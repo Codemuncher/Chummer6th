@@ -1,0 +1,227 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
+    <OutputType>Library</OutputType>
+    <GenerateAssemblyInfo>True</GenerateAssemblyInfo>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+	<Configurations>Debug;Release;Debuggable Release</Configurations>
+    <EmbeddedResourceUseDependentUponConvention>true</EmbeddedResourceUseDependentUponConvention>
+    <PostBuildEvent>echo Statement 1: copy "$(TargetDir)*.dll" "$(TargetDir)Plugins\SINners\" /Y
+copy "$(TargetDir)*.dll" "$(TargetDir)Plugins\SINners\" /Y
+echo Statement 2: copy "$(TargetDir)*.txt" "$(TargetDir)Plugins\SINners\" /Y
+copy "$(TargetDir)*.txt" "$(TargetDir)Plugins\SINners\" /Y
+echo Statement 3: copy "$(TargetDir)*.dll.config" "$(TargetDir)Plugins\SINners\" /Y
+copy "$(TargetDir)*.dll.config" "$(TargetDir)Plugins\SINners\" /Y
+echo Statement 4: copy "$(TargetDir)*.pdb" "$(TargetDir)Plugins\SINners\" /Y
+copy "$(TargetDir)*.pdb" "$(TargetDir)Plugins\SINners\" /Y
+echo Statement 5: copy "$(TargetDir)Plugins\SINners\*" "$(SolutionDir)Chummer\bin\$(ConfigurationName)\Plugins\SINners\" /Y
+copy "$(TargetDir)Plugins\SINners\*" "$(SolutionDir)Chummer\bin\$(ConfigurationName)\Plugins\SINners\" /Y</PostBuildEvent>
+    <PreBuildEvent>echo Statement 1: mkdir "$(TargetDir)Plugins\SINners\"
+mkdir "$(TargetDir)Plugins\SINners\"
+echo Statement 2: mkdir "$(SolutionDir)Chummer\bin\$(ConfigurationName)\Plugins\SINners\"
+mkdir "$(SolutionDir)Chummer\bin\$(ConfigurationName)\Plugins\SINners\"
+Exit 0</PreBuildEvent>
+    <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <AnalysisLevel>latest-minimum</AnalysisLevel>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <AssemblyVersion>1.0.0.4</AssemblyVersion>
+    <FileVersion>1.0.0.4</FileVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SupportedOSPlatformVersion>10.0.26100.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.InteropServices.ComVisible">
+      <_Parameter1>False</_Parameter1>
+      <_Parameter1_TypeName>System.Boolean</_Parameter1_TypeName>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.InteropServices.Guid">
+      <_Parameter1>3c2fba71-eaa6-490e-9213-69eda4e64db0</_Parameter1>
+    </AssemblyAttribute>
+    <PackageReference Include="GroupControls" Version="1.9.0" />
+    <PackageReference Include="IdentityModel" Version="6.2.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.8" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Abstractions" Version="8.13.0" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.13.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Logging" Version="8.13.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.13.0" />
+    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.24" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" />
+    <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Validation" Version="17.8.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="NLog" Version="6.0.2" />
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
+    <PackageReference Include="System.ComponentModel.Composition" Version="9.0.8" />
+    <PackageReference Include="System.Composition" Version="9.0.8" />
+    <PackageReference Include="System.Composition.AttributedModel" Version="9.0.8" />
+    <PackageReference Include="System.Composition.Convention" Version="9.0.8" />
+    <PackageReference Include="System.Composition.Hosting" Version="9.0.8" />
+    <PackageReference Include="System.Composition.Runtime" Version="9.0.8" />
+    <PackageReference Include="System.Composition.TypedParts" Version="9.0.8" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.8" />
+    <PackageReference Include="System.Reflection.Metadata" Version="9.0.8" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+    <PackageReference Include="System.Security.AccessControl" Version="6.0.1" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.8" />
+    <PackageReference Include="System.Text.Encodings.Web" Version="9.0.8" />
+    <PackageReference Include="System.Text.Json" Version="9.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters.CoreServices" Version="2.0.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.8" />
+    <PackageReference Include="CoreWCF.Primitives" Version="1.8.0" />
+    <PackageReference Include="CoreWCF.ConfigurationManager" Version="1.8.0" />
+    <PackageReference Include="CoreWCF.Http" Version="1.8.0" />
+    <PackageReference Include="CoreWCF.WebHttp" Version="1.8.0" />
+    <PackageReference Include="CoreWCF.NetTcp" Version="1.8.0" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutputPath>
+    <StartAction>Program</StartAction>
+    <StartProgram>$(SolutionDir)Chummer\bin\$(Configuration)\Chummer5.exe</StartProgram>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <NoWarn>VSTHRD003;VSTHRD100;VSTHRD103;VSTHRD200</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutputPath>
+    <StartAction>Program</StartAction>
+    <StartProgram>$(SolutionDir)Chummer\bin\$(Configuration)\Chummer5.exe</StartProgram>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <NoWarn>VSTHRD003;VSTHRD100;VSTHRD103;VSTHRD200</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debuggable Release|AnyCPU'">
+    <OutputPath>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutputPath>
+    <StartAction>Program</StartAction>
+    <StartProgram>$(SolutionDir)Chummer\bin\$(Configuration)\Chummer5.exe</StartProgram>
+    <Optimize>false</Optimize>
+    <NoWarn>VSTHRD003;VSTHRD100;VSTHRD103;VSTHRD200</NoWarn>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Update="UI\ucSINnerGroupCreate.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnerGroupSearch.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnerResponseUI.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnersAdvanced.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnersBasic.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnerShare.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnersOptions.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnersUserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnersSearch.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="UI\ucSINnerVisibility.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Service Include="{94E38DFF-614B-4cbd-B67C-F211BB35CE8B}" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(SolutionDir)Chummer\Chummer.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="OpenAPIs\swagger.json">
+      <Namespace>ChummerHub.Client.Sinners</Namespace>
+      <ClassName>SinnersClient</ClassName>
+      <CodeGenerator>NSwagCSharp</CodeGenerator>
+      <SourceUri>https://chummer-beta.azurewebsites.net/swagger/v1/swagger.json</SourceUri>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="changelog.txt" />
+    <Content Include="OidcClient\SimpleHttpServer\Resources\Pages\404.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="OidcClient\SimpleHttpServer\Resources\Pages\500.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="plugin.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="OidcClient\OidcClient\AssemblyAttributes.cs" />
+    <Compile Remove="OidcClient\OidcClient\AuthorizeClient.cs" />
+    <Compile Remove="OidcClient\OidcClient\AuthorizeState.cs" />
+    <Compile Remove="OidcClient\OidcClient\Browser\BrowserOptions.cs" />
+    <Compile Remove="OidcClient\OidcClient\Browser\BrowserResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Browser\BrowserResultType.cs" />
+    <Compile Remove="OidcClient\OidcClient\Browser\DisplayMode.cs" />
+    <Compile Remove="OidcClient\OidcClient\Browser\IBrowser.cs" />
+    <Compile Remove="OidcClient\OidcClient\CryptoHelper.cs" />
+    <Compile Remove="OidcClient\OidcClient\IIdentityTokenValidator.cs" />
+    <Compile Remove="OidcClient\OidcClient\Infrastructure\LoggingExtensions.cs" />
+    <Compile Remove="OidcClient\OidcClient\Infrastructure\LogSerializer.cs" />
+    <Compile Remove="OidcClient\OidcClient\Infrastructure\OidcClientOptionsExtensions.cs" />
+    <Compile Remove="OidcClient\OidcClient\Infrastructure\StringExtensions.cs" />
+    <Compile Remove="OidcClient\OidcClient\NoValidationIdentityTokenValidator.cs" />
+    <Compile Remove="OidcClient\OidcClient\OidcClient.cs" />
+    <Compile Remove="OidcClient\OidcClient\OidcClientOptions.cs" />
+    <Compile Remove="OidcClient\OidcClient\Policy.cs" />
+    <Compile Remove="OidcClient\OidcClient\ProviderInformation.cs" />
+    <Compile Remove="OidcClient\OidcClient\RefreshTokenDelegatingHandler.cs" />
+    <Compile Remove="OidcClient\OidcClient\Requests\AuthorizeRequest.cs" />
+    <Compile Remove="OidcClient\OidcClient\Requests\LoginRequest.cs" />
+    <Compile Remove="OidcClient\OidcClient\Requests\LogoutRequest.cs" />
+    <Compile Remove="OidcClient\OidcClient\ResponseProcessor.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\AuthorizeResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\IdentityTokenValidationResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\LoginResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\LogoutResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\RefreshTokenResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\ResponseValidationResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\Result.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\TokenResponseValidationResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\Results\UserInfoResult.cs" />
+    <Compile Remove="OidcClient\OidcClient\TokenRefreshedEventArgs.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Resources\" />
+  </ItemGroup>
+</Project>

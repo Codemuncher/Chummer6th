@@ -1,0 +1,37 @@
+{
+  "dependencies": {
+    "mssql3": {
+      "type": "mssql",
+      "connectionId": "ConnectionStrings:MasterSqlConnection"
+    },
+    "mssql4": {
+      "type": "mssql",
+      "connectionId": "ConnectionStrings:DefaultConnection"
+    },
+    "appInsights1": {
+      "type": "appInsights",
+      "connectionId": "APPINSIGHTS_CONNECTIONSTRING"
+    },
+    "secrets2": {
+      "type": "secrets",
+      "connectionId": "VaultUri"
+    },
+    "mssql1": {
+      "type": "mssql",
+      "connectionId": "DefaultConnection"
+    },
+    "mssql2": {
+      "type": "mssql",
+      "connectionId": "MasterSqlConnection"
+    },
+    "appConfig1": {
+      "type": "appConfig",
+      "connectionId": "AppConfig"
+    },
+    "secrets1": {
+      "type": "secrets",
+      "connectionId": "VaultUri",
+      "dynamicId": null
+    }
+  }
+}
