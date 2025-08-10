@@ -22,6 +22,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -45,7 +46,8 @@ namespace Chummer
 
         private readonly FileSystemWatcher _watcherCharacterRosterFolderRawSaves;
         private readonly FileSystemWatcher _watcherCharacterRosterFolderCompressedSaves;
-        private readonly DebuggableSemaphoreSlim _objCharacterRosterFolderWatcherSemaphore = new DebuggableSemaphoreSlim();
+        private readonly DebuggableSemaphoreSlim _objCharacterRosterFolderWatcherSemaphore;
+        private readonly AsyncFriendlyReaderWriterLock _objCachePurgeReaderWriterLock = new AsyncFriendlyReaderWriterLock();
         private Task _tskMostRecentlyUsedsRefresh;
         private Task _tskWatchFolderRefresh;
         private CancellationTokenSource _objMostRecentlyUsedsRefreshCancellationTokenSource;
@@ -66,13 +68,13 @@ namespace Chummer
             {
                 _objCharacterRosterFolderWatcherSemaphore = new DebuggableSemaphoreSlim();
                 _watcherCharacterRosterFolderRawSaves = new FileSystemWatcher(GlobalSettings.CharacterRosterPath, "*.chum5")
-                    {
-                        IncludeSubdirectories = true
-                    };
+                {
+                    IncludeSubdirectories = true
+                };
                 _watcherCharacterRosterFolderCompressedSaves = new FileSystemWatcher(GlobalSettings.CharacterRosterPath, "*.chum5lz")
-                    {
-                        IncludeSubdirectories = true
-                    };
+                {
+                    IncludeSubdirectories = true
+                };
 
                 Disposed += (sender, args) =>
                 {
@@ -98,6 +100,7 @@ namespace Chummer
                     _watcherCharacterRosterFolderRawSaves.Dispose();
                     _watcherCharacterRosterFolderCompressedSaves.Dispose();
                     _objCharacterRosterFolderWatcherSemaphore.Dispose();
+                    _objCachePurgeReaderWriterLock.Dispose();
                 };
             }
             else
@@ -123,6 +126,7 @@ namespace Chummer
                         objOldCancellationTokenSource.Dispose();
                     }
                     _objGenericFormClosingCancellationTokenSource.Dispose();
+                    _objCachePurgeReaderWriterLock.Dispose();
                 };
             }
         }
@@ -313,50 +317,59 @@ namespace Chummer
                     }
 
                     CancellationToken objTokenToUse = objTemp.Token;
-                    await _objCharacterRosterFolderWatcherSemaphore.WaitAsync(objTokenToUse).ConfigureAwait(false);
+                    System.IAsyncDisposable objLocker = await _objCachePurgeReaderWriterLock.EnterReadLockAsync(objTokenToUse).ConfigureAwait(false);
                     try
                     {
-                        TreeNode objNewNode = await CacheCharacter(e.FullPath, true, objTokenToUse).ConfigureAwait(false);
-                        if (objNewNode.Tag is CharacterCache objNewCache)
+                        objTokenToUse.ThrowIfCancellationRequested();
+                        await _objCharacterRosterFolderWatcherSemaphore.WaitAsync(objTokenToUse).ConfigureAwait(false);
+                        try
                         {
-                            HashSet<CharacterCache> setCachesToDispose = new HashSet<CharacterCache>(2);
-                            string strFilePath = await objNewCache.GetFilePathAsync(objTokenToUse).ConfigureAwait(false);
-                            await treCharacterList.DoThreadSafeAsync(x =>
+                            TreeNode objNewNode = await CacheCharacter(e.FullPath, true, objTokenToUse).ConfigureAwait(false);
+                            if (objNewNode.Tag is CharacterCache objNewCache)
                             {
-                                foreach (TreeNode objNode in x.Nodes.OfType<TreeNode>()
-                                                              .DeepWhere(y => y.Nodes.OfType<TreeNode>(),
-                                                                         y => y.Tag is CharacterCache z
-                                                                              && z.FilePath == strFilePath))
+                                HashSet<CharacterCache> setCachesToDispose = new HashSet<CharacterCache>(2);
+                                string strFilePath = await objNewCache.GetFilePathAsync(objTokenToUse).ConfigureAwait(false);
+                                await treCharacterList.DoThreadSafeAsync(x =>
                                 {
-                                    objNode.Text = objNewNode.Text;
-                                    objNode.ToolTipText = objNewNode.ToolTipText;
-                                    objNode.ForeColor = objNewNode.ForeColor;
-                                    if (objNode.Tag is CharacterCache objOldCache && !ReferenceEquals(objOldCache, objNewCache) && !objOldCache.IsDisposed)
-                                        setCachesToDispose.Add(objOldCache);
-                                    objNode.Tag = objNewCache;
+                                    foreach (TreeNode objNode in x.Nodes.OfType<TreeNode>()
+                                                                  .DeepWhere(y => y.Nodes.OfType<TreeNode>(),
+                                                                             y => y.Tag is CharacterCache z
+                                                                                  && z.FilePath == strFilePath))
+                                    {
+                                        objNode.Text = objNewNode.Text;
+                                        objNode.ToolTipText = objNewNode.ToolTipText;
+                                        objNode.ForeColor = objNewNode.ForeColor;
+                                        if (objNode.Tag is CharacterCache objOldCache && !ReferenceEquals(objOldCache, objNewCache) && !objOldCache.IsDisposed)
+                                            setCachesToDispose.Add(objOldCache);
+                                        objNode.Tag = objNewCache;
+                                    }
+                                }, objTokenToUse).ConfigureAwait(false);
+                                List<CharacterCache> lstToKeep = new List<CharacterCache>();
+                                foreach (CharacterCache objCache in setCachesToDispose)
+                                {
+                                    objTokenToUse.ThrowIfCancellationRequested();
+                                    if (!objCache.IsDisposed && _dicSavedCharacterCaches.ContainsKey(await objCache.GetFilePathAsync(objTokenToUse).ConfigureAwait(false)))
+                                        lstToKeep.Add(objCache);
                                 }
-                            }, objTokenToUse).ConfigureAwait(false);
-                            List<CharacterCache> lstToKeep = new List<CharacterCache>();
-                            foreach (CharacterCache objCache in setCachesToDispose)
-                            {
-                                objTokenToUse.ThrowIfCancellationRequested();
-                                if (!objCache.IsDisposed && _dicSavedCharacterCaches.ContainsKey(await objCache.GetFilePathAsync(objTokenToUse).ConfigureAwait(false)))
-                                    lstToKeep.Add(objCache);
+                                foreach (CharacterCache objCache in lstToKeep)
+                                {
+                                    objTokenToUse.ThrowIfCancellationRequested();
+                                    setCachesToDispose.Remove(objCache);
+                                }
+                                foreach (CharacterCache objOldCache in setCachesToDispose)
+                                {
+                                    await objOldCache.DisposeAsync().ConfigureAwait(false);
+                                }
                             }
-                            foreach (CharacterCache objCache in lstToKeep)
-                            {
-                                objTokenToUse.ThrowIfCancellationRequested();
-                                setCachesToDispose.Remove(objCache);
-                            }
-                            foreach (CharacterCache objOldCache in setCachesToDispose)
-                            {
-                                await objOldCache.DisposeAsync().ConfigureAwait(false);
-                            }
+                        }
+                        finally
+                        {
+                            _objCharacterRosterFolderWatcherSemaphore.Release();
                         }
                     }
                     finally
                     {
-                        _objCharacterRosterFolderWatcherSemaphore.Release();
+                        await objLocker.DisposeAsync().ConfigureAwait(false);
                     }
                 }
             }
@@ -792,7 +805,7 @@ namespace Chummer
                 return;
             try
             {
-                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                 out HashSet<string> setToRefresh))
                 {
                     bool blnRefreshMru = false;
@@ -835,7 +848,7 @@ namespace Chummer
                 switch (e.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
-                        using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                        using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                         out HashSet<string> setToRefresh))
                         {
                             foreach (ExportCharacter objForm in e.NewItems)
@@ -853,7 +866,7 @@ namespace Chummer
                     case NotifyCollectionChangedAction.Replace:
                     case NotifyCollectionChangedAction.Remove:
                         {
-                            using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                             out HashSet<string> setToRefresh))
                             {
                                 bool blnRefreshMru = false;
@@ -900,11 +913,11 @@ namespace Chummer
                 return;
             try
             {
-                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                 out HashSet<string> setToRefresh))
                 {
                     bool blnRefreshMru = false;
-                    using (new FetchSafelyFromPool<HashSet<string>>(
+                    using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(
                                Utils.StringHashSetPool, out HashSet<string> setCharacters))
                     {
                         // Because the Recent Characters list can have characters listed that aren't in either MRU, refresh it if we are moving or removing any such character
@@ -947,7 +960,7 @@ namespace Chummer
                 switch (e.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
-                        using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                        using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                         out HashSet<string> setToRefresh))
                         {
                             foreach (CharacterSheetViewer objForm in e.NewItems)
@@ -963,36 +976,36 @@ namespace Chummer
                     case NotifyCollectionChangedAction.Move:
                     case NotifyCollectionChangedAction.Replace:
                     case NotifyCollectionChangedAction.Remove:
-                    {
-                        using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
-                                                                        out HashSet<string> setToRefresh))
                         {
-                            bool blnRefreshMru = false;
-                            using (new FetchSafelyFromPool<HashSet<string>>(
-                                       Utils.StringHashSetPool, out HashSet<string> setCharacters))
+                            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
+                                                                            out HashSet<string> setToRefresh))
                             {
-                                // Because the Recent Characters list can have characters listed that aren't in either MRU, refresh it if we are moving or removing any such character
-                                foreach (CharacterSheetViewer objForm in e.OldItems)
+                                bool blnRefreshMru = false;
+                                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(
+                                           Utils.StringHashSetPool, out HashSet<string> setCharacters))
                                 {
-                                    token.ThrowIfCancellationRequested();
-                                    setCharacters.Clear();
-                                    setCharacters.AddRange(objForm.CharacterObjects.Select(x => x.FileName));
-                                    setToRefresh.AddRange(setCharacters);
-                                    setCharacters.ExceptWith(GlobalSettings.FavoriteCharacters);
-                                    setCharacters.ExceptWith(GlobalSettings.MostRecentlyUsedCharacters);
-                                    if (setCharacters.Count > 0)
+                                    // Because the Recent Characters list can have characters listed that aren't in either MRU, refresh it if we are moving or removing any such character
+                                    foreach (CharacterSheetViewer objForm in e.OldItems)
                                     {
-                                        blnRefreshMru = true;
-                                        break;
+                                        token.ThrowIfCancellationRequested();
+                                        setCharacters.Clear();
+                                        setCharacters.AddRange(objForm.CharacterObjects.Select(x => x.FileName));
+                                        setToRefresh.AddRange(setCharacters);
+                                        setCharacters.ExceptWith(GlobalSettings.FavoriteCharacters);
+                                        setCharacters.ExceptWith(GlobalSettings.MostRecentlyUsedCharacters);
+                                        if (setCharacters.Count > 0)
+                                        {
+                                            blnRefreshMru = true;
+                                            break;
+                                        }
                                     }
                                 }
-                            }
 
-                            if (blnRefreshMru)
-                                await RefreshMruLists("mru", token).ConfigureAwait(false);
-                            await RefreshNodeTexts(setToRefresh, token).ConfigureAwait(false);
+                                if (blnRefreshMru)
+                                    await RefreshMruLists("mru", token).ConfigureAwait(false);
+                                await RefreshNodeTexts(setToRefresh, token).ConfigureAwait(false);
+                            }
                         }
-                    }
                         break;
 
                     case NotifyCollectionChangedAction.Reset:
@@ -1015,7 +1028,7 @@ namespace Chummer
                 return;
             try
             {
-                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                 out HashSet<string> setToRefresh))
                 {
                     bool blnRefreshMru = false;
@@ -1058,7 +1071,7 @@ namespace Chummer
                 switch (e.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
-                        using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                        using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                         out HashSet<string> setToRefresh))
                         {
                             foreach (CharacterShared objForm in e.NewItems)
@@ -1074,34 +1087,34 @@ namespace Chummer
                     case NotifyCollectionChangedAction.Move:
                     case NotifyCollectionChangedAction.Replace:
                     case NotifyCollectionChangedAction.Remove:
-                    {
-                        using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
-                                                                        out HashSet<string> setToRefresh))
                         {
-                            bool blnRefreshMru = false;
-                            // Because the Recent Characters list can have characters listed that aren't in either MRU, refresh it if we are moving or removing any such character
-                            foreach (CharacterShared objForm in e.OldItems)
+                            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
+                                                                            out HashSet<string> setToRefresh))
                             {
-                                token.ThrowIfCancellationRequested();
-                                string strFile = objForm.CharacterObject.FileName;
-                                setToRefresh.Add(strFile);
-                                if (await GlobalSettings.FavoriteCharacters.ContainsAsync(
-                                                            objForm.CharacterObject.FileName, token: token)
-                                                        .ConfigureAwait(false))
-                                    continue;
-                                if (await GlobalSettings.MostRecentlyUsedCharacters.ContainsAsync(
-                                                            objForm.CharacterObject.FileName, token: token)
-                                                        .ConfigureAwait(false))
-                                    continue;
-                                blnRefreshMru = true;
-                                break;
-                            }
+                                bool blnRefreshMru = false;
+                                // Because the Recent Characters list can have characters listed that aren't in either MRU, refresh it if we are moving or removing any such character
+                                foreach (CharacterShared objForm in e.OldItems)
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    string strFile = objForm.CharacterObject.FileName;
+                                    setToRefresh.Add(strFile);
+                                    if (await GlobalSettings.FavoriteCharacters.ContainsAsync(
+                                                                objForm.CharacterObject.FileName, token: token)
+                                                            .ConfigureAwait(false))
+                                        continue;
+                                    if (await GlobalSettings.MostRecentlyUsedCharacters.ContainsAsync(
+                                                                objForm.CharacterObject.FileName, token: token)
+                                                            .ConfigureAwait(false))
+                                        continue;
+                                    blnRefreshMru = true;
+                                    break;
+                                }
 
-                            if (blnRefreshMru)
-                                await RefreshMruLists("mru", token).ConfigureAwait(false);
-                            await RefreshNodeTexts(setToRefresh, token).ConfigureAwait(false);
+                                if (blnRefreshMru)
+                                    await RefreshMruLists("mru", token).ConfigureAwait(false);
+                                await RefreshNodeTexts(setToRefresh, token).ConfigureAwait(false);
+                            }
                         }
-                    }
                         break;
 
                     case NotifyCollectionChangedAction.Reset:
@@ -1189,7 +1202,7 @@ namespace Chummer
             if (objFavoriteNode == null && blnRefreshFavorites)
             {
                 objFavoriteNode = new TreeNode(await LanguageManager.GetStringAsync("Treenode_Roster_FavoriteCharacters", token: token).ConfigureAwait(false))
-                    {Tag = "Favorite"};
+                { Tag = "Favorite" };
                 blnAddFavoriteNode = true;
             }
 
@@ -1198,9 +1211,10 @@ namespace Chummer
             bool blnAddRecentNode = false;
             List<string> lstRecents = (await GlobalSettings.MostRecentlyUsedCharacters.ToArrayAsync(token).ConfigureAwait(false)).ToList();
             // Add any characters that are open to the displayed list so we can have more than 10 characters listed
-            foreach (string strFile in Program.MainForm.OpenFormsWithCharacters.SelectMany(
-                         x => x.CharacterObjects).Select(x => x.FileName))
+            foreach (Character objCharacter in Program.MainForm.OpenFormsWithCharacters.SelectMany(
+                         x => x.CharacterObjects))
             {
+                string strFile = await objCharacter.GetFileNameAsync(token).ConfigureAwait(false);
                 // Make sure we're not loading a character that was already loaded by the MRU list.
                 if (!lstFavorites.Contains(strFile) && !lstRecents.Contains(strFile))
                     lstRecents.Add(strFile);
@@ -1213,7 +1227,7 @@ namespace Chummer
             if (objRecentNode == null && lstRecents.Count > 0)
             {
                 objRecentNode = new TreeNode(await LanguageManager.GetStringAsync("Treenode_Roster_RecentCharacters", token: token).ConfigureAwait(false))
-                    {Tag = "Recent"};
+                { Tag = "Recent" };
                 blnAddRecentNode = true;
             }
 
@@ -1224,160 +1238,168 @@ namespace Chummer
 
             TreeNode[] lstFavoritesNodes = intFavoritesCount > 0 ? new TreeNode[intFavoritesCount] : null;
             TreeNode[] lstRecentsNodes = intRecentsCount > 0 ? new TreeNode[intRecentsCount] : null;
-
-            if (intFavoritesCount > 0 || intRecentsCount > 0)
+            System.IAsyncDisposable objLocker = await _objCachePurgeReaderWriterLock.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
             {
                 token.ThrowIfCancellationRequested();
-                Task<TreeNode>[] atskCachingTasks = new Task<TreeNode>[intFavoritesCount + intRecentsCount];
+                if (intFavoritesCount > 0 || intRecentsCount > 0)
+                {
+                    token.ThrowIfCancellationRequested();
+                    Task<TreeNode>[] atskCachingTasks = new Task<TreeNode>[intFavoritesCount + intRecentsCount];
 
-                for (int i = 0; i < intFavoritesCount; ++i)
-                {
-                    int iLocal = i;
-                    atskCachingTasks[i]
-                        = Task.Run(() => CacheCharacter(lstFavorites[iLocal], token: token), token);
-                }
-
-                for (int i = 0; i < intRecentsCount; ++i)
-                {
-                    int iLocal = i;
-                    atskCachingTasks[intFavoritesCount + i]
-                        = Task.Run(() => CacheCharacter(lstRecents[iLocal], token: token), token);
-                }
-
-                try
-                {
-                    await Task.WhenAll(atskCachingTasks).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException)
-                {
-                    //swallow this
-                }
-
-                if (lstFavoritesNodes != null)
-                {
                     for (int i = 0; i < intFavoritesCount; ++i)
                     {
-                        lstFavoritesNodes[i] = await atskCachingTasks[i].ConfigureAwait(false);
+                        int iLocal = i;
+                        atskCachingTasks[i]
+                            = Task.Run(() => CacheCharacter(lstFavorites[iLocal], token: token), token);
                     }
 
-                    if (objFavoriteNode != null)
-                    {
-                        foreach (TreeNode objNode in lstFavoritesNodes)
-                        {
-                            token.ThrowIfCancellationRequested();
-                            if (objNode == null)
-                                continue;
-                            TreeView treFavoriteNode = objFavoriteNode.TreeView;
-                            if (treFavoriteNode != null)
-                            {
-                                if (treFavoriteNode.IsNullOrDisposed())
-                                    continue;
-                                await treFavoriteNode.DoThreadSafeAsync(
-                                    () => objFavoriteNode.Nodes.Add(objNode), token).ConfigureAwait(false);
-                            }
-                            else
-                                objFavoriteNode.Nodes.Add(objNode);
-                        }
-                    }
-                }
-
-                if (lstRecentsNodes != null)
-                {
                     for (int i = 0; i < intRecentsCount; ++i)
                     {
-                        lstRecentsNodes[i] = await atskCachingTasks[intFavoritesCount + i].ConfigureAwait(false);
+                        int iLocal = i;
+                        atskCachingTasks[intFavoritesCount + i]
+                            = Task.Run(() => CacheCharacter(lstRecents[iLocal], token: token), token);
                     }
 
-                    if (objRecentNode != null)
+                    try
                     {
-                        foreach (TreeNode objNode in lstRecentsNodes)
+                        await Task.WhenAll(atskCachingTasks).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        //swallow this
+                    }
+
+                    if (lstFavoritesNodes != null)
+                    {
+                        for (int i = 0; i < intFavoritesCount; ++i)
                         {
-                            token.ThrowIfCancellationRequested();
-                            if (objNode == null)
-                                continue;
-                            TreeView treRecentNode = objRecentNode.TreeView;
-                            if (treRecentNode != null)
+                            lstFavoritesNodes[i] = await atskCachingTasks[i].ConfigureAwait(false);
+                        }
+
+                        if (objFavoriteNode != null)
+                        {
+                            foreach (TreeNode objNode in lstFavoritesNodes)
                             {
-                                if (treRecentNode.IsNullOrDisposed())
+                                token.ThrowIfCancellationRequested();
+                                if (objNode == null)
                                     continue;
-                                await treRecentNode.DoThreadSafeAsync(
-                                    () => objRecentNode.Nodes.Add(objNode), token).ConfigureAwait(false);
+                                TreeView treFavoriteNode = objFavoriteNode.TreeView;
+                                if (treFavoriteNode != null)
+                                {
+                                    if (treFavoriteNode.IsNullOrDisposed())
+                                        continue;
+                                    await treFavoriteNode.DoThreadSafeAsync(
+                                        () => objFavoriteNode.Nodes.Add(objNode), token).ConfigureAwait(false);
+                                }
+                                else
+                                    objFavoriteNode.Nodes.Add(objNode);
                             }
-                            else
-                                objRecentNode.Nodes.Add(objNode);
+                        }
+                    }
+
+                    if (lstRecentsNodes != null)
+                    {
+                        for (int i = 0; i < intRecentsCount; ++i)
+                        {
+                            lstRecentsNodes[i] = await atskCachingTasks[intFavoritesCount + i].ConfigureAwait(false);
+                        }
+
+                        if (objRecentNode != null)
+                        {
+                            foreach (TreeNode objNode in lstRecentsNodes)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (objNode == null)
+                                    continue;
+                                TreeView treRecentNode = objRecentNode.TreeView;
+                                if (treRecentNode != null)
+                                {
+                                    if (treRecentNode.IsNullOrDisposed())
+                                        continue;
+                                    await treRecentNode.DoThreadSafeAsync(
+                                        () => objRecentNode.Nodes.Add(objNode), token).ConfigureAwait(false);
+                                }
+                                else
+                                    objRecentNode.Nodes.Add(objNode);
+                            }
                         }
                     }
                 }
+
+                token.ThrowIfCancellationRequested();
+
+                if (treCharacterList.IsNullOrDisposed())
+                    return;
+
+                Log.Trace("Populating CharacterRosterTreeNode MRUs (MainThread).");
+                await treCharacterList.DoThreadSafeAsync(treList =>
+                {
+                    treList.SuspendLayout();
+                    try
+                    {
+                        if (blnRefreshFavorites && objFavoriteNode != null)
+                        {
+                            if (blnAddFavoriteNode)
+                            {
+                                treList.Nodes.Insert(0, objFavoriteNode);
+                            }
+                            else if (lstFavoritesNodes != null)
+                            {
+                                try
+                                {
+                                    objFavoriteNode.Nodes.Clear();
+                                    foreach (TreeNode objNode in lstFavoritesNodes)
+                                    {
+                                        if (objNode != null)
+                                            objFavoriteNode.Nodes.Add(objNode);
+                                    }
+                                }
+                                catch (ObjectDisposedException e)
+                                {
+                                    //just swallow this
+                                    Log.Trace(e, "ObjectDisposedException can be ignored here.");
+                                }
+                            }
+                            objFavoriteNode.ExpandAll();
+                        }
+
+                        if (objRecentNode != null)
+                        {
+                            if (blnAddRecentNode)
+                            {
+                                treList.Nodes.Insert((objFavoriteNode != null).ToInt32(), objRecentNode);
+                            }
+                            else if (lstRecentsNodes != null)
+                            {
+                                try
+                                {
+                                    objRecentNode.Nodes.Clear();
+                                    foreach (TreeNode objNode in lstRecentsNodes)
+                                    {
+                                        if (objNode != null)
+                                            objRecentNode.Nodes.Add(objNode);
+                                    }
+                                }
+                                catch (ObjectDisposedException e)
+                                {
+                                    //just swallow this
+                                    Log.Trace(e, "ObjectDisposedException can be ignored here.");
+                                }
+                            }
+                            objRecentNode.ExpandAll();
+                        }
+                    }
+                    finally
+                    {
+                        treList.ResumeLayout();
+                    }
+                }, token).ConfigureAwait(false);
             }
-
-            token.ThrowIfCancellationRequested();
-
-            if (treCharacterList.IsNullOrDisposed())
-                return;
-
-            Log.Trace("Populating CharacterRosterTreeNode MRUs (MainThread).");
-            await treCharacterList.DoThreadSafeAsync(treList =>
+            finally
             {
-                treList.SuspendLayout();
-                try
-                {
-                    if (blnRefreshFavorites && objFavoriteNode != null)
-                    {
-                        if (blnAddFavoriteNode)
-                        {
-                            treList.Nodes.Insert(0, objFavoriteNode);
-                        }
-                        else if (lstFavoritesNodes != null)
-                        {
-                            try
-                            {
-                                objFavoriteNode.Nodes.Clear();
-                                foreach (TreeNode objNode in lstFavoritesNodes)
-                                {
-                                    if (objNode != null)
-                                        objFavoriteNode.Nodes.Add(objNode);
-                                }
-                            }
-                            catch (ObjectDisposedException e)
-                            {
-                                //just swallow this
-                                Log.Trace(e, "ObjectDisposedException can be ignored here.");
-                            }
-                        }
-                        objFavoriteNode.ExpandAll();
-                    }
-
-                    if (objRecentNode != null)
-                    {
-                        if (blnAddRecentNode)
-                        {
-                            treList.Nodes.Insert((objFavoriteNode != null).ToInt32(), objRecentNode);
-                        }
-                        else if (lstRecentsNodes != null)
-                        {
-                            try
-                            {
-                                objRecentNode.Nodes.Clear();
-                                foreach (TreeNode objNode in lstRecentsNodes)
-                                {
-                                    if (objNode != null)
-                                        objRecentNode.Nodes.Add(objNode);
-                                }
-                            }
-                            catch (ObjectDisposedException e)
-                            {
-                                //just swallow this
-                                Log.Trace(e, "ObjectDisposedException can be ignored here.");
-                            }
-                        }
-                        objRecentNode.ExpandAll();
-                    }
-                }
-                finally
-                {
-                    treList.ResumeLayout();
-                }
-            }, token).ConfigureAwait(false);
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
         }
 
         private async Task LoadWatchFolderCharacters(CancellationToken token = default)
@@ -1418,19 +1440,16 @@ namespace Chummer
                         dicWatch.Add(strFile, strNewParent);
                     }
                 }
-                catch (OperationCanceledException)
-                {
-                    // Throw cancellations because we expect to handle them in whatever awaits this task
-                    throw;
-                }
                 catch (UnauthorizedAccessException e)
                 {
+                    e = e.Demystify();
                     // We do not have sufficient privileges for this directory
                     strErrorText = e.Message;
                     dicWatch.Clear();
                 }
-                catch (Exception e)
+                catch (Exception e) when (!(e is OperationCanceledException)) // Throw cancellations because we expect to handle them in whatever awaits this task
                 {
+                    e = e.Demystify();
                     // We had some other issue while trying to load the character roster, so log it
                     Log.Warn(e);
                     strErrorText = e.Message;
@@ -1451,24 +1470,24 @@ namespace Chummer
                 if (objWatchNode != null)
                 {
                     await treCharacterList.DoThreadSafeAsync(() =>
-                                          {
-                                              objWatchNode.Nodes.Clear();
-                                              if (string.IsNullOrEmpty(strErrorText))
-                                              {
-                                                  objWatchNode.ForeColor = ColorManager.WindowText;
-                                                  objWatchNode.ToolTipText = string.Empty;
-                                              }
-                                              else
-                                              {
-                                                  objWatchNode.ForeColor = ColorManager.ErrorColor;
-                                                  objWatchNode.ToolTipText = strErrorText;
-                                              }
-                                          }, token)
+                    {
+                        objWatchNode.Nodes.Clear();
+                        if (string.IsNullOrEmpty(strErrorText))
+                        {
+                            objWatchNode.ForeColor = ColorManager.WindowText;
+                            objWatchNode.ToolTipText = string.Empty;
+                        }
+                        else
+                        {
+                            objWatchNode.ForeColor = ColorManager.ErrorColor;
+                            objWatchNode.ToolTipText = strErrorText;
+                        }
+                    }, token)
                                           .ConfigureAwait(false);
                 }
                 else
                 {
-                    objWatchNode = new TreeNode(strWatchText) {Tag = "Watch"};
+                    objWatchNode = new TreeNode(strWatchText) { Tag = "Watch" };
                     if (!string.IsNullOrEmpty(strErrorText))
                     {
                         objWatchNode.ForeColor = ColorManager.ErrorColor;
@@ -1485,74 +1504,62 @@ namespace Chummer
                 return;
 
             Dictionary<TreeNode, string> dicWatchNodes = new Dictionary<TreeNode, string>(dicWatch.Count);
-            List<Task<TreeNode>> lstCachingTasks = new List<Task<TreeNode>>(Utils.MaxParallelBatchSize);
-            int intCounter = 0;
-            foreach (string strKey in dicWatch.Keys)
+            System.IAsyncDisposable objLocker = await _objCachePurgeReaderWriterLock.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
             {
-                lstCachingTasks.Add(Task.Run(() => CacheCharacter(strKey, token: token), token));
-                if (++intCounter != Utils.MaxParallelBatchSize)
-                    continue;
+                token.ThrowIfCancellationRequested();
+                List<Task<TreeNode>> lstCachingTasks = new List<Task<TreeNode>>(Utils.MaxParallelBatchSize);
+                int intCounter = 0;
+                foreach (string strKey in dicWatch.Keys)
+                {
+                    lstCachingTasks.Add(Task.Run(() => CacheCharacter(strKey, token: token), token));
+                    if (++intCounter != Utils.MaxParallelBatchSize)
+                        continue;
+                    token.ThrowIfCancellationRequested();
+                    await Task.WhenAll(lstCachingTasks).ConfigureAwait(false);
+                    token.ThrowIfCancellationRequested();
+                    foreach (Task<TreeNode> tskCachingTask in lstCachingTasks)
+                    {
+                        TreeNode objNode = await tskCachingTask.ConfigureAwait(false);
+                        if (objNode.Tag is CharacterCache objCache && !objCache.IsDisposed)
+                            dicWatchNodes.Add(objNode, dicWatch[await objCache.GetFilePathAsync(token).ConfigureAwait(false)]);
+                        token.ThrowIfCancellationRequested();
+                    }
+                    lstCachingTasks.Clear();
+                    intCounter = 0;
+                }
                 token.ThrowIfCancellationRequested();
                 await Task.WhenAll(lstCachingTasks).ConfigureAwait(false);
                 token.ThrowIfCancellationRequested();
                 foreach (Task<TreeNode> tskCachingTask in lstCachingTasks)
                 {
                     TreeNode objNode = await tskCachingTask.ConfigureAwait(false);
-                    if (objNode.Tag is CharacterCache objCache)
+                    if (objNode.Tag is CharacterCache objCache && !objCache.IsDisposed)
                         dicWatchNodes.Add(objNode, dicWatch[await objCache.GetFilePathAsync(token).ConfigureAwait(false)]);
                     token.ThrowIfCancellationRequested();
                 }
-                lstCachingTasks.Clear();
-                intCounter = 0;
-            }
-            token.ThrowIfCancellationRequested();
-            await Task.WhenAll(lstCachingTasks).ConfigureAwait(false);
-            token.ThrowIfCancellationRequested();
-            foreach (Task<TreeNode> tskCachingTask in lstCachingTasks)
-            {
-                TreeNode objNode = await tskCachingTask.ConfigureAwait(false);
-                if (objNode.Tag is CharacterCache objCache)
-                    dicWatchNodes.Add(objNode, dicWatch[await objCache.GetFilePathAsync(token).ConfigureAwait(false)]);
-                token.ThrowIfCancellationRequested();
-            }
 
-            foreach (string s in new SortedSet<string>(dicWatchNodes.Values))
-            {
-                token.ThrowIfCancellationRequested();
-                if (s == "Watch")
-                    continue;
-                if (objWatchNode.TreeView != null)
+                foreach (string s in new SortedSet<string>(dicWatchNodes.Values))
                 {
-                    if (objWatchNode.TreeView.IsDisposed)
+                    token.ThrowIfCancellationRequested();
+                    if (s == "Watch")
                         continue;
-                    await objWatchNode.TreeView.DoThreadSafeAsync(
-                        () => objWatchNode.Nodes.Add(new TreeNode(s) {Tag = s}), token).ConfigureAwait(false);
-                }
-                else
-                    objWatchNode.Nodes.Add(new TreeNode(s) {Tag = s});
-            }
-
-            foreach (KeyValuePair<TreeNode, string> kvtNode in dicWatchNodes.OrderBy(x => x.Key.Text))
-            {
-                token.ThrowIfCancellationRequested();
-                if (kvtNode.Value == "Watch")
-                {
                     if (objWatchNode.TreeView != null)
                     {
                         if (objWatchNode.TreeView.IsDisposed)
                             continue;
-                        await objWatchNode.TreeView.DoThreadSafeAsync(() => objWatchNode.Nodes.Add(kvtNode.Key), token).ConfigureAwait(false);
+                        await objWatchNode.TreeView.DoThreadSafeAsync(
+                            () => objWatchNode.Nodes.Add(new TreeNode(s) { Tag = s }), token).ConfigureAwait(false);
                     }
                     else
-                        objWatchNode.Nodes.Add(kvtNode.Key);
+                        objWatchNode.Nodes.Add(new TreeNode(s) { Tag = s });
                 }
-                else
+
+                foreach (KeyValuePair<TreeNode, string> kvtNode in dicWatchNodes.OrderBy(x => x.Key.Text))
                 {
-                    foreach (TreeNode objNode in objWatchNode.Nodes)
+                    token.ThrowIfCancellationRequested();
+                    if (kvtNode.Value == "Watch")
                     {
-                        token.ThrowIfCancellationRequested();
-                        if (objNode.Tag.ToString() != kvtNode.Value)
-                            continue;
                         if (objWatchNode.TreeView != null)
                         {
                             if (objWatchNode.TreeView.IsDisposed)
@@ -1560,37 +1567,67 @@ namespace Chummer
                             await objWatchNode.TreeView.DoThreadSafeAsync(() => objWatchNode.Nodes.Add(kvtNode.Key), token).ConfigureAwait(false);
                         }
                         else
-                            objNode.Nodes.Add(kvtNode.Key);
+                            objWatchNode.Nodes.Add(kvtNode.Key);
                     }
-                }
-            }
-
-            token.ThrowIfCancellationRequested();
-
-            if (treCharacterList.IsNullOrDisposed())
-                return;
-
-            Log.Trace("Populating CharacterRosterTreeNode Watch Folder (MainThread).");
-            await treCharacterList.DoThreadSafeAsync(x =>
-            {
-                x.SuspendLayout();
-                if (objWatchNode != null)
-                {
-                    if (objWatchNode.TreeView == null)
+                    else
                     {
-                        TreeNode objFavoriteNode = x.FindNode("Favorite", false);
-                        TreeNode objRecentNode = x.FindNode("Recent", false);
-                        if (objFavoriteNode != null && objRecentNode != null)
-                            x.Nodes.Insert(2, objWatchNode);
-                        else if (objFavoriteNode != null || objRecentNode != null)
-                            x.Nodes.Insert(1, objWatchNode);
-                        else
-                            x.Nodes.Insert(0, objWatchNode);
+                        foreach (TreeNode objNode in objWatchNode.Nodes)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            string strTag;
+                            if (objNode.Tag is CharacterCache objCache)
+                            {
+                                if (objCache.IsDisposed)
+                                    continue;
+                                strTag = await objCache.GetFilePathAsync(token).ConfigureAwait(false);
+                            }
+                            else
+                                strTag = objNode.Tag.ToString();
+                            if (strTag != kvtNode.Value)
+                                continue;
+                            if (objWatchNode.TreeView != null)
+                            {
+                                if (objWatchNode.TreeView.IsDisposed)
+                                    continue;
+                                await objWatchNode.TreeView.DoThreadSafeAsync(() => objWatchNode.Nodes.Add(kvtNode.Key), token).ConfigureAwait(false);
+                            }
+                            else
+                                objNode.Nodes.Add(kvtNode.Key);
+                        }
                     }
-                    objWatchNode.ExpandAll();
                 }
-                x.ResumeLayout();
-            }, token).ConfigureAwait(false);
+
+                token.ThrowIfCancellationRequested();
+
+                if (treCharacterList.IsNullOrDisposed())
+                    return;
+
+                Log.Trace("Populating CharacterRosterTreeNode Watch Folder (MainThread).");
+                await treCharacterList.DoThreadSafeAsync(x =>
+                {
+                    x.SuspendLayout();
+                    if (objWatchNode != null)
+                    {
+                        if (objWatchNode.TreeView == null)
+                        {
+                            TreeNode objFavoriteNode = x.FindNode("Favorite", false);
+                            TreeNode objRecentNode = x.FindNode("Recent", false);
+                            if (objFavoriteNode != null && objRecentNode != null)
+                                x.Nodes.Insert(2, objWatchNode);
+                            else if (objFavoriteNode != null || objRecentNode != null)
+                                x.Nodes.Insert(1, objWatchNode);
+                            else
+                                x.Nodes.Insert(0, objWatchNode);
+                        }
+                        objWatchNode.ExpandAll();
+                    }
+                    x.ResumeLayout();
+                }, token).ConfigureAwait(false);
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
         }
 
         public Task RefreshPluginNodesAsync(IPlugin objPluginToRefresh, CancellationToken objToken = default)
@@ -1699,21 +1736,41 @@ namespace Chummer
         private async Task PurgeUnusedCharacterCaches(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            // Done in two steps because we want the entire ConcurrentDictionary read-locked via the enumerator while we collect the caches we want to purge
-            List<string> lstToPurge = new List<string>();
-            foreach (KeyValuePair<string, CharacterCache> kvpCache in _dicSavedCharacterCaches)
+            if (_objCachePurgeReaderWriterLock.IsInUpgradeableReadLock)
+                return; // This is the only place where we enter an upgradeable read lock, so if we are already in one, that means we are already mid-purge, so skip
+            System.IAsyncDisposable objLocker1 = await _objCachePurgeReaderWriterLock.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
+            try
             {
                 token.ThrowIfCancellationRequested();
-                string strKey = kvpCache.Key;
-                CharacterCache objCache = kvpCache.Value;
-                if (await treCharacterList.DoThreadSafeFuncAsync(x => x.FindNodeByTag(objCache), token).ConfigureAwait(false) == null)
-                    lstToPurge.Add(kvpCache.Key);
+                System.IAsyncDisposable objLocker2 = await _objCachePurgeReaderWriterLock.EnterWriteLockAsync(token).ConfigureAwait(false);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    // Done in two steps because we want the entire ConcurrentDictionary read-locked via the enumerator while we collect the caches we want to purge
+                    List<string> lstToPurge = new List<string>();
+                    foreach (KeyValuePair<string, CharacterCache> kvpCache in _dicSavedCharacterCaches)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        string strKey = kvpCache.Key;
+                        CharacterCache objCache = kvpCache.Value;
+                        if (await treCharacterList.DoThreadSafeFuncAsync(x => x.FindNodeByTag(objCache), token).ConfigureAwait(false) == null)
+                            lstToPurge.Add(strKey);
+                    }
+                    foreach (string strKey in lstToPurge)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (_dicSavedCharacterCaches.TryRemove(strKey, out CharacterCache objCacheToDelete) && !objCacheToDelete.IsDisposed)
+                            await objCacheToDelete.DisposeAsync().ConfigureAwait(false);
+                    }
+                }
+                finally
+                {
+                    await objLocker2.DisposeAsync().ConfigureAwait(false);
+                }
             }
-            foreach (string strKey in lstToPurge)
+            finally
             {
-                token.ThrowIfCancellationRequested();
-                if (_dicSavedCharacterCaches.TryRemove(strKey, out CharacterCache objCacheToDelete) && !objCacheToDelete.IsDisposed)
-                    await objCacheToDelete.DisposeAsync().ConfigureAwait(false);
+                await objLocker1.DisposeAsync().ConfigureAwait(false);
             }
         }
 
@@ -2035,8 +2092,7 @@ namespace Chummer
                     = await treCharacterList.DoThreadSafeFuncAsync(x => x.SelectedNode, _objGenericToken).ConfigureAwait(false);
                 if (objSelectedNode == null)
                     return;
-                CharacterCache objCache = objSelectedNode.Tag as CharacterCache;
-                if (objCache != null)
+                if (objSelectedNode.Tag is CharacterCache objCache)
                 {
                     System.IAsyncDisposable objLocker = await objCache.LockObject.EnterUpgradeableReadLockAsync(_objGenericToken).ConfigureAwait(false);
                     try
@@ -2147,7 +2203,7 @@ namespace Chummer
                 return;
             if (!(sender is TreeView treSenderView))
                 return;
-            
+
             TreeNode nodDestinationNode;
             try
             {

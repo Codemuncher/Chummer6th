@@ -44,7 +44,7 @@ namespace Chummer
     /// An Adept Power.
     /// </summary>
     [HubClassTag("SourceID", true, "Name", "Extra")]
-    [DebuggerDisplay("{DisplayName(GlobalSettings.DefaultLanguage)}")]
+    [DebuggerDisplay("{DisplayName(\"en-us\")}")]
     public sealed class Power : INotifyMultiplePropertiesChangedAsync, IHasInternalId, IHasName, IHasSourceId, IHasXmlDataNode, IHasNotes, IHasSource, IHasLockObject, IHasCharacterObject
     {
         private Guid _guiID;
@@ -165,7 +165,7 @@ namespace Chummer
                 }
 
                 objWriter.WriteEndElement();
-                objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+                objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
                 objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
                 objWriter.WriteEndElement();
             }
@@ -662,12 +662,22 @@ namespace Chummer
                         .WriteElementStringAsync(
                             "fullname", await DisplayNameAsync(strLanguageToPrint, token).ConfigureAwait(false),
                             token).ConfigureAwait(false);
+                    await objWriter.WriteElementStringAsync("name_english", await GetNameAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                    await objWriter
+                        .WriteElementStringAsync(
+                            "fullname_english", await DisplayNameAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false),
+                            token)
+                        .ConfigureAwait(false);
+                    string strExtra = await GetExtraAsync(token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync(
                             "extra",
-                            await CharacterObject.TranslateExtraAsync(await GetExtraAsync(token).ConfigureAwait(false),
+                            await CharacterObject.TranslateExtraAsync(strExtra,
                                     strLanguageToPrint, token: token)
                                 .ConfigureAwait(false), token).ConfigureAwait(false);
+                    await objWriter
+                        .WriteElementStringAsync(
+                            "extra_english", strExtra, token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync("pointsperlevel",
                             (await GetPointsPerLevelAsync(token).ConfigureAwait(false)).ToString(objCulture), token)
@@ -687,6 +697,10 @@ namespace Chummer
                     await objWriter
                         .WriteElementStringAsync(
                             "action", await DisplayActionMethodAsync(strLanguageToPrint, token).ConfigureAwait(false),
+                            token).ConfigureAwait(false);
+                    await objWriter
+                        .WriteElementStringAsync(
+                            "action_english", await DisplayActionMethodAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false),
                             token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync(
@@ -1231,7 +1245,8 @@ namespace Chummer
             {
                 using (LockObject.EnterReadLock())
                 {
-                    return Convert.ToDecimal(_strPointsPerLevel, GlobalSettings.InvariantCultureInfo);
+                    decimal.TryParse(_strPointsPerLevel, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decReturn);
+                    return decReturn;
                 }
             }
             set
@@ -1256,7 +1271,8 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                return Convert.ToDecimal(_strPointsPerLevel, GlobalSettings.InvariantCultureInfo);
+                decimal.TryParse(_strPointsPerLevel, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decReturn);
+                return decReturn;
             }
             finally
             {
@@ -1324,7 +1340,8 @@ namespace Chummer
             {
                 using (LockObject.EnterReadLock())
                 {
-                    return Convert.ToDecimal(_strAdeptWayDiscount, GlobalSettings.InvariantCultureInfo);
+                    decimal.TryParse(_strAdeptWayDiscount, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decReturn);
+                    return decReturn;
                 }
             }
             set
@@ -1349,7 +1366,8 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                return Convert.ToDecimal(_strAdeptWayDiscount, GlobalSettings.InvariantCultureInfo);
+                decimal.TryParse(_strAdeptWayDiscount, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decReturn);
+                return decReturn;
             }
             finally
             {
@@ -1585,7 +1603,7 @@ namespace Chummer
                     if (!string.IsNullOrEmpty(_strCachedTotalRatingToolTip))
                         return _strCachedTotalRatingToolTip;
                     string strSpace = LanguageManager.GetString("String_Space");
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
                     {
                         bool blnFirstItem = true;
                         bool blnLevelsEnabled = LevelsEnabled;
@@ -1655,7 +1673,7 @@ namespace Chummer
                 if (!string.IsNullOrEmpty(_strCachedTotalRatingToolTip))
                     return _strCachedTotalRatingToolTip;
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
                 {
                     bool blnFirstItem = true;
                     bool blnLevelsEnabled = await GetLevelsEnabledAsync(token).ConfigureAwait(false);
@@ -2049,7 +2067,7 @@ namespace Chummer
                     }
 
                     string strSpace = LanguageManager.GetString("String_Space");
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
                     {
                         decimal decExtraPointCost = ExtraPointCost;
                         if (decExtraPointCost != 0)
@@ -2154,7 +2172,7 @@ namespace Chummer
                 }
 
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdModifier))
                 {
                     decimal decExtraPointCost = await GetExtraPointCostAsync(token).ConfigureAwait(false);
                     if (decExtraPointCost != 0)

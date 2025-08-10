@@ -32,7 +32,7 @@ namespace Chummer
     /// <summary>
     /// An Art.
     /// </summary>
-    [DebuggerDisplay("{DisplayName(GlobalSettings.DefaultLanguage)}")]
+    [DebuggerDisplay("{DisplayName(\"en-us\")}")]
     public class Art : IHasInternalId, IHasName, IHasSourceId, IHasXmlDataNode, IHasNotes, ICanRemove, IHasSource, IHasCharacterObject
     {
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
@@ -204,7 +204,7 @@ namespace Chummer
             else
                 objWriter.WriteElementString("bonus", string.Empty);
             objWriter.WriteElementString("improvementsource", _objImprovementSource.ToString());
-            objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+            objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
             objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
             objWriter.WriteEndElement();
         }
@@ -260,6 +260,7 @@ namespace Chummer
                 await objWriter.WriteElementStringAsync("name", await DisplayNameShortAsync(strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
                 await objWriter.WriteElementStringAsync("fullname", await DisplayNameAsync(strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
                 await objWriter.WriteElementStringAsync("name_english", Name, token).ConfigureAwait(false);
+                await objWriter.WriteElementStringAsync("fullname_english", await DisplayNameAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false), token).ConfigureAwait(false);
                 await objWriter.WriteElementStringAsync("source", await _objCharacter.LanguageBookShortAsync(Source, strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
                 await objWriter.WriteElementStringAsync("page", await DisplayPageAsync(strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
                 await objWriter.WriteElementStringAsync("improvementsource", SourceType.ToString(), token).ConfigureAwait(false);
@@ -570,24 +571,25 @@ namespace Chummer
 
         #region UI Methods
 
-        public TreeNode CreateTreeNode(ContextMenuStrip cmsArt, bool blnAddCategory = false)
+        public async Task<TreeNode> CreateTreeNode(ContextMenuStrip cmsArt, bool blnAddCategory = false, CancellationToken token = default)
         {
-            if (Grade == -1 && !string.IsNullOrEmpty(Source) && !_objCharacter.Settings.BookEnabled(Source))
+            token.ThrowIfCancellationRequested();
+            if (Grade < 0 && !string.IsNullOrEmpty(Source) && !await _objCharacter.Settings.BookEnabledAsync(Source, token).ConfigureAwait(false))
                 return null;
 
-            string strText = CurrentDisplayName;
+            string strText = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
             if (blnAddCategory)
-                strText = LanguageManager.GetString("Label_Art") + LanguageManager.GetString("String_Space") + strText;
+                strText = await LanguageManager.GetStringAsync("Label_Art", token: token).ConfigureAwait(false)
+                    + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + strText;
             TreeNode objNode = new TreeNode
             {
                 Name = InternalId,
                 Text = strText,
                 Tag = this,
                 ContextMenuStrip = cmsArt,
-                ForeColor = PreferredColor,
-                ToolTipText = Notes.WordWrap()
+                ForeColor = await GetPreferredColorAsync(token).ConfigureAwait(false),
+                ToolTipText = (await GetNotesAsync(token).ConfigureAwait(false)).WordWrap()
             };
-
             return objNode;
         }
 
@@ -597,11 +599,11 @@ namespace Chummer
             {
                 if (!string.IsNullOrEmpty(Notes))
                 {
-                    return Grade != 0
+                    return Grade < 0
                         ? ColorManager.GenerateCurrentModeDimmedColor(NotesColor)
                         : ColorManager.GenerateCurrentModeColor(NotesColor);
                 }
-                return Grade != 0
+                return Grade < 0
                     ? ColorManager.GrayText
                     : ColorManager.WindowText;
             }
@@ -612,11 +614,11 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (!string.IsNullOrEmpty(await GetNotesAsync(token).ConfigureAwait(false)))
             {
-                return Grade != 0
+                return Grade < 0
                     ? ColorManager.GenerateCurrentModeDimmedColor(await GetNotesColorAsync(token).ConfigureAwait(false))
                     : ColorManager.GenerateCurrentModeColor(await GetNotesColorAsync(token).ConfigureAwait(false));
             }
-            return Grade != 0
+            return Grade < 0
                 ? ColorManager.GrayText
                 : ColorManager.WindowText;
         }

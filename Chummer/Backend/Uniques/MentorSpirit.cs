@@ -30,7 +30,7 @@ using NLog;
 namespace Chummer
 {
     [HubClassTag("SourceID", true, "Name", "Extra")]
-    [DebuggerDisplay("{DisplayNameShort(GlobalSettings.DefaultLanguage)}")]
+    [DebuggerDisplay("{DisplayNameShort(\"en-us\")}")]
     public sealed class MentorSpirit : IHasInternalId, IHasName, IHasSourceId, IHasXmlDataNode, IHasSource, IHasNotes, IHasLockObject, IHasCharacterObject
     {
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
@@ -101,7 +101,7 @@ namespace Chummer
                 _objCachedMyXPathNode = null;
                 if (!xmlMentor.TryGetField("id", Guid.TryParse, out _guiSourceID))
                 {
-                    Log.Warn(new object[] {"Missing id field for xmlnode", xmlMentor});
+                    Log.Warn(new object[] { "Missing id field for xmlnode", xmlMentor });
                     Utils.BreakIfDebug();
                 }
 
@@ -526,7 +526,7 @@ namespace Chummer
                     objWriter.WriteElementString("choice2", string.Empty);
 
                 objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
-                objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+                objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
 
                 if (SourceID != Guid.Empty)
                 {
@@ -654,21 +654,33 @@ namespace Chummer
                         .ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync("disadvantage_english", Disadvantage, token)
                         .ConfigureAwait(false);
+                    string strExtra = await GetExtraAsync(token).ConfigureAwait(false);
+                    string strExtraChoice1 = await GetExtraChoice1Async(token).ConfigureAwait(false);
+                    string strExtraChoice2 = await GetExtraChoice2Async(token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync(
                             "extra",
-                            await _objCharacter.TranslateExtraAsync(await GetExtraAsync(token).ConfigureAwait(false), strLanguageToPrint, token: token)
+                            await _objCharacter.TranslateExtraAsync(strExtra, strLanguageToPrint, token: token)
                                 .ConfigureAwait(false), token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync(
                             "extrachoice1",
-                            await _objCharacter.TranslateExtraAsync(await GetExtraChoice1Async(token).ConfigureAwait(false), strLanguageToPrint, token: token)
+                            await _objCharacter.TranslateExtraAsync(strExtraChoice1, strLanguageToPrint, token: token)
                                 .ConfigureAwait(false), token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync(
                             "extrachoice2",
-                            await _objCharacter.TranslateExtraAsync(await GetExtraChoice2Async(token).ConfigureAwait(false), strLanguageToPrint, token: token)
+                            await _objCharacter.TranslateExtraAsync(strExtraChoice2, strLanguageToPrint, token: token)
                                 .ConfigureAwait(false), token).ConfigureAwait(false);
+                    await objWriter
+                        .WriteElementStringAsync(
+                            "extra_english", strExtra, token).ConfigureAwait(false);
+                    await objWriter
+                        .WriteElementStringAsync(
+                            "extrachoice1_english", strExtraChoice1, token).ConfigureAwait(false);
+                    await objWriter
+                        .WriteElementStringAsync(
+                            "extrachoice2_english", strExtraChoice2, token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync(
                             "source",
@@ -683,7 +695,7 @@ namespace Chummer
                             MentorMask.ToString(GlobalSettings.InvariantCultureInfo), token)
                         .ConfigureAwait(false);
                     if (GlobalSettings.PrintNotes)
-                        await objWriter.WriteElementStringAsync("notes", _strNotes.CleanOfInvalidUnicodeChars(), token)
+                        await objWriter.WriteElementStringAsync("notes", _strNotes.CleanOfXmlInvalidUnicodeChars(), token)
                             .ConfigureAwait(false);
                 }
                 finally

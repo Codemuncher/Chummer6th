@@ -175,6 +175,7 @@ namespace Chummer.Tests
             }
             catch (Exception ex)
             {
+                ex = ex.Demystify();
                 Assert.Fail(ex.Message);
             }
         }
@@ -201,8 +202,7 @@ namespace Chummer.Tests
             Debug.WriteLine("Unit test initialized for: Test03_SaveAsChum5lz()");
             foreach (Character objCharacter in GetTestCharacters())
             {
-                string strFileName = Path.GetFileName(objCharacter.FileName)
-                                     ?? LanguageManager.GetString("String_Unknown");
+                string strFileName = Path.GetFileName(objCharacter.FileName) ?? "Unknown";
                 Debug.WriteLine("Checking " + strFileName);
                 string strDestination =
                     Path.Combine(CommonTestData.TestPathInfo.FullName, "(Compressed) " + strFileName);
@@ -229,8 +229,7 @@ namespace Chummer.Tests
             DefaultNodeMatcher objDiffNodeMatcher = new DefaultNodeMatcher(ElementSelectors.ByNameAndText);
             foreach (Character objCharacterControl in GetTestCharacters())
             {
-                string strFileName = Path.GetFileName(objCharacterControl.FileName) ??
-                                     LanguageManager.GetString("String_Unknown");
+                string strFileName = Path.GetFileName(objCharacterControl.FileName) ?? "Unknown";
                 Debug.WriteLine("Saving Control for " + strFileName);
                 // First Load-Save cycle
                 string strDestinationControl = Path.Combine(CommonTestData.TestPathInfo.FullName, "(Control) " + strFileName);
@@ -277,6 +276,7 @@ namespace Chummer.Tests
                 }
                 catch (XmlSchemaException e)
                 {
+                    e = e.Demystify();
                     Assert.Fail("Unexpected validation failure: " + e.Message);
                 }
             }
@@ -354,8 +354,7 @@ namespace Chummer.Tests
             int intLanguageIndex = 0;
             foreach (Character objCharacter in GetTestCharacters())
             {
-                Debug.WriteLine("Checking " + (Path.GetFileName(objCharacter.FileName)
-                                               ?? LanguageManager.GetString("String_Unknown")));
+                Debug.WriteLine("Checking " + (Path.GetFileName(objCharacter.FileName) ?? "Unknown"));
                 // Always try to export in English because this will cover most export code
                 DoAndSaveExport(objCharacter, GlobalSettings.DefaultLanguage);
                 // Rotate through languages instead of testing every one for every character to save on execution time
@@ -394,6 +393,7 @@ namespace Chummer.Tests
             }
             catch (Exception ex)
             {
+                ex = ex.Demystify();
                 Assert.Fail(ex.Message);
             }
             finally
@@ -404,6 +404,7 @@ namespace Chummer.Tests
                 }
                 catch (Exception e)
                 {
+                    e = e.Demystify();
                     string strErrorMessage = "Encountered (non-fatal) exception while disposing of main form." + Environment.NewLine
                         + e.Message;
                     Debug.WriteLine(strErrorMessage);
@@ -447,8 +448,7 @@ namespace Chummer.Tests
                 Debug.WriteLine("Main form loaded");
                 foreach (Character objCharacter in GetTestCharacters())
                 {
-                    string strFileName = Path.GetFileName(objCharacter.FileName) ??
-                                         LanguageManager.GetString("String_Unknown");
+                    string strFileName = Path.GetFileName(objCharacter.FileName) ?? "Unknown";
                     Debug.WriteLine("Checking " + strFileName);
                     string strDummyFileName = Path.Combine(CommonTestData.TestPathInfo.FullName,
                         "(UnitTest07Dummy) "
@@ -503,6 +503,7 @@ namespace Chummer.Tests
                                 }
                                 catch (ApplicationException e)
                                 {
+                                    e = e.Demystify();
                                     string strErrorMessage
                                         = "Encountered (non-fatal) exception while disposing of character form."
                                           + Environment.NewLine
@@ -513,6 +514,7 @@ namespace Chummer.Tests
                                 }
                                 catch (InvalidOperationException e)
                                 {
+                                    e = e.Demystify();
                                     string strErrorMessage
                                         = "Encountered (non-fatal) exception while disposing of character form."
                                           + Environment.NewLine
@@ -525,6 +527,7 @@ namespace Chummer.Tests
                         }
                         catch (Exception e)
                         {
+                            e = e.Demystify();
                             string strErrorMessage
                                 = "Exception while loading form for " + strFileName + ":";
                             strErrorMessage += Environment.NewLine + e;

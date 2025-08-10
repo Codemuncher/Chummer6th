@@ -929,12 +929,13 @@ namespace Chummer.Backend.Attributes
                     return intReturn;
                 return _intCachedValue = await Task.Run(async () => Math.Min(
                                                             Math.Max(
-                                                                Base + await GetFreeBaseAsync(token).ConfigureAwait(false)
-                                                                     + await GetRawMinimumAsync(token).ConfigureAwait(false)
-                                                                     + await GetAttributeValueModifiersAsync(token)
+                                                                await GetBaseAsync(token).ConfigureAwait(false)
+                                                                    + await GetFreeBaseAsync(token).ConfigureAwait(false)
+                                                                    + await GetRawMinimumAsync(token).ConfigureAwait(false)
+                                                                    + await GetAttributeValueModifiersAsync(token)
                                                                          .ConfigureAwait(false),
                                                                 await GetTotalMinimumAsync(token).ConfigureAwait(false))
-                                                            + Karma,
+                                                            + await GetKarmaAsync(token).ConfigureAwait(false),
                                                             await GetTotalMaximumAsync(token).ConfigureAwait(false)), token)
                                                    .ConfigureAwait(false);
             }
@@ -1724,33 +1725,33 @@ namespace Chummer.Backend.Attributes
                     switch (Abbrev)
                     {
                         case "STR":
-                        {
-                            // Special case for cyberlimbs: if every limb has been replaced with a modular connector with an attribute of 0, we allow the augmented attribute to be 0
-                            if (intLimbCount > 0 && intPureCyberValue == 0)
-                                return 0;
-                            break;
-                        }
+                            {
+                                // Special case for cyberlimbs: if every limb has been replaced with a modular connector with an attribute of 0, we allow the augmented attribute to be 0
+                                if (intLimbCount > 0 && intPureCyberValue == 0)
+                                    return 0;
+                                break;
+                            }
                         case "REA":
-                        {
-                            decimal decTotalEncumbrance = lstUsedImprovements.Sum(
-                                x => x.ImproveSource == Improvement.ImprovementSource
-                                    .ArmorEncumbrance, x => x.Augmented * x.Rating, token: token);
-                            if (decTotalEncumbrance < 0)
-                                return 0;
-                            break;
-                        }
+                            {
+                                decimal decTotalEncumbrance = lstUsedImprovements.Sum(
+                                    x => x.ImproveSource == Improvement.ImprovementSource
+                                        .ArmorEncumbrance, x => x.Augmented * x.Rating, token: token);
+                                if (decTotalEncumbrance < 0)
+                                    return 0;
+                                break;
+                            }
                         case "AGI":
-                        {
-                            // Special case for cyberlimbs: if every limb has been replaced with a modular connector with an attribute of 0, we allow the augmented attribute to be 0
-                            if (intLimbCount > 0 && intPureCyberValue == 0)
-                                return 0;
-                            decimal decTotalEncumbrance = lstUsedImprovements.Sum(
-                                x => x.ImproveSource == Improvement.ImprovementSource
-                                    .ArmorEncumbrance, x => x.Augmented * x.Rating, token: token);
-                            if (decTotalEncumbrance < 0)
-                                return 0;
-                            break;
-                        }
+                            {
+                                // Special case for cyberlimbs: if every limb has been replaced with a modular connector with an attribute of 0, we allow the augmented attribute to be 0
+                                if (intLimbCount > 0 && intPureCyberValue == 0)
+                                    return 0;
+                                decimal decTotalEncumbrance = lstUsedImprovements.Sum(
+                                    x => x.ImproveSource == Improvement.ImprovementSource
+                                        .ArmorEncumbrance, x => x.Augmented * x.Rating, token: token);
+                                if (decTotalEncumbrance < 0)
+                                    return 0;
+                                break;
+                            }
                     }
 
                     return 1;
@@ -2403,7 +2404,7 @@ namespace Chummer.Backend.Attributes
 
                     string strSpace = LanguageManager.GetString("String_Space");
 
-                    using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                    using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                     out HashSet<string> setUniqueNames))
                     {
                         decimal decBaseValue = 0;
@@ -2415,7 +2416,7 @@ namespace Chummer.Backend.Attributes
                         List<Tuple<string, decimal, string>> lstUniquePair =
                             new List<Tuple<string, decimal, string>>(lstUsedImprovements.Count);
 
-                        using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                        using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                       out StringBuilder sbdModifier))
                         {
                             foreach (Improvement objImprovement in lstUsedImprovements.Where(
@@ -2458,7 +2459,7 @@ namespace Chummer.Backend.Attributes
                                 // Run through the list of UniqueNames and pick out the highest value for each one.
                                 decimal decHighest = decimal.MinValue;
 
-                                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                               out StringBuilder sbdNewModifier))
                                 {
                                     foreach ((string strGroupName, decimal decValue, string strSourceName) in
@@ -2499,7 +2500,7 @@ namespace Chummer.Backend.Attributes
                             else if (setUniqueNames.Contains("precedence1"))
                             {
                                 // Retrieve all the items that are precedence1 and nothing else.
-                                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                               out StringBuilder sbdNewModifier))
                                 {
                                     foreach ((string _, decimal decValue, string strSourceName) in lstUniquePair
@@ -2593,7 +2594,7 @@ namespace Chummer.Backend.Attributes
                                 _objCharacter.Cyberware.ForEach(objCyberware => BuildTooltip(sbdModifier, objCyberware, strSpace));
                             }
 
-                            return _strCachedToolTip = DisplayAbbrev + strSpace + '('
+                            return _strCachedToolTip = CurrentDisplayAbbrev + strSpace + '('
                                                        + Value.ToString(GlobalSettings.CultureInfo) + ')' +
                                                        sbdModifier;
                         }
@@ -2641,7 +2642,7 @@ namespace Chummer.Backend.Attributes
 
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
 
-                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                 out HashSet<string> setUniqueNames))
                 {
                     decimal decBaseValue = 0;
@@ -2653,7 +2654,7 @@ namespace Chummer.Backend.Attributes
                     List<Tuple<string, decimal, string>> lstUniquePair =
                         new List<Tuple<string, decimal, string>>(lstUsedImprovements.Count);
 
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdModifier))
                     {
                         foreach (Improvement objImprovement in lstUsedImprovements.Where(
@@ -2697,7 +2698,7 @@ namespace Chummer.Backend.Attributes
                             // Run through the list of UniqueNames and pick out the highest value for each one.
                             decimal decHighest = decimal.MinValue;
 
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdNewModifier))
                             {
                                 foreach ((string strGroupName, decimal decValue, string strSourceName) in
@@ -2740,7 +2741,7 @@ namespace Chummer.Backend.Attributes
                         else if (setUniqueNames.Contains("precedence1"))
                         {
                             // Retrieve all the items that are precedence1 and nothing else.
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdNewModifier))
                             {
                                 foreach ((string _, decimal decValue, string strSourceName) in lstUniquePair
@@ -2839,7 +2840,7 @@ namespace Chummer.Backend.Attributes
                             await _objCharacter.Cyberware.ForEachAsync(objCyberware => BuildTooltip(sbdModifier, objCyberware, strSpace), token: token).ConfigureAwait(false);
                         }
 
-                        return _strCachedToolTip = await GetDisplayAbbrevAsync(GlobalSettings.Language, token).ConfigureAwait(false) + strSpace + '('
+                        return _strCachedToolTip = await GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false) + strSpace + '('
                                                    + (await GetValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ')' +
                                                    sbdModifier;
                     }
@@ -3938,7 +3939,12 @@ namespace Chummer.Backend.Attributes
         /// <summary>
         /// Translated abbreviation of the attribute.
         /// </summary>
-        public string DisplayAbbrev => GetDisplayAbbrev(GlobalSettings.Language);
+        public string CurrentDisplayAbbrev => GetDisplayAbbrev(GlobalSettings.Language);
+
+        /// <summary>
+        /// Translated abbreviation of the attribute.
+        /// </summary>
+        public Task<string> GetCurrentDisplayAbbrevAsync(CancellationToken token = default) => GetDisplayAbbrevAsync(GlobalSettings.Language, token);
 
         public string GetDisplayAbbrev(string strLanguage)
         {
@@ -3949,6 +3955,8 @@ namespace Chummer.Backend.Attributes
 
         public Task<string> GetDisplayAbbrevAsync(string strLanguage, CancellationToken token = default)
         {
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled<string>(token);
             return Abbrev == "MAGAdept"
                 ? LanguageManager.MAGAdeptStringAsync(strLanguage, token: token)
                 : LanguageManager.GetStringAsync("String_Attribute" + Abbrev + "Short", strLanguage, token: token);
@@ -3956,6 +3964,7 @@ namespace Chummer.Backend.Attributes
 
         public async Task Upgrade(int intAmount = 1, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (intAmount <= 0)
                 return;
             IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);

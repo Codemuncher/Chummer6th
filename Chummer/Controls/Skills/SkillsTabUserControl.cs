@@ -31,7 +31,6 @@ using System.Xml.XPath;
 using Chummer.Backend.Attributes;
 using Chummer.Backend.Skills;
 using Chummer.Controls.Shared;
-using System.ComponentModel;
 
 namespace Chummer.UI.Skills
 {
@@ -202,7 +201,7 @@ namespace Chummer.UI.Skills
                 ThreadSafeBindingList<SkillGroup> lstSkillGroups = await objSkillSection.GetSkillGroupsAsync(token).ConfigureAwait(false);
                 await this.DoThreadSafeAsync(() =>
                 {
-                    using (new FetchSafelyFromPool<Stopwatch>(Utils.StopwatchPool, out Stopwatch parts))
+                    using (new FetchSafelyFromSafeObjectPool<Stopwatch>(Utils.StopwatchPool, out Stopwatch parts))
                     {
                         parts.Start();
                         SuspendLayout();
@@ -509,7 +508,7 @@ namespace Chummer.UI.Skills
                 intRatingLabelWidth = Math.Max(intRatingLabelWidth, objSkillControl.NudSkillWidth);
             }
             token.ThrowIfCancellationRequested();
-            lblActiveSkills.MinimumSize = new Size(intNameLabelWidth - lblActiveSkills.Margin.Right, lblActiveSkills.MinimumSize.Height);
+            lblActiveSkills.MinimumSize = new Size(intNameLabelWidth, lblActiveSkills.MinimumSize.Height);
             token.ThrowIfCancellationRequested();
             lblActiveKarma.Margin = new Padding(
                 Math.Max(0, lblActiveSp.Margin.Left + intRatingLabelWidth - lblActiveSp.Width),
@@ -1182,16 +1181,14 @@ namespace Chummer.UI.Skills
                                                   .GetStringAsync("Label_Options_NewKnowledgeSkill", token: MyToken)
                                                   .ConfigureAwait(false);
                     using (ThreadSafeForm<SelectItem> form = await ThreadSafeForm<SelectItem>.GetAsync(
-                               () => new SelectItem
-                               {
-                                   Description = strDescription
-                               }, MyToken).ConfigureAwait(false))
+                               () => new SelectItem(), MyToken).ConfigureAwait(false))
                     {
+                        await form.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, MyToken).ConfigureAwait(false);
                         form.MyForm.SetDropdownItemsMode(await _objCharacter.SkillsSection.GetMyDefaultKnowledgeSkillsAsync(MyToken).ConfigureAwait(false));
                         if (await form.ShowDialogSafeAsync(_objCharacter, MyToken).ConfigureAwait(false)
                             != DialogResult.OK)
                             return;
-                        strSelectedSkill = form.MyForm.SelectedItem;
+                        strSelectedSkill = await form.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, MyToken).ConfigureAwait(false);
                     }
 
                     KnowledgeSkill skill = new KnowledgeSkill(_objCharacter, false);
@@ -1232,12 +1229,12 @@ namespace Chummer.UI.Skills
                                 return;
 
                             case DialogResult.Yes:
-                            {
-                                if (!await skill.GetIsLanguageAsync(MyToken).ConfigureAwait(false))
-                                    await skill.SetTypeAsync("Language", MyToken).ConfigureAwait(false);
-                                await skill.SetIsNativeLanguageAsync(true, MyToken).ConfigureAwait(false);
-                                break;
-                            }
+                                {
+                                    if (!await skill.GetIsLanguageAsync(MyToken).ConfigureAwait(false))
+                                        await skill.SetTypeAsync("Language", MyToken).ConfigureAwait(false);
+                                    await skill.SetIsNativeLanguageAsync(true, MyToken).ConfigureAwait(false);
+                                    break;
+                                }
                         }
                     }
 

@@ -283,11 +283,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -331,11 +327,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -379,11 +371,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -427,11 +415,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -666,11 +650,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -713,11 +693,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -762,11 +738,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -811,11 +783,7 @@ namespace Chummer
             {
                 //no need to do anything here - actually we can't anyway...
             }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Log.Error(e);
 #if DEBUG
@@ -1884,7 +1852,7 @@ namespace Chummer
 
         public static Task PopulateWithListItemsAsync([NotNull] this ElasticComboBox cboThis, IEnumerable<ListItem> lstItems, CancellationToken token = default)
         {
-            return cboThis.DoThreadSafeAsync(x=> PopulateWithListItemsCore(x, lstItems, token), token);
+            return cboThis.DoThreadSafeAsync(x => PopulateWithListItemsCore(x, lstItems, token), token);
         }
 
         private static void PopulateWithListItemsCore(this ListBox lsbThis, IEnumerable<ListItem> lstItems, CancellationToken token = default)

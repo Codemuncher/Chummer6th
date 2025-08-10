@@ -35,14 +35,14 @@ namespace Chummer
         private CharacterSettings _objSelectedSetting;
         private readonly DebuggableSemaphoreSlim _objLoadContentLocker = new DebuggableSemaphoreSlim();
         private readonly ConcurrentDictionary<MasterIndexEntry, Task<string>> _dicCachedNotes = new ConcurrentDictionary<MasterIndexEntry, Task<string>>();
-        private List<ListItem> _lstFileNamesWithItems = Utils.ListItemListPool.Get();
-        private List<ListItem> _lstItems = Utils.ListItemListPool.Get();
+        private List<ListItem> _lstFileNamesWithItems;
+        private List<ListItem> _lstItems;
         private CancellationTokenSource _objPopulateCharacterSettingsCancellationTokenSource;
         private CancellationTokenSource _objLoadContentCancellationTokenSource;
         private CancellationTokenSource _objRefreshListCancellationTokenSource;
         private CancellationTokenSource _objItemsSelectedIndexChangedCancellationTokenSource;
         private CancellationTokenSource _objCharacterSettingSelectedIndexChangedCancellationTokenSource;
-        private readonly CancellationTokenSource _objGenericFormClosingCancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _objGenericFormClosingCancellationTokenSource;
         private readonly CancellationToken _objGenericToken;
 
         private static async Task<CharacterSettings> GetInitialSetting(CancellationToken token = default)
@@ -89,6 +89,12 @@ namespace Chummer
 
         public MasterIndex()
         {
+            InitializeComponent();
+            this.UpdateLightDarkMode();
+            this.TranslateWinForm();
+            _lstFileNamesWithItems = Utils.ListItemListPool.Get();
+            _lstItems = Utils.ListItemListPool.Get();
+            _objGenericFormClosingCancellationTokenSource = new CancellationTokenSource();
             _objGenericToken = _objGenericFormClosingCancellationTokenSource.Token;
             Disposed += (sender, args) =>
             {
@@ -128,9 +134,6 @@ namespace Chummer
                 Utils.ListItemListPool.Return(ref _lstFileNamesWithItems);
                 Utils.ListItemListPool.Return(ref _lstItems);
             };
-            InitializeComponent();
-            this.UpdateLightDarkMode();
-            this.TranslateWinForm();
         }
 
         private async Task PopulateCharacterSettings(CancellationToken token = default)
@@ -148,7 +151,7 @@ namespace Chummer
             {
                 token = objJoinedCancellationTokenSource.Token;
                 // Populate the Character Settings list.
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstCharacterSettings))
                 {
                     IReadOnlyDictionary<string, CharacterSettings> dicCharacterSettings
@@ -466,7 +469,7 @@ namespace Chummer
                                 Interlocked.CompareExchange(ref _objSelectedSetting,
                                                             await GetInitialSetting(token).ConfigureAwait(false), null);
                             string strSourceFilter;
-                            using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                             out HashSet<string> setValidCodes))
                             {
                                 if (_objSelectedSetting != null)
@@ -621,7 +624,7 @@ namespace Chummer
                                                     }
                                                     else
                                                     {
-                                                        using (new FetchSafelyFromPool<List<ListItem>>(
+                                                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(
                                                                    Utils.ListItemListPool,
                                                                    out List<ListItem> lstItemsNeedingNameChanges))
                                                         {
@@ -966,12 +969,13 @@ namespace Chummer
         {
             try
             {
+                CharacterSettings objSettings = await cboCharacterSetting.DoThreadSafeFuncAsync(x => x.SelectedValue, _objGenericToken).ConfigureAwait(false) as CharacterSettings;
                 CursorWait objCursorWait = await CursorWait.NewAsync(this, token: _objGenericToken).ConfigureAwait(false);
                 try
                 {
                     using (ThreadSafeForm<EditCharacterSettings> frmOptions
                            = await ThreadSafeForm<EditCharacterSettings>.GetAsync(
-                               () => new EditCharacterSettings(cboCharacterSetting.SelectedValue as CharacterSettings),
+                               () => new EditCharacterSettings(objSettings),
                                _objGenericToken).ConfigureAwait(false))
                         await frmOptions.ShowDialogSafeAsync(this, _objGenericToken).ConfigureAwait(false);
                     // Do not repopulate the character settings list because that will happen from frmCharacterSettings where appropriate

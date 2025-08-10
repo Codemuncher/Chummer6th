@@ -885,12 +885,19 @@ namespace Chummer
                   .PopulateWithListItemsAsync(
                       await _objContact.CharacterObject.ContactArchetypesAsync(token: token).ConfigureAwait(false),
                       token: token).ConfigureAwait(false);
-            await cboContactRole.DoThreadSafeAsync(x =>
+            if (await cboContactRole.DoThreadSafeFuncAsync(x =>
             {
                 x.SelectedValue = _objContact.Role;
-                if (x.SelectedIndex < 0)
-                    x.Text = _objContact.DisplayRole;
-            }, token: token).ConfigureAwait(false);
+                return x.SelectedIndex;
+            }, token: token).ConfigureAwait(false) < 0)
+            {
+                string strDisplayRole = await _objContact.GetDisplayRoleAsync(token: token).ConfigureAwait(false);
+                await cboContactRole.DoThreadSafeAsync(x =>
+                {
+                    if (x.SelectedIndex < 0)
+                        x.Text = strDisplayRole;
+                }, token).ConfigureAwait(false);
+            }
         }
 
         private async Task DoDataBindings(CancellationToken token = default)
@@ -1022,7 +1029,7 @@ namespace Chummer
                         Anchor = AnchorStyles.Right,
                         AutoSize = true,
                         AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                        FlatAppearance = {BorderSize = 0},
+                        FlatAppearance = { BorderSize = 0 },
                         FlatStyle = FlatStyle.Flat,
                         Padding = new Padding(1),
                         MinimumSize = new Size(24, 24),
@@ -1436,11 +1443,11 @@ namespace Chummer
                         Name = "cboMetatype"
                     };
                     x.cboGender = new ElasticComboBox
-                        {Anchor = AnchorStyles.Left | AnchorStyles.Right, FormattingEnabled = true, Name = "cboGender"};
+                    { Anchor = AnchorStyles.Left | AnchorStyles.Right, FormattingEnabled = true, Name = "cboGender" };
                     x.cboAge = new ElasticComboBox
-                        {Anchor = AnchorStyles.Left | AnchorStyles.Right, FormattingEnabled = true, Name = "cboAge"};
+                    { Anchor = AnchorStyles.Left | AnchorStyles.Right, FormattingEnabled = true, Name = "cboAge" };
                     x.cboType = new ElasticComboBox
-                        {Anchor = AnchorStyles.Left | AnchorStyles.Right, FormattingEnabled = true, Name = "cboType"};
+                    { Anchor = AnchorStyles.Left | AnchorStyles.Right, FormattingEnabled = true, Name = "cboType" };
                     x.cboPersonalLife = new ElasticComboBox
                     {
                         Anchor = AnchorStyles.Left | AnchorStyles.Right,
@@ -1667,10 +1674,10 @@ namespace Chummer
                     {
                         string strTemp = await _objContact.GetDisplayPersonalLifeAsync(token).ConfigureAwait(false);
                         await cboPersonalLife.DoThreadSafeAsync(x =>
-                            {
-                                if (x.SelectedIndex < 0)
-                                    x.Text = strTemp;
-                            }, token: token).ConfigureAwait(false);
+                        {
+                            if (x.SelectedIndex < 0)
+                                x.Text = strTemp;
+                        }, token: token).ConfigureAwait(false);
                     }
 
                     if (await cboType.DoThreadSafeFuncAsync(x => x.SelectedIndex, token: token).ConfigureAwait(false)
@@ -1689,10 +1696,10 @@ namespace Chummer
                     {
                         string strTemp = await _objContact.GetDisplayTypeAsync(token).ConfigureAwait(false);
                         await cboPreferredPayment.DoThreadSafeAsync(x =>
-                            {
-                                if (x.SelectedIndex < 0)
-                                    x.Text = strTemp;
-                            }, token: token).ConfigureAwait(false);
+                        {
+                            if (x.SelectedIndex < 0)
+                                x.Text = strTemp;
+                        }, token: token).ConfigureAwait(false);
                     }
 
                     if (await cboHobbiesVice.DoThreadSafeFuncAsync(x => x.SelectedIndex, token: token)
@@ -1700,10 +1707,10 @@ namespace Chummer
                     {
                         string strTemp = await _objContact.GetDisplayTypeAsync(token).ConfigureAwait(false);
                         await cboHobbiesVice.DoThreadSafeAsync(x =>
-                            {
-                                if (x.SelectedIndex < 0)
-                                    x.Text = strTemp;
-                            }, token: token).ConfigureAwait(false);
+                        {
+                            if (x.SelectedIndex < 0)
+                                x.Text = strTemp;
+                        }, token: token).ConfigureAwait(false);
                     }
                 }
 
@@ -1825,13 +1832,13 @@ namespace Chummer
         {
             token.ThrowIfCancellationRequested();
             // Read the list of Categories from the XML file.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetatypes))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGenders))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstAges))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPersonalLives))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstTypes))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPreferredPayments))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstHobbiesVices))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetatypes))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGenders))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstAges))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPersonalLives))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstTypes))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPreferredPayments))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstHobbiesVices))
             {
                 token.ThrowIfCancellationRequested();
                 lstMetatypes.Add(ListItem.Blank);
@@ -1970,13 +1977,13 @@ namespace Chummer
         {
             token.ThrowIfCancellationRequested();
             // Read the list of Categories from the XML file.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetatypes))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGenders))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstAges))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPersonalLives))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstTypes))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPreferredPayments))
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstHobbiesVices))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetatypes))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGenders))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstAges))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPersonalLives))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstTypes))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPreferredPayments))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstHobbiesVices))
             {
                 token.ThrowIfCancellationRequested();
                 lstMetatypes.Add(ListItem.Blank);

@@ -36,7 +36,7 @@ namespace Chummer
     /// <summary>
     /// A Martial Art.
     /// </summary>
-    [DebuggerDisplay("{DisplayName(GlobalSettings.DefaultLanguage)}")]
+    [DebuggerDisplay("{DisplayName(\"en-us\")}")]
     public sealed class MartialArt : IHasChildren<MartialArtTechnique>, IHasName, IHasSourceId, IHasInternalId, IHasXmlDataNode, IHasNotes, ICanRemove, IHasSource, IHasLockObject, IHasCharacterObject
     {
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
@@ -124,7 +124,7 @@ namespace Chummer
 
                 if (lstImprovementSourcesToProcess.Count == 0 || _objCharacter?.IsLoading != false)
                     return;
-                using (new FetchSafelyFromPool<Dictionary<INotifyMultiplePropertiesChangedAsync, HashSet<string>>>(
+                using (new FetchSafelyFromSafeObjectPool<Dictionary<INotifyMultiplePropertiesChangedAsync, HashSet<string>>>(
                            Utils.DictionaryForMultiplePropertyChangedPool,
                            out Dictionary<INotifyMultiplePropertiesChangedAsync, HashSet<string>> dicChangedProperties))
                 {
@@ -187,7 +187,7 @@ namespace Chummer
             {
                 if (!objXmlArtNode.TryGetField("id", Guid.TryParse, out _guiSourceID))
                 {
-                    Log.Warn(new object[] {"Missing id field for xmlnode", objXmlArtNode});
+                    Log.Warn(new object[] { "Missing id field for xmlnode", objXmlArtNode });
                     Utils.BreakIfDebug();
                 }
 
@@ -344,7 +344,7 @@ namespace Chummer
                 }
 
                 objWriter.WriteEndElement();
-                objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+                objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
                 objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
                 objWriter.WriteEndElement();
             }
@@ -446,6 +446,10 @@ namespace Chummer
                             "fullname", await DisplayNameAsync(strLanguageToPrint, token).ConfigureAwait(false),
                             token: token).ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync("name_english", Name, token: token).ConfigureAwait(false);
+                    await objWriter
+                        .WriteElementStringAsync(
+                            "fullname_english", await DisplayNameAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false),
+                            token: token).ConfigureAwait(false);
                     await objWriter
                         .WriteElementStringAsync(
                             "source",
@@ -968,35 +972,42 @@ namespace Chummer
 
         #region Methods
 
-        public TreeNode CreateTreeNode(ContextMenuStrip cmsMartialArt, ContextMenuStrip cmsMartialArtTechnique)
+        public async Task<TreeNode> CreateTreeNode(ContextMenuStrip cmsMartialArt, ContextMenuStrip cmsMartialArtTechnique, CancellationToken token = default)
         {
-            using (LockObject.EnterReadLock())
+            token.ThrowIfCancellationRequested();
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
             {
-                if (IsQuality && !string.IsNullOrEmpty(Source) && !_objCharacter.Settings.BookEnabled(Source))
+                token.ThrowIfCancellationRequested();
+                if (IsQuality && !string.IsNullOrEmpty(Source) && !await _objCharacter.Settings.BookEnabledAsync(Source, token).ConfigureAwait(false))
                     return null;
 
                 TreeNode objNode = new TreeNode
                 {
                     Name = InternalId,
-                    Text = CurrentDisplayName,
+                    Text = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false),
                     Tag = this,
                     ContextMenuStrip = cmsMartialArt,
-                    ForeColor = PreferredColor,
-                    ToolTipText = Notes.WordWrap()
+                    ForeColor = await GetPreferredColorAsync(token).ConfigureAwait(false),
+                    ToolTipText = (await GetNotesAsync(token).ConfigureAwait(false)).WordWrap()
                 };
 
                 TreeNodeCollection lstChildNodes = objNode.Nodes;
-                foreach (MartialArtTechnique objTechnique in Techniques)
+                await Techniques.ForEachAsync(async objTechnique =>
                 {
-                    TreeNode objLoopNode = objTechnique.CreateTreeNode(cmsMartialArtTechnique);
+                    TreeNode objLoopNode = await objTechnique.CreateTreeNode(cmsMartialArtTechnique, token).ConfigureAwait(false);
                     if (objLoopNode != null)
                     {
                         lstChildNodes.Add(objLoopNode);
                         objNode.Expand();
                     }
-                }
+                }, token).ConfigureAwait(false);
 
                 return objNode;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
             }
         }
 

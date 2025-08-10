@@ -18,9 +18,9 @@
  */
 
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
-using System.ComponentModel;
 
 namespace Chummer.UI.Editors
 {
@@ -31,7 +31,7 @@ namespace Chummer.UI.Editors
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
-            if (!Utils.IsDesignerMode)
+            if (!Utils.IsDesignerMode && !Utils.IsRunningInVisualStudio)
                 tsControls.Visible = false;
         }
 

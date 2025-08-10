@@ -25,20 +25,17 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using CoreWCF.Channels;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using Chummer.Forms;
 using Chummer.Plugins;
 using iText.Kernel.Pdf;
 #if DEBUG
 using Microsoft.IO;
 #endif
 using NLog;
-using RtfPipe.Tokens;
 using Application = System.Windows.Forms.Application;
 
 namespace Chummer
@@ -80,7 +77,7 @@ namespace Chummer
             tabOptions.MouseWheel += CommonFunctions.ShiftTabsOnMouseScroll;
             this.UpdateLightDarkMode(token: token);
             this.TranslateWinForm(token: token);
-            pnlHasNotesColorPreview.BackColor = _objSelectedHasNotesColor;
+            pnlHasNotesColorPreview.BackColor = ColorManager.IsLightMode ? _objSelectedHasNotesColor : ColorManager.GenerateDarkModeColor(_objSelectedHasNotesColor);
             _setCustomDataDirectoryInfos
                 = new HashSet<CustomDataDirectoryInfo>(GlobalSettings.CustomDataDirectoryInfos);
             Disposed += (sender, args) =>
@@ -270,7 +267,7 @@ namespace Chummer
                 string strSelectedLanguage = _strSelectedLanguage;
                 // Build a list of Sourcebooks that will be passed to the Verify method.
                 // This is done since not all of the books are available in every language or the user may only wish to verify the content of certain books.
-                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                 out HashSet<string> setBooks))
                 {
                     foreach (ListItem objItem in await lstGlobalSourcebookInfos.DoThreadSafeFuncAsync(x => x.Items)
@@ -380,7 +377,7 @@ namespace Chummer
             if (_intLoading > 0)
                 return;
             UseAILogging useAI = await cboUseLoggingApplicationInsights
-                                       .DoThreadSafeFuncAsync(x => (UseAILogging)((ListItem) x.SelectedItem).Value)
+                                       .DoThreadSafeFuncAsync(x => (UseAILogging)((ListItem)x.SelectedItem).Value)
                                        .ConfigureAwait(false);
             GlobalSettings.UseLoggingResetCounter = 10;
             if (useAI > UseAILogging.Info
@@ -564,20 +561,28 @@ namespace Chummer
                     switch (eNewColorMode)
                     {
                         case ColorMode.Automatic:
-                            bool blnLightMode = !ColorManager.DoesRegistrySayDarkMode();
-                            await this.UpdateLightDarkModeAsync(blnLightMode).ConfigureAwait(false);
-                            pnlHasNotesColorPreview.BackColor = blnLightMode ? _objSelectedHasNotesColor : ColorManager.GenerateDarkModeColor(_objSelectedHasNotesColor);
-                            break;
+                            {
+                                bool blnLightMode = !ColorManager.DoesRegistrySayDarkMode();
+                                Color objPreviewColor = blnLightMode ? _objSelectedHasNotesColor : ColorManager.GenerateDarkModeColor(_objSelectedHasNotesColor);
+                                await this.UpdateLightDarkModeAsync(blnLightMode).ConfigureAwait(false);
+                                await pnlHasNotesColorPreview.DoThreadSafeAsync(x => x.BackColor = objPreviewColor).ConfigureAwait(false);
+                                break;
+                            }
 
                         case ColorMode.Light:
-                            await this.UpdateLightDarkModeAsync(true).ConfigureAwait(false);
-                            pnlHasNotesColorPreview.BackColor = _objSelectedHasNotesColor;
-                            break;
+                            {
+                                await this.UpdateLightDarkModeAsync(true).ConfigureAwait(false);
+                                await pnlHasNotesColorPreview.DoThreadSafeAsync(x => x.BackColor = _objSelectedHasNotesColor).ConfigureAwait(false);
+                                break;
+                            }
 
                         case ColorMode.Dark:
-                            await this.UpdateLightDarkModeAsync(false).ConfigureAwait(false);
-                            pnlHasNotesColorPreview.BackColor = ColorManager.GenerateDarkModeColor(_objSelectedHasNotesColor);
-                            break;
+                            {
+                                Color objPreviewColor = ColorManager.GenerateDarkModeColor(_objSelectedHasNotesColor);
+                                await this.UpdateLightDarkModeAsync(false).ConfigureAwait(false);
+                                await pnlHasNotesColorPreview.DoThreadSafeAsync(x => x.BackColor = objPreviewColor).ConfigureAwait(false);
+                                break;
+                            }
                     }
                 }
             }
@@ -591,10 +596,10 @@ namespace Chummer
 
         private async void btnHasNotesColorSelect_Click(object sender, EventArgs e)
         {
-            Color objOldColor = _objSelectedHasNotesColor;
+            Color objPreviewColor = _objSelectedHasNotesColor;
             if (_eSelectedColorModeSetting == ColorMode.Dark || (_eSelectedColorModeSetting == ColorMode.Automatic && ColorManager.DoesRegistrySayDarkMode()))
-                objOldColor = ColorManager.GenerateDarkModeColor(objOldColor);
-            await this.DoThreadSafeAsync(() => dlgColor.Color = objOldColor).ConfigureAwait(false);
+                objPreviewColor = ColorManager.GenerateDarkModeColor(objPreviewColor);
+            await this.DoThreadSafeAsync(() => dlgColor.Color = objPreviewColor).ConfigureAwait(false);
             if (await this.DoThreadSafeFuncAsync(x => dlgColor.ShowDialog(x)).ConfigureAwait(false) != DialogResult.OK)
                 return;
             Color objNewColor = await this.DoThreadSafeFuncAsync(() => dlgColor.Color).ConfigureAwait(false);
@@ -602,11 +607,10 @@ namespace Chummer
                 objNewColor = ColorManager.GenerateInverseDarkModeColor(objNewColor);
             if (objNewColor != _objSelectedHasNotesColor)
             {
-                _objSelectedHasNotesColor = objNewColor;
+                objPreviewColor = _objSelectedHasNotesColor = objNewColor;
                 if (_eSelectedColorModeSetting == ColorMode.Dark || (_eSelectedColorModeSetting == ColorMode.Automatic && ColorManager.DoesRegistrySayDarkMode()))
-                    pnlHasNotesColorPreview.BackColor = ColorManager.GenerateDarkModeColor(_objSelectedHasNotesColor);
-                else
-                    pnlHasNotesColorPreview.BackColor = _objSelectedHasNotesColor;
+                    objPreviewColor = ColorManager.GenerateDarkModeColor(objPreviewColor);
+                await pnlHasNotesColorPreview.DoThreadSafeAsync(x => x.BackColor = objPreviewColor).ConfigureAwait(false);
                 OptionsChanged(sender, e);
             }
         }
@@ -823,7 +827,7 @@ namespace Chummer
             if (lsbCustomDataDirectories.SelectedIndex == -1)
                 return;
             ListItem objSelected = (ListItem)lsbCustomDataDirectories.SelectedItem;
-            CustomDataDirectoryInfo objInfoToRemove = (CustomDataDirectoryInfo) objSelected.Value;
+            CustomDataDirectoryInfo objInfoToRemove = (CustomDataDirectoryInfo)objSelected.Value;
             if (!_setCustomDataDirectoryInfos.Remove(objInfoToRemove))
                 return;
             OptionsChanged(sender, e);
@@ -834,9 +838,9 @@ namespace Chummer
         {
             if (await lsbCustomDataDirectories.DoThreadSafeFuncAsync(x => x.SelectedIndex).ConfigureAwait(false) == -1)
                 return;
-            ListItem objSelected = await lsbCustomDataDirectories.DoThreadSafeFuncAsync(x => (ListItem) x.SelectedItem)
+            ListItem objSelected = await lsbCustomDataDirectories.DoThreadSafeFuncAsync(x => (ListItem)x.SelectedItem)
                                                                  .ConfigureAwait(false);
-            CustomDataDirectoryInfo objInfoToRename = (CustomDataDirectoryInfo) objSelected.Value;
+            CustomDataDirectoryInfo objInfoToRename = (CustomDataDirectoryInfo)objSelected.Value;
             string strDescription
                 = await LanguageManager.GetStringAsync("String_CustomItem_SelectText", _strSelectedLanguage)
                                        .ConfigureAwait(false);
@@ -1041,9 +1045,9 @@ namespace Chummer
             if (_intSkipRefresh > 0)
                 return;
             ListItem objSelectedItem = await lsbCustomDataDirectories
-                                             .DoThreadSafeFuncAsync(x => (ListItem) x.SelectedItem)
+                                             .DoThreadSafeFuncAsync(x => (ListItem)x.SelectedItem)
                                              .ConfigureAwait(false);
-            CustomDataDirectoryInfo objSelected = (CustomDataDirectoryInfo) objSelectedItem.Value;
+            CustomDataDirectoryInfo objSelected = (CustomDataDirectoryInfo)objSelectedItem.Value;
             if (objSelected == null)
             {
                 await gpbDirectoryInfo.DoThreadSafeAsync(x => x.Visible = false).ConfigureAwait(false);
@@ -1053,30 +1057,30 @@ namespace Chummer
             await gpbDirectoryInfo.DoThreadSafeAsync(x => x.SuspendLayout()).ConfigureAwait(false);
             try
             {
-                string strDescription = await objSelected.GetDisplayDescriptionAsync(_strSelectedLanguage)
-                                                         .ConfigureAwait(false);
+                string strDescription = _strSelectedLanguage == GlobalSettings.Language
+                    ? await objSelected.GetCurrentDisplayDescriptionAsync().ConfigureAwait(false)
+                    : await objSelected.DisplayDescriptionAsync(_strSelectedLanguage).ConfigureAwait(false);
                 await txtDirectoryDescription.DoThreadSafeAsync(x => x.Text = strDescription).ConfigureAwait(false);
                 await lblDirectoryVersion.DoThreadSafeAsync(x => x.Text = objSelected.MyVersion.ToString())
                                          .ConfigureAwait(false);
-                string strAuthors = await objSelected
-                                          .GetDisplayAuthorsAsync(_strSelectedLanguage, _objSelectedCultureInfo)
-                                          .ConfigureAwait(false);
+                string strAuthors = _objSelectedCultureInfo == GlobalSettings.CultureInfo && _strSelectedLanguage == GlobalSettings.Language
+                    ? await objSelected.GetCurrentDisplayAuthorsAsync().ConfigureAwait(false)
+                    : await objSelected.DisplayAuthorsAsync(_objSelectedCultureInfo, _strSelectedLanguage).ConfigureAwait(false);
                 await lblDirectoryAuthors.DoThreadSafeAsync(x => x.Text = strAuthors).ConfigureAwait(false);
                 await lblDirectoryName.DoThreadSafeAsync(x => x.Text = objSelected.Name).ConfigureAwait(false);
                 string strText = objSelected.DirectoryPath.Replace(Utils.GetStartupPath,
                                                                    await LanguageManager
-                                                                         .GetStringAsync(
-                                                                             "String_Chummer5a", _strSelectedLanguage)
+                                                                         .GetStringAsync("String_Chummer5a", _strSelectedLanguage)
                                                                          .ConfigureAwait(false));
                 await lblDirectoryPath.DoThreadSafeAsync(x => x.Text = strText).ConfigureAwait(false);
 
                 if (objSelected.DependenciesList.Count > 0)
                 {
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdDependencies))
                     {
                         foreach (DirectoryDependency dependency in objSelected.DependenciesList)
-                            sbdDependencies.AppendLine(await dependency.GetDisplayNameAsync().ConfigureAwait(false));
+                            sbdDependencies.AppendLine(dependency.CurrentDisplayName);
                         await lblDependencies.DoThreadSafeAsync(x => x.Text = sbdDependencies.ToString())
                                              .ConfigureAwait(false);
                     }
@@ -1089,13 +1093,12 @@ namespace Chummer
 
                 if (objSelected.IncompatibilitiesList.Count > 0)
                 {
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdIncompatibilities))
                     {
                         foreach (DirectoryDependency exclusivity in objSelected.IncompatibilitiesList)
                         {
-                            sbdIncompatibilities.AppendLine(
-                                await exclusivity.GetDisplayNameAsync().ConfigureAwait(false));
+                            sbdIncompatibilities.AppendLine(exclusivity.CurrentDisplayName);
                         }
 
                         await lblIncompatibilities.DoThreadSafeAsync(x => x.Text = sbdIncompatibilities.ToString())
@@ -1307,7 +1310,7 @@ namespace Chummer
             {
                 string strSheetLanguage = x.SelectedValue?.ToString();
                 if (strSheetLanguage != _strSelectedLanguage
-                    && x.Items.Cast<ListItem>().Any(y => y.Value.ToString() == _strSelectedLanguage))
+                    && x.Items.OfType<ListItem>().Any(y => y.Value.ToString() == _strSelectedLanguage))
                 {
                     x.SelectedValue = _strSelectedLanguage;
                 }
@@ -1324,7 +1327,7 @@ namespace Chummer
         {
             // Load the Sourcebook information.
             // Put the Sourcebooks into a List so they can first be sorted.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstSourcebookInfos))
             {
                 foreach (XPathNavigator objXmlBook in (await XmlManager
@@ -1583,7 +1586,7 @@ namespace Chummer
             GlobalSettings.DefaultHasNotesColor = _objSelectedHasNotesColor;
             GlobalSettings.DpiScalingMethodSetting = await cboDpiScalingMethod.DoThreadSafeFuncAsync(
                 x => x.SelectedIndex >= 0
-                    ? (DpiScalingMethod) Enum.Parse(typeof(DpiScalingMethod), x.SelectedValue.ToString())
+                    ? (DpiScalingMethod)Enum.Parse(typeof(DpiScalingMethod), x.SelectedValue.ToString())
                     : GlobalSettings.DefaultDpiScalingMethod, token).ConfigureAwait(false);
             GlobalSettings.StartupFullscreen = await chkStartupFullscreen.DoThreadSafeFuncAsync(x => x.Checked, token)
                                                                          .ConfigureAwait(false);
@@ -1680,7 +1683,7 @@ namespace Chummer
 
             GlobalSettings.Chum5lzCompressionLevel = await cboChum5lzCompressionLevel.DoThreadSafeFuncAsync(
                 x => x.SelectedIndex >= 0
-                    ? (LzmaHelper.ChummerCompressionPreset) Enum.Parse(typeof(LzmaHelper.ChummerCompressionPreset),
+                    ? (LzmaHelper.ChummerCompressionPreset)Enum.Parse(typeof(LzmaHelper.ChummerCompressionPreset),
                                                                        x.SelectedValue.ToString())
                     : GlobalSettings.DefaultChum5lzCompressionLevel, token).ConfigureAwait(false);
             GlobalSettings.CustomDateTimeFormats = await chkCustomDateTimeFormats
@@ -1717,7 +1720,7 @@ namespace Chummer
         private async Task PopulateDefaultCharacterSettingLists(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstCharacterSettings))
             {
                 foreach (KeyValuePair<string, CharacterSettings> kvpLoopCharacterOptions in await SettingsManager
@@ -1779,7 +1782,7 @@ namespace Chummer
         private async Task PopulateChum5lzCompressionLevelOptions(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                        out List<ListItem> lstChum5lzCompressionLevelOptions))
             {
                 lstChum5lzCompressionLevelOptions.Add(new ListItem(LzmaHelper.ChummerCompressionPreset.Fastest,
@@ -1824,7 +1827,7 @@ namespace Chummer
         private async Task PopulateMugshotCompressionOptions(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstMugshotCompressionOptions))
             {
                 lstMugshotCompressionOptions.Add(
@@ -1863,7 +1866,7 @@ namespace Chummer
                         strOldSelected = "jpeg_manual";
                     }
 
-                    await nudMugshotCompressionQuality.DoThreadSafeAsync(x => x.ValueAsInt = intQuality, token)
+                    await nudMugshotCompressionQuality.DoThreadSafeAsync(x => x.Value = intQuality, token)
                                                       .ConfigureAwait(false);
                 }
 
@@ -1894,7 +1897,7 @@ namespace Chummer
         {
             int intIndex = 0;
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstPdfParameters))
             {
                 foreach (XPathNavigator objXmlNode in (await XmlManager
@@ -1963,7 +1966,7 @@ namespace Chummer
                                                         .ConfigureAwait(false)
                   ?? GlobalSettings.UseLoggingApplicationInsights.ToString();
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstUseAIOptions))
             {
                 foreach (UseAILogging eOption in Enum.GetValues(typeof(UseAILogging)))
@@ -1997,7 +2000,7 @@ namespace Chummer
                                                       .ConfigureAwait(false)
                                     ?? GlobalSettings.ColorModeSetting.ToString();
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstColorModes))
             {
                 foreach (ColorMode eLoopColorMode in Enum.GetValues(typeof(ColorMode)))
@@ -2028,7 +2031,7 @@ namespace Chummer
                                                                           .ToString(), token)
                                                              .ConfigureAwait(false);
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstDpiScalingMethods))
             {
                 foreach (DpiScalingMethod eLoopDpiScalingMethod in Enum.GetValues(typeof(DpiScalingMethod)))
@@ -2105,7 +2108,7 @@ namespace Chummer
         private async Task PopulateLanguageList(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstLanguages))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstLanguages))
             {
                 foreach (KeyValuePair<string, string> kvpLanguages in _dicCachedLanguageDocumentNames)
                 {
@@ -2122,7 +2125,7 @@ namespace Chummer
         private async Task PopulateSheetLanguageList(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                             out HashSet<string> setLanguagesWithSheets))
             {
                 // Populate the XSL list with all of the manifested XSL files found in the sheets\[language] directory.
@@ -2137,7 +2140,7 @@ namespace Chummer
 
                 token.ThrowIfCancellationRequested();
 
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                out List<ListItem> lstSheetLanguages))
                 {
                     foreach (KeyValuePair<string, string> kvpLanguages in _dicCachedLanguageDocumentNames)
@@ -2167,7 +2170,7 @@ namespace Chummer
                     x => x.Image = FlagImageGetter.GetFlagFromCountryCode(strSelectedSheetLanguage?.Substring(3, 2),
                         Math.Min(x.Width, x.Height)), token).ConfigureAwait(false);
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstFiles))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstFiles))
             {
                 // Populate the XSL list with all of the manifested XSL files found in the sheets\[language] directory.
                 foreach (XPathNavigator xmlSheet in (await XmlManager.LoadXPathAsync("sheets.xml", token: token)
@@ -2278,7 +2281,7 @@ namespace Chummer
             return cboXSLT.DoThreadSafeAsync(x =>
             {
                 x.SelectedValue = GlobalSettings.DefaultCharacterSheet;
-                if (cboXSLT.SelectedValue == null && cboXSLT.Items.Count > 0)
+                if (x.SelectedValue == null && x.Items.Count > 0)
                 {
                     int intNameIndex;
                     string strLanguage = _strSelectedLanguage;
@@ -2379,7 +2382,7 @@ namespace Chummer
                     ? SearchOption.AllDirectories
                     : SearchOption.TopDirectoryOnly;
 
-                using (new FetchSafelyFromPool<Stopwatch>(Utils.StopwatchPool, out Stopwatch sw))
+                using (new FetchSafelyFromSafeObjectPool<Stopwatch>(Utils.StopwatchPool, out Stopwatch sw))
                 {
                     sw.Start();
                     XPathNavigator objBooks = await tskLoadBooks.ConfigureAwait(false);
@@ -2461,7 +2464,7 @@ namespace Chummer
                             await ScanFilesForPDFTexts(astrFiles, dicPatternsToMatch, dicBackupPatternsToMatch, frmLoadingBar.MyForm)
                                 .ConfigureAwait(false);
                         sw.Stop();
-                        using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                        using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                    out StringBuilder sbdFeedback))
                         {
                             sbdFeedback.AppendLine().AppendLine()
@@ -2502,7 +2505,7 @@ namespace Chummer
             }
         }
 
-        private async Task<List<SourcebookInfo>> ScanFilesForPDFTexts(IEnumerable<string> lstFiles,
+        private async Task<List<SourcebookInfo>> ScanFilesForPDFTexts(string[] lstFiles,
                                                                       ConcurrentDictionary<string, Tuple<string, int>> dicPatternsToMatch,
                                                                       ConcurrentDictionary<string, Tuple<string, int>> dicBackupPatternsToMatch,
                                                                       LoadingBar frmProgressBar,
@@ -2516,10 +2519,12 @@ namespace Chummer
             int intCounter = 0;
             if (dicPatternsToMatch?.IsEmpty == false)
             {
+                int intFileCounter = 0;
                 foreach (string strFile in lstFiles)
                 {
                     token.ThrowIfCancellationRequested();
                     lstLoadingTasks.Add(GetSourcebookInfo(strFile, dicPatternsToMatch));
+                    ++intFileCounter;
                     if (++intCounter != Utils.MaxParallelBatchSize)
                         continue;
                     await Task.WhenAll(lstLoadingTasks).ConfigureAwait(false);
@@ -2542,6 +2547,16 @@ namespace Chummer
 
                     intCounter = 0;
                     lstLoadingTasks.Clear();
+                    if (dicPatternsToMatch.IsEmpty)
+                    {
+                        for (; intFileCounter <= lstFiles.Length; ++intFileCounter)
+                        {
+                            await frmProgressBar
+                              .PerformStepAsync(eUseTextPattern: LoadingBar.ProgressBarTextPatterns.Scanning, token: token)
+                              .ConfigureAwait(false);
+                        }
+                        break;
+                    }
                 }
 
                 await Task.WhenAll(lstLoadingTasks).ConfigureAwait(false);
@@ -2593,6 +2608,8 @@ namespace Chummer
 
                     intCounter = 0;
                     lstLoadingTasks.Clear();
+                    if (dicBackupPatternsToMatch.IsEmpty)
+                        break;
                 }
 
                 await Task.WhenAll(lstLoadingTasks).ConfigureAwait(false);
@@ -2678,7 +2695,8 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 List<string> lstKeysToLoop = dicPatternsToMatch.GetKeysToListSafe();
                 //Search the first 15 pages for all the text
-                for (int intPage = 1; intPage <= 15; intPage++)
+                int intMaxPage = Math.Min(15, objPdfDocument.GetNumberOfPages());
+                for (int intPage = 1; intPage <= intMaxPage; intPage++)
                 {
                     token.ThrowIfCancellationRequested();
                     // No more patterns to match, exit early
@@ -2751,7 +2769,7 @@ namespace Chummer
                 if (intPage >= objInnerPdfDocument.GetNumberOfPages())
                     return string.Empty;
 
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                               out StringBuilder sbdAllLines))
                 {
                     try
@@ -2769,7 +2787,7 @@ namespace Chummer
                         token.ThrowIfCancellationRequested();
                         strPageText = strPageText.NormalizeLineEndings();
                         token.ThrowIfCancellationRequested();
-                        strPageText = strPageText.CleanOfInvalidUnicodeChars();
+                        strPageText = strPageText.CleanOfXmlInvalidUnicodeChars();
                         token.ThrowIfCancellationRequested();
                         // don't trust it to be correct, trim all whitespace and remove empty strings before we even start
                         foreach (string strLine in strPageText.SplitNoAlloc(Environment.NewLine,

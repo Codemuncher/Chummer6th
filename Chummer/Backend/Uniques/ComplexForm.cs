@@ -37,7 +37,7 @@ namespace Chummer
     /// A Technomancer Program or Complex Form.
     /// </summary>
     [HubClassTag("SourceID", true, "Name", "Extra")]
-    [DebuggerDisplay("{DisplayName(GlobalSettings.DefaultLanguage)}")]
+    [DebuggerDisplay("{DisplayName(\"en-us\")}")]
     public sealed class ComplexForm : IHasInternalId, IHasName, IHasSourceId, IHasXmlDataNode, IHasNotes, ICanRemove, IHasSource, IHasLockObject, IHasCharacterObject
     {
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
@@ -211,7 +211,7 @@ namespace Chummer
                 objWriter.WriteElementString("extra", _strExtra);
                 objWriter.WriteElementString("source", _strSource);
                 objWriter.WriteElementString("page", _strPage);
-                objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+                objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
                 objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
                 objWriter.WriteElementString("grade", _intGrade.ToString(GlobalSettings.InvariantCultureInfo));
                 objWriter.WriteEndElement();
@@ -280,15 +280,15 @@ namespace Chummer
                     await objWriter.WriteElementStringAsync("name_english", Name, token).ConfigureAwait(false);
                     await objWriter
                             .WriteElementStringAsync(
-                                "fullname_english", await DisplayNameAsync(GlobalSettings.Language, token).ConfigureAwait(false),
+                                "fullname_english", await DisplayNameAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false),
                                 token)
                             .ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync("duration", await DisplayDurationAsync(strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
-                    await objWriter.WriteElementStringAsync("duration_english", Duration, token).ConfigureAwait(false);
+                    await objWriter.WriteElementStringAsync("duration_english", await DisplayDurationAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false), token).ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync("fv", await DisplayFvAsync(strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
-                    await objWriter.WriteElementStringAsync("fv_english", await GetCalculatedFvAsync(token), token).ConfigureAwait(false);
+                    await objWriter.WriteElementStringAsync("fv_english", await DisplayFvAsync(GlobalSettings.DefaultLanguage, token), token).ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync("target", await DisplayTargetAsync(strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
-                    await objWriter.WriteElementStringAsync("target_english", Target, token).ConfigureAwait(false);
+                    await objWriter.WriteElementStringAsync("target_english", await DisplayTargetAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false), token).ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync("source", await _objCharacter.LanguageBookShortAsync(Source, strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync("page", await DisplayPageAsync(strLanguageToPrint, token).ConfigureAwait(false), token).ConfigureAwait(false);
                     if (GlobalSettings.PrintNotes)
@@ -648,7 +648,7 @@ namespace Chummer
                     .GetTotalValueAsync(token).ConfigureAwait(false);
                 int intHighestLevel = intRes * 2;
                 string strFv = await GetCalculatedFvAsync(token).ConfigureAwait(false);
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                 out StringBuilder sbdTip))
                 {
                     sbdTip.Append(await LanguageManager.GetStringAsync("Tip_ComplexFormFading", token: token));
@@ -682,7 +682,7 @@ namespace Chummer
                                     _objCharacter, Improvement.ImprovementType.FadingValue, Name, true, token))
                     {
                         sbdTip.Append(strSpace).Append('+').Append(strSpace).Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false)).Append(strSpace)
-                                .Append('(').Append(objLoopImprovement.Value.ToString("0;-0;0", GlobalSettings.CultureInfo)).Append(')');
+                                .Append('(').Append(objLoopImprovement.Value.ToString("#,0.##;-#,0.##;#,0.##", GlobalSettings.CultureInfo)).Append(')');
                     }
                     // Minimum Fading of 2
                     sbdTip.AppendLine().AppendFormat(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("String_MinimumAttribute", token: token), 2);
@@ -708,7 +708,7 @@ namespace Chummer
                     List<Improvement> lstImprovements
                         = ImprovementManager.GetCachedImprovementListForValueOf(
                             _objCharacter, Improvement.ImprovementType.FadingValue, Name, true);
-                    if (lstImprovements.Count > 0)
+                    if (lstImprovements.Count > 0 || !strReturn.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                     {
                         bool blnForce = strReturn.StartsWith('L');
                         string strFv = blnForce ? strReturn.TrimStartOnce("L", true) : strReturn;
@@ -719,44 +719,37 @@ namespace Chummer
                         }
                         else
                         {
-                            int intPos = strReturn.IndexOf('-');
-                            if (intPos != -1)
-                            {
-                                strFv = strReturn.Substring(intPos);
-                            }
-                            else
-                            {
-                                intPos = strReturn.IndexOf('+');
-                                if (intPos != -1)
-                                {
-                                    strFv = strReturn.Substring(intPos);
-                                }
-                            }
+                            strFv = strFv.TrimStart('+');
                         }
 
                         string strToAppend = string.Empty;
                         int intFadingDv = 0;
-                        if (strFv.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
+                        if (strFv.DoesNeedXPathProcessingToBeConvertedToNumber(out decValue))
                         {
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
-                                                                          out StringBuilder sbdReturn))
+                            if (lstImprovements.Count > 0 || strFv.HasValuesNeedingReplacementForXPathProcessing())
                             {
-                                sbdReturn.Append(strFv);
-                                foreach (Improvement objImprovement in lstImprovements)
+                                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
+                                                                          out StringBuilder sbdReturn))
                                 {
-                                    sbdReturn.AppendFormat(GlobalSettings.InvariantCultureInfo, "{0:+0;-0;+0}",
-                                                       objImprovement.Value);
+                                    sbdReturn.Append('(').Append(strFv).Append(')');
+                                    foreach (Improvement objImprovement in lstImprovements)
+                                    {
+                                        sbdReturn.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                                    }
+                                    _objCharacter.ProcessAttributesInXPath(sbdReturn);
+                                    strFv = sbdReturn.ToString();
                                 }
-
-                                (bool blnIsSuccess, object xprResult) = CommonFunctions.EvaluateInvariantXPath(sbdReturn.ToString());
-                                if (blnIsSuccess)
-                                    intFadingDv = ((double)xprResult).StandardRound();
-                                else
-                                    strToAppend = sbdReturn.ToString();
                             }
+                            (bool blnIsSuccess, object xprResult) = CommonFunctions.EvaluateInvariantXPath(strFv);
+                            if (blnIsSuccess)
+                                intFadingDv = ((double)xprResult).StandardRound();
+                            else
+                                strToAppend = strFv;
                         }
                         else
                         {
+                            foreach (Improvement objImprovement in lstImprovements)
+                                decValue += objImprovement.Value;
                             intFadingDv = decValue.StandardRound();
                         }
 
@@ -794,7 +787,7 @@ namespace Chummer
                 List<Improvement> lstImprovements
                     = await ImprovementManager.GetCachedImprovementListForValueOfAsync(
                         _objCharacter, Improvement.ImprovementType.FadingValue, Name, true, token).ConfigureAwait(false);
-                if (lstImprovements.Count > 0)
+                if (lstImprovements.Count > 0 || !strReturn.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                 {
                     bool blnForce = strReturn.StartsWith('L');
                     string strFv = blnForce ? strReturn.TrimStartOnce("L", true) : strReturn;
@@ -805,44 +798,37 @@ namespace Chummer
                     }
                     else
                     {
-                        int intPos = strReturn.IndexOf('-');
-                        if (intPos != -1)
-                        {
-                            strFv = strReturn.Substring(intPos);
-                        }
-                        else
-                        {
-                            intPos = strReturn.IndexOf('+');
-                            if (intPos != -1)
-                            {
-                                strFv = strReturn.Substring(intPos);
-                            }
-                        }
+                        strFv = strFv.TrimStart('+');
                     }
 
                     string strToAppend = string.Empty;
                     int intFadingDv = 0;
-                    if (strFv.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
+                    if (strFv.DoesNeedXPathProcessingToBeConvertedToNumber(out decValue))
                     {
-                        using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
-                                                                      out StringBuilder sbdReturn))
+                        if (lstImprovements.Count > 0 || strFv.HasValuesNeedingReplacementForXPathProcessing())
                         {
-                            sbdReturn.Append(strFv);
-                            foreach (Improvement objImprovement in lstImprovements)
+                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
+                                                                          out StringBuilder sbdReturn))
                             {
-                                sbdReturn.AppendFormat(GlobalSettings.InvariantCultureInfo, "{0:+0;-0;+0}",
-                                                   objImprovement.Value);
+                                sbdReturn.Append('(').Append(strFv).Append(')');
+                                foreach (Improvement objImprovement in lstImprovements)
+                                {
+                                    sbdReturn.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                                }
+                                await _objCharacter.ProcessAttributesInXPathAsync(sbdReturn, token: token).ConfigureAwait(false);
+                                strFv = sbdReturn.ToString();
                             }
-
-                            (bool blnIsSuccess, object xprResult) = await CommonFunctions.EvaluateInvariantXPathAsync(sbdReturn.ToString(), token).ConfigureAwait(false);
-                            if (blnIsSuccess)
-                                intFadingDv = ((double)xprResult).StandardRound();
-                            else
-                                strToAppend = sbdReturn.ToString();
                         }
+                        (bool blnIsSuccess, object xprResult) = await CommonFunctions.EvaluateInvariantXPathAsync(strFv, token).ConfigureAwait(false);
+                        if (blnIsSuccess)
+                            intFadingDv = ((double)xprResult).StandardRound();
+                        else
+                            strToAppend = strFv;
                     }
                     else
                     {
+                        foreach (Improvement objImprovement in lstImprovements)
+                            decValue += objImprovement.Value;
                         intFadingDv = decValue.StandardRound();
                     }
 
@@ -1237,7 +1223,7 @@ namespace Chummer
                 string strSkillKey = UseSkill;
                 if (string.IsNullOrEmpty(strSkillKey))
                     strSkillKey = "Software";
-                return await (await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false)).GetActiveSkillAsync("Software", token).ConfigureAwait(false);
+                return await (await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false)).GetActiveSkillAsync(strSkillKey, token).ConfigureAwait(false);
             }
             finally
             {
@@ -1300,7 +1286,7 @@ namespace Chummer
                 string strSpace = LanguageManager.GetString("String_Space");
                 using (LockObject.EnterReadLock())
                 {
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                               out StringBuilder sbdReturn))
                     {
                         string strFormat = strSpace + "{0}" + strSpace + "({1})";
@@ -1349,7 +1335,7 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                               out StringBuilder sbdReturn))
                 {
                     string strFormat = strSpace + "{0}" + strSpace + "({1})";
@@ -1477,23 +1463,32 @@ namespace Chummer
 
         #region UI Methods
 
-        public TreeNode CreateTreeNode(ContextMenuStrip cmsComplexForm)
+        public async Task<TreeNode> CreateTreeNode(ContextMenuStrip cmsComplexForm, bool blnForInitiationsTab = false, CancellationToken token = default)
         {
-            using (LockObject.EnterReadLock())
+            token.ThrowIfCancellationRequested();
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
             {
-                if (Grade != 0 && !string.IsNullOrEmpty(Source) && !_objCharacter.Settings.BookEnabled(Source))
+                token.ThrowIfCancellationRequested();
+                if ((blnForInitiationsTab ? Grade < 0 : Grade != 0) && !string.IsNullOrEmpty(Source) && !await _objCharacter.Settings.BookEnabledAsync(Source, token).ConfigureAwait(false))
                     return null;
 
                 TreeNode objNode = new TreeNode
                 {
                     Name = InternalId,
-                    Text = CurrentDisplayName,
+                    Text = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false),
                     Tag = this,
                     ContextMenuStrip = cmsComplexForm,
-                    ForeColor = PreferredColor,
-                    ToolTipText = Notes.WordWrap()
+                    ForeColor = blnForInitiationsTab
+                        ? await GetPreferredColorForInitiationsTabAsync(token).ConfigureAwait(false)
+                        : await GetPreferredColorAsync(token).ConfigureAwait(false),
+                    ToolTipText = (await GetNotesAsync(token).ConfigureAwait(false)).WordWrap()
                 };
                 return objNode;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
             }
         }
 
@@ -1538,18 +1533,58 @@ namespace Chummer
             }
         }
 
+        public Color PreferredColorForInitiationsTab
+        {
+            get
+            {
+                using (LockObject.EnterReadLock())
+                {
+                    if (!string.IsNullOrEmpty(Notes))
+                    {
+                        return Grade < 0
+                            ? ColorManager.GenerateCurrentModeDimmedColor(NotesColor)
+                            : ColorManager.GenerateCurrentModeColor(NotesColor);
+                    }
+                    return Grade < 0
+                        ? ColorManager.GrayText
+                        : ColorManager.WindowText;
+                }
+            }
+        }
+
+        public async Task<Color> GetPreferredColorForInitiationsTabAsync(CancellationToken token = default)
+        {
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (!string.IsNullOrEmpty(await GetNotesAsync(token).ConfigureAwait(false)))
+                {
+                    return Grade < 0
+                        ? ColorManager.GenerateCurrentModeDimmedColor(await GetNotesColorAsync(token).ConfigureAwait(false))
+                        : ColorManager.GenerateCurrentModeColor(await GetNotesColorAsync(token).ConfigureAwait(false));
+                }
+                return Grade < 0
+                    ? ColorManager.GrayText
+                    : ColorManager.WindowText;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
         #endregion UI Methods
 
         public bool Remove(bool blnConfirmDelete = true)
         {
             using (LockObject.EnterUpgradeableReadLock())
             {
-                if (blnConfirmDelete)
+                if (Grade < 0)
+                    return false;
+                if (blnConfirmDelete && !CommonFunctions.ConfirmDelete(LanguageManager.GetString("Message_DeleteComplexForm")))
                 {
-                    if (Grade != 0) // If we are prompting, we are not removing this by removing the initiation/submersion that granted it
-                        return false;
-                    if (!CommonFunctions.ConfirmDelete(LanguageManager.GetString("Message_DeleteComplexForm")))
-                        return false;
+                    return false;
                 }
 
                 using (LockObject.EnterWriteLock())
@@ -1570,15 +1605,14 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (blnConfirmDelete)
-                {
-                    if (Grade != 0) // If we are prompting, we are not removing this by removing the initiation/submersion that granted it
-                        return false;
-                    if (!await CommonFunctions
+                if (Grade < 0)
+                    return false;
+                if (blnConfirmDelete && !await CommonFunctions
                             .ConfirmDeleteAsync(
                                 await LanguageManager.GetStringAsync("Message_DeleteComplexForm", token: token)
                                     .ConfigureAwait(false), token).ConfigureAwait(false))
-                        return false;
+                {
+                    return false;
                 }
 
                 IAsyncDisposable objLocker2 = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);

@@ -32,7 +32,7 @@ using Chummer.Annotations;
 
 namespace Chummer
 {
-    [DebuggerDisplay("{DisplayName(GlobalSettings.InvariantCultureInfo, GlobalSettings.DefaultLanguage)}")]
+    [DebuggerDisplay("{DisplayName(null, \"en-us\")}")]
     public sealed class CalendarWeek : IHasInternalId, IComparable, INotifyMultiplePropertiesChangedAsync, IEquatable<CalendarWeek>, IComparable<CalendarWeek>, IHasNotes, IHasLockObject
     {
         private Guid _guiID;
@@ -284,7 +284,7 @@ namespace Chummer
                 objWriter.WriteElementString("guid", _guiID.ToString("D", GlobalSettings.InvariantCultureInfo));
                 objWriter.WriteElementString("year", _intYear.ToString(GlobalSettings.InvariantCultureInfo));
                 objWriter.WriteElementString("week", _intWeek.ToString(GlobalSettings.InvariantCultureInfo));
-                objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+                objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
                 objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
                 objWriter.WriteEndElement();
             }
@@ -550,6 +550,8 @@ namespace Chummer
         {
             using (LockObject.EnterReadLock())
             {
+                if (objCulture == null)
+                    objCulture = GlobalSettings.CultureInfo;
                 string strReturn = string.Format(
                     objCulture, LanguageManager.GetString("String_WeekDisplay", strLanguage)
                     , Year
@@ -570,6 +572,8 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
+                if (objCulture == null)
+                    objCulture = GlobalSettings.CultureInfo;
                 string strReturn = string.Format(
                     objCulture, await LanguageManager.GetStringAsync("String_WeekDisplay", strLanguage, token: token)
                                                      .ConfigureAwait(false)

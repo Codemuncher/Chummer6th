@@ -18,15 +18,16 @@
  */
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -176,6 +177,7 @@ namespace Chummer
                         }
                         catch (Exception e)
                         {
+                            e = e.Demystify();
                             Log.Warn(e, $"Exception while loading {strPath}: " + e.Message);
                             Interlocked.Exchange(ref _objPdfDocument, null)?.Close();
                             Interlocked.Exchange(ref _objPdfReader, null)?.Close();
@@ -436,7 +438,7 @@ namespace Chummer
 
         static GlobalSettings()
         {
-            if (Utils.IsDesignerMode)
+            if (Utils.IsDesignerMode || Utils.IsRunningInVisualStudio)
                 return;
 
             bool blnFirstEverLaunch = false;
@@ -661,7 +663,8 @@ namespace Chummer
             }
             catch (Exception e)
             {
-                System.Diagnostics.Trace.TraceError(e.Message, e);
+                e = e.Demystify();
+                Trace.TraceError(e.Message, e);
 #if DEBUG
                 throw;
                 /*
@@ -1513,10 +1516,6 @@ namespace Chummer
         private static XmlDocument _xmlClipboard = new XmlDocument { XmlResolver = null };
         private static readonly AsyncFriendlyReaderWriterLock _objClipboardLocker = new AsyncFriendlyReaderWriterLock();
 
-        private static readonly Lazy<Regex> s_RgxInvalidUnicodeCharsExpression = new Lazy<Regex>(() => new Regex(
-            @"[\u0000-\u0008\u000B\u000C\u000E-\u001F]",
-            RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant | RegexOptions.Compiled));
-
         private static ClipboardContentType _eClipboardContentType;
 
         /// <summary>
@@ -1538,12 +1537,6 @@ namespace Chummer
         /// XmlReaderSettings that should only be used if invalid characters are found.
         /// </summary>
         public static XmlReaderSettings UnSafeXmlReaderAsyncSettings { get; } = new XmlReaderSettings { XmlResolver = null, IgnoreComments = true, IgnoreWhitespace = true, CheckCharacters = false, Async = true };
-
-        /// <summary>
-        /// Regex that indicates whether a given string is a match for text that cannot be saved in XML. Match == true.
-        /// </summary>
-        [CLSCompliant(false)]
-        public static Regex InvalidUnicodeCharsExpression => s_RgxInvalidUnicodeCharsExpression.Value;
 
         /// <summary>
         /// Lock the clipboard for reading.
@@ -1854,19 +1847,27 @@ namespace Chummer
                         if (LoadStringFromRegistry(ref strTemp, strCode, "Sourcebook")
                             && !string.IsNullOrEmpty(strTemp))
                         {
-                            string[] strParts = strTemp.Split('|');
-                            objSource.Path = strParts[0];
-                            if (string.IsNullOrEmpty(objSource.Path))
+                            string[] strParts = strTemp.SplitFixedSizePooledArray(2, '|');
+                            try
                             {
-                                objSource.Path = string.Empty;
-                                objSource.Offset = 0;
-                            }
-                            else
-                            {
-                                if (!File.Exists(objSource.Path))
+                                objSource.Path = strParts[0];
+                                if (string.IsNullOrEmpty(objSource.Path))
+                                {
                                     objSource.Path = string.Empty;
-                                if (strParts.Length > 1 && int.TryParse(strParts[1], out int intTmp))
-                                    objSource.Offset = intTmp;
+                                    objSource.Offset = 0;
+                                }
+                                else
+                                {
+                                    if (!File.Exists(objSource.Path))
+                                        objSource.Path = string.Empty;
+                                    string strSecondPart = strParts[1];
+                                    if (!string.IsNullOrEmpty(strSecondPart) && int.TryParse(strSecondPart, out int intTmp))
+                                        objSource.Offset = intTmp;
+                                }
+                            }
+                            finally
+                            {
+                                ArrayPool<string>.Shared.Return(strParts);
                             }
                         }
                     }
@@ -1904,19 +1905,27 @@ namespace Chummer
                             if (LoadStringFromRegistry(ref strTemp, strCode, "Sourcebook")
                                 && !string.IsNullOrEmpty(strTemp))
                             {
-                                string[] strParts = strTemp.Split('|');
-                                objSource.Path = strParts[0];
-                                if (string.IsNullOrEmpty(objSource.Path))
+                                string[] strParts = strTemp.SplitFixedSizePooledArray(2, '|');
+                                try
                                 {
-                                    objSource.Path = string.Empty;
-                                    objSource.Offset = 0;
-                                }
-                                else
-                                {
-                                    if (!File.Exists(objSource.Path))
+                                    objSource.Path = strParts[0];
+                                    if (string.IsNullOrEmpty(objSource.Path))
+                                    {
                                         objSource.Path = string.Empty;
-                                    if (strParts.Length > 1 && int.TryParse(strParts[1], out int intTmp))
-                                        objSource.Offset = intTmp;
+                                        objSource.Offset = 0;
+                                    }
+                                    else
+                                    {
+                                        if (!File.Exists(objSource.Path))
+                                            objSource.Path = string.Empty;
+                                        string strSecondPart = strParts[1];
+                                        if (!string.IsNullOrEmpty(strSecondPart) && int.TryParse(strSecondPart, out int intTmp))
+                                            objSource.Offset = intTmp;
+                                    }
+                                }
+                                finally
+                                {
+                                    ArrayPool<string>.Shared.Return(strParts);
                                 }
                             }
                         }
@@ -1975,19 +1984,27 @@ namespace Chummer
                         if (LoadStringFromRegistry(ref strTemp, strCode, "Sourcebook")
                             && !string.IsNullOrEmpty(strTemp))
                         {
-                            string[] strParts = strTemp.Split('|');
-                            objSource.Path = strParts[0];
-                            if (string.IsNullOrEmpty(objSource.Path))
+                            string[] strParts = strTemp.SplitFixedSizePooledArray(2, '|');
+                            try
                             {
-                                objSource.Path = string.Empty;
-                                objSource.Offset = 0;
-                            }
-                            else
-                            {
-                                if (!File.Exists(objSource.Path))
+                                objSource.Path = strParts[0];
+                                if (string.IsNullOrEmpty(objSource.Path))
+                                {
                                     objSource.Path = string.Empty;
-                                if (strParts.Length > 1 && int.TryParse(strParts[1], out int intTmp))
-                                    objSource.Offset = intTmp;
+                                    objSource.Offset = 0;
+                                }
+                                else
+                                {
+                                    if (!File.Exists(objSource.Path))
+                                        objSource.Path = string.Empty;
+                                    string strSecondPart = strParts[1];
+                                    if (!string.IsNullOrEmpty(strSecondPart) && int.TryParse(strSecondPart, out int intTmp))
+                                        objSource.Offset = intTmp;
+                                }
+                            }
+                            finally
+                            {
+                                ArrayPool<string>.Shared.Return(strParts);
                             }
                         }
                     }
@@ -2027,19 +2044,27 @@ namespace Chummer
                             if (LoadStringFromRegistry(ref strTemp, strCode, "Sourcebook")
                                 && !string.IsNullOrEmpty(strTemp))
                             {
-                                string[] strParts = strTemp.Split('|');
-                                objSource.Path = strParts[0];
-                                if (string.IsNullOrEmpty(objSource.Path))
+                                string[] strParts = strTemp.SplitFixedSizePooledArray(2, '|');
+                                try
                                 {
-                                    objSource.Path = string.Empty;
-                                    objSource.Offset = 0;
-                                }
-                                else
-                                {
-                                    if (!File.Exists(objSource.Path))
+                                    objSource.Path = strParts[0];
+                                    if (string.IsNullOrEmpty(objSource.Path))
+                                    {
                                         objSource.Path = string.Empty;
-                                    if (strParts.Length > 1 && int.TryParse(strParts[1], out int intTmp))
-                                        objSource.Offset = intTmp;
+                                        objSource.Offset = 0;
+                                    }
+                                    else
+                                    {
+                                        if (!File.Exists(objSource.Path))
+                                            objSource.Path = string.Empty;
+                                        string strSecondPart = strParts[1];
+                                        if (!string.IsNullOrEmpty(strSecondPart) && int.TryParse(strSecondPart, out int intTmp))
+                                            objSource.Offset = intTmp;
+                                    }
+                                }
+                                finally
+                                {
+                                    ArrayPool<string>.Shared.Return(strParts);
                                 }
                             }
                         }
@@ -2106,19 +2131,27 @@ namespace Chummer
                                     if (LoadStringFromRegistry(ref strTemp, strCode, "Sourcebook")
                                         && !string.IsNullOrEmpty(strTemp))
                                     {
-                                        string[] strParts = strTemp.Split('|');
-                                        objSource.Path = strParts[0];
-                                        if (string.IsNullOrEmpty(objSource.Path))
+                                        string[] strParts = strTemp.SplitFixedSizePooledArray(2, '|');
+                                        try
                                         {
-                                            objSource.Path = string.Empty;
-                                            objSource.Offset = 0;
-                                        }
-                                        else
-                                        {
-                                            if (!File.Exists(objSource.Path))
+                                            objSource.Path = strParts[0];
+                                            if (string.IsNullOrEmpty(objSource.Path))
+                                            {
                                                 objSource.Path = string.Empty;
-                                            if (strParts.Length > 1 && int.TryParse(strParts[1], out int intTmp))
-                                                objSource.Offset = intTmp;
+                                                objSource.Offset = 0;
+                                            }
+                                            else
+                                            {
+                                                if (!File.Exists(objSource.Path))
+                                                    objSource.Path = string.Empty;
+                                                string strSecondPart = strParts[1];
+                                                if (!string.IsNullOrEmpty(strSecondPart) && int.TryParse(strSecondPart, out int intTmp))
+                                                    objSource.Offset = intTmp;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            ArrayPool<string>.Shared.Return(strParts);
                                         }
                                     }
                                 }
@@ -2192,19 +2225,27 @@ namespace Chummer
                                     if (LoadStringFromRegistry(ref strTemp, strCode, "Sourcebook")
                                         && !string.IsNullOrEmpty(strTemp))
                                     {
-                                        string[] strParts = strTemp.Split('|');
-                                        objSource.Path = strParts[0];
-                                        if (string.IsNullOrEmpty(objSource.Path))
+                                        string[] strParts = strTemp.SplitFixedSizePooledArray(2, '|');
+                                        try
                                         {
-                                            objSource.Path = string.Empty;
-                                            objSource.Offset = 0;
-                                        }
-                                        else
-                                        {
-                                            if (!File.Exists(objSource.Path))
+                                            objSource.Path = strParts[0];
+                                            if (string.IsNullOrEmpty(objSource.Path))
+                                            {
                                                 objSource.Path = string.Empty;
-                                            if (strParts.Length > 1 && int.TryParse(strParts[1], out int intTmp))
-                                                objSource.Offset = intTmp;
+                                                objSource.Offset = 0;
+                                            }
+                                            else
+                                            {
+                                                if (!File.Exists(objSource.Path))
+                                                    objSource.Path = string.Empty;
+                                                string strSecondPart = strParts[1];
+                                                if (!string.IsNullOrEmpty(strSecondPart) && int.TryParse(strSecondPart, out int intTmp))
+                                                    objSource.Offset = intTmp;
+                                            }
+                                        }
+                                        finally
+                                        {
+                                            ArrayPool<string>.Shared.Return(strParts);
                                         }
                                     }
                                 }
@@ -2352,94 +2393,94 @@ namespace Chummer
                 switch (e.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
-                    {
-                        for (int i = e.NewStartingIndex + 1; i <= MaxMruSize; ++i)
                         {
-                            if (i <= await s_LstFavoriteCharacters.GetCountAsync(token).ConfigureAwait(false))
-                                s_ObjBaseChummerKey.SetValue("stickymru" + i.ToString(InvariantCultureInfo),
-                                    await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token).ConfigureAwait(false));
-                            else
-                                s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo),
-                                    false);
-                        }
+                            for (int i = e.NewStartingIndex + 1; i <= MaxMruSize; ++i)
+                            {
+                                if (i <= await s_LstFavoriteCharacters.GetCountAsync(token).ConfigureAwait(false))
+                                    s_ObjBaseChummerKey.SetValue("stickymru" + i.ToString(InvariantCultureInfo),
+                                        await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token).ConfigureAwait(false));
+                                else
+                                    s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo),
+                                        false);
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case NotifyCollectionChangedAction.Remove:
-                    {
-                        for (int i = e.OldStartingIndex + 1; i <= MaxMruSize; ++i)
-                        {
-                            if (i <= await s_LstFavoriteCharacters.GetCountAsync(token).ConfigureAwait(false))
-                                s_ObjBaseChummerKey.SetValue("stickymru" + i.ToString(InvariantCultureInfo),
-                                    await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token).ConfigureAwait(false));
-                            else
-                                s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo), false);
-                        }
-
-                        break;
-                    }
-                    case NotifyCollectionChangedAction.Replace:
-                    {
-                        string strNewFile = e.NewItems.Count > 0 ? e.NewItems[0] as string : string.Empty;
-                        if (!string.IsNullOrEmpty(strNewFile))
-                            s_ObjBaseChummerKey.SetValue(
-                                "stickymru" + (e.OldStartingIndex + 1).ToString(InvariantCultureInfo), strNewFile);
-                        else
                         {
                             for (int i = e.OldStartingIndex + 1; i <= MaxMruSize; ++i)
                             {
                                 if (i <= await s_LstFavoriteCharacters.GetCountAsync(token).ConfigureAwait(false))
                                     s_ObjBaseChummerKey.SetValue("stickymru" + i.ToString(InvariantCultureInfo),
-                                        await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token)
-                                            .ConfigureAwait(false));
+                                        await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token).ConfigureAwait(false));
                                 else
-                                    s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo),
-                                        false);
+                                    s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo), false);
                             }
-                        }
 
-                        break;
-                    }
-                    case NotifyCollectionChangedAction.Move:
-                    {
-                        int intOldStartingIndex = e.OldStartingIndex;
-                        int intNewStartingIndex = e.NewStartingIndex;
-                        if (intOldStartingIndex == intNewStartingIndex)
                             break;
-                        int intUpdateFrom;
-                        int intUpdateTo;
-                        if (intOldStartingIndex > intNewStartingIndex)
-                        {
-                            intUpdateFrom = intNewStartingIndex;
-                            intUpdateTo = intOldStartingIndex;
                         }
-                        else
+                    case NotifyCollectionChangedAction.Replace:
                         {
-                            intUpdateFrom = intOldStartingIndex;
-                            intUpdateTo = intNewStartingIndex;
-                        }
-
-                        for (int i = intUpdateFrom; i <= intUpdateTo; ++i)
-                        {
-                            s_ObjBaseChummerKey.SetValue("stickymru" + (i + 1).ToString(InvariantCultureInfo),
-                                await s_LstFavoriteCharacters.GetValueAtAsync(i, token).ConfigureAwait(false));
-                        }
-
-                        break;
-                    }
-                    case NotifyCollectionChangedAction.Reset:
-                    {
-                        for (int i = 1; i <= MaxMruSize; ++i)
-                        {
-                            if (i <= await s_LstFavoriteCharacters.GetCountAsync(token).ConfigureAwait(false))
-                                s_ObjBaseChummerKey.SetValue("stickymru" + i.ToString(InvariantCultureInfo),
-                                    await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token).ConfigureAwait(false));
+                            string strNewFile = e.NewItems.Count > 0 ? e.NewItems[0] as string : string.Empty;
+                            if (!string.IsNullOrEmpty(strNewFile))
+                                s_ObjBaseChummerKey.SetValue(
+                                    "stickymru" + (e.OldStartingIndex + 1).ToString(InvariantCultureInfo), strNewFile);
                             else
-                                s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo), false);
-                        }
+                            {
+                                for (int i = e.OldStartingIndex + 1; i <= MaxMruSize; ++i)
+                                {
+                                    if (i <= await s_LstFavoriteCharacters.GetCountAsync(token).ConfigureAwait(false))
+                                        s_ObjBaseChummerKey.SetValue("stickymru" + i.ToString(InvariantCultureInfo),
+                                            await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token)
+                                                .ConfigureAwait(false));
+                                    else
+                                        s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo),
+                                            false);
+                                }
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
+                    case NotifyCollectionChangedAction.Move:
+                        {
+                            int intOldStartingIndex = e.OldStartingIndex;
+                            int intNewStartingIndex = e.NewStartingIndex;
+                            if (intOldStartingIndex == intNewStartingIndex)
+                                break;
+                            int intUpdateFrom;
+                            int intUpdateTo;
+                            if (intOldStartingIndex > intNewStartingIndex)
+                            {
+                                intUpdateFrom = intNewStartingIndex;
+                                intUpdateTo = intOldStartingIndex;
+                            }
+                            else
+                            {
+                                intUpdateFrom = intOldStartingIndex;
+                                intUpdateTo = intNewStartingIndex;
+                            }
+
+                            for (int i = intUpdateFrom; i <= intUpdateTo; ++i)
+                            {
+                                s_ObjBaseChummerKey.SetValue("stickymru" + (i + 1).ToString(InvariantCultureInfo),
+                                    await s_LstFavoriteCharacters.GetValueAtAsync(i, token).ConfigureAwait(false));
+                            }
+
+                            break;
+                        }
+                    case NotifyCollectionChangedAction.Reset:
+                        {
+                            for (int i = 1; i <= MaxMruSize; ++i)
+                            {
+                                if (i <= await s_LstFavoriteCharacters.GetCountAsync(token).ConfigureAwait(false))
+                                    s_ObjBaseChummerKey.SetValue("stickymru" + i.ToString(InvariantCultureInfo),
+                                        await s_LstFavoriteCharacters.GetValueAtAsync(i - 1, token).ConfigureAwait(false));
+                                else
+                                    s_ObjBaseChummerKey.DeleteValue("stickymru" + i.ToString(InvariantCultureInfo), false);
+                            }
+
+                            break;
+                        }
                 }
 
                 MruChanged?.Invoke(null, new TextEventArgs("stickymru"));
@@ -2476,98 +2517,98 @@ namespace Chummer
                 switch (e.Action)
                 {
                     case NotifyCollectionChangedAction.Add:
-                    {
-                        for (int i = e.NewStartingIndex + 1; i <= MaxMruSize; ++i)
                         {
-                            if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token).ConfigureAwait(false))
-                                s_ObjBaseChummerKey.SetValue("mru" + i.ToString(InvariantCultureInfo),
-                                    await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i - 1, token)
-                                        .ConfigureAwait(false));
-                            else
-                                s_ObjBaseChummerKey.DeleteValue("mru" + i.ToString(InvariantCultureInfo), false);
-                        }
-
-                        break;
-                    }
-                    case NotifyCollectionChangedAction.Remove:
-                    {
-                        for (int i = e.OldStartingIndex + 1; i <= MaxMruSize; ++i)
-                        {
-                            if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token).ConfigureAwait(false))
-                                s_ObjBaseChummerKey.SetValue("mru" + i.ToString(InvariantCultureInfo),
-                                    await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i - 1, token)
-                                        .ConfigureAwait(false));
-                            else
-                                s_ObjBaseChummerKey.DeleteValue("mru" + i.ToString(InvariantCultureInfo), false);
-                        }
-
-                        break;
-                    }
-                    case NotifyCollectionChangedAction.Replace:
-                    {
-                        string strNewFile = e.NewItems.Count > 0 ? e.NewItems[0] as string : string.Empty;
-                        if (!string.IsNullOrEmpty(strNewFile))
-                        {
-                            s_ObjBaseChummerKey.SetValue(
-                                "mru" + (e.OldStartingIndex + 1).ToString(InvariantCultureInfo), strNewFile);
-                        }
-                        else
-                        {
-                            for (int i = e.OldStartingIndex + 1; i <= MaxMruSize; ++i)
+                            for (int i = e.NewStartingIndex + 1; i <= MaxMruSize; ++i)
                             {
-                                if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token)
-                                        .ConfigureAwait(false))
+                                if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token).ConfigureAwait(false))
                                     s_ObjBaseChummerKey.SetValue("mru" + i.ToString(InvariantCultureInfo),
                                         await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i - 1, token)
                                             .ConfigureAwait(false));
                                 else
                                     s_ObjBaseChummerKey.DeleteValue("mru" + i.ToString(InvariantCultureInfo), false);
                             }
-                        }
 
-                        break;
-                    }
-                    case NotifyCollectionChangedAction.Move:
-                    {
-                        int intOldStartingIndex = e.OldStartingIndex;
-                        int intNewStartingIndex = e.NewStartingIndex;
-                        if (intOldStartingIndex == intNewStartingIndex)
                             break;
-                        int intUpdateFrom;
-                        int intUpdateTo;
-                        if (intOldStartingIndex > intNewStartingIndex)
-                        {
-                            intUpdateFrom = intNewStartingIndex;
-                            intUpdateTo = intOldStartingIndex;
                         }
-                        else
+                    case NotifyCollectionChangedAction.Remove:
                         {
-                            intUpdateFrom = intOldStartingIndex;
-                            intUpdateTo = intNewStartingIndex;
-                        }
+                            for (int i = e.OldStartingIndex + 1; i <= MaxMruSize; ++i)
+                            {
+                                if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token).ConfigureAwait(false))
+                                    s_ObjBaseChummerKey.SetValue("mru" + i.ToString(InvariantCultureInfo),
+                                        await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i - 1, token)
+                                            .ConfigureAwait(false));
+                                else
+                                    s_ObjBaseChummerKey.DeleteValue("mru" + i.ToString(InvariantCultureInfo), false);
+                            }
 
-                        for (int i = intUpdateFrom; i <= intUpdateTo; ++i)
-                        {
-                            s_ObjBaseChummerKey.SetValue("mru" + (i + 1).ToString(InvariantCultureInfo),
-                                await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i, token).ConfigureAwait(false));
+                            break;
                         }
-
-                        break;
-                    }
-                    case NotifyCollectionChangedAction.Reset:
-                    {
-                        for (int i = 1; i <= MaxMruSize; ++i)
+                    case NotifyCollectionChangedAction.Replace:
                         {
-                            if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token).ConfigureAwait(false))
-                                s_ObjBaseChummerKey.SetValue("mru" + i.ToString(InvariantCultureInfo),
-                                    await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i - 1, token)
-                                        .ConfigureAwait(false));
+                            string strNewFile = e.NewItems.Count > 0 ? e.NewItems[0] as string : string.Empty;
+                            if (!string.IsNullOrEmpty(strNewFile))
+                            {
+                                s_ObjBaseChummerKey.SetValue(
+                                    "mru" + (e.OldStartingIndex + 1).ToString(InvariantCultureInfo), strNewFile);
+                            }
                             else
-                                s_ObjBaseChummerKey.DeleteValue("mru" + i.ToString(InvariantCultureInfo), false);
-                        }
+                            {
+                                for (int i = e.OldStartingIndex + 1; i <= MaxMruSize; ++i)
+                                {
+                                    if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token)
+                                            .ConfigureAwait(false))
+                                        s_ObjBaseChummerKey.SetValue("mru" + i.ToString(InvariantCultureInfo),
+                                            await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i - 1, token)
+                                                .ConfigureAwait(false));
+                                    else
+                                        s_ObjBaseChummerKey.DeleteValue("mru" + i.ToString(InvariantCultureInfo), false);
+                                }
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
+                    case NotifyCollectionChangedAction.Move:
+                        {
+                            int intOldStartingIndex = e.OldStartingIndex;
+                            int intNewStartingIndex = e.NewStartingIndex;
+                            if (intOldStartingIndex == intNewStartingIndex)
+                                break;
+                            int intUpdateFrom;
+                            int intUpdateTo;
+                            if (intOldStartingIndex > intNewStartingIndex)
+                            {
+                                intUpdateFrom = intNewStartingIndex;
+                                intUpdateTo = intOldStartingIndex;
+                            }
+                            else
+                            {
+                                intUpdateFrom = intOldStartingIndex;
+                                intUpdateTo = intNewStartingIndex;
+                            }
+
+                            for (int i = intUpdateFrom; i <= intUpdateTo; ++i)
+                            {
+                                s_ObjBaseChummerKey.SetValue("mru" + (i + 1).ToString(InvariantCultureInfo),
+                                    await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i, token).ConfigureAwait(false));
+                            }
+
+                            break;
+                        }
+                    case NotifyCollectionChangedAction.Reset:
+                        {
+                            for (int i = 1; i <= MaxMruSize; ++i)
+                            {
+                                if (i <= await s_LstMostRecentlyUsedCharacters.GetCountAsync(token).ConfigureAwait(false))
+                                    s_ObjBaseChummerKey.SetValue("mru" + i.ToString(InvariantCultureInfo),
+                                        await s_LstMostRecentlyUsedCharacters.GetValueAtAsync(i - 1, token)
+                                            .ConfigureAwait(false));
+                                else
+                                    s_ObjBaseChummerKey.DeleteValue("mru" + i.ToString(InvariantCultureInfo), false);
+                            }
+
+                            break;
+                        }
                 }
 
                 MruChanged?.Invoke(null, new TextEventArgs("mru"));

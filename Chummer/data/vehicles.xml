@@ -9225,7 +9225,9 @@
         </weaponmount>
       </weaponmounts>
       <weapons>
-        <weapon>Siemens FWD Screamer Sonic Cannon</weapon>
+        <weapon>
+          <name>Siemens FWD Screamer Sonic Cannon</name>
+        </weapon>
       </weapons>
       <modslots>0</modslots>
       <seats>0</seats>
@@ -9721,8 +9723,10 @@
         </gear>
       </gears>
       <mods>
-        <name rating="1">ECM</name> <!-- no rating specified in book -->
-        <name rating="1">Passenger Protection System</name> <!-- no rating specified in book -->
+        <name rating="1">ECM</name>
+        <!-- no rating specified in book -->
+        <name rating="1">Passenger Protection System</name>
+        <!-- no rating specified in book -->
         <name>Amenities (Luxury)</name>
         <name>Rigger Interface</name>
       </mods>
@@ -11001,9 +11005,12 @@
       </gears>
       <mods>
         <name>Rigger Interface</name>
-        <name rating="1">ECM</name> <!-- no rating specified in book -->
-        <name>Landing Drone Rack (Small)</name> <!-- no size specified in book -->
-        <name>Landing Drone Rack (Small)</name> <!-- no size specified in book -->
+        <name rating="1">ECM</name>
+        <!-- no rating specified in book -->
+        <name>Landing Drone Rack (Small)</name>
+        <!-- no size specified in book -->
+        <name>Landing Drone Rack (Small)</name>
+        <!-- no size specified in book -->
         <name>Satellite Link</name>
       </mods>
       <seats>6</seats>
@@ -11317,7 +11324,8 @@
       <armor>7</armor>
       <avail>21R</avail>
       <body>16</body>
-      <category>Trucks</category> <!-- Catalog picture does NOT look like a truck, but w/e -->
+      <category>Trucks</category>
+      <!-- Catalog picture does NOT look like a truck, but w/e -->
       <cost>100000</cost>
       <handling>4/4</handling>
       <pilot>3</pilot>

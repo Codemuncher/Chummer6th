@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -179,7 +180,7 @@ namespace Chummer.Plugins
                 }
 
                 using (RegistryKey keyChummerKey = objClasses.OpenSubKey("Chummer", true) //open myApp protocol's subkey
-                                                                                       //if the protocol is not registered yet...we register it
+                                                                                          //if the protocol is not registered yet...we register it
                                                    ?? objClasses.CreateSubKey("Chummer", RegistryKeyPermissionCheck.ReadWriteSubTree))
                 {
                     if (keyChummerKey == null)
@@ -309,20 +310,22 @@ namespace Chummer.Plugins
                     }
                     catch (ReflectionTypeLoadException e)
                     {
+                        e = e.Demystify();
                         TelemetryClient objTelemetry = Program.ChummerTelemetryClient.Value;
                         if (objTelemetry != null)
                         {
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdLoaderExceptions))
                             {
                                 int counter = 0;
                                 foreach (Exception except in e.LoaderExceptions)
                                 {
+                                    Exception innerExcept = except.Demystify();
                                     counter++;
                                     sbdLoaderExceptions
                                         .AppendLine().Append("LoaderException ").Append(counter).Append(": ")
-                                        .Append(except.Message);
-                                    objTelemetry.TrackException(except);
+                                        .Append(innerExcept.Message);
+                                    objTelemetry.TrackException(innerExcept);
                                 }
 
                                 try
@@ -507,13 +510,14 @@ namespace Chummer.Plugins
                 }
                 catch (ReflectionTypeLoadException e)
                 {
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    e = e.Demystify();
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdMessage))
                     {
                         sbdMessage.AppendLine("Exception loading plugins: ");
                         foreach (Exception exp in e.LoaderExceptions)
                         {
-                            sbdMessage.AppendLine(exp.Message);
+                            sbdMessage.AppendLine(exp.Demystify().Message);
                         }
 
                         sbdMessage.AppendLine().Append(e);
@@ -522,7 +526,7 @@ namespace Chummer.Plugins
                 }
                 catch (CompositionException e)
                 {
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdMessage))
                     {
                         sbdMessage.AppendLine("Exception loading plugins: ");

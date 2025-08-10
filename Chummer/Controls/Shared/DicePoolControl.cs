@@ -18,24 +18,24 @@
  */
 
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.ComponentModel;
 
 namespace Chummer.UI.Shared.Components
 {
     public partial class DicePoolControl : UserControl
     {
-        private AsyncFriendlyReaderWriterLock _objDicePoolLockObject = new AsyncFriendlyReaderWriterLock();
+        private readonly AsyncFriendlyReaderWriterLock _objDicePoolLockObject = new AsyncFriendlyReaderWriterLock();
         private decimal _decDicePool;
         private bool _blnCanBeRolled = true;
-        private bool _blnCanEverBeRolled = Utils.IsDesignerMode;
+        private bool _blnCanEverBeRolled = Utils.IsDesignerMode || Utils.IsRunningInVisualStudio;
 
         public DicePoolControl()
         {
             InitializeComponent();
-            this.Disposed += (sender, args) => _objDicePoolLockObject.Dispose();
+            Disposed += (sender, args) => _objDicePoolLockObject.Dispose();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
             CanEverBeRolled = CanEverBeRolled || GlobalSettings.AllowSkillDiceRolling;

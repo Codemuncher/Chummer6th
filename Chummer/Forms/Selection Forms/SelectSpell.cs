@@ -17,7 +17,6 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using RtfPipe.Tokens;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -45,14 +44,13 @@ namespace Chummer
 
         private readonly XPathNavigator _xmlBaseSpellDataNode;
         private readonly Character _objCharacter;
-        private List<ListItem> _lstCategory = Utils.ListItemListPool.Get();
+        private List<ListItem> _lstCategory;
         private bool _blnRefresh;
 
         #region Control Events
 
         public SelectSpell(Character objCharacter)
         {
-            Disposed += (sender, args) => Utils.ListItemListPool.Return(ref _lstCategory);
             _objCharacter = objCharacter ?? throw new ArgumentNullException(nameof(objCharacter));
             InitializeComponent();
             this.UpdateLightDarkMode();
@@ -60,6 +58,8 @@ namespace Chummer
 
             // Load the Spells information.
             _xmlBaseSpellDataNode = _objCharacter.LoadDataXPath("spells.xml").SelectSingleNodeAndCacheExpression("/chummer");
+            _lstCategory = Utils.ListItemListPool.Get();
+            Disposed += (sender, args) => Utils.ListItemListPool.Return(ref _lstCategory);
         }
 
         private async void SelectSpell_Load(object sender, EventArgs e)
@@ -293,14 +293,14 @@ namespace Chummer
             bool blnHasSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.TextLength != 0, token: token).ConfigureAwait(false);
 
             string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSpellItems))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSpellItems))
             {
-                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool, out HashSet<string> limitDescriptors))
-                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool, out HashSet<string> limitDescriptors))
+                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                 out HashSet<string> blockDescriptors))
                 {
                     string strFilter = string.Empty;
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                     {
                         sbdFilter.Append('(').Append(await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
                         if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"
@@ -309,7 +309,7 @@ namespace Chummer
                             sbdFilter.Append(" and category = ").Append(strCategory.CleanXPath());
                         else
                         {
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdCategoryFilter))
                             {
                                 foreach (string strItem in _lstCategory.Select(x => x.Value.ToString()))
@@ -576,7 +576,7 @@ namespace Chummer
             bool blnExtendedFound = false;
             bool blnAlchemicalFound = false;
             string strDescriptors = xmlSpell.SelectSingleNodeAndCacheExpression("descriptor", token)?.Value;
-            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdDescriptors))
+            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdDescriptors))
             {
                 if (!string.IsNullOrEmpty(strDescriptors))
                 {
@@ -660,13 +660,13 @@ namespace Chummer
                 {
                     // If Extended Area was not found and the Extended checkbox is checked, add Extended Area to the list of Descriptors.
                     if (await chkExtended.DoThreadSafeFuncAsync(x =>
-                        {
-                            x.Visible = true;
-                            if (!x.Enabled) // Resets this checkbox if we just selected an Extended Area spell
-                                x.Checked = false;
-                            x.Enabled = true;
-                            return x.Checked;
-                        }, token: token).ConfigureAwait(false))
+                    {
+                        x.Visible = true;
+                        if (!x.Enabled) // Resets this checkbox if we just selected an Extended Area spell
+                            x.Checked = false;
+                        x.Enabled = true;
+                        return x.Checked;
+                    }, token: token).ConfigureAwait(false))
                     {
                         sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescExtendedArea", token: token).ConfigureAwait(false)).Append(',')
                             .Append(strSpace);
@@ -696,7 +696,7 @@ namespace Chummer
             string strSelectedSpellName = xmlSpell.SelectSingleNodeAndCacheExpression("name", token)?.Value ?? string.Empty;
             string strSelectedSpellCategory = xmlSpell.SelectSingleNodeAndCacheExpression("category", token)?.Value ?? string.Empty;
             List<Improvement> lstDrainRelevantImprovements = new List<Improvement>();
-            using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                               out HashSet<string> setDescriptors))
             {
                 foreach (string strDescriptor in strDescriptors.SplitNoAlloc(',', StringSplitOptions.RemoveEmptyEntries))
@@ -839,19 +839,19 @@ namespace Chummer
             switch (xmlSpell.SelectSingleNodeAndCacheExpression("damage", token)?.Value)
             {
                 case "P":
-                {
-                    await lblDamageLabel.DoThreadSafeAsync(x => x.Visible = true, token: token).ConfigureAwait(false);
-                    string strDamage = await LanguageManager.GetStringAsync("String_DamagePhysical", token: token).ConfigureAwait(false);
-                    await lblDamage.DoThreadSafeAsync(x => x.Text = strDamage, token: token).ConfigureAwait(false);
-                }
+                    {
+                        await lblDamageLabel.DoThreadSafeAsync(x => x.Visible = true, token: token).ConfigureAwait(false);
+                        string strDamage = await LanguageManager.GetStringAsync("String_DamagePhysical", token: token).ConfigureAwait(false);
+                        await lblDamage.DoThreadSafeAsync(x => x.Text = strDamage, token: token).ConfigureAwait(false);
+                    }
                     break;
 
                 case "S":
-                {
-                    await lblDamageLabel.DoThreadSafeAsync(x => x.Visible = true, token: token).ConfigureAwait(false);
-                    string strDamage = await LanguageManager.GetStringAsync("String_DamageStun", token: token).ConfigureAwait(false);
-                    await lblDamage.DoThreadSafeAsync(x => x.Text = strDamage, token: token).ConfigureAwait(false);
-                }
+                    {
+                        await lblDamageLabel.DoThreadSafeAsync(x => x.Visible = true, token: token).ConfigureAwait(false);
+                        string strDamage = await LanguageManager.GetStringAsync("String_DamageStun", token: token).ConfigureAwait(false);
+                        await lblDamage.DoThreadSafeAsync(x => x.Text = strDamage, token: token).ConfigureAwait(false);
+                    }
                     break;
 
                 default:
@@ -900,14 +900,13 @@ namespace Chummer
             int intDrainDv = 0;
             if (strDv.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
             {
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdDv))
                 {
-                    sbdDv.Append(strDv);
+                    sbdDv.Append('(').Append(strDv).Append(')');
                     foreach (Improvement objImprovement in lstDrainRelevantImprovements)
                     {
-                        sbdDv.AppendFormat(GlobalSettings.InvariantCultureInfo, "{0:+0;-0;+0}",
-                                                       objImprovement.Value);
+                        sbdDv.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
                     }
 
                     if (await chkLimited.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false))
@@ -924,6 +923,7 @@ namespace Chummer
                         sbdDv.Insert(0, "2 * (").Append(')');
                     }
 
+                    await _objCharacter.ProcessAttributesInXPathAsync(sbdDv, token: token).ConfigureAwait(false);
                     (bool blnIsSuccess, object xprResult) = await CommonFunctions.EvaluateInvariantXPathAsync(sbdDv.ToString(), token).ConfigureAwait(false);
                     if (blnIsSuccess)
                         intDrainDv = ((double)xprResult).StandardRound();
@@ -949,7 +949,7 @@ namespace Chummer
                 {
                     decValue *= 2;
                 }
-                int intDv = decValue.StandardRound();
+                intDrainDv = decValue.StandardRound();
             }
 
             // Drain always minimum 2

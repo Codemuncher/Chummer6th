@@ -122,9 +122,9 @@ namespace Chummer
             }
         }
 
-        private void cmdOK_Click(object sender, EventArgs e)
+        private async void cmdOK_Click(object sender, EventArgs e)
         {
-            AcceptForm();
+            await AcceptForm().ConfigureAwait(false);
         }
 
         private void cmdCancel_Click(object sender, EventArgs e)
@@ -133,9 +133,9 @@ namespace Chummer
             Close();
         }
 
-        private void lstMetamagic_DoubleClick(object sender, EventArgs e)
+        private async void lstMetamagic_DoubleClick(object sender, EventArgs e)
         {
-            AcceptForm();
+            await AcceptForm().ConfigureAwait(false);
         }
 
         private async void chkLimitList_CheckedChanged(object sender, EventArgs e)
@@ -183,7 +183,7 @@ namespace Chummer
             if (_lstMetamagicLimits.Count > 0)
             {
                 strFilter += " and (";
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                 {
                     foreach (string strMetamagic in _lstMetamagicLimits)
                         sbdFilter.Append("name = ").Append(strMetamagic.CleanXPath()).Append(" or ");
@@ -195,7 +195,7 @@ namespace Chummer
             string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(strSearch))
                 strFilter += " and " + CommonFunctions.GenerateSearchXPath(strSearch);
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetamagics))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetamagics))
             {
                 foreach (XPathNavigator objXmlMetamagic in
                          _objXmlDocument.Select(_strRootXPath + '[' + strFilter + ']'))
@@ -231,21 +231,24 @@ namespace Chummer
         /// <summary>
         /// Accept the selected item and close the form.
         /// </summary>
-        private void AcceptForm()
+        private async Task AcceptForm(CancellationToken token = default)
         {
-            string strSelectedId = lstMetamagic.SelectedValue?.ToString();
+            token.ThrowIfCancellationRequested();
+            string strSelectedId = await lstMetamagic.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(strSelectedId))
             {
                 // Make sure the selected Metamagic or Echo meets its requirements.
                 XPathNavigator objXmlMetamagic = _objXmlDocument.TryGetNodeByNameOrId(_strRootXPath, strSelectedId);
 
-                if (objXmlMetamagic?.RequirementsMet(_objCharacter, strLocalName: _strType) != true)
+                if (objXmlMetamagic == null || !await objXmlMetamagic.RequirementsMetAsync(_objCharacter, strLocalName: _strType, token: token).ConfigureAwait(false))
                     return;
 
                 _strSelectedMetamagic = strSelectedId;
-
-                DialogResult = DialogResult.OK;
-                Close();
+                await this.DoThreadSafeAsync(x =>
+                {
+                    x.DialogResult = DialogResult.OK;
+                    x.Close();
+                }, token).ConfigureAwait(false);
             }
         }
 

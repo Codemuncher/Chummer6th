@@ -107,7 +107,7 @@ namespace Chummer
                     try
                     {
                         // Populate the Metatype Category list.
-                        using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                        out List<ListItem> lstCategories))
                         {
                             // Create a list of Categories.
@@ -115,7 +115,7 @@ namespace Chummer
                                 = _xmlBaseMetatypeDataNode.SelectSingleNodeAndCacheExpression("metatypes", _objGenericToken);
                             if (xmlMetatypesNode != null)
                             {
-                                using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                                using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                                 out HashSet<string> setAlreadyProcessed))
                                 {
                                     foreach (XPathNavigator objXmlCategory in _xmlBaseMetatypeDataNode
@@ -148,9 +148,10 @@ namespace Chummer
 
                             await cboCategory.PopulateWithListItemsAsync(lstCategories, _objGenericToken).ConfigureAwait(false);
                             // Attempt to select the default Metahuman Category. If it could not be found, select the first item in the list instead.
+                            string strMetatypeCategory = await _objCharacter.GetMetatypeCategoryAsync(_objGenericToken).ConfigureAwait(false);
                             await cboCategory.DoThreadSafeAsync(x =>
                             {
-                                x.SelectedValue = _objCharacter.MetatypeCategory;
+                                x.SelectedValue = strMetatypeCategory;
                                 if (x.SelectedIndex == -1 && lstCategories.Count > 0)
                                     x.SelectedIndex = 0;
                             }, _objGenericToken).ConfigureAwait(false);
@@ -160,7 +161,7 @@ namespace Chummer
                         await chkPossessionBased.SetToolTipAsync(
                             await LanguageManager.GetStringAsync("Tip_Metatype_PossessionTradition", token: _objGenericToken).ConfigureAwait(false), _objGenericToken).ConfigureAwait(false);
 
-                        using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                        out List<ListItem> lstMethods))
                         {
                             if (GlobalSettings.Language != GlobalSettings.DefaultLanguage)
@@ -690,7 +691,7 @@ namespace Chummer
                     }
 
                     // ReSharper disable once IdentifierTypo
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdQualities))
                     {
                         // Build a list of the Metavariant's Qualities.
@@ -841,7 +842,7 @@ namespace Chummer
                     }
 
                     // ReSharper disable once IdentifierTypo
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdQualities))
                     {
                         // Build a list of the Metatype's Positive Qualities.
@@ -1035,7 +1036,7 @@ namespace Chummer
                 // Don't attempt to do anything if nothing is selected.
                 if (objXmlMetatype != null)
                 {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetavariants))
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetavariants))
                     {
                         lstMetavariants.Add(new ListItem(Guid.Empty, await LanguageManager.GetStringAsync("String_None", token: token).ConfigureAwait(false)));
                         foreach (XPathNavigator objXmlMetavariant in objXmlMetatype.Select(
@@ -1142,11 +1143,11 @@ namespace Chummer
                 string strSearchText = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token).ConfigureAwait(false);
                 if (!string.IsNullOrEmpty(strSelectedCategory) || !string.IsNullOrEmpty(strSearchText))
                 {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                    out List<ListItem> lstMetatypeItems))
                     {
                         string strFilter = string.Empty;
-                        using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
+                        using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                         {
                             sbdFilter.Append('(').Append(await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
                             if (!string.IsNullOrEmpty(strSelectedCategory) && strSelectedCategory != "Show All"

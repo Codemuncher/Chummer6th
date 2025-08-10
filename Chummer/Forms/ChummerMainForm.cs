@@ -89,7 +89,7 @@ namespace Chummer
 
         public bool IsClosing => _intFormClosing > 0;
 
-#region Control Events
+        #region Control Events
 
         public ChummerMainForm(bool blnIsUnitTest = false, bool blnIsUnitTestForUI = false)
         {
@@ -688,7 +688,7 @@ namespace Chummer
                             }
 
                             NativeMethods.ChangeFilterStruct changeFilter = default;
-                            changeFilter.size = (uint) Marshal.SizeOf(changeFilter);
+                            changeFilter.size = (uint)Marshal.SizeOf(changeFilter);
                             changeFilter.info = 0;
                             if (NativeMethods.ChangeWindowMessageFilterEx(
                                     await this.DoThreadSafeFuncAsync(x => x.Handle, token: _objGenericToken)
@@ -755,7 +755,7 @@ namespace Chummer
                                     string[] strArgs = Environment.GetCommandLineArgs();
                                     using (ProcessCommandLineArguments(strArgs, out blnShowTest,
                                                out HashSet<string> setFilesToLoad,
-                                               opFrmChummerMain))
+                                               opLoadActivity: opFrmChummerMain))
                                     {
                                         if (Directory.Exists(Utils.GetAutosavesFolderPath))
                                         {
@@ -1029,16 +1029,14 @@ namespace Chummer
                             //the config is invalid - reset it!
                             Properties.Settings.Default.Reset();
                             Properties.Settings.Default.Save();
-                            Log.Warn(
-                                "Configuration Settings were invalid and had to be reset. Exception: " + ex.Message);
+                            Log.Warn(ex, "Configuration Settings were invalid and had to be reset.");
                         }
                         catch (System.Configuration.ConfigurationErrorsException ex)
                         {
                             //the config is invalid - reset it!
                             Properties.Settings.Default.Reset();
                             Properties.Settings.Default.Save();
-                            Log.Warn(
-                                "Configuration Settings were invalid and had to be reset. Exception: " + ex.Message);
+                            Log.Warn(ex, "Configuration Settings were invalid and had to be reset");
                         }
 
                         if (Properties.Settings.Default.Size.Width == 0 || Properties.Settings.Default.Size.Height == 0
@@ -1098,8 +1096,8 @@ namespace Chummer
             }
         }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         [CLSCompliant(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public PageViewTelemetry MyStartupPvt { get; set; }
 
         private void OpenCharactersOnBeforeClearCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -1126,64 +1124,64 @@ namespace Chummer
                 switch (e.Action)
                 {
                     case NotifyCollectionChangedAction.Reset:
-                    {
-                        foreach (Character objCharacter in Program.OpenCharacters)
                         {
-                            objCharacter.PropertyChangedAsync += UpdateCharacterTabTitle;
-                        }
+                            foreach (Character objCharacter in Program.OpenCharacters)
+                            {
+                                objCharacter.PropertyChangedAsync += UpdateCharacterTabTitle;
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case NotifyCollectionChangedAction.Add:
-                    {
-                        foreach (Character objCharacter in e.NewItems)
                         {
-                            objCharacter.PropertyChangedAsync += UpdateCharacterTabTitle;
-                        }
+                            foreach (Character objCharacter in e.NewItems)
+                            {
+                                objCharacter.PropertyChangedAsync += UpdateCharacterTabTitle;
+                            }
 
-                        break;
-                    }
+                            break;
+                        }
                     case NotifyCollectionChangedAction.Remove:
-                    {
-                        foreach (Character objCharacter in e.OldItems)
                         {
-                            if (objCharacter?.IsDisposed != false)
-                                continue;
-                            try
+                            foreach (Character objCharacter in e.OldItems)
                             {
-                                objCharacter.PropertyChangedAsync -= UpdateCharacterTabTitle;
+                                if (objCharacter?.IsDisposed != false)
+                                    continue;
+                                try
+                                {
+                                    objCharacter.PropertyChangedAsync -= UpdateCharacterTabTitle;
+                                }
+                                catch (ObjectDisposedException)
+                                {
+                                    //swallow this
+                                }
                             }
-                            catch (ObjectDisposedException)
-                            {
-                                //swallow this
-                            }
-                        }
 
-                        break;
-                    }
+                            break;
+                        }
                     case NotifyCollectionChangedAction.Replace:
-                    {
-                        foreach (Character objCharacter in e.OldItems)
                         {
-                            if (objCharacter?.IsDisposed != false)
-                                continue;
-                            try
+                            foreach (Character objCharacter in e.OldItems)
                             {
-                                objCharacter.PropertyChangedAsync -= UpdateCharacterTabTitle;
+                                if (objCharacter?.IsDisposed != false)
+                                    continue;
+                                try
+                                {
+                                    objCharacter.PropertyChangedAsync -= UpdateCharacterTabTitle;
+                                }
+                                catch (ObjectDisposedException)
+                                {
+                                    //swallow this
+                                }
                             }
-                            catch (ObjectDisposedException)
+
+                            foreach (Character objCharacter in e.NewItems)
                             {
-                                //swallow this
+                                objCharacter.PropertyChangedAsync += UpdateCharacterTabTitle;
                             }
-                        }
 
-                        foreach (Character objCharacter in e.NewItems)
-                        {
-                            objCharacter.PropertyChangedAsync += UpdateCharacterTabTitle;
+                            break;
                         }
-
-                        break;
-                    }
                 }
             }
             catch (OperationCanceledException)
@@ -1873,6 +1871,11 @@ namespace Chummer
             Process.Start(new ProcessStartInfo("https://github.com/chummer5a/chummer5a/issues/") { UseShellExecute = true });
         }
 
+        private void mnuReportBug_Click(object sender, EventArgs e)
+        {
+            Process.Start(new ProcessStartInfo("https://github.com/chummer5a/chummer5a/issues/new/choose") { UseShellExecute = true });
+        }
+
         public PrintMultipleCharacters PrintMultipleCharactersForm { get; private set; }
 
         private async void mnuFilePrintMultiple_Click(object sender, EventArgs e)
@@ -2051,62 +2054,62 @@ namespace Chummer
                         switch (objMdiChild)
                         {
                             case CharacterShared frmCharacterShared:
-                            {
-                                await objTabPage.DoThreadSafeAsync(x => x.Text = frmCharacterShared.CharacterObject.CharacterName, token: _objGenericToken).ConfigureAwait(false);
-                                if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
                                 {
-                                    _mascotChummy.CharacterObject = frmCharacterShared.CharacterObject;
-                                }
+                                    await objTabPage.DoThreadSafeAsync(x => x.Text = frmCharacterShared.CharacterObject.CharacterName, token: _objGenericToken).ConfigureAwait(false);
+                                    if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
+                                    {
+                                        _mascotChummy.CharacterObject = frmCharacterShared.CharacterObject;
+                                    }
 
-                                break;
-                            }
+                                    break;
+                                }
                             case CharacterSheetViewer frmSheetViewer:
-                            {
-                                string strSpace = await LanguageManager.GetStringAsync("String_Space", token: _objGenericToken).ConfigureAwait(false);
-                                string strSheet = await LanguageManager.GetStringAsync("String_Sheet_Blank", token: _objGenericToken).ConfigureAwait(false);
-                                await objTabPage.DoThreadSafeAsync(
-                                    x => x.Text = string.Format(
-                                        strSheet,
-                                        string.Join(',' + strSpace,
-                                                    frmSheetViewer.CharacterObjects.Select(y => y.CharacterName.Trim()))), token: _objGenericToken).ConfigureAwait(false);
-                                if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
                                 {
-                                    _mascotChummy.CharacterObject = null;
-                                }
+                                    string strSpace = await LanguageManager.GetStringAsync("String_Space", token: _objGenericToken).ConfigureAwait(false);
+                                    string strSheet = await LanguageManager.GetStringAsync("String_Sheet_Blank", token: _objGenericToken).ConfigureAwait(false);
+                                    await objTabPage.DoThreadSafeAsync(
+                                        x => x.Text = string.Format(
+                                            strSheet,
+                                            string.Join(',' + strSpace,
+                                                        frmSheetViewer.CharacterObjects.Select(y => y.CharacterName.Trim()))), token: _objGenericToken).ConfigureAwait(false);
+                                    if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
+                                    {
+                                        _mascotChummy.CharacterObject = null;
+                                    }
 
-                                break;
-                            }
+                                    break;
+                                }
                             case ExportCharacter frmExportCharacter:
-                            {
-                                string strExport = await LanguageManager.GetStringAsync("String_Export_Blank", token: _objGenericToken).ConfigureAwait(false);
-                                await objTabPage.DoThreadSafeAsync(
-                                    x => x.Text = string.Format(
-                                        strExport,
-                                        frmExportCharacter.CharacterObject.CharacterName.Trim()), token: _objGenericToken).ConfigureAwait(false);
-                                if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
                                 {
-                                    _mascotChummy.CharacterObject = null;
-                                }
+                                    string strExport = await LanguageManager.GetStringAsync("String_Export_Blank", token: _objGenericToken).ConfigureAwait(false);
+                                    await objTabPage.DoThreadSafeAsync(
+                                        x => x.Text = string.Format(
+                                            strExport,
+                                            frmExportCharacter.CharacterObject.CharacterName.Trim()), token: _objGenericToken).ConfigureAwait(false);
+                                    if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
+                                    {
+                                        _mascotChummy.CharacterObject = null;
+                                    }
 
-                                break;
-                            }
+                                    break;
+                                }
                             default:
-                            {
-                                string strKey = await objMdiChild.DoThreadSafeFuncAsync(x => x.Tag?.ToString(), token: _objGenericToken).ConfigureAwait(false);
-                                if (!string.IsNullOrEmpty(strKey))
                                 {
-                                    string strTagText
-                                        = await LanguageManager.GetStringAsync(strKey, GlobalSettings.Language, false, _objGenericToken).ConfigureAwait(false);
-                                    if (!string.IsNullOrEmpty(strTagText))
-                                        await objTabPage.DoThreadSafeAsync(x => x.Text = strTagText, token: _objGenericToken).ConfigureAwait(false);
-                                }
-                                if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
-                                {
-                                    _mascotChummy.CharacterObject = null;
-                                }
+                                    string strKey = await objMdiChild.DoThreadSafeFuncAsync(x => x.Tag?.ToString(), token: _objGenericToken).ConfigureAwait(false);
+                                    if (!string.IsNullOrEmpty(strKey))
+                                    {
+                                        string strTagText
+                                            = await LanguageManager.GetStringAsync(strKey, GlobalSettings.Language, false, _objGenericToken).ConfigureAwait(false);
+                                        if (!string.IsNullOrEmpty(strTagText))
+                                            await objTabPage.DoThreadSafeAsync(x => x.Text = strTagText, token: _objGenericToken).ConfigureAwait(false);
+                                    }
+                                    if (GlobalSettings.AllowEasterEggs && _mascotChummy != null)
+                                    {
+                                        _mascotChummy.CharacterObject = null;
+                                    }
 
-                                break;
-                            }
+                                    break;
+                                }
                         }
 
                         await tabForms.DoThreadSafeAsync(x =>
@@ -2650,7 +2653,7 @@ namespace Chummer
                 try
                 {
                     // Open each file that has been dropped into the window.
-                    string[] s = (string[]) e.Data.GetData(DataFormats.FileDrop, false);
+                    string[] s = (string[])e.Data.GetData(DataFormats.FileDrop, false);
                     if (s.Length == 0)
                         return;
                     Character[] lstCharacters = new Character[s.Length];
@@ -2783,6 +2786,7 @@ namespace Chummer
                 }
                 catch (IOException ex)
                 {
+                    ex = ex.Demystify();
                     Log.Warn(ex, ex.Message);
                 }
 
@@ -3107,9 +3111,9 @@ namespace Chummer
         }
 #endif
 
-#endregion Control Events
+        #endregion Control Events
 
-#region Methods
+        #region Methods
         /// <summary>
         /// Create a new character and show the Create Form.
         /// </summary>
@@ -3376,7 +3380,7 @@ namespace Chummer
                                 await this.DoThreadSafeAsync(y =>
                                 {
                                     CharacterShared frmNewCharacter = objCharacter.Created
-                                        ? (CharacterShared) new CharacterCareer(objCharacter)
+                                        ? (CharacterShared)new CharacterCareer(objCharacter)
                                         : new CharacterCreate(objCharacter);
                                     frmNewCharacter.MdiParent = y;
                                     bool blnMaximizePreShow = y.MdiChildren.Length <= 1 && (y.MdiChildren.Length == 0
@@ -4284,12 +4288,12 @@ namespace Chummer
                         if (objReceivedData.dwData == Program.CommandLineArgsDataTypeId)
                         {
                             string strParam = Marshal.PtrToStringUni(objReceivedData.lpData) ?? string.Empty;
-                            string[] strArgs = strParam.Split("<>", StringSplitOptions.RemoveEmptyEntries);
+                            string[] strArgs = strParam.SplitToPooledArray(out int intLength, "<|>", StringSplitOptions.RemoveEmptyEntries);
 
                             _objGenericToken.ThrowIfCancellationRequested();
                             bool blnShowTest;
                             using (ProcessCommandLineArguments(strArgs, out blnShowTest,
-                                       out HashSet<string> setFilesToLoad))
+                                       out HashSet<string> setFilesToLoad, intLength))
                             {
                                 _objGenericToken.ThrowIfCancellationRequested();
                                 if (Directory.Exists(Utils.GetAutosavesFolderPath))
@@ -4421,16 +4425,19 @@ namespace Chummer
             }
         }
 
-        private static FetchSafelyFromPool<HashSet<string>> ProcessCommandLineArguments(string[] strArgs, out bool blnShowTest, out HashSet<string> setFilesToLoad, CustomActivity opLoadActivity = null)
+        private static FetchSafelyFromSafeObjectPool<HashSet<string>> ProcessCommandLineArguments(string[] strArgs, out bool blnShowTest, out HashSet<string> setFilesToLoad, int intLength = int.MaxValue, CustomActivity opLoadActivity = null)
         {
             blnShowTest = false;
-            FetchSafelyFromPool<HashSet<string>> objReturn = new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool, out setFilesToLoad);
-            if (strArgs.Length == 0)
+            FetchSafelyFromSafeObjectPool<HashSet<string>> objReturn = new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool, out setFilesToLoad);
+            if (Math.Min(strArgs.Length, intLength) == 0)
                 return objReturn;
             try
             {
+                int intIndex = -1;
                 foreach (string strArg in strArgs)
                 {
+                    if (++intIndex >= intLength)
+                        return objReturn;
                     if (strArg.EndsWith(Path.GetFileName(Application.ExecutablePath), StringComparison.OrdinalIgnoreCase))
                         continue;
                     switch (strArg)
@@ -4502,9 +4509,9 @@ namespace Chummer
             return objReturn;
         }
 
-#endregion Methods
+        #endregion Methods
 
-#region Application Properties
+        #region Application Properties
 
         /// <summary>
         /// The frmDiceRoller window being used by the application.
@@ -4552,6 +4559,6 @@ namespace Chummer
         /// </summary>
         public bool IsFinishedLoading { get; private set; }
 
-#endregion Application Properties
+        #endregion Application Properties
     }
 }

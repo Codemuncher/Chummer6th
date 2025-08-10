@@ -33,7 +33,7 @@ namespace Chummer
     /// <summary>
     /// A Location.
     /// </summary>
-    [DebuggerDisplay("{nameof(Name)}")]
+    [DebuggerDisplay("{" + nameof(Name) + "}")]
     public sealed class Location : IHasInternalId, IHasName, IHasNotes, ICanRemove, ICanSort, IHasLockObject, IHasCharacterObject
     {
         private Guid _guiID;
@@ -74,7 +74,7 @@ namespace Chummer
                 objWriter.WriteStartElement("location");
                 objWriter.WriteElementString("guid", _guiID.ToString("D", GlobalSettings.InvariantCultureInfo));
                 objWriter.WriteElementString("name", _strName);
-                objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+                objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
                 objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
                 objWriter.WriteElementString("sortorder", _intSortOrder.ToString(GlobalSettings.InvariantCultureInfo));
                 objWriter.WriteEndElement();
@@ -181,7 +181,7 @@ namespace Chummer
         /// </summary>
         public string DisplayNameShort(string strLanguage = "")
         {
-            if (string.IsNullOrEmpty(strLanguage) || strLanguage == GlobalSettings.Language)
+            if (string.IsNullOrEmpty(strLanguage) || strLanguage.Equals(GlobalSettings.Language, StringComparison.OrdinalIgnoreCase))
                 return Name;
             using (LockObject.EnterReadLock())
             {
@@ -217,7 +217,7 @@ namespace Chummer
         /// </summary>
         public async Task<string> DisplayNameShortAsync(string strLanguage = "", CancellationToken token = default)
         {
-            if (string.IsNullOrEmpty(strLanguage) || strLanguage == GlobalSettings.Language)
+            if (string.IsNullOrEmpty(strLanguage) || strLanguage.Equals(GlobalSettings.Language, StringComparison.OrdinalIgnoreCase))
                 return Name;
             IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
             try
@@ -427,15 +427,14 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                string strText = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
                 TreeNode objNode = new TreeNode
                 {
                     Name = InternalId,
-                    Text = strText,
+                    Text = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false),
                     Tag = this,
                     ContextMenuStrip = cmsLocation,
-                    ForeColor = PreferredColor,
-                    ToolTipText = Notes.WordWrap()
+                    ForeColor = await GetPreferredColorAsync(token).ConfigureAwait(false),
+                    ToolTipText = (await GetNotesAsync(token).ConfigureAwait(false)).WordWrap()
                 };
 
                 return objNode;

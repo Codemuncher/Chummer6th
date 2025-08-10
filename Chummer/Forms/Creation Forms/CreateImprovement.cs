@@ -17,8 +17,12 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Skills;
+using Microsoft.IO;
 using System;
+using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -27,10 +31,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Skills;
-using Microsoft.IO;
-using System.ComponentModel;
-
 
 namespace Chummer
 {
@@ -58,7 +58,7 @@ namespace Chummer
 
         private async void CreateImprovement_Load(object sender, EventArgs e)
         {
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstTypes))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstTypes))
             {
                 // Populate the Improvement Type list.
                 foreach (XPathNavigator objXmlImprovement in _objImprovementsDocumentImprovementsNode.Select("improvement"))
@@ -113,7 +113,7 @@ namespace Chummer
                         XPathNavigator xmlImprovementNode
                             = _objImprovementsDocumentImprovementsNode.TryGetNodeByNameOrId(
                                 "improvement",
-                                cboImprovemetType.SelectedValue.ToString(),blnIdIsGuid:false);
+                                await cboImprovemetType.DoThreadSafeFuncAsync(x => x.SelectedValue.ToString()).ConfigureAwait(false), blnIdIsGuid: false);
                         XPathNavigator objFetchNode = xmlImprovementNode?.SelectSingleNodeAndCacheExpression("fields/field");
                         string strText
                             = await TranslateField(objFetchNode?.Value, EditImprovementObject.ImprovedName).ConfigureAwait(false);
@@ -215,7 +215,7 @@ namespace Chummer
             switch (_strSelect)
             {
                 case "SelectActionDicePool":
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                    out List<ListItem> lstActions))
                     {
                         foreach (XPathNavigator xmlAction in (await _objCharacter.LoadDataXPathAsync("actions.xml").ConfigureAwait(false))
@@ -231,16 +231,14 @@ namespace Chummer
                         }
 
                         string strDescription = await LanguageManager.GetStringAsync("Title_SelectAction").ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> frmSelectAction = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                               {
-                                   Description = strDescription
-                               }).ConfigureAwait(false))
+                        using (ThreadSafeForm<SelectItem> frmSelectAction = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem()).ConfigureAwait(false))
                         {
+                            await frmSelectAction.MyForm.DoThreadSafeAsync(x => x.Description = strDescription).ConfigureAwait(false);
                             frmSelectAction.MyForm.SetDropdownItemsMode(lstActions);
 
                             if (await frmSelectAction.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
                             {
-                                string strSelect = frmSelectAction.MyForm.SelectedName;
+                                string strSelect = await frmSelectAction.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName).ConfigureAwait(false);
                                 await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
                                 string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
                                 await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
@@ -368,43 +366,43 @@ namespace Chummer
                     break;
 
                 case "SelectMentalAttribute":
-                {
-                    string strDescription = await LanguageManager.GetStringAsync("Title_SelectAttribute").ConfigureAwait(false);
-                    using (ThreadSafeForm<SelectAttribute> frmPickAttribute =
-                           await ThreadSafeForm<SelectAttribute>.GetAsync(() =>
-                                                                              new SelectAttribute(Backend.Attributes.AttributeSection.MentalAttributes.ToArray())
-                                                                                  { Description = strDescription }).ConfigureAwait(false))
                     {
-                        if (await frmPickAttribute.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectAttribute").ConfigureAwait(false);
+                        using (ThreadSafeForm<SelectAttribute> frmPickAttribute =
+                               await ThreadSafeForm<SelectAttribute>.GetAsync(() =>
+                                                                                  new SelectAttribute(Backend.Attributes.AttributeSection.MentalAttributes.ToArray())
+                                                                                  { Description = strDescription }).ConfigureAwait(false))
                         {
-                            string strSelect = frmPickAttribute.MyForm.SelectedAttribute;
-                            await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                            string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                            await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            if (await frmPickAttribute.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                            {
+                                string strSelect = frmPickAttribute.MyForm.SelectedAttribute;
+                                await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            }
                         }
-                    }
 
-                    break;
-                }
+                        break;
+                    }
                 case "SelectPhysicalAttribute":
-                {
-                    string strDescription = await LanguageManager.GetStringAsync("Title_SelectAttribute").ConfigureAwait(false);
-                    using (ThreadSafeForm<SelectAttribute> frmPickAttribute =
-                           await ThreadSafeForm<SelectAttribute>.GetAsync(() =>
-                                                                              new SelectAttribute(Backend.Attributes.AttributeSection.PhysicalAttributes.ToArray())
-                                                                                  { Description = strDescription }).ConfigureAwait(false))
                     {
-                        if (await frmPickAttribute.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectAttribute").ConfigureAwait(false);
+                        using (ThreadSafeForm<SelectAttribute> frmPickAttribute =
+                               await ThreadSafeForm<SelectAttribute>.GetAsync(() =>
+                                                                                  new SelectAttribute(Backend.Attributes.AttributeSection.PhysicalAttributes.ToArray())
+                                                                                  { Description = strDescription }).ConfigureAwait(false))
                         {
-                            string strSelect = frmPickAttribute.MyForm.SelectedAttribute;
-                            await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                            string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                            await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            if (await frmPickAttribute.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                            {
+                                string strSelect = frmPickAttribute.MyForm.SelectedAttribute;
+                                await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            }
                         }
-                    }
 
-                    break;
-                }
+                        break;
+                    }
                 case "SelectSpecialAttribute":
                     {
                         List<string> lstAbbrevs = new List<string>(Backend.Attributes.AttributeSection.AttributeStrings);
@@ -426,9 +424,9 @@ namespace Chummer
                             */
                         string strDescription = await LanguageManager.GetStringAsync("Title_SelectAttribute").ConfigureAwait(false);
                         using (ThreadSafeForm<SelectAttribute> frmPickAttribute = await ThreadSafeForm<SelectAttribute>.GetAsync(() => new SelectAttribute(lstAbbrevs.ToArray())
-                               {
-                                   Description = strDescription
-                               }).ConfigureAwait(false))
+                        {
+                            Description = strDescription
+                        }).ConfigureAwait(false))
                         {
                             if (await frmPickAttribute.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
                             {
@@ -442,225 +440,228 @@ namespace Chummer
                     break;
 
                 case "SelectSkill":
-                {
-                    string strDescription = await LanguageManager.GetStringAsync("Title_SelectSkill").ConfigureAwait(false);
-                    using (ThreadSafeForm<SelectSkill> frmPickSkill =
-                           await ThreadSafeForm<SelectSkill>.GetAsync(() => new SelectSkill(_objCharacter)
-                                                                          { Description = strDescription }).ConfigureAwait(false))
                     {
-                        if (await frmPickSkill.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
-                        {
-                            string strSelect = frmPickSkill.MyForm.SelectedSkill;
-                            await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                            string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                            await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
-                        }
-                    }
-
-                    break;
-                }
-                case "SelectKnowSkill":
-                {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
-                               out List<ListItem> lstDropdownItems))
-                    {
-                        string strFilter = string.Empty;
-                        using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
-                                   out HashSet<string> setProcessedSkillNames))
-                        {
-                            await _objCharacter.SkillsSection.KnowledgeSkills.ForEachAsync(async objKnowledgeSkill =>
-                            {
-                                lstDropdownItems.Add(
-                                    new ListItem(objKnowledgeSkill.Name,
-                                                 await objKnowledgeSkill.GetCurrentDisplayNameAsync()
-                                                                        .ConfigureAwait(false)));
-                                setProcessedSkillNames.Add(objKnowledgeSkill.Name);
-                            }).ConfigureAwait(false);
-
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
-                                       out StringBuilder sbdFilters))
-                            {
-                                if (setProcessedSkillNames.Count > 0)
-                                {
-                                    sbdFilters.Append("not(");
-                                    foreach (string strName in setProcessedSkillNames)
-                                    {
-                                        sbdFilters.Append("name = ").Append(strName.CleanXPath()).Append(" or ");
-                                    }
-
-                                    sbdFilters.Length -= 4;
-                                    sbdFilters.Append(')');
-                                }
-
-                                if (sbdFilters.Length > 0)
-                                    strFilter = '[' + sbdFilters.ToString() + ']';
-                            }
-                        }
-
-                        foreach (XPathNavigator xmlSkill in (await _objCharacter.LoadDataXPathAsync("skills.xml").ConfigureAwait(false))
-                                 .Select("/chummer/knowledgeskills/skill"
-                                         + strFilter))
-                        {
-                            string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name")?.Value;
-                            if (!string.IsNullOrEmpty(strName))
-                                lstDropdownItems.Add(
-                                    new ListItem(
-                                        strName,
-                                        xmlSkill.SelectSingleNodeAndCacheExpression("translate")?.Value ??
-                                        strName));
-                        }
-
-                        lstDropdownItems.Sort(CompareListItems.CompareNames);
-
                         string strDescription = await LanguageManager.GetStringAsync("Title_SelectSkill").ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> frmPickSkill = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem { Description = strDescription }).ConfigureAwait(false))
+                        using (ThreadSafeForm<SelectSkill> frmPickSkill =
+                               await ThreadSafeForm<SelectSkill>.GetAsync(() => new SelectSkill(_objCharacter)).ConfigureAwait(false))
                         {
-                            frmPickSkill.MyForm.SetDropdownItemsMode(lstDropdownItems);
+                            await frmPickSkill.MyForm.DoThreadSafeAsync(x => x.Description = strDescription).ConfigureAwait(false);
                             if (await frmPickSkill.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
                             {
-                                string strSelect = frmPickSkill.MyForm.SelectedItem;
+                                string strSelect = frmPickSkill.MyForm.SelectedSkill;
                                 await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
                                 string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
                                 await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
                             }
                         }
-                    }
 
-                    break;
-                }
+                        break;
+                    }
+                case "SelectKnowSkill":
+                    {
+                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
+                                   out List<ListItem> lstDropdownItems))
+                        {
+                            string strFilter = string.Empty;
+                            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
+                                       out HashSet<string> setProcessedSkillNames))
+                            {
+                                await _objCharacter.SkillsSection.KnowledgeSkills.ForEachAsync(async objKnowledgeSkill =>
+                                {
+                                    lstDropdownItems.Add(
+                                        new ListItem(objKnowledgeSkill.Name,
+                                                     await objKnowledgeSkill.GetCurrentDisplayNameAsync()
+                                                                            .ConfigureAwait(false)));
+                                    setProcessedSkillNames.Add(objKnowledgeSkill.Name);
+                                }).ConfigureAwait(false);
+
+                                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
+                                           out StringBuilder sbdFilters))
+                                {
+                                    if (setProcessedSkillNames.Count > 0)
+                                    {
+                                        sbdFilters.Append("not(");
+                                        foreach (string strName in setProcessedSkillNames)
+                                        {
+                                            sbdFilters.Append("name = ").Append(strName.CleanXPath()).Append(" or ");
+                                        }
+
+                                        sbdFilters.Length -= 4;
+                                        sbdFilters.Append(')');
+                                    }
+
+                                    if (sbdFilters.Length > 0)
+                                        strFilter = '[' + sbdFilters.ToString() + ']';
+                                }
+                            }
+
+                            foreach (XPathNavigator xmlSkill in (await _objCharacter.LoadDataXPathAsync("skills.xml").ConfigureAwait(false))
+                                     .Select("/chummer/knowledgeskills/skill"
+                                             + strFilter))
+                            {
+                                string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name")?.Value;
+                                if (!string.IsNullOrEmpty(strName))
+                                    lstDropdownItems.Add(
+                                        new ListItem(
+                                            strName,
+                                            xmlSkill.SelectSingleNodeAndCacheExpression("translate")?.Value ??
+                                            strName));
+                            }
+
+                            lstDropdownItems.Sort(CompareListItems.CompareNames);
+
+                            string strDescription = await LanguageManager.GetStringAsync("Title_SelectSkill").ConfigureAwait(false);
+                            using (ThreadSafeForm<SelectItem> frmPickSkill = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem()).ConfigureAwait(false))
+                            {
+                                await frmPickSkill.MyForm.DoThreadSafeAsync(x => x.Description = strDescription).ConfigureAwait(false);
+                                frmPickSkill.MyForm.SetDropdownItemsMode(lstDropdownItems);
+                                if (await frmPickSkill.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                                {
+                                    string strSelect = await frmPickSkill.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem).ConfigureAwait(false);
+                                    await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                    string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                    await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                                }
+                            }
+                        }
+
+                        break;
+                    }
                 case "SelectSkillCategory":
-                {
-                    string strDescription = await LanguageManager.GetStringAsync("Title_SelectSkillCategory").ConfigureAwait(false);
-                    using (ThreadSafeForm<SelectSkillCategory> frmPickSkillCategory = await ThreadSafeForm<SelectSkillCategory>.GetAsync(() => new SelectSkillCategory(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
                     {
-                        if (await frmPickSkillCategory.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectSkillCategory").ConfigureAwait(false);
+                        using (ThreadSafeForm<SelectSkillCategory> frmPickSkillCategory = await ThreadSafeForm<SelectSkillCategory>.GetAsync(() => new SelectSkillCategory(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
                         {
-                            string strSelect = frmPickSkillCategory.MyForm.SelectedCategory;
-                            await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                            string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                            await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            if (await frmPickSkillCategory.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                            {
+                                string strSelect = frmPickSkillCategory.MyForm.SelectedCategory;
+                                await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            }
                         }
-                    }
 
-                    break;
-                }
+                        break;
+                    }
                 case "SelectSkillGroup":
-                {
-                    string strDescription = await LanguageManager.GetStringAsync("Title_SelectSkillGroup").ConfigureAwait(false);
-                    using (ThreadSafeForm<SelectSkillGroup> frmPickSkillGroup = await ThreadSafeForm<SelectSkillGroup>.GetAsync(() => new SelectSkillGroup(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
                     {
-                        if (await frmPickSkillGroup.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectSkillGroup").ConfigureAwait(false);
+                        using (ThreadSafeForm<SelectSkillGroup> frmPickSkillGroup = await ThreadSafeForm<SelectSkillGroup>.GetAsync(() => new SelectSkillGroup(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
                         {
-                            string strSelect = frmPickSkillGroup.MyForm.SelectedSkillGroup;
-                            await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                            string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                            await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            if (await frmPickSkillGroup.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                            {
+                                string strSelect = frmPickSkillGroup.MyForm.SelectedSkillGroup;
+                                await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            }
                         }
-                    }
 
-                    break;
-                }
+                        break;
+                    }
                 case "SelectComplexForm":
-                {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
-                               out List<ListItem> lstComplexForms))
                     {
-                        foreach (XPathNavigator xmlSpell in (await _objCharacter.LoadDataXPathAsync(
-                                                                      "complexforms.xml").ConfigureAwait(false))
-                                                                  .SelectAndCacheExpression(
-                                                                      "/chummer/complexforms/complexform"))
+                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
+                                   out List<ListItem> lstComplexForms))
                         {
-                            string strName = xmlSpell.SelectSingleNodeAndCacheExpression("name")?.Value;
-                            if (!string.IsNullOrEmpty(strName))
-                                lstComplexForms.Add(new ListItem(
-                                    strName,
-                                    xmlSpell.SelectSingleNodeAndCacheExpression("translate")?.Value
-                                    ?? strName));
-                        }
-
-                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectComplexForm").ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> selectComplexForm = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem { Description = strDescription }).ConfigureAwait(false))
-                        {
-                            selectComplexForm.MyForm.SetDropdownItemsMode(lstComplexForms);
-
-                            if (await selectComplexForm.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                            foreach (XPathNavigator xmlSpell in (await _objCharacter.LoadDataXPathAsync(
+                                                                          "complexforms.xml").ConfigureAwait(false))
+                                                                      .SelectAndCacheExpression(
+                                                                          "/chummer/complexforms/complexform"))
                             {
-                                string strSelect = selectComplexForm.MyForm.SelectedName;
-                                await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                                string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                                await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                                string strName = xmlSpell.SelectSingleNodeAndCacheExpression("name")?.Value;
+                                if (!string.IsNullOrEmpty(strName))
+                                    lstComplexForms.Add(new ListItem(
+                                        strName,
+                                        xmlSpell.SelectSingleNodeAndCacheExpression("translate")?.Value
+                                        ?? strName));
+                            }
+
+                            string strDescription = await LanguageManager.GetStringAsync("Title_SelectComplexForm").ConfigureAwait(false);
+                            using (ThreadSafeForm<SelectItem> selectComplexForm = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem()).ConfigureAwait(false))
+                            {
+                                await selectComplexForm.MyForm.DoThreadSafeAsync(x => x.Description = strDescription).ConfigureAwait(false);
+                                selectComplexForm.MyForm.SetDropdownItemsMode(lstComplexForms);
+
+                                if (await selectComplexForm.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                                {
+                                    string strSelect = await selectComplexForm.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName).ConfigureAwait(false);
+                                    await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                    string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                    await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                                }
                             }
                         }
-                    }
 
-                    break;
-                }
+                        break;
+                    }
                 case "SelectSpell":
-                {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
-                               out List<ListItem> lstSpells))
                     {
-                        foreach (XPathNavigator xmlSpell in (await _objCharacter.LoadDataXPathAsync("spells.xml").ConfigureAwait(false))
-                                                                  .SelectAndCacheExpression(
-                                                                      "/chummer/spells/spell"))
+                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
+                                   out List<ListItem> lstSpells))
                         {
-                            string strName = xmlSpell.SelectSingleNodeAndCacheExpression("name")?.Value;
-                            if (!string.IsNullOrEmpty(strName))
-                                lstSpells.Add(new ListItem(
-                                    strName,
-                                    xmlSpell.SelectSingleNodeAndCacheExpression("translate")?.Value
-                                    ?? strName));
+                            foreach (XPathNavigator xmlSpell in (await _objCharacter.LoadDataXPathAsync("spells.xml").ConfigureAwait(false))
+                                                                      .SelectAndCacheExpression(
+                                                                          "/chummer/spells/spell"))
+                            {
+                                string strName = xmlSpell.SelectSingleNodeAndCacheExpression("name")?.Value;
+                                if (!string.IsNullOrEmpty(strName))
+                                    lstSpells.Add(new ListItem(
+                                        strName,
+                                        xmlSpell.SelectSingleNodeAndCacheExpression("translate")?.Value
+                                        ?? strName));
+                            }
+
+                            string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpell").ConfigureAwait(false);
+                            using (ThreadSafeForm<SelectItem> selectSpell = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem()).ConfigureAwait(false))
+                            {
+                                await selectSpell.MyForm.DoThreadSafeAsync(x => x.Description = strDescription).ConfigureAwait(false);
+                                selectSpell.MyForm.SetDropdownItemsMode(lstSpells);
+
+                                if (await selectSpell.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                                {
+                                    string strSelect = await selectSpell.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName).ConfigureAwait(false);
+                                    await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                    string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                    await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                                }
+                            }
                         }
 
-                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpell").ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> selectSpell = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem { Description = strDescription }).ConfigureAwait(false))
+                        break;
+                    }
+                case "SelectWeaponCategory":
+                    {
+                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectWeaponCategory").ConfigureAwait(false);
+                        using (ThreadSafeForm<SelectWeaponCategory> frmPickWeaponCategory = await ThreadSafeForm<SelectWeaponCategory>.GetAsync(() => new SelectWeaponCategory(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
                         {
-                            selectSpell.MyForm.SetDropdownItemsMode(lstSpells);
-
-                            if (await selectSpell.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                            if (await frmPickWeaponCategory.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
                             {
-                                string strSelect = selectSpell.MyForm.SelectedName;
+                                string strSelect = frmPickWeaponCategory.MyForm.SelectedCategory;
                                 await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
                                 string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
                                 await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
                             }
                         }
-                    }
 
-                    break;
-                }
-                case "SelectWeaponCategory":
-                {
-                    string strDescription = await LanguageManager.GetStringAsync("Title_SelectWeaponCategory").ConfigureAwait(false);
-                    using (ThreadSafeForm<SelectWeaponCategory> frmPickWeaponCategory = await ThreadSafeForm<SelectWeaponCategory>.GetAsync(() => new SelectWeaponCategory(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
-                    {
-                        if (await frmPickWeaponCategory.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
-                        {
-                            string strSelect = frmPickWeaponCategory.MyForm.SelectedCategory;
-                            await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                            string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                            await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
-                        }
+                        break;
                     }
-
-                    break;
-                }
                 case "SelectSpellCategory":
-                {
-                    string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpellCategory").ConfigureAwait(false);
-                    using (ThreadSafeForm<SelectSpellCategory> frmPickSpellCategory = await ThreadSafeForm<SelectSpellCategory>.GetAsync(() => new SelectSpellCategory(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
                     {
-                        if (await frmPickSpellCategory.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                        string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpellCategory").ConfigureAwait(false);
+                        using (ThreadSafeForm<SelectSpellCategory> frmPickSpellCategory = await ThreadSafeForm<SelectSpellCategory>.GetAsync(() => new SelectSpellCategory(_objCharacter) { Description = strDescription }).ConfigureAwait(false))
                         {
-                            string strSelect = frmPickSpellCategory.MyForm.SelectedCategory;
-                            await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
-                            string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
-                            await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            if (await frmPickSpellCategory.ShowDialogSafeAsync(this).ConfigureAwait(false) == DialogResult.OK)
+                            {
+                                string strSelect = frmPickSpellCategory.MyForm.SelectedCategory;
+                                await txtSelect.DoThreadSafeAsync(x => x.Text = strSelect).ConfigureAwait(false);
+                                string strTranslateSelection = await TranslateField(_strSelect, strSelect).ConfigureAwait(false);
+                                await txtTranslateSelection.DoThreadSafeAsync(x => x.Text = strTranslateSelection).ConfigureAwait(false);
+                            }
                         }
-                    }
 
-                    break;
-                }
+                        break;
+                    }
                 case "SelectAdeptPower":
                     using (ThreadSafeForm<SelectPower> frmPickPower = await ThreadSafeForm<SelectPower>.GetAsync(() => new SelectPower(_objCharacter) { IgnoreLimits = chkIgnoreLimits.Checked }).ConfigureAwait(false))
                     {
@@ -818,7 +819,7 @@ namespace Chummer
 
                 objStream.Position = 0;
 
-                    // Read it back in as an XmlDocument.
+                // Read it back in as an XmlDocument.
                 using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
                 using (XmlReader objXmlReader = XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
                     objBonusXml.Load(objXmlReader);
@@ -886,18 +887,25 @@ namespace Chummer
                 case "SelectSkill":
                     if (await ExoticSkill.IsExoticSkillNameAsync(_objCharacter, strToTranslate, token).ConfigureAwait(false))
                     {
-                        string[] astrToTranslateParts = strToTranslate.Split('(', StringSplitOptions.RemoveEmptyEntries);
-                        astrToTranslateParts[0] = astrToTranslateParts[0].Trim();
-                        astrToTranslateParts[1] = astrToTranslateParts[1].Substring(0, astrToTranslateParts[1].Length - 1);
+                        string[] astrToTranslateParts = strToTranslate.SplitFixedSizePooledArray('(', 2, StringSplitOptions.RemoveEmptyEntries);
+                        try
+                        {
+                            astrToTranslateParts[0] = astrToTranslateParts[0].Trim();
+                            astrToTranslateParts[1] = astrToTranslateParts[1].Substring(0, astrToTranslateParts[1].Length - 1);
 
-                        objXmlNode = (await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false)).TryGetNodeByNameOrId("/chummer/skills/skill", astrToTranslateParts[0]);
-                        string strFirstPartTranslated = objXmlNode != null
-                            ? objXmlNode.SelectSingleNodeAndCacheExpression("translate", token: token)?.Value
-                              ?? objXmlNode.SelectSingleNodeAndCacheExpression("name", token: token)?.Value
-                              ?? astrToTranslateParts[0]
-                            : astrToTranslateParts[0];
+                            objXmlNode = (await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false)).TryGetNodeByNameOrId("/chummer/skills/skill", astrToTranslateParts[0]);
+                            string strFirstPartTranslated = objXmlNode != null
+                                ? objXmlNode.SelectSingleNodeAndCacheExpression("translate", token: token)?.Value
+                                  ?? objXmlNode.SelectSingleNodeAndCacheExpression("name", token: token)?.Value
+                                  ?? astrToTranslateParts[0]
+                                : astrToTranslateParts[0];
 
-                        return strFirstPartTranslated + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + '(' + await _objCharacter.TranslateExtraAsync(astrToTranslateParts[1], token: token).ConfigureAwait(false) + ')';
+                            return strFirstPartTranslated + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + '(' + await _objCharacter.TranslateExtraAsync(astrToTranslateParts[1], token: token).ConfigureAwait(false) + ')';
+                        }
+                        finally
+                        {
+                            ArrayPool<string>.Shared.Return(astrToTranslateParts);
+                        }
                     }
 
                     objXmlNode = (await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false)).TryGetNodeByNameOrId("/chummer/skills/skill", strToTranslate);

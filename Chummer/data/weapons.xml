@@ -6118,7 +6118,7 @@
     </weapon>
     <weapon>
       <id>61555ac9-9925-4252-bc25-92c948eb9dfd</id>
-      <name>SA Retarius Net Gun</name>
+      <name>SA Retiarius Net Gun</name>
       <category>Exotic Ranged Weapons</category>
       <type>Ranged</type>
       <conceal>6</conceal>
@@ -15344,7 +15344,8 @@
       <category>Missile Launchers</category>
       <type>Ranged</type>
       <conceal>10</conceal>
-      <accuracy>3</accuracy> <!-- No accuracy statted, so using the Proteus Krake's Sensor rating -->
+      <accuracy>3</accuracy>
+      <!-- No accuracy statted, so using the Proteus Krake's Sensor rating -->
       <reach>0</reach>
       <damage>Missile</damage>
       <ap>-</ap>
@@ -16468,11 +16469,11 @@
       <required>
         <weapondetails>
           <OR>
-           <conceal operation="lessthanequals">0</conceal>
-           <category>Tasers</category>
-           <category>Holdouts</category>
-           <category>Light Pistols</category>
-           <category>Heavy Pistols</category>
+            <conceal operation="lessthanequals">0</conceal>
+            <category>Tasers</category>
+            <category>Holdouts</category>
+            <category>Light Pistols</category>
+            <category>Heavy Pistols</category>
           </OR>
         </weapondetails>
       </required>
@@ -16598,11 +16599,11 @@
       <required>
         <weapondetails>
           <OR>
-           <conceal operation="lessthanequals">0</conceal>
-           <category>Tasers</category>
-           <category>Holdouts</category>
-           <category>Light Pistols</category>
-           <category>Heavy Pistols</category>
+            <conceal operation="lessthanequals">0</conceal>
+            <category>Tasers</category>
+            <category>Holdouts</category>
+            <category>Light Pistols</category>
+            <category>Heavy Pistols</category>
           </OR>
         </weapondetails>
       </required>
@@ -16821,11 +16822,11 @@
       <forbidden>
         <weapondetails>
           <OR>
-           <name>HK Urban Fighter</name>
-           <name>HK Urban Enforcer</name>
-           <name>HK Urban Striker</name>
-           <name>HK Urban Assassin</name>
-           <name>Hammerli Gemini</name>
+            <name>HK Urban Fighter</name>
+            <name>HK Urban Enforcer</name>
+            <name>HK Urban Striker</name>
+            <name>HK Urban Assassin</name>
+            <name>Hammerli Gemini</name>
           </OR>
         </weapondetails>
       </forbidden>
@@ -16845,7 +16846,7 @@
           <name>Hammerli Gemini</name>
         </weapondetails>
       </required>
-    </accessory>    
+    </accessory>
     <accessory>
       <id>6763996b-0458-46ee-a6a5-f50255ace664</id>
       <name>Belt-Feed, 100-round</name>
@@ -17221,11 +17222,11 @@
       <required>
         <weapondetails>
           <OR>
-           <conceal operation="lessthanequals">0</conceal>
-           <category>Tasers</category>
-           <category>Holdouts</category>
-           <category>Light Pistols</category>
-           <category>Heavy Pistols</category>
+            <conceal operation="lessthanequals">0</conceal>
+            <category>Tasers</category>
+            <category>Holdouts</category>
+            <category>Light Pistols</category>
+            <category>Heavy Pistols</category>
           </OR>
         </weapondetails>
       </required>
@@ -17836,13 +17837,13 @@
         <oneof>
           <accessory>Drum Magazine, 24-round</accessory>
           <accessory>Drum Magazine, 32-round</accessory>
+          <weapondetails>
+            <OR>
+              <ammo operation="contains">(cy)</ammo>
+              <ammo operation="contains">(d)</ammo>
+            </OR>
+          </weapondetails>
         </oneof>
-        <weapondetails>
-          <OR>
-            <ammo operation="contains">(cy)</ammo>
-            <ammo operation="contains">(d)</ammo>
-          </OR>
-        </weapondetails>
       </required>
     </accessory>
     <accessory>
@@ -19092,7 +19093,8 @@
       <ammobonus>-50</ammobonus>
       <ammoslots>1</ammoslots>
       <conceal>0</conceal>
-      <rating>1000</rating> <!-- TODO: Create system where rating is based on weapon ammo capacity and can be consumed as charges -->
+      <rating>1000</rating>
+      <!-- TODO: Create system where rating is based on weapon ammo capacity and can be consumed as charges -->
       <required>
         <weapondetails>
           <mode operation="contains">SA</mode>
@@ -19124,7 +19126,8 @@
       <ammobonus>-25</ammobonus>
       <ammoslots>1</ammoslots>
       <conceal>1</conceal>
-      <rating>1000</rating> <!-- TODO: Create system where rating is based on weapon ammo capacity and can be consumed as charges -->
+      <rating>1000</rating>
+      <!-- TODO: Create system where rating is based on weapon ammo capacity and can be consumed as charges -->
       <required>
         <weapondetails>
           <mode operation="contains">SA</mode>

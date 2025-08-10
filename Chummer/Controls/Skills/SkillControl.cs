@@ -352,7 +352,7 @@ namespace Chummer.UI.Skills
                                                                     ,
                                                               _objMyToken);
 
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                    out List<ListItem> lstAttributeItems))
                     {
                         foreach (string strLoopAttribute in AttributeSection.AttributeStrings)
@@ -565,7 +565,7 @@ namespace Chummer.UI.Skills
                                                                 x => x.GetAddSpecToolTipAsync(_objMyToken)
                                                                       , token).ConfigureAwait(false);
 
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                out List<ListItem> lstAttributeItems))
                 {
                     foreach (string strLoopAttribute in AttributeSection.AttributeStrings)
@@ -1010,19 +1010,19 @@ namespace Chummer.UI.Skills
                             || (objLoopImprovement.Condition == "create") != blnCreated)
                         && objLoopImprovement.Enabled
                         && objLoopImprovement.ImprovedName == _objSkill.SkillCategory, objLoopImprovement =>
-                    {
-                        switch (objLoopImprovement.ImproveType)
                         {
-                            case Improvement.ImprovementType.SkillCategorySpecializationKarmaCost:
-                                return objLoopImprovement.Value;
+                            switch (objLoopImprovement.ImproveType)
+                            {
+                                case Improvement.ImprovementType.SkillCategorySpecializationKarmaCost:
+                                    return objLoopImprovement.Value;
 
-                            case Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier:
-                                decSpecCostMultiplier *= objLoopImprovement.Value / 100.0m;
-                                break;
-                        }
+                                case Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier:
+                                    decSpecCostMultiplier *= objLoopImprovement.Value / 100.0m;
+                                    break;
+                            }
 
-                        return 0;
-                    }, token: _objMyToken);
+                            return 0;
+                        }, token: _objMyToken);
 
                     if (decSpecCostMultiplier != 1.0m)
                         intPrice = (intPrice * decSpecCostMultiplier + decExtraSpecCost).StandardRound();
@@ -1258,7 +1258,7 @@ namespace Chummer.UI.Skills
             {
                 lblName.MinimumSize =
                         new Size(
-                            intNewNameWidth - lblName.Margin.Right - pnlAttributes.Margin.Left + pnlAttributes.Width,
+                            intNewNameWidth - lblName.Margin.Right - pnlAttributes.Margin.Left - pnlAttributes.Width,
                             lblName.MinimumSize.Height);
             }
             catch (OperationCanceledException)
@@ -1359,12 +1359,13 @@ namespace Chummer.UI.Skills
         private void RefreshPoolTooltipAndDisplay(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            string backgroundCalcPool = _objSkill.DisplayOtherAttribute(AttributeActive.Abbrev);
-            string backgroundCalcTooltip = _objSkill.CompileDicepoolTooltip(AttributeActive.Abbrev);
+            string strAbbrev = AttributeActive.Abbrev;
+            string strBackgroundCalcPool = _objSkill.DisplayOtherAttribute(strAbbrev);
+            string strBackgroundCalcTooltip = _objSkill.CompileDicepoolTooltip(strAbbrev);
             lblModifiedRating.DoThreadSafe((x, y) =>
             {
-                x.Text = backgroundCalcPool;
-                x.ToolTipText = backgroundCalcTooltip;
+                x.Text = strBackgroundCalcPool;
+                x.ToolTipText = strBackgroundCalcTooltip;
             }, token);
         }
 
@@ -1373,10 +1374,12 @@ namespace Chummer.UI.Skills
         /// </summary>
         private async Task RefreshPoolTooltipAndDisplayAsync(CancellationToken token = default)
         {
-            string backgroundCalcPool = await _objSkill.DisplayOtherAttributeAsync(AttributeActive.Abbrev, token).ConfigureAwait(false);
-            string backgroundCalcTooltip = await _objSkill.CompileDicepoolTooltipAsync(AttributeActive.Abbrev, token: token).ConfigureAwait(false);
-            await lblModifiedRating.DoThreadSafeAsync(x => x.Text = backgroundCalcPool, token: token).ConfigureAwait(false);
-            await lblModifiedRating.SetToolTipTextAsync(backgroundCalcTooltip, token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            string strAbbrev = AttributeActive.Abbrev;
+            string strBackgroundCalcPool = await _objSkill.DisplayOtherAttributeAsync(strAbbrev, token).ConfigureAwait(false);
+            string strBackgroundCalcTooltip = await _objSkill.CompileDicepoolTooltipAsync(strAbbrev, token: token).ConfigureAwait(false);
+            await lblModifiedRating.DoThreadSafeAsync(x => x.Text = strBackgroundCalcPool, token: token).ConfigureAwait(false);
+            await lblModifiedRating.SetToolTipTextAsync(strBackgroundCalcTooltip, token).ConfigureAwait(false);
         }
 
         // Hacky solutions to data binding causing cursor to reset whenever the user is typing something in: have text changes start a timer, and have a 1s delay in the timer update fire the text update

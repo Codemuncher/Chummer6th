@@ -491,7 +491,7 @@ namespace Chummer
                         throw new AbortedException();
                     }
 
-                    SelectedValue = frmPickItem.MyForm.SelectedName;
+                    SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName, token).ConfigureAwait(false);
                 }
             }
 
@@ -514,7 +514,7 @@ namespace Chummer
                 // Populate the Magician Traditions list.
                 XPathNavigator xmlTraditionsBaseChummerNode =
                     (await _objCharacter.LoadDataXPathAsync("traditions.xml", token: token).ConfigureAwait(false)).SelectSingleNodeAndCacheExpression("/chummer", token);
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                out List<ListItem> lstTraditions))
                 {
                     if (xmlTraditionsBaseChummerNode != null)
@@ -538,9 +538,9 @@ namespace Chummer
                     }
 
                     using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                           {
-                               AllowAutoSelect = false
-                           }, token).ConfigureAwait(false))
+                    {
+                        AllowAutoSelect = false
+                    }, token).ConfigureAwait(false))
                     {
                         frmPickItem.MyForm.SetDropdownItemsMode(lstTraditions);
                         frmPickItem.MyForm.SelectedItem = await (await _objCharacter.GetMagicTraditionAsync(token).ConfigureAwait(false)).GetSourceIDStringAsync(token).ConfigureAwait(false);
@@ -551,7 +551,7 @@ namespace Chummer
                             throw new AbortedException();
                         }
 
-                        SelectedValue = frmPickItem.MyForm.SelectedName;
+                        SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -836,9 +836,9 @@ namespace Chummer
                     await LanguageManager.GetStringAsync("String_Improvement_SelectSkillGroupName", token: token).ConfigureAwait(false), _strFriendlyName)
                 : await LanguageManager.GetStringAsync("String_Improvement_SelectSkillGroup", token: token).ConfigureAwait(false);
             using (ThreadSafeForm<SelectSkillGroup> frmPickSkillGroup = await ThreadSafeForm<SelectSkillGroup>.GetAsync(() => new SelectSkillGroup(_objCharacter)
-                   {
-                       Description = strDescription
-                   }, token).ConfigureAwait(false))
+            {
+                Description = strDescription
+            }, token).ConfigureAwait(false))
             {
                 if (!string.IsNullOrEmpty(ForcedValue))
                 {
@@ -943,33 +943,33 @@ namespace Chummer
                                 break;
 
                             default:
-                            {
-                                string strDescription = !string.IsNullOrEmpty(_strFriendlyName)
-                                    ? string.Format(GlobalSettings.CultureInfo,
-                                        await LanguageManager.GetStringAsync(
-                                            "String_Improvement_SelectAttributeNamed", token: token).ConfigureAwait(false),
-                                        _strFriendlyName)
-                                    : await LanguageManager.GetStringAsync("String_Improvement_SelectAttribute",
-                                        token: token).ConfigureAwait(false);
-                                using (ThreadSafeForm<SelectAttribute> frmPickAttribute
-                                       = await ThreadSafeForm<SelectAttribute>.GetAsync(
-                                           () => new SelectAttribute(lstAbbrevs.ToArray())
-                                           {
-                                               Description = strDescription
-                                           }, token).ConfigureAwait(false))
                                 {
-                                    // Make sure the dialogue window was not canceled.
-                                    if (await frmPickAttribute.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) ==
-                                        DialogResult.Cancel)
+                                    string strDescription = !string.IsNullOrEmpty(_strFriendlyName)
+                                        ? string.Format(GlobalSettings.CultureInfo,
+                                            await LanguageManager.GetStringAsync(
+                                                "String_Improvement_SelectAttributeNamed", token: token).ConfigureAwait(false),
+                                            _strFriendlyName)
+                                        : await LanguageManager.GetStringAsync("String_Improvement_SelectAttribute",
+                                            token: token).ConfigureAwait(false);
+                                    using (ThreadSafeForm<SelectAttribute> frmPickAttribute
+                                           = await ThreadSafeForm<SelectAttribute>.GetAsync(
+                                               () => new SelectAttribute(lstAbbrevs.ToArray())
+                                               {
+                                                   Description = strDescription
+                                               }, token).ConfigureAwait(false))
                                     {
-                                        throw new AbortedException();
+                                        // Make sure the dialogue window was not canceled.
+                                        if (await frmPickAttribute.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) ==
+                                            DialogResult.Cancel)
+                                        {
+                                            throw new AbortedException();
+                                        }
+
+                                        strSelected = frmPickAttribute.MyForm.SelectedAttribute;
+
+                                        break;
                                     }
-
-                                    strSelected = frmPickAttribute.MyForm.SelectedAttribute;
-
-                                    break;
                                 }
-                            }
                         }
 
                         if (blnSingleSelected && selectedValues.Count > 0 && !selectedValues.Contains(strSelected))
@@ -1020,7 +1020,7 @@ namespace Chummer
             else
             {
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
-                using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                               out StringBuilder sdbValue))
                 {
                     foreach (string s in AttributeSection.AttributeStrings)
@@ -1103,32 +1103,32 @@ namespace Chummer
                     break;
 
                 default:
-                {
-                    string strDescription = !string.IsNullOrEmpty(_strFriendlyName)
-                        ? string.Format(GlobalSettings.CultureInfo,
-                            await LanguageManager.GetStringAsync("String_Improvement_SelectAttributeNamed",
-                                token: token).ConfigureAwait(false),
-                            _strFriendlyName)
-                        : await LanguageManager.GetStringAsync("String_Improvement_SelectAttribute", token: token).ConfigureAwait(false);
-                    // Display the Select Attribute window and record which Skill was selected.
-                    using (ThreadSafeForm<SelectAttribute> frmPickAttribute =
-                           await ThreadSafeForm<SelectAttribute>.GetAsync(
-                               () => new SelectAttribute(lstAbbrevs.ToArray())
-                               {
-                                   Description = strDescription
-                               }, token).ConfigureAwait(false))
                     {
-                        // Make sure the dialogue window was not canceled.
-                        if (await frmPickAttribute.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
+                        string strDescription = !string.IsNullOrEmpty(_strFriendlyName)
+                            ? string.Format(GlobalSettings.CultureInfo,
+                                await LanguageManager.GetStringAsync("String_Improvement_SelectAttributeNamed",
+                                    token: token).ConfigureAwait(false),
+                                _strFriendlyName)
+                            : await LanguageManager.GetStringAsync("String_Improvement_SelectAttribute", token: token).ConfigureAwait(false);
+                        // Display the Select Attribute window and record which Skill was selected.
+                        using (ThreadSafeForm<SelectAttribute> frmPickAttribute =
+                               await ThreadSafeForm<SelectAttribute>.GetAsync(
+                                   () => new SelectAttribute(lstAbbrevs.ToArray())
+                                   {
+                                       Description = strDescription
+                                   }, token).ConfigureAwait(false))
                         {
-                            throw new AbortedException();
+                            // Make sure the dialogue window was not canceled.
+                            if (await frmPickAttribute.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
+                            {
+                                throw new AbortedException();
+                            }
+
+                            strSelected = frmPickAttribute.MyForm.SelectedAttribute;
                         }
 
-                        strSelected = frmPickAttribute.MyForm.SelectedAttribute;
+                        break;
                     }
-
-                    break;
-                }
             }
 
             SelectedValue = strSelected;
@@ -1214,9 +1214,9 @@ namespace Chummer
                     _strFriendlyName)
                 : await LanguageManager.GetStringAsync("String_Improvement_SelectLimit", token: token).ConfigureAwait(false);
             using (ThreadSafeForm<SelectLimit> frmPickLimit = await ThreadSafeForm<SelectLimit>.GetAsync(() => new SelectLimit(strLimits.ToArray())
-                   {
-                       Description = strDescription
-                   }, token).ConfigureAwait(false))
+            {
+                Description = strDescription
+            }, token).ConfigureAwait(false))
             {
                 // Make sure the dialogue window was not canceled.
                 if (await frmPickLimit.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -1344,9 +1344,9 @@ namespace Chummer
                         _strFriendlyName)
                     : await LanguageManager.GetStringAsync("String_Improvement_SelectAttribute", token: token).ConfigureAwait(false);
                 using (ThreadSafeForm<SelectAttribute> frmPickAttribute = await ThreadSafeForm<SelectAttribute>.GetAsync(() => new SelectAttribute(lstAbbrevs.ToArray())
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickAttribute.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -1373,11 +1373,9 @@ namespace Chummer
                         _strFriendlyName)
                     : await LanguageManager.GetStringAsync("String_Improvement_SelectSkill", token: token).ConfigureAwait(false);
                 using (ThreadSafeForm<SelectSkill> frmPickSkill = await ThreadSafeForm<SelectSkill>.GetAsync(() =>
-                           new SelectSkill(_objCharacter)
-                           {
-                               Description = strDescription
-                           }, token).ConfigureAwait(false))
+                           new SelectSkill(_objCharacter), token).ConfigureAwait(false))
                 {
+                    await frmPickSkill.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                     string strTemp = bonusNode["skillgroup"]?.InnerText;
                     if (!string.IsNullOrEmpty(strTemp))
                         frmPickSkill.MyForm.OnlySkillGroup = strTemp;
@@ -1514,11 +1512,9 @@ namespace Chummer
                         _strFriendlyName)
                     : await LanguageManager.GetStringAsync("String_Improvement_SelectSkill", token: token).ConfigureAwait(false);
                 using (ThreadSafeForm<SelectSkill> frmPickSkill = await ThreadSafeForm<SelectSkill>.GetAsync(() =>
-                           new SelectSkill(_objCharacter)
-                           {
-                               Description = strDescription
-                           }, token).ConfigureAwait(false))
+                           new SelectSkill(_objCharacter), token).ConfigureAwait(false))
                 {
+                    await frmPickSkill.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                     string strTemp = bonusNode["skillgroup"]?.InnerText;
                     if (!string.IsNullOrEmpty(strTemp))
                         frmPickSkill.MyForm.OnlySkillGroup = strTemp;
@@ -1613,9 +1609,9 @@ namespace Chummer
                     await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false),
                     node["translate"]?.InnerText ?? node["name"]?.InnerText);
                 using (ThreadSafeForm<SelectText> frmPickText = await ThreadSafeForm<SelectText>.GetAsync(() => new SelectText
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickText.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -1659,9 +1655,9 @@ namespace Chummer
                     await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false),
                     node["translate"]?.InnerText ?? node["name"]?.InnerText);
                 using (ThreadSafeForm<SelectText> frmPickText = await ThreadSafeForm<SelectText>.GetAsync(() => new SelectText
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickText.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -1812,7 +1808,7 @@ namespace Chummer
                     intRating = await ImprovementManager.ValueToIntAsync(_objCharacter, strTemp, _intRating, token).ConfigureAwait(false);
                 decimal decQty = 1.0m;
                 if (xmlGearNode["quantity"] != null)
-                    decQty = Convert.ToDecimal(xmlGearNode["quantity"].InnerText, GlobalSettings.InvariantCultureInfo);
+                    decQty = await ImprovementManager.ValueToDecAsync(_objCharacter, xmlGearNode["quantity"].InnerText, _intRating, token).ConfigureAwait(false);
 
                 // Create the new piece of Gear.
                 List<Weapon> lstWeapons = new List<Weapon>(1);
@@ -1823,7 +1819,7 @@ namespace Chummer
                 if (objNewGearToCreate.InternalId.IsEmptyGuid())
                     throw new AbortedException();
 
-                objNewGearToCreate.Quantity = decQty;
+                await objNewGearToCreate.SetQuantityAsync(decQty, token).ConfigureAwait(false);
 
                 // If a Commlink has just been added, see if the character already has one. If not, make it the active Commlink.
                 if (await _objCharacter.GetActiveCommlinkAsync(token).ConfigureAwait(false) == null && await objNewGearToCreate.GetIsCommlinkAsync(token).ConfigureAwait(false))
@@ -1972,9 +1968,9 @@ namespace Chummer
                     await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false),
                     xmlProgram["translate"]?.InnerText ?? xmlProgram["name"]?.InnerText);
                 using (ThreadSafeForm<SelectText> frmPickText = await ThreadSafeForm<SelectText>.GetAsync(() => new SelectText
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickText.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -2040,9 +2036,9 @@ namespace Chummer
                     await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false),
                     xmlProgram["translate"]?.InnerText ?? xmlProgram["name"]?.InnerText);
                 using (ThreadSafeForm<SelectText> frmPickText = await ThreadSafeForm<SelectText>.GetAsync(() => new SelectText
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickText.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -2115,7 +2111,7 @@ namespace Chummer
                 if (await frmSelect.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                     throw new AbortedException();
 
-                Contact objSelectedContact = int.TryParse(frmSelect.MyForm.SelectedItem, out int intIndex)
+                Contact objSelectedContact = int.TryParse(await frmSelect.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false), out int intIndex)
                     ? lstSelectedContacts[intIndex]
                     : throw new AbortedException();
 
@@ -2213,7 +2209,7 @@ namespace Chummer
             {
                 if (strTemp.EndsWith("-natural", StringComparison.Ordinal))
                 {
-                    intMax = Convert.ToInt32(strTemp.TrimEndOnce("-natural", true), GlobalSettings.InvariantCultureInfo) -
+                    intMax = await ImprovementManager.ValueToIntAsync(_objCharacter, strTemp.TrimEndOnce("-natural", true), _intRating, token).ConfigureAwait(false) -
                              await (await _objCharacter.GetAttributeAsync(strAttribute, token: token).ConfigureAwait(false)).GetMetatypeMaximumAsync(token).ConfigureAwait(false);
                 }
                 else
@@ -2459,7 +2455,7 @@ namespace Chummer
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
             await CreateImprovementAsync(string.Empty, _objImprovementSource, SourceName, Improvement.ImprovementType.FreeKnowledgeSkills, _strUnique,
-                await ImprovementManager.ValueToDecAsync(_objCharacter, bonusNode.InnerText, Convert.ToInt32(bonusNode.Value, GlobalSettings.InvariantCultureInfo), token).ConfigureAwait(false), token: token).ConfigureAwait(false);
+                await ImprovementManager.ValueToDecAsync(_objCharacter, bonusNode.InnerText, await ImprovementManager.ValueToIntAsync(_objCharacter, bonusNode.Value, _intRating, token).ConfigureAwait(false), token).ConfigureAwait(false), token: token).ConfigureAwait(false);
         }
 
         public async Task skillgrouplevel(XmlNode bonusNode, CancellationToken token = default)
@@ -2614,11 +2610,7 @@ namespace Chummer
             string strBonus = bonusNode["devicerating"]?.InnerText;
             if (!string.IsNullOrEmpty(strBonus))
             {
-                if (strBonus.StartsWith("FixedValues(", StringComparison.Ordinal))
-                {
-                    string[] strValues = strBonus.TrimStartOnce("FixedValues(", true).TrimEndOnce(')').Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    strBonus = strValues[Math.Max(Math.Min(_intRating, strValues.Length) - 1, 0)];
-                }
+                strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
                     strBonus = '+' + strBonus;
@@ -2629,11 +2621,7 @@ namespace Chummer
             strBonus = bonusNode["programlimit"]?.InnerText;
             if (!string.IsNullOrEmpty(strBonus))
             {
-                if (strBonus.StartsWith("FixedValues(", StringComparison.Ordinal))
-                {
-                    string[] strValues = strBonus.TrimStartOnce("FixedValues(", true).TrimEndOnce(')').Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    strBonus = strValues[Math.Max(Math.Min(_intRating, strValues.Length) - 1, 0)];
-                }
+                strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
                     strBonus = '+' + strBonus;
@@ -2644,11 +2632,7 @@ namespace Chummer
             strBonus = bonusNode["attack"]?.InnerText;
             if (!string.IsNullOrEmpty(strBonus))
             {
-                if (strBonus.StartsWith("FixedValues(", StringComparison.Ordinal))
-                {
-                    string[] strValues = strBonus.TrimStartOnce("FixedValues(", true).TrimEndOnce(')').Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    strBonus = strValues[Math.Max(Math.Min(_intRating, strValues.Length) - 1, 0)];
-                }
+                strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
                     strBonus = '+' + strBonus;
@@ -2659,11 +2643,7 @@ namespace Chummer
             strBonus = bonusNode["sleaze"]?.InnerText;
             if (!string.IsNullOrEmpty(strBonus))
             {
-                if (strBonus.StartsWith("FixedValues(", StringComparison.Ordinal))
-                {
-                    string[] strValues = strBonus.TrimStartOnce("FixedValues(", true).TrimEndOnce(')').Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    strBonus = strValues[Math.Max(Math.Min(_intRating, strValues.Length) - 1, 0)];
-                }
+                strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
                     strBonus = '+' + strBonus;
@@ -2674,11 +2654,7 @@ namespace Chummer
             strBonus = bonusNode["dataprocessing"]?.InnerText;
             if (!string.IsNullOrEmpty(strBonus))
             {
-                if (strBonus.StartsWith("FixedValues(", StringComparison.Ordinal))
-                {
-                    string[] strValues = strBonus.TrimStartOnce("FixedValues(", true).TrimEndOnce(')').Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    strBonus = strValues[Math.Max(Math.Min(_intRating, strValues.Length) - 1, 0)];
-                }
+                strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
                     strBonus = '+' + strBonus;
@@ -2689,11 +2665,7 @@ namespace Chummer
             strBonus = bonusNode["firewall"]?.InnerText;
             if (!string.IsNullOrEmpty(strBonus))
             {
-                if (strBonus.StartsWith("FixedValues(", StringComparison.Ordinal))
-                {
-                    string[] strValues = strBonus.TrimStartOnce("FixedValues(", true).TrimEndOnce(')').Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    strBonus = strValues[Math.Max(Math.Min(_intRating, strValues.Length) - 1, 0)];
-                }
+                strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
                     strBonus = '+' + strBonus;
@@ -2704,11 +2676,7 @@ namespace Chummer
             strBonus = bonusNode["matrixcm"]?.InnerText;
             if (!string.IsNullOrEmpty(strBonus))
             {
-                if (strBonus.StartsWith("FixedValues(", StringComparison.Ordinal))
-                {
-                    string[] strValues = strBonus.TrimStartOnce("FixedValues(", true).TrimEndOnce(')').Split(',', StringSplitOptions.RemoveEmptyEntries);
-                    strBonus = strValues[Math.Max(Math.Min(_intRating, strValues.Length) - 1, 0)];
-                }
+                strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
                     strBonus = '+' + strBonus;
@@ -3395,8 +3363,9 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            await _objCharacter.ModifyPrototypeTranshumanAsync(Convert.ToDecimal(bonusNode.InnerText, GlobalSettings.InvariantCultureInfo), token).ConfigureAwait(false);
-            await CreateImprovementAsync(bonusNode.InnerText, _objImprovementSource, SourceName, Improvement.ImprovementType.PrototypeTranshuman, _strUnique, token: token).ConfigureAwait(false);
+            decimal decValue = await ImprovementManager.ValueToDecAsync(_objCharacter, bonusNode.InnerText, _intRating, token).ConfigureAwait(false);
+            await _objCharacter.ModifyPrototypeTranshumanAsync(decValue, token).ConfigureAwait(false);
+            await CreateImprovementAsync(bonusNode.InnerText, _objImprovementSource, SourceName, Improvement.ImprovementType.PrototypeTranshuman, _strUnique, intRating: _intRating, token: token).ConfigureAwait(false);
         }
 
         // Check for Friends In High Places modifiers.
@@ -3574,7 +3543,7 @@ namespace Chummer
                         foreach (XmlNode xmlSelectCategory in xmlSelectCategoryList)
                         {
                             // Display the Select Category window and record which Category was selected.
-                            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                            out List<ListItem> lstGeneralItems))
                             {
                                 using (XmlNodeList xmlCategoryList = xmlSelectCategory.SelectNodes("category"))
@@ -3598,11 +3567,9 @@ namespace Chummer
                                                            "String_Improvement_SelectSkillNamed", token: token).ConfigureAwait(false), _strFriendlyName)
                                                    : await LanguageManager.GetStringAsync("Title_SelectWeaponCategory", token: token).ConfigureAwait(false);
                                 using (ThreadSafeForm<SelectItem> frmPickCategory = await ThreadSafeForm<SelectItem>.GetAsync(() =>
-                                           new SelectItem
-                                           {
-                                               Description = strDescription
-                                           }, token).ConfigureAwait(false))
+                                           new SelectItem(), token).ConfigureAwait(false))
                                 {
+                                    await frmPickCategory.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                                     frmPickCategory.MyForm.SetGeneralItemsMode(lstGeneralItems);
 
                                     if (ForcedValue.StartsWith("Adept:", StringComparison.Ordinal)
@@ -3621,7 +3588,7 @@ namespace Chummer
                                         throw new AbortedException();
                                     }
 
-                                    SelectedValue = frmPickCategory.MyForm.SelectedItem;
+                                    strSelectedValue = await frmPickCategory.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                                 }
                             }
 
@@ -3662,7 +3629,7 @@ namespace Chummer
                     {
                         string strSelectedValue;
                         // Display the Select Category window and record which Category was selected.
-                        using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                        out List<ListItem> lstGeneralItems))
                         {
                             using (XmlNodeList xmlCategoryList = xmlSelectCategory.SelectNodes("category"))
@@ -3687,11 +3654,9 @@ namespace Chummer
                                     _strFriendlyName)
                                 : await LanguageManager.GetStringAsync("Title_SelectWeaponCategory", token: token).ConfigureAwait(false);
                             using (ThreadSafeForm<SelectItem> frmPickCategory = await ThreadSafeForm<SelectItem>.GetAsync(() =>
-                                       new SelectItem
-                                       {
-                                           Description = strDescription
-                                       }, token).ConfigureAwait(false))
+                                       new SelectItem(), token).ConfigureAwait(false))
                             {
+                                await frmPickCategory.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                                 frmPickCategory.MyForm.SetGeneralItemsMode(lstGeneralItems);
 
                                 if (ForcedValue.StartsWith("Adept:", StringComparison.Ordinal)
@@ -3710,7 +3675,7 @@ namespace Chummer
                                     throw new AbortedException();
                                 }
 
-                                strSelectedValue = frmPickCategory.MyForm.SelectedItem;
+                                strSelectedValue = await frmPickCategory.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                             }
                         }
 
@@ -3747,7 +3712,7 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGeneralItems))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGeneralItems))
             {
                 string strType = bonusNode.Attributes?["type"]?.InnerText;
                 if (!string.IsNullOrEmpty(strType))
@@ -3772,11 +3737,9 @@ namespace Chummer
                             "String_Improvement_SelectSkillNamed", token: token).ConfigureAwait(false),
                         _strFriendlyName)
                     : await LanguageManager.GetStringAsync("Title_SelectWeapon", token: token).ConfigureAwait(false);
-                using (ThreadSafeForm<SelectItem> frmPickWeapon = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                using (ThreadSafeForm<SelectItem> frmPickWeapon = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem(), token).ConfigureAwait(false))
                 {
+                    await frmPickWeapon.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                     frmPickWeapon.MyForm.SetGeneralItemsMode(lstGeneralItems);
                     if (!string.IsNullOrEmpty(ForcedValue))
                     {
@@ -3791,7 +3754,7 @@ namespace Chummer
                         throw new AbortedException();
                     }
 
-                    string strSelected = frmPickWeapon.MyForm.SelectedItem;
+                    string strSelected = await frmPickWeapon.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
 
                     objSelectedWeapon = await (await _objCharacter.GetWeaponsAsync(token).ConfigureAwait(false)).FirstOrDefaultAsync(x => x.InternalId == strSelected, token).ConfigureAwait(false);
                     if (objSelectedWeapon == null)
@@ -3814,9 +3777,9 @@ namespace Chummer
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
             using (ThreadSafeForm<SelectMentorSpirit> frmPickMentorSpirit = await ThreadSafeForm<SelectMentorSpirit>.GetAsync(() => new SelectMentorSpirit(_objCharacter)
-                   {
-                       ForcedMentor = ForcedValue
-                   }, token).ConfigureAwait(false))
+            {
+                ForcedMentor = ForcedValue
+            }, token).ConfigureAwait(false))
             {
                 // Make sure the dialogue window was not canceled.
                 if (await frmPickMentorSpirit.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -3863,9 +3826,9 @@ namespace Chummer
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
             using (ThreadSafeForm<SelectMentorSpirit> frmPickMentorSpirit = await ThreadSafeForm<SelectMentorSpirit>.GetAsync(() => new SelectMentorSpirit(_objCharacter, "paragons.xml")
-                   {
-                       ForcedMentor = ForcedValue
-                   }, token).ConfigureAwait(false))
+            {
+                ForcedMentor = ForcedValue
+            }, token).ConfigureAwait(false))
             {
                 // Make sure the dialogue window was not canceled.
                 if (await frmPickMentorSpirit.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -4068,9 +4031,9 @@ namespace Chummer
                 throw new ArgumentNullException(nameof(bonusNode));
             string strDescription = string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("Label_SelectSide", token: token).ConfigureAwait(false), _strFriendlyName);
             using (ThreadSafeForm<SelectSide> frmPickSide = await ThreadSafeForm<SelectSide>.GetAsync(() => new SelectSide
-                   {
-                       Description = strDescription
-                   }, token).ConfigureAwait(false))
+            {
+                Description = strDescription
+            }, token).ConfigureAwait(false))
             {
                 if (!string.IsNullOrEmpty(ForcedValue))
                     frmPickSide.MyForm.ForceValue(ForcedValue);
@@ -4173,7 +4136,7 @@ namespace Chummer
                         foreach (XmlNode objNode in objXmlPowerList)
                         {
                             XmlNode objXmlPower;
-                            int intLevels = Convert.ToInt32(objNode["val"]?.InnerText.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo)), GlobalSettings.InvariantCultureInfo);
+                            int intLevels = await ImprovementManager.ValueToIntAsync(_objCharacter, objNode["val"]?.InnerText, _intRating, token).ConfigureAwait(false);
                             string strPointsPerLevel = objNode["pointsperlevel"]?.InnerText;
                             // Display the Select Power window and record which Power was selected.
                             using (ThreadSafeForm<SelectPower> frmPickPower = await ThreadSafeForm<SelectPower>.GetAsync(() => new SelectPower(_objCharacter), token).ConfigureAwait(false))
@@ -4182,10 +4145,10 @@ namespace Chummer
                                 frmPickPower.MyForm.IgnoreLimits = objNode["ignorerating"]?.InnerText == bool.TrueString;
 
                                 if (!string.IsNullOrEmpty(strPointsPerLevel))
-                                    frmPickPower.MyForm.PointsPerLevel = Convert.ToDecimal(strPointsPerLevel, GlobalSettings.InvariantCultureInfo);
+                                    frmPickPower.MyForm.PointsPerLevel = await ImprovementManager.ValueToDecAsync(_objCharacter, strPointsPerLevel, _intRating, token).ConfigureAwait(false);
                                 string strLimit = objNode["limit"]?.InnerText.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                                 if (!string.IsNullOrEmpty(strLimit))
-                                    frmPickPower.MyForm.LimitToRating = Convert.ToInt32(strLimit, GlobalSettings.InvariantCultureInfo);
+                                    frmPickPower.MyForm.LimitToRating = await ImprovementManager.ValueToIntAsync(_objCharacter, strLimit, _intRating, token).ConfigureAwait(false);
                                 string strLimitToPowers = objNode.Attributes?["limittopowers"]?.InnerText;
                                 if (!string.IsNullOrEmpty(strLimitToPowers))
                                     frmPickPower.MyForm.LimitToPowers = strLimitToPowers;
@@ -4281,7 +4244,7 @@ namespace Chummer
             {
                 if (xmlArtList?.Count > 0)
                 {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                    out List<ListItem> lstArts))
                     {
                         foreach (XmlNode objXmlAddArt in xmlArtList)
@@ -4312,7 +4275,7 @@ namespace Chummer
                             if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                                 throw new AbortedException();
 
-                            objXmlSelectedArt = objXmlDocument.TryGetNodeByNameOrId("/chummer/powers/power", frmPickItem.MyForm.SelectedItem)
+                            objXmlSelectedArt = objXmlDocument.TryGetNodeByNameOrId("/chummer/powers/power", await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false))
                                                 ?? throw new AbortedException();
                         }
                     }
@@ -4386,7 +4349,7 @@ namespace Chummer
             {
                 if (xmlMetamagicList?.Count > 0)
                 {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                    out List<ListItem> lstMetamagics))
                     {
                         foreach (XmlNode objXmlAddMetamagic in xmlMetamagicList)
@@ -4419,7 +4382,7 @@ namespace Chummer
                             if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                                 throw new AbortedException();
 
-                            objXmlSelectedMetamagic = objXmlDocument.TryGetNodeByNameOrId("/chummer/metamagics/metamagic", frmPickItem.MyForm.SelectedItem)
+                            objXmlSelectedMetamagic = objXmlDocument.TryGetNodeByNameOrId("/chummer/metamagics/metamagic", await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false))
                                                       ?? throw new AbortedException();
                         }
                     }
@@ -4503,7 +4466,7 @@ namespace Chummer
             {
                 if (xmlEchoList?.Count > 0)
                 {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                    out List<ListItem> lstEchoes))
                     {
                         foreach (XmlNode objXmlAddEcho in xmlEchoList)
@@ -4535,7 +4498,7 @@ namespace Chummer
                             if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                                 throw new AbortedException();
 
-                            xmlSelectedEcho = objXmlDocument.TryGetNodeByNameOrId("/chummer/echoes/echo", frmPickItem.MyForm.SelectedItem)
+                            xmlSelectedEcho = objXmlDocument.TryGetNodeByNameOrId("/chummer/echoes/echo", await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false))
                                               ?? throw new AbortedException();
                         }
                     }
@@ -5354,7 +5317,7 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstCritters))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstCritters))
             {
                 using (XmlNodeList objXmlNodeList = (await _objCharacter.LoadDataAsync("critters.xml", token: token).ConfigureAwait(false))
                                                                  .SelectNodes(
@@ -5379,7 +5342,7 @@ namespace Chummer
                         throw new AbortedException();
                     }
 
-                    SelectedValue = frmPickItem.MyForm.SelectedItem;
+                    SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                 }
 
                 await CreateImprovementAsync(SelectedValue, _objImprovementSource, SourceName,
@@ -5399,11 +5362,9 @@ namespace Chummer
             if (nodeList.Count > 0)
             {
                 string strDescription = string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false), _strFriendlyName);
-                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem(), token).ConfigureAwait(false))
                 {
+                    await frmPickItem.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                     frmPickItem.MyForm.SetGeneralItemsMode(nodeList.OfType<XPathNavigator>().Select(objNode =>
                         new ListItem(objNode.Value, objNode.SelectSingleNodeAndCacheExpression("@translate")?.Value ?? objNode.Value)));
 
@@ -5419,7 +5380,7 @@ namespace Chummer
                         throw new AbortedException();
                     }
 
-                    SelectedValue = frmPickItem.MyForm.SelectedName;
+                    SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName, token).ConfigureAwait(false);
                 }
             }
 
@@ -5456,7 +5417,7 @@ namespace Chummer
 
             //.SelectNodes("/chummer/skills/skill[not(exotic = 'True') and (" + strFilter + ')' + SkillFilter(filter) + ']');
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstArmors))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstArmors))
             {
                 if (objXmlNodeList.Count > 0)
                 {
@@ -5474,11 +5435,9 @@ namespace Chummer
                 if (lstArmors.Count > 0)
                 {
                     string strDescription = string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false), _strFriendlyName);
-                    using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                           {
-                               Description = strDescription
-                           }, token).ConfigureAwait(false))
+                    using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem(), token).ConfigureAwait(false))
                     {
+                        await frmPickItem.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                         frmPickItem.MyForm.SetGeneralItemsMode(lstArmors);
 
                         if (!string.IsNullOrEmpty(LimitSelection))
@@ -5493,7 +5452,7 @@ namespace Chummer
                             throw new AbortedException();
                         }
 
-                        SelectedValue = frmPickItem.MyForm.SelectedItem;
+                        SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -5518,7 +5477,7 @@ namespace Chummer
                 ? "/chummer/cyberwares/cyberware[(category = " + strCategory.CleanXPath() + ") and (" + strBookXPath + ")]"
                 : "/chummer/cyberwares/cyberware[(" + strBookXPath + ")]");
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> list))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> list))
             {
                 if (objXmlNodeList.Count > 0)
                 {
@@ -5537,11 +5496,9 @@ namespace Chummer
                 string strDescription = string.Format(GlobalSettings.CultureInfo,
                     await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false),
                     _strFriendlyName);
-                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem(), token).ConfigureAwait(false))
                 {
+                    await frmPickItem.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                     frmPickItem.MyForm.SetGeneralItemsMode(list);
 
                     if (!string.IsNullOrEmpty(LimitSelection))
@@ -5556,7 +5513,7 @@ namespace Chummer
                         throw new AbortedException();
                     }
 
-                    SelectedValue = frmPickItem.MyForm.SelectedItem;
+                    SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                 }
             }
 
@@ -5581,9 +5538,9 @@ namespace Chummer
                     await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false),
                     _strFriendlyName);
                 using (ThreadSafeForm<SelectText> frmPickText = await ThreadSafeForm<SelectText>.GetAsync(() => new SelectText
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     if (!string.IsNullOrEmpty(LimitSelection))
                     {
@@ -5602,7 +5559,7 @@ namespace Chummer
             }
             else
             {
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstWeapons))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstWeapons))
                 {
                     bool blnIncludeUnarmed = bonusNode.SelectSingleNodeAndCacheExpressionAsNavigator("@includeunarmed", token)?.Value == bool.TrueString;
                     string strExclude = bonusNode.SelectSingleNodeAndCacheExpressionAsNavigator("@excludecategory", token)?.Value ?? string.Empty;
@@ -5635,11 +5592,9 @@ namespace Chummer
                         string strDescription = string.Format(GlobalSettings.CultureInfo,
                             await LanguageManager.GetStringAsync("String_Improvement_SelectText", token: token).ConfigureAwait(false),
                             _strFriendlyName);
-                        using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                               {
-                                   Description = strDescription
-                               }, token).ConfigureAwait(false))
+                        using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem(), token).ConfigureAwait(false))
                         {
+                            await frmPickItem.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                             frmPickItem.MyForm.SetGeneralItemsMode(lstWeapons);
 
                             if (!string.IsNullOrEmpty(LimitSelection))
@@ -5654,7 +5609,7 @@ namespace Chummer
                                 throw new AbortedException();
                             }
 
-                            SelectedValue = frmPickItem.MyForm.SelectedName;
+                            SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName, token).ConfigureAwait(false);
                         }
                     }
                     else
@@ -5686,8 +5641,7 @@ namespace Chummer
                 string strCount = bonusNode.Attributes?["count"]?.InnerText;
                 if (strCount.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                 {
-                    strCount = await _objCharacter.AttributeSection.ProcessAttributesInXPathAsync(strCount, token: token).ConfigureAwait(false);
-
+                    strCount = await _objCharacter.ProcessAttributesInXPathAsync(strCount, token: token).ConfigureAwait(false);
                     (bool blnIsSuccess, object objProcess) = await CommonFunctions.EvaluateInvariantXPathAsync(strCount, token).ConfigureAwait(false);
                     powerCount = blnIsSuccess ? ((double)objProcess).StandardRound() : 1;
                 }
@@ -5719,9 +5673,9 @@ namespace Chummer
                 string strDescription =
                     await LanguageManager.GetStringAsync("String_Improvement_SelectOptionalPower", token: token).ConfigureAwait(false);
                 using (ThreadSafeForm<SelectOptionalPower> frmPickPower = await ThreadSafeForm<SelectOptionalPower>.GetAsync(() => new SelectOptionalPower(_objCharacter, lstPowerExtraPairs.ToArray())
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickPower.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -5812,7 +5766,7 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstItems))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstItems))
             {
                 using (XmlNodeList objXmlList = bonusNode.SelectNodes("category"))
                 {
@@ -5844,9 +5798,9 @@ namespace Chummer
                 }
 
                 using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                       {
-                           AllowAutoSelect = false
-                       }, token).ConfigureAwait(false))
+                {
+                    AllowAutoSelect = false
+                }, token).ConfigureAwait(false))
                 {
                     frmPickItem.MyForm.SetGeneralItemsMode(lstItems);
                     // Make sure the dialogue window was not canceled.
@@ -5855,7 +5809,7 @@ namespace Chummer
                         throw new AbortedException();
                     }
 
-                    SelectedValue = frmPickItem.MyForm.SelectedItem;
+                    SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                 }
 
                 // Create the Improvement.
@@ -5883,9 +5837,9 @@ namespace Chummer
                 default:
                     {
                         using (ThreadSafeForm<SelectItem> frmSelect = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                               {
-                                   AllowAutoSelect = true
-                               }, token).ConfigureAwait(false))
+                        {
+                            AllowAutoSelect = true
+                        }, token).ConfigureAwait(false))
                         {
                             frmSelect.MyForm.SetGeneralItemsMode(options.Select(x => new ListItem(x, x)));
 
@@ -5899,7 +5853,7 @@ namespace Chummer
                                 throw new AbortedException();
                             }
 
-                            final = frmSelect.MyForm.SelectedItem;
+                            final = await frmSelect.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                         }
 
                         break;
@@ -5955,7 +5909,7 @@ namespace Chummer
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
             XmlDocument objXmlDocument = await _objCharacter.LoadDataAsync("qualities.xml", token: token).ConfigureAwait(false);
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstQualities))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstQualities))
             {
                 using (XmlNodeList xmlQualityList = bonusNode.SelectNodes("quality"))
                 {
@@ -5995,10 +5949,11 @@ namespace Chummer
                     // Don't do anything else if the form was canceled.
                     if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                         throw new AbortedException();
+                    string strSelected = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                     objXmlSelectedQuality = objXmlDocument.TryGetNodeByNameOrId(
-                        "/chummer/qualities/quality", frmPickItem.MyForm.SelectedItem);
+                        "/chummer/qualities/quality", strSelected);
                     objXmlBonusQuality
-                        = bonusNode.SelectSingleNode("quality[. = " + frmPickItem.MyForm.SelectedItem.CleanXPath() + ']');
+                        = bonusNode.SelectSingleNode("quality[. = " + strSelected.CleanXPath() + ']');
                 }
 
                 int intQualityDiscount = 0;
@@ -6047,17 +6002,17 @@ namespace Chummer
                         // Don't do anything else if the form was canceled.
                         if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                             throw new AbortedException();
-                        if (frmPickItem.MyForm.SelectedItem != "None")
+                        string strSelected = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
+                        if (strSelected != "None")
                         {
                             objXmlSelectedQuality
                                 = objXmlDocument.TryGetNodeByNameOrId("/chummer/qualities/quality",
-                                                                      frmPickItem.MyForm.SelectedItem);
+                                                                      strSelected);
                             objXmlBonusQuality
                                 = bonusNode.SelectSingleNode("discountqualities/quality[. = "
-                                                             + frmPickItem.MyForm.SelectedItem.CleanXPath() + ']');
+                                                             + strSelected.CleanXPath() + ']');
                             intQualityDiscount
-                                = Convert.ToInt32(objXmlBonusQuality?.SelectSingleNodeAndCacheExpressionAsNavigator("@discount", token)?.Value,
-                                                  GlobalSettings.InvariantCultureInfo);
+                                = await ImprovementManager.ValueToIntAsync(_objCharacter, objXmlBonusQuality?.SelectSingleNodeAndCacheExpressionAsNavigator("@discount", token)?.Value, _intRating, token).ConfigureAwait(false);
                             List<Weapon> lstWeapons = new List<Weapon>(1);
                             Quality discountQuality = new Quality(_objCharacter);
                             await discountQuality.SetBPAsync(0, token).ConfigureAwait(false);
@@ -6192,9 +6147,9 @@ namespace Chummer
                 // Display the Select Spell window.
                 string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpellCategory", token: token).ConfigureAwait(false);
                 using (ThreadSafeForm<SelectSpellCategory> frmPickSpellCategory = await ThreadSafeForm<SelectSpellCategory>.GetAsync(() => new SelectSpellCategory(_objCharacter)
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickSpellCategory.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
@@ -6230,9 +6185,9 @@ namespace Chummer
                 // Display the Select Spell window.
                 string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpellCategory", token: token).ConfigureAwait(false);
                 using (ThreadSafeForm<SelectSpellCategory> frmPickSpellCategory = await ThreadSafeForm<SelectSpellCategory>.GetAsync(() => new SelectSpellCategory(_objCharacter)
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                {
+                    Description = strDescription
+                }, token).ConfigureAwait(false))
                 {
                     frmPickSpellCategory.MyForm.SetExcludeCategories(bonusNode.Attributes?["exclude"]?.InnerText.SplitNoAlloc(',', StringSplitOptions.RemoveEmptyEntries));
 
@@ -6261,18 +6216,16 @@ namespace Chummer
             else
             {
                 string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpellDescriptor", token: token).ConfigureAwait(false);
-                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem(), token).ConfigureAwait(false))
                 {
+                    await frmPickItem.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                     {
                         throw new AbortedException();
                     }
 
-                    strSelected = frmPickItem.MyForm.SelectedItem;
+                    strSelected = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                 }
             }
             await CreateImprovementAsync(strSelected, Improvement.ImprovementType.LimitSpellDescriptor, token).ConfigureAwait(false);
@@ -6292,18 +6245,16 @@ namespace Chummer
             else
             {
                 string strDescription = await LanguageManager.GetStringAsync("Title_SelectSpellDescriptor", token: token).ConfigureAwait(false);
-                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                       {
-                           Description = strDescription
-                       }, token).ConfigureAwait(false))
+                using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem(), token).ConfigureAwait(false))
                 {
+                    await frmPickItem.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                     // Make sure the dialogue window was not canceled.
                     if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel)
                     {
                         throw new AbortedException();
                     }
 
-                    strSelected = frmPickItem.MyForm.SelectedItem;
+                    strSelected = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                 }
             }
             await CreateImprovementAsync(strSelected, Improvement.ImprovementType.BlockSpellDescriptor, token).ConfigureAwait(false);
@@ -6373,7 +6324,7 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (xmlAllowedSpirits == null)
                 throw new ArgumentNullException(nameof(xmlAllowedSpirits));
-            using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                             out HashSet<string> setAllowed))
             {
                 foreach (XmlNode n in xmlAllowedSpirits)
@@ -6381,7 +6332,7 @@ namespace Chummer
                     setAllowed.Add(n.InnerText);
                 }
 
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSpirits))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSpirits))
                 {
                     foreach (XPathNavigator xmlSpirit in (await _objCharacter.LoadDataXPathAsync(strXmlDoc, token: token).ConfigureAwait(false))
                                                                       .SelectAndCacheExpression(
@@ -6420,15 +6371,16 @@ namespace Chummer
                             throw new AbortedException();
                         }
 
+                        string strSelected = await frmSelect.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, token).ConfigureAwait(false);
                         if (addToSelectedValue)
                         {
                             if (string.IsNullOrEmpty(SelectedValue))
-                                SelectedValue = frmSelect.MyForm.SelectedItem;
+                                SelectedValue = strSelected;
                             else
-                                SelectedValue += ", " + frmSelect.MyForm.SelectedItem;
+                                SelectedValue += ", " + strSelected;
                         }
 
-                        await CreateImprovementAsync(frmSelect.MyForm.SelectedItem, _objImprovementSource, SourceName, impType,
+                        await CreateImprovementAsync(strSelected, _objImprovementSource, SourceName, impType,
                             _strUnique, token: token).ConfigureAwait(false);
                     }
                 }
@@ -6591,7 +6543,7 @@ namespace Chummer
             }
             else
             {
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkills))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkills))
                 {
                     using (XmlNodeList objXmlGroups = bonusNode.SelectNodes("skillgroup"))
                     {
@@ -6623,11 +6575,11 @@ namespace Chummer
 
                     string strDescription = await LanguageManager.GetStringAsync("String_DisableSkillGroupPrompt", token: token).ConfigureAwait(false);
                     using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                           {
-                               Description = strDescription,
-                               AllowAutoSelect = false
-                           }, token).ConfigureAwait(false))
                     {
+                        AllowAutoSelect = false
+                    }, token).ConfigureAwait(false))
+                    {
+                        await frmPickItem.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, token).ConfigureAwait(false);
                         frmPickItem.MyForm.SetGeneralItemsMode(lstSkills);
 
                         // Make sure the dialogue window was not canceled.
@@ -6636,7 +6588,7 @@ namespace Chummer
                             throw new AbortedException();
                         }
 
-                        SelectedValue = frmPickItem.MyForm.SelectedName;
+                        SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -7228,9 +7180,9 @@ namespace Chummer
                 // Populate the Magician Traditions list.
                 XPathNavigator xmlActionsBaseNode =
                     (await _objCharacter.LoadDataXPathAsync("actions.xml", token: token).ConfigureAwait(false)).SelectSingleNodeAndCacheExpression("/chummer", token);
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstActions))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstActions))
                 {
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdXPath))
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdXPath))
                     {
                         sbdXPath.Append("actions/action[").Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false));
                         string strCategory = bonusNode.Attributes?["category"]?.InnerText ?? string.Empty;
@@ -7260,9 +7212,9 @@ namespace Chummer
                     }
 
                     using (ThreadSafeForm<SelectItem> frmPickItem = await ThreadSafeForm<SelectItem>.GetAsync(() => new SelectItem
-                           {
-                               AllowAutoSelect = false
-                           }, token).ConfigureAwait(false))
+                    {
+                        AllowAutoSelect = false
+                    }, token).ConfigureAwait(false))
                     {
                         frmPickItem.MyForm.SetDropdownItemsMode(lstActions);
 
@@ -7272,7 +7224,7 @@ namespace Chummer
                             throw new AbortedException();
                         }
 
-                        SelectedValue = frmPickItem.MyForm.SelectedName;
+                        SelectedValue = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName, token).ConfigureAwait(false);
                     }
                 }
             }
@@ -7355,7 +7307,10 @@ namespace Chummer
             {
                 foreach (XmlNode child in xmlMetamagicsList)
                 {
-                    int intRating = Convert.ToInt32(child.Attributes?["grade"]?.InnerText ?? "-1", GlobalSettings.InvariantCultureInfo);
+                    int intRating = -1;
+                    string strGrade = child.Attributes?["grade"]?.InnerText;
+                    if (!string.IsNullOrEmpty(strGrade))
+                        intRating = await ImprovementManager.ValueToIntAsync(_objCharacter, strGrade, _intRating, token).ConfigureAwait(false);
                     await CreateImprovementAsync(child.InnerText, _objImprovementSource, SourceName, Improvement.ImprovementType.MetamagicLimit, _strUnique, 0, intRating, token: token).ConfigureAwait(false);
                 }
             }
@@ -7406,12 +7361,13 @@ namespace Chummer
                 frmPickItem.MyForm.AllowAutoSelect = !string.IsNullOrEmpty(ForcedValue);
 
                 // Make sure the dialogue window was not canceled.
-                if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel || string.IsNullOrEmpty(frmPickItem.MyForm.SelectedName))
+                string strSelected = await frmPickItem.MyForm.DoThreadSafeFuncAsync(x => x.SelectedName, token).ConfigureAwait(false);
+                if (await frmPickItem.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false) == DialogResult.Cancel || string.IsNullOrEmpty(strSelected))
                 {
                     throw new AbortedException();
                 }
 
-                SelectedValue = frmPickItem.MyForm.SelectedName;
+                SelectedValue = strSelected;
             }
             // Create the Improvement.
             SkillSpecialization objExpertise = new SkillSpecialization(_objCharacter, SelectedValue, true, true);

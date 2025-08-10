@@ -97,9 +97,16 @@ Application Changes:
 - Complex forms can be set to use a skill other than Software through the same useskill data node that spells can have.
 - Weapon accessories can now add additional accessory mounting slots to their parent weapon through the addmount node.
 - Weapon accessories can now overwrite the range category of their parent weapon through the replacerange node.
+- Weapons now export the mounts they still have available for accessories and modifications as "availablemounts" and "availablemounts_english".
+- Added a handler for Cyberware that inherit their availabilty from a child item using the 'or Gear' suffix, preventing Restricted Gear from checking the sub-item twice. Specifically this supports the Chemical Gland bioware that has the drug selected at time of implantation, gaining the availability of the implanted bioware at that time. Implements #5174
+- Fixed SelectCyberware form not showing Availability correctly for items with 'Or Gear' Availability suffix.
+- Added a more obvious "Report a Bug" menu item that takes the user directly to the page to create a new GitHub issue (more obvious than using the Issues Tracker).
+- Vehicle mods, vehicle weapon mounts, and vehicle weapon mount options now support a lot more referential content in their various fields (i.e., they can draw from far more vehicle stats and weapon mount stats to determine their costs, availabilities, and various bonuses). These generally use the same curly bracket notation as fields that reference character attributes. Vehicle attributes are referenced directly by their names, with the suffixes "Base", "Total", and "Max" used for the base (before modifications), total (after modifications), and maximum values, respectively. 
+- Cyberware with custom values that work off of STR and/or AGI values (not minima or maxima) now properly uses the STR and AGI of their parent cyberware or vehicle when appropriate.
+- If Chummer5a encounters an error while loading a custom data file, it will now show the exception of the file to the user instead of silently swallowing it.
 
 Data Changes:
-- Corrected the categories (and therefore also mounts, concealabilities, and ranges) for the Krime AKM-SU97, the Krime Ditch, the Krime Stopper-II, the Krime Soldier, and the Krime Ripper as per forum errata found here: https://forums.shadowruntabletop.com/index.php?topic=31750.msg544923#msg544923.
+- Corrected the categories (and therefore also mounts, concealabilities, and ranges) for the Krime AKM-SU97, the Krime Ditch, the Krime Stopper-II, the Krime Soldier, and the Krime Ripper as per forum errata found here: https://jackpoint.live/index.php?topic=31750.msg544923#msg544923.
 - Vocal Expansion can now properly only be taken at Betaware, Deltaware, or Gammaware grades and now properly adds conditional limit modifiers. Existing characters with this bioware will need to reapply improvements to get these bonuses.
 - Internal Synthlink now doubles the cost of the instrument into which it is taken instead of adding double the cost to the instrument. This is based on the way Internal Smartgun's cost is described in the core rulebook.
 - Fixed the Unrestricted Kill Code Qualities customdata not working correctly to allow non-technomancers taking the qualities.
@@ -142,7 +149,7 @@ Data Changes:
 - Fixed implementation of the Critical Strike power to properly provide the bonus for Unarmed Combat. Closes #5180
 - Fixed Capsule Ammo not using correct range.
 - Fixed Three-Dimensional Memory not being discounted by the Artist's Way.
-- Attune Animal spell now orrectly uses Animal Handling as its skill instead of the Ritual Spellcasting skill.
+- Attune Animal spell now correctly uses Animal Handling as its skill instead of the Ritual Spellcasting skill.
 - Armory asset for advanced lifestyles now properly costs 1000. Fixes #5193.
 - Monofilament Whips now properly increase their Accuracy by 2 when they are wirelessly enabled.
 - Registered sprite limits are now equal to a character's Charisma in all English pre-made settings to match the entry in the fifth printing of the CRB. German settings are unaffected because it is still Logic-based in the German CRB.
@@ -155,6 +162,9 @@ Data Changes:
 - Corrected the Walther P99 being sourced to Datapuls Verschlusssache instead of to Schattenhandbuch 4 (it is exclusive to that collection and does not appear in the individual books).
 - Armor mods for custom liners have now had their categories renamed to be more generic.
 - Foci, formulae, and magical supplies and compounds will now use "Force" instead of "Rating" where appropriate.
+- Fixed page reference for the Guard, Hammer, Lockdown, Mugger, Shell, Sneak, Stealth, Track and Wrapper programs in gear.xml.
+- Spellcasting foci now properly no longer stack with individualised spellcasting foci of the same type. This change does not affect existing characters with spellcasting foci.
+- Added customdata for Critter Prices, as originally created by u/RunnerPakhet and implemented for Chummer by Mesothelioma.
 
 Fixes implemented by BM123499
 
@@ -300,6 +310,10 @@ Changed/New Strings:
 - String_SelectFolderForPDFScan
 - Message_ScanFoldersRecursively
 - String_Fallback_Pattern
+- Menu_Main_ReportBug
+- String_ModifyEllipses
+- MessageTitle_Load_Error_Generic
+- Message_Load_Error_CustomFile
 
 Removed Strings:
 - Label_SelectMetamagic_Disadvantage

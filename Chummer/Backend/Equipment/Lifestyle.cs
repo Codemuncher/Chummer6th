@@ -51,7 +51,7 @@ namespace Chummer.Backend.Equipment
     /// <summary>
     /// Lifestyle.
     /// </summary>
-    [DebuggerDisplay("{DisplayName(GlobalSettings.DefaultLanguage)}")]
+    [DebuggerDisplay("{DisplayName(\"en-us\")}")]
     public sealed class Lifestyle : IHasInternalId, IHasXmlDataNode, IHasNotes, ICanRemove, IHasCustomName, IHasSourceId, IHasSource, ICanSort, INotifyMultiplePropertiesChangedAsync, IHasLockObject, IHasCost, IHasCharacterObject
     {
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
@@ -171,7 +171,7 @@ namespace Chummer.Backend.Equipment
             {
                 if (!objXmlLifestyle.TryGetField("id", Guid.TryParse, out _guiSourceID))
                 {
-                    Log.Warn(new object[] {"Missing id field for xmlnode", objXmlLifestyle});
+                    Log.Warn(new object[] { "Missing id field for xmlnode", objXmlLifestyle });
                     Utils.BreakIfDebug();
                 }
                 else
@@ -501,7 +501,7 @@ namespace Chummer.Backend.Equipment
                 }
 
                 objWriter.WriteEndElement();
-                objWriter.WriteElementString("notes", _strNotes.CleanOfInvalidUnicodeChars());
+                objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
                 objWriter.WriteElementString("notesColor", ColorTranslator.ToHtml(_colNotes));
                 objWriter.WriteElementString("sortorder", _intSortOrder.ToString(GlobalSettings.InvariantCultureInfo));
                 objWriter.WriteEndElement();
@@ -574,7 +574,7 @@ namespace Chummer.Backend.Equipment
                     objNode.TryGetStringFieldQuickly("lifestylename", ref _strBaseLifestyle);
                     if (string.IsNullOrWhiteSpace(_strBaseLifestyle))
                     {
-                        using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+                        using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                                        out List<ListItem> lstQualities))
                         {
                             foreach (XPathNavigator xmlLifestyle in xmlLifestyles.SelectAndCacheExpression(
@@ -1817,7 +1817,7 @@ namespace Chummer.Backend.Equipment
                     return LP - Comforts - Area - Security +
                            // HT 140: Bonus LP cannot exceed 2x base LP
                            Math.Min(Roommates + BonusLP - LifestyleQualities.Sum(x => x.LPCost < 0, x => x.LPCost),
-                               2*LP) -
+                               2 * LP) -
                            LifestyleQualities.Sum(x => x.LPCost > 0, x => x.LPCost);
             }
         }
@@ -1836,7 +1836,7 @@ namespace Chummer.Backend.Equipment
                                   await GetBonusLPAsync(token).ConfigureAwait(false) -
                                   await LifestyleQualities
                                       .SumAsync(x => x.LPCost < 0, x => x.GetLPCostAsync(token), token)
-                                      .ConfigureAwait(false), 2*LP) -
+                                      .ConfigureAwait(false), 2 * LP) -
                        await LifestyleQualities.SumAsync(x => x.LPCost > 0, x => x.GetLPCostAsync(token), token).ConfigureAwait(false);
             }
             finally
@@ -3984,11 +3984,11 @@ namespace Chummer.Backend.Equipment
                                 decContractCost += await x.GetCostAsync(token).ConfigureAwait(false);
                                 break;
                             case QualityType.Entertainment when !x.Category.Contains("Asset"):
-                            {
-                                decMultiplier += await x.GetMultiplierAsync(token).ConfigureAwait(false);
-                                decBaseMultiplier += await x.GetBaseMultiplierAsync(token).ConfigureAwait(false);
-                                return await x.GetCostAsync(token).ConfigureAwait(false);
-                            }
+                                {
+                                    decMultiplier += await x.GetMultiplierAsync(token).ConfigureAwait(false);
+                                    decBaseMultiplier += await x.GetBaseMultiplierAsync(token).ConfigureAwait(false);
+                                    return await x.GetCostAsync(token).ConfigureAwait(false);
+                                }
                         }
                         return 0;
                     }, token).ConfigureAwait(false);
@@ -4177,22 +4177,31 @@ namespace Chummer.Backend.Equipment
 
         #region UI Methods
 
-        public TreeNode CreateTreeNode(ContextMenuStrip cmsBasicLifestyle, ContextMenuStrip cmsAdvancedLifestyle)
+        public async Task<TreeNode> CreateTreeNode(ContextMenuStrip cmsBasicLifestyle, ContextMenuStrip cmsAdvancedLifestyle, CancellationToken token = default)
         {
-            using (LockObject.EnterReadLock())
+            token.ThrowIfCancellationRequested();
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
             {
+                token.ThrowIfCancellationRequested();
                 //if (!string.IsNullOrEmpty(ParentID) && !string.IsNullOrEmpty(Source) && !_objCharacter.Settings.BookEnabled(Source))
                 //return null;
                 TreeNode objNode = new TreeNode
                 {
                     Name = InternalId,
-                    Text = CurrentDisplayName,
+                    Text = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false),
                     Tag = this,
-                    ContextMenuStrip = StyleType == LifestyleType.Standard ? cmsBasicLifestyle : cmsAdvancedLifestyle,
-                    ForeColor = PreferredColor,
-                    ToolTipText = Notes.WordWrap()
+                    ContextMenuStrip = await GetStyleTypeAsync(token).ConfigureAwait(false) == LifestyleType.Standard
+                        ? cmsBasicLifestyle
+                        : cmsAdvancedLifestyle,
+                    ForeColor = await GetPreferredColorAsync(token).ConfigureAwait(false),
+                    ToolTipText = (await GetNotesAsync(token).ConfigureAwait(false)).WordWrap()
                 };
                 return objNode;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
             }
         }
 
@@ -4633,10 +4642,14 @@ namespace Chummer.Backend.Equipment
                 {
                     if (_objCharacter.Lifestyles.Contains(this) && !_objCharacter.Lifestyles.Remove(this))
                         return false;
-                    List<string> lstIds = new List<string>(LifestyleQualities.Count);
-                    LifestyleQualities.ForEach(x => lstIds.Add(x.InternalId));
-                    ImprovementManager.RemoveImprovements(CharacterObject, Improvement.ImprovementSource.Quality,
-                        lstIds);
+                    int intQualitiesCount = LifestyleQualities.Count;
+                    if (intQualitiesCount > 0)
+                    {
+                        List<string> lstIds = new List<string>(intQualitiesCount);
+                        LifestyleQualities.ForEach(x => lstIds.Add(x.InternalId));
+                        ImprovementManager.RemoveImprovements(CharacterObject, Improvement.ImprovementSource.Quality,
+                            lstIds);
+                    }
                 }
             }
 
@@ -4661,10 +4674,13 @@ namespace Chummer.Backend.Equipment
                     if (await _objCharacter.Lifestyles.ContainsAsync(this, token).ConfigureAwait(false)
                         && !await _objCharacter.Lifestyles.RemoveAsync(this, token).ConfigureAwait(false))
                         return false;
-
-                    List<string> lstIds = new List<string>(await LifestyleQualities.GetCountAsync(token).ConfigureAwait(false));
-                    await LifestyleQualities.ForEachAsync(x => lstIds.Add(x.InternalId), token).ConfigureAwait(false);
-                    await ImprovementManager.RemoveImprovementsAsync(CharacterObject, Improvement.ImprovementSource.Quality, lstIds, token).ConfigureAwait(false);
+                    int intQualitiesCount = await LifestyleQualities.GetCountAsync(token).ConfigureAwait(false);
+                    if (intQualitiesCount > 0)
+                    {
+                        List<string> lstIds = new List<string>(intQualitiesCount);
+                        await LifestyleQualities.ForEachAsync(x => lstIds.Add(x.InternalId), token).ConfigureAwait(false);
+                        await ImprovementManager.RemoveImprovementsAsync(CharacterObject, Improvement.ImprovementSource.Quality, lstIds, token).ConfigureAwait(false);
+                    }
                 }
                 finally
                 {
