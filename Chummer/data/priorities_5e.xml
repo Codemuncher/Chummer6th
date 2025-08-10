@@ -49,6 +49,28 @@
       <value>A</value>
       <category>Heritage</category>
       <metatypes>
+      <!-- <metatype>
+          <name>A.I.</name>
+          <value>4</value>
+          <karma>0</karma>
+          <metavariants>
+            <metavariant>
+              <name>E-Ghost</name>
+              <value>4</value>
+              <karma>0</karma>
+            </metavariant>
+            <metavariant>
+              <name>Xenosapient</name>
+              <value>4</value>
+              <karma>0</karma>
+            </metavariant>
+            <metavariant>
+              <name>Protosapient</name>
+              <value>4</value>
+              <karma>0</karma>
+            </metavariant>
+          </metavariants>
+        </metatype>-->
         <metatype>
           <name>Human</name>
           <value>0</value>
@@ -66,6 +88,26 @@
           <value>0</value>
           <karma>0</karma>
           <metavariants>
+           <!-- <metavariant>
+              <name>Dryad</name>
+              <value>8</value>
+              <karma>0</karma>
+            </metavariant>
+            <metavariant>
+              <name>Nocturna</name>
+              <value>8</value>
+              <karma>0</karma>
+            </metavariant>
+            <metavariant>
+              <name>Wakyambi</name>
+              <value>8</value>
+              <karma>12</karma>
+            </metavariant>
+            <metavariant>
+              <name>Xapiri Thëpë</name>
+              <value>8</value>
+              <karma>0</karma>
+            </metavariant>-->
           </metavariants>
         </metatype>
         <metatype>
@@ -73,6 +115,26 @@
           <value>13</value>
           <karma>0</karma>
           <metavariants>
+           <!-- <metavariant>
+              <name>Gnome</name>
+              <value>7</value>
+              <karma>7</karma>
+            </metavariant>
+            <metavariant>
+              <name>Hanuman</name>
+              <value>7</value>
+              <karma>5</karma>
+            </metavariant>
+            <metavariant>
+              <name>Koborokuru</name>
+              <value>7</value>
+              <karma>0</karma>
+            </metavariant>
+            <metavariant>
+              <name>Menehune</name>
+              <value>7</value>
+              <karma>2</karma>
+            </metavariant>-->
           </metavariants>
         </metatype>
         <metatype>
@@ -80,6 +142,26 @@
           <value>13</value>
           <karma>0</karma>
           <metavariants>
+            <!--<metavariant>
+              <name>Hobgoblin</name>
+              <value>7</value>
+              <karma>5</karma>
+            </metavariant>
+            <metavariant>
+              <name>Ogre</name>
+              <value>7</value>
+              <karma>8</karma>
+            </metavariant>
+            <metavariant>
+              <name>Oni</name>
+              <value>7</value>
+              <karma>4</karma>
+            </metavariant>
+            <metavariant>
+              <name>Satyr</name>
+              <value>7</value>
+              <karma>10</karma>
+            </metavariant>-->
           </metavariants>
         </metatype>
         <metatype>
@@ -87,6 +169,26 @@
           <value>13</value>
           <karma>0</karma>
           <metavariants>
+           <!-- <metavariant>
+              <name>Cyclops</name>
+              <value>5</value>
+              <karma>2</karma>
+            </metavariant>
+            <metavariant>
+              <name>Fomorian</name>
+              <value>5</value>
+              <karma>12</karma>
+            </metavariant>
+            <metavariant>
+              <name>Giant</name>
+              <value>5</value>
+              <karma>2</karma>
+            </metavariant>
+            <metavariant>
+              <name>Minotaur</name>
+              <value>5</value>
+              <karma>2</karma>
+            </metavariant>-->
           </metavariants>
         </metatype>
        <!-- <metatype>
