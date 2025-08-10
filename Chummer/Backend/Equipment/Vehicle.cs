@@ -2174,19 +2174,19 @@ namespace Chummer.Backend.Equipment
                 // Then check for mods that modify the sensor value (needs separate loop in case of % modifiers on top of stat-overriding mods)
                 int intTotalBonusSensor = await Mods.SumAsync(objMod => !objMod.IncludedInVehicle && objMod.Equipped && !ReferenceEquals(objMod, objExcludeMod),
                     async objMod =>
+                {
+                    string strLoop = objMod.Bonus?["sensor"]?.InnerText;
+                    int intTemp = await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", token: token)
+                        .ConfigureAwait(false);
+                    if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        string strLoop = objMod.Bonus?["sensor"]?.InnerText;
-                        int intTemp = await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", token: token)
+                        strLoop = objMod.WirelessBonus?["sensor"]?.InnerText;
+                        intTemp += await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", token: token)
                             .ConfigureAwait(false);
-                        if (objMod.WirelessOn && objMod.WirelessBonus != null)
-                        {
-                            strLoop = objMod.WirelessBonus?["sensor"]?.InnerText;
-                            intTemp += await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", token: token)
-                                .ConfigureAwait(false);
-                        }
+                    }
 
-                        return intTemp;
-                    }, token: token).ConfigureAwait(false);
+                    return intTemp;
+                }, token: token).ConfigureAwait(false);
 
                 return intTotalSensor + intTotalBonusSensor;
             }
@@ -4448,17 +4448,17 @@ namespace Chummer.Backend.Equipment
                 foreach (VehicleMod objMod in Mods)
                 {
                     string strBonusBoxes = objMod.Bonus?["matrixcmbonus"]?.InnerText;
-                    if (!string.IsNullOrEmpty(strBonusBoxes))
+                    if (!string.IsNullOrEmpty(strBonusBoxes) && int.TryParse(strBonusBoxes, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
                     {
                         // Add the Modification's Device Rating to the Vehicle's base Device Rating.
-                        intReturn += Convert.ToInt32(strBonusBoxes, GlobalSettings.InvariantCultureInfo);
+                        intReturn += intLoop;
                     }
                     if (objMod.WirelessOn)
                     {
                         strBonusBoxes = objMod.WirelessBonus?["matrixcmbonus"]?.InnerText;
-                        if (!string.IsNullOrEmpty(strBonusBoxes))
+                        if (!string.IsNullOrEmpty(strBonusBoxes) && int.TryParse(strBonusBoxes, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
                         {
-                            intReturn += Convert.ToInt32(strBonusBoxes, GlobalSettings.InvariantCultureInfo);
+                            intReturn += intLoop2;
                         }
                     }
                 }
@@ -5305,14 +5305,14 @@ namespace Chummer.Backend.Equipment
                 foreach (VehicleMod objMod in Mods)
                 {
                     XmlElement objBonus = objMod.Bonus?[strAttributeNodeName];
-                    if (objBonus != null)
+                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
                     {
                         intReturn += Convert.ToInt32(objBonus.InnerText, GlobalSettings.InvariantCultureInfo);
                     }
                     objBonus = objMod.WirelessOn ? objMod.WirelessBonus?[strAttributeNodeName] : null;
-                    if (objBonus != null)
+                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
                     {
-                        intReturn += Convert.ToInt32(objBonus.InnerText, GlobalSettings.InvariantCultureInfo);
+                        intReturn += intLoop2;
                     }
                 }
             }
@@ -5355,15 +5355,15 @@ namespace Chummer.Backend.Equipment
                 {
                     int intInnerReturn = 0;
                     XmlElement objBonus = objMod.Bonus?[strAttributeNodeName];
-                    if (objBonus != null)
+                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
                     {
-                        intInnerReturn += Convert.ToInt32(objBonus.InnerText, GlobalSettings.InvariantCultureInfo);
+                        intInnerReturn += intLoop;
                     }
 
                     objBonus = objMod.WirelessOn ? objMod.WirelessBonus?[strAttributeNodeName] : null;
-                    if (objBonus != null)
+                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
                     {
-                        intInnerReturn += Convert.ToInt32(objBonus.InnerText, GlobalSettings.InvariantCultureInfo);
+                        intInnerReturn += intLoop2;
                     }
 
                     return intInnerReturn;
@@ -5473,17 +5473,17 @@ namespace Chummer.Backend.Equipment
                 switch (await GlobalSettings.GetClipboardContentTypeAsync(token).ConfigureAwait(false))
                 {
                     case ClipboardContentType.Gear:
+                    {
+                        string strClipboardCategory = (await GlobalSettings.GetClipboardAsync(token).ConfigureAwait(false))
+                            .SelectSingleNodeAndCacheExpressionAsNavigator("category", token)?.Value ?? string.Empty;
+                        if (!string.IsNullOrEmpty(strClipboardCategory))
                         {
-                            string strClipboardCategory = (await GlobalSettings.GetClipboardAsync(token).ConfigureAwait(false))
-                                .SelectSingleNodeAndCacheExpressionAsNavigator("category", token)?.Value ?? string.Empty;
-                            if (!string.IsNullOrEmpty(strClipboardCategory))
-                            {
-                                XPathNodeIterator xmlAddonCategoryList =
-                                    (await this.GetNodeXPathAsync(token: token).ConfigureAwait(false))
-                                    ?.SelectAndCacheExpression("addoncategory", token);
-                                return xmlAddonCategoryList?.Count > 0 && xmlAddonCategoryList.Cast<XPathNavigator>()
-                                    .Any(xmlLoop => xmlLoop.Value == strClipboardCategory);
-                            }
+                            XPathNodeIterator xmlAddonCategoryList =
+                                (await this.GetNodeXPathAsync(token: token).ConfigureAwait(false))
+                                ?.SelectAndCacheExpression("addoncategory", token);
+                            return xmlAddonCategoryList?.Count > 0 && xmlAddonCategoryList.Cast<XPathNavigator>()
+                                .Any(xmlLoop => xmlLoop.Value == strClipboardCategory);
+                        }
 
                             return false;
                         }

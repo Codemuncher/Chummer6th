@@ -41,8 +41,9 @@ namespace Chummer
         private WeaponMount _objMount;
         private readonly XmlDocument _xmlDoc;
         private readonly XPathNavigator _xmlDocXPath;
-        private HashSet<string> _setBlackMarketMaps = Utils.StringHashSetPool.Get();
+        private HashSet<string> _setBlackMarketMaps;
         private decimal _decOldBaseCost;
+        private decimal _decCurrentBaseCost;
 
         private CancellationTokenSource _objUpdateInfoCancellationTokenSource;
         private CancellationTokenSource _objRefreshComboBoxesCancellationTokenSource;
@@ -56,12 +57,13 @@ namespace Chummer
 
         public CreateWeaponMount(Vehicle objVehicle, Character objCharacter, WeaponMount objWeaponMount = null)
         {
-            Disposed += (sender, args) => Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
             _objCharacter = objCharacter ?? throw new ArgumentNullException(nameof(objCharacter));
             _objGenericToken = _objGenericCancellationTokenSource.Token;
             _lstMods = new ThreadSafeList<VehicleMod>(1);
+            _setBlackMarketMaps = Utils.StringHashSetPool.Get();
             Disposed += (sender, args) =>
             {
+                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
                 CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objUpdateInfoCancellationTokenSource, null);
                 if (objOldCancellationTokenSource?.IsCancellationRequested == false)
                 {
@@ -116,7 +118,7 @@ namespace Chummer
                 string strSizeFilter = "category = \'Size\' and " + await objSettings.BookXPathAsync(token: _objGenericToken).ConfigureAwait(false);
                 if (!_objVehicle.IsDrone && await objSettings.GetDroneModsAsync(_objGenericToken).ConfigureAwait(false))
                     strSizeFilter += " and not(optionaldrone)";
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSize))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSize))
                 {
                     XPathNodeIterator xmlSizeNodeList
                         = _xmlDocXPath.Select("/chummer/weaponmounts/weaponmount[" + strSizeFilter + ']');
@@ -198,9 +200,9 @@ namespace Chummer
 
                 if (_objMount != null)
                 {
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstVisibility))
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstFlexibility))
-                    using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstControl))
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstVisibility))
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstFlexibility))
+                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstControl))
                     {
                         lstVisibility.AddRange(await cboVisibility.DoThreadSafeFuncAsync(x => x.Items.Cast<ListItem>(), _objGenericToken).ConfigureAwait(false));
                         lstFlexibility.AddRange(await cboFlexibility.DoThreadSafeFuncAsync(x => x.Items.Cast<ListItem>(), _objGenericToken).ConfigureAwait(false));
@@ -687,13 +689,15 @@ namespace Chummer
                     if (objMod != null)
                     {
                         await cmdDeleteMod.DoThreadSafeAsync(x => x.Enabled = !objMod.IncludedInVehicle, token).ConfigureAwait(false);
-                        await lblSlots.DoThreadSafeAsync(x => x.Text = objMod.CalculatedSlots.ToString(GlobalSettings.InvariantCultureInfo), token).ConfigureAwait(false);
+                        string strSlots = (await objMod.GetCalculatedSlotsAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
+                        await lblSlots.DoThreadSafeAsync(x => x.Text = strSlots, token).ConfigureAwait(false);
                         string strModAvail = await objMod.GetDisplayTotalAvailAsync(token).ConfigureAwait(false);
                         await lblAvailability.DoThreadSafeAsync(x => x.Text = strModAvail, token).ConfigureAwait(false);
 
                         if (await chkFreeItem.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false))
                         {
-                            string strCostInner = 0.0m.ToString(_objCharacter.Settings.NuyenFormat, GlobalSettings.CultureInfo)
+                            string strCostInner = 0.0m.ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false),
+                                    GlobalSettings.CultureInfo)
                                 + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                             await lblCost.DoThreadSafeAsync(x => x.Text = strCostInner, token).ConfigureAwait(false);
                         }
@@ -720,9 +724,9 @@ namespace Chummer
                                 .SumAsync(x => !x.IncludedInVehicle, x => x.GetCalculatedSlotsAsync(token), token)
                                 .ConfigureAwait(false);
 
-                            decimal decMarkup = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token).ConfigureAwait(false);
-                            string strCostInner = (await objMod.TotalCostInMountCreation(intTotalSlots, token).ConfigureAwait(false) * (1 + decMarkup / 100.0m))
-                                    .ToString(_objCharacter.Settings.NuyenFormat, GlobalSettings.CultureInfo)
+                            decimal decMarkupInner = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token).ConfigureAwait(false) / 100.0m;
+                            string strCostInner = (await objMod.TotalCostInMountCreation(intTotalSlots, token).ConfigureAwait(false) * (1 + decMarkupInner))
+                                    .ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo)
                                     + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                             await lblCost.DoThreadSafeAsync(x => x.Text = strCostInner, token).ConfigureAwait(false);
                         }
@@ -836,6 +840,7 @@ namespace Chummer
                     intAvail += await objLoopAvail.GetValueAsync(token).ConfigureAwait(false);
                     return await x.GetCalculatedSlotsAsync(token).ConfigureAwait(false);
                 }, token).ConfigureAwait(false);
+                _decCurrentBaseCost = decCost;
                 if (!await chkFreeItem.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false))
                 {
                     decCost += await _lstMods
@@ -844,7 +849,10 @@ namespace Chummer
                 }
 
                 if (await chkBlackMarketDiscount.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false))
+                {
                     decCost *= 0.9m;
+                    _decCurrentBaseCost *= 0.9m;
+                }
 
                 string strAvailText = intAvail.ToString(GlobalSettings.CultureInfo);
                 switch (chrAvailSuffix)
@@ -858,9 +866,10 @@ namespace Chummer
                         break;
                 }
 
-                decCost *= 1 + await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token).ConfigureAwait(false) / 100.0m;
-
-                string strCost = decCost.ToString(_objCharacter.Settings.NuyenFormat, GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
+                decimal decMarkup = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token).ConfigureAwait(false) / 100.0m;
+                decCost *= 1 + decMarkup;
+                _decCurrentBaseCost *= 1 + decMarkup;
+                string strCost = decCost.ToString(await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                 await lblCost.DoThreadSafeAsync(x => x.Text = strCost, token).ConfigureAwait(false);
                 await lblSlots.DoThreadSafeAsync(x => x.Text = intSlots.ToString(GlobalSettings.CultureInfo), token).ConfigureAwait(false);
                 await lblAvailability.DoThreadSafeAsync(x => x.Text = strAvailText, token).ConfigureAwait(false);
@@ -921,9 +930,10 @@ namespace Chummer
                         if (string.IsNullOrEmpty(strSelectedId))
                             continue;
                         XmlNode xmlLoopNode = _xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strSelectedId);
-                        if (xmlLoopNode != null)
+                        if (xmlLoopNode != null && int.TryParse(xmlLoopNode["slots"]?.InnerText, NumberStyles.Integer,
+                                GlobalSettings.InvariantCultureInfo, out int intDummy))
                         {
-                            intSlots += Convert.ToInt32(xmlLoopNode["slots"]?.InnerText, GlobalSettings.InvariantCultureInfo);
+                            intSlots += intDummy;
                         }
                     }
 
@@ -939,7 +949,8 @@ namespace Chummer
                                                                                    {
                                                                                        // Pass the selected vehicle on to the form.
                                                                                        VehicleMountMods = true,
-                                                                                       WeaponMountSlots = intLoopSlots
+                                                                                       WeaponMountSlots = intLoopSlots,
+                                                                                       ParentWeaponMountOwnCost = _decCurrentBaseCost
                                                                                    }, token).ConfigureAwait(false))
                         {
                             // Make sure the dialogue window was not canceled.
@@ -1054,9 +1065,9 @@ namespace Chummer
                 }
 
                 XPathNavigator xmlVehicleNode = await _objVehicle.GetNodeXPathAsync(token: token).ConfigureAwait(false);
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstVisibility))
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstFlexibility))
-                using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstControl))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstVisibility))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstFlexibility))
+                using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstControl))
                 {
                     // Populate the Weapon Mount Category list.
                     string strFilter = "category != \"Size\" and " + await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false);
