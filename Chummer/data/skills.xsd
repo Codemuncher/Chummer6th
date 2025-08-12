@@ -1,95 +1,150 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
-  <xs:element name="skill">
+<xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:msprop="urn:schemas-microsoft-com:xml-msprop">
+  <xs:annotation>
+    <xs:appinfo source="urn:schemas-microsoft-com:xml-msdatasource">
+      <DataSource DefaultConnectionIndex="0" FunctionsComponentName="QueriesTableAdapter" Modifier="AutoLayout, AnsiClass, Class, Public" SchemaSerializationMode="IncludeSchema" xmlns="urn:schemas-microsoft-com:xml-msdatasource">
+        <Connections />
+        <Tables />
+        <Sources />
+      </DataSource>
+    </xs:appinfo>
+  </xs:annotation>
+  <xs:element name="skill" msprop:Generator_RowEvHandlerName="skillRowChangeEventHandler" msprop:Generator_RowDeletedName="skillRowDeleted" msprop:Generator_RowDeletingName="skillRowDeleting" msprop:Generator_RowEvArgName="skillRowChangeEvent" msprop:Generator_TablePropName="skill" msprop:Generator_RowChangedName="skillRowChanged" msprop:Generator_RowChangingName="skillRowChanging" msprop:Generator_TableClassName="skillDataTable" msprop:Generator_RowClassName="skillRow" msprop:Generator_TableVarName="tableskill" msprop:Generator_UserTableName="skill">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="id" type="xs:string" minOccurs="1" maxOccurs="1" />
-        <xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1" />
-        <xs:element name="hide" type="xs:string" minOccurs="0" maxOccurs="1" />
-        <xs:element name="ignoresourcedisabled" type="xs:string" minOccurs="0" maxOccurs="1" />
-        <xs:element name="attribute" type="xs:string" minOccurs="1" maxOccurs="1" />
-        <xs:element name="category" type="xs:string" minOccurs="1" maxOccurs="1" />
-        <xs:element name="default" type="xs:string" minOccurs="1" maxOccurs="1" />
-        <xs:element name="exotic" type="xs:string" minOccurs="0" maxOccurs="1" />
-        <xs:element name="skillgroup" type="xs:string" minOccurs="1" maxOccurs="1" />
-        <xs:element name="requiresgroundmovement" type="xs:string" minOccurs="0" maxOccurs="1" />
-        <xs:element name="requiresswimmovement" type="xs:string" minOccurs="0" maxOccurs="1" />
-        <xs:element name="requiresflymovement" type="xs:string" minOccurs="0" maxOccurs="1" />
-        <xs:element name="specs" minOccurs="1" maxOccurs="1">
+        <xs:element name="id" msprop:Generator_ColumnPropNameInRow="id" msprop:Generator_ColumnPropNameInTable="idColumn" msprop:Generator_ColumnVarNameInTable="columnid" msprop:Generator_UserColumnName="id" type="xs:string" />
+        <xs:element name="name" msprop:Generator_ColumnPropNameInRow="name" msprop:Generator_ColumnPropNameInTable="nameColumn" msprop:Generator_ColumnVarNameInTable="columnname" msprop:Generator_UserColumnName="name" type="xs:string" />
+        <xs:element name="hide" msprop:Generator_ColumnPropNameInRow="hide" msprop:Generator_ColumnPropNameInTable="hideColumn" msprop:Generator_ColumnVarNameInTable="columnhide" msprop:Generator_UserColumnName="hide" type="xs:string" minOccurs="0" />
+        <xs:element name="ignoresourcedisabled" msprop:Generator_ColumnPropNameInRow="ignoresourcedisabled" msprop:Generator_ColumnPropNameInTable="ignoresourcedisabledColumn" msprop:Generator_ColumnVarNameInTable="columnignoresourcedisabled" msprop:Generator_UserColumnName="ignoresourcedisabled" type="xs:string" minOccurs="0" />
+        <xs:element name="attribute" msprop:Generator_ColumnPropNameInRow="attribute" msprop:Generator_ColumnPropNameInTable="attributeColumn" msprop:Generator_ColumnVarNameInTable="columnattribute" msprop:Generator_UserColumnName="attribute" type="xs:string" />
+        <xs:element name="category" msprop:Generator_ColumnPropNameInRow="category" msprop:Generator_ColumnPropNameInTable="categoryColumn" msprop:Generator_ColumnVarNameInTable="columncategory" msprop:Generator_UserColumnName="category" type="xs:string" />
+        <xs:element name="default" msprop:Generator_ColumnPropNameInRow="_default" msprop:Generator_ColumnPropNameInTable="defaultColumn" msprop:Generator_ColumnVarNameInTable="columndefault" msprop:Generator_UserColumnName="default" type="xs:string" />
+        <xs:element name="exotic" msprop:Generator_ColumnPropNameInRow="exotic" msprop:Generator_ColumnPropNameInTable="exoticColumn" msprop:Generator_ColumnVarNameInTable="columnexotic" msprop:Generator_UserColumnName="exotic" type="xs:string" minOccurs="0" />
+        <xs:element name="skillgroup" msprop:Generator_ColumnPropNameInRow="skillgroup" msprop:Generator_ColumnPropNameInTable="skillgroupColumn" msprop:Generator_ColumnVarNameInTable="columnskillgroup" msprop:Generator_UserColumnName="skillgroup" type="xs:string" />
+        <xs:element name="requiresgroundmovement" msprop:Generator_ColumnPropNameInRow="requiresgroundmovement" msprop:Generator_ColumnPropNameInTable="requiresgroundmovementColumn" msprop:Generator_ColumnVarNameInTable="columnrequiresgroundmovement" msprop:Generator_UserColumnName="requiresgroundmovement" type="xs:string" minOccurs="0" />
+        <xs:element name="requiresswimmovement" msprop:Generator_ColumnPropNameInRow="requiresswimmovement" msprop:Generator_ColumnPropNameInTable="requiresswimmovementColumn" msprop:Generator_ColumnVarNameInTable="columnrequiresswimmovement" msprop:Generator_UserColumnName="requiresswimmovement" type="xs:string" minOccurs="0" />
+        <xs:element name="requiresflymovement" msprop:Generator_ColumnPropNameInRow="requiresflymovement" msprop:Generator_ColumnPropNameInTable="requiresflymovementColumn" msprop:Generator_ColumnVarNameInTable="columnrequiresflymovement" msprop:Generator_UserColumnName="requiresflymovement" type="xs:string" minOccurs="0" />
+        <xs:element name="source" msprop:Generator_ColumnPropNameInRow="source" msprop:Generator_ColumnPropNameInTable="sourceColumn" msprop:Generator_ColumnVarNameInTable="columnsource" msprop:Generator_UserColumnName="source" type="xs:string" minOccurs="0" />
+        <xs:element name="page" msprop:Generator_ColumnPropNameInRow="page" msprop:Generator_ColumnPropNameInTable="pageColumn" msprop:Generator_ColumnVarNameInTable="columnpage" msprop:Generator_UserColumnName="page" type="xs:string" minOccurs="0" />
+        <xs:element name="specs" msprop:Generator_RowEvHandlerName="specsRowChangeEventHandler" msprop:Generator_RowDeletedName="specsRowDeleted" msprop:Generator_RowDeletingName="specsRowDeleting" msprop:Generator_RowEvArgName="specsRowChangeEvent" msprop:Generator_TablePropName="specs" msprop:Generator_RowChangedName="specsRowChanged" msprop:Generator_RowChangingName="specsRowChanging" msprop:Generator_TableClassName="specsDataTable" msprop:Generator_RowClassName="specsRow" msprop:Generator_TableVarName="tablespecs" msprop:Generator_UserTableName="specs" minOccurs="0" maxOccurs="unbounded">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="spec" nillable="true" minOccurs="0" maxOccurs="unbounded">
+              <xs:element name="spec" nillable="true" msprop:Generator_RowEvHandlerName="specRowChangeEventHandler" msprop:Generator_RowDeletedName="specRowDeleted" msprop:Generator_RowDeletingName="specRowDeleting" msprop:Generator_RowEvArgName="specRowChangeEvent" msprop:Generator_TablePropName="spec" msprop:Generator_RowChangedName="specRowChanged" msprop:Generator_RowChangingName="specRowChanging" msprop:Generator_TableClassName="specDataTable" msprop:Generator_RowClassName="specRow" msprop:Generator_TableVarName="tablespec" msprop:Generator_UserTableName="spec" minOccurs="0" maxOccurs="unbounded">
                 <xs:complexType>
-                  <xs:simpleContent msdata:ColumnName="spec_Text" msdata:Ordinal="0">
+                  <xs:simpleContent msprop:Generator_ColumnPropNameInRow="spec_Text" msprop:Generator_ColumnPropNameInTable="spec_TextColumn" msprop:Generator_ColumnVarNameInTable="columnspec_Text" msprop:Generator_UserColumnName="spec_Text" msdata:ColumnName="spec_Text" msdata:Ordinal="0">
                     <xs:extension base="xs:string">
+                      <xs:attribute name="specs_Id" msprop:Generator_ColumnPropNameInRow="specs_Id" msprop:Generator_ColumnPropNameInTable="specs_IdColumn" msprop:Generator_ColumnVarNameInTable="columnspecs_Id" msprop:Generator_UserColumnName="specs_Id" type="xs:int" use="prohibited" />
                     </xs:extension>
                   </xs:simpleContent>
                 </xs:complexType>
               </xs:element>
             </xs:sequence>
+            <xs:attribute name="specs_Id" msdata:AutoIncrement="true" msprop:Generator_ColumnPropNameInRow="specs_Id" msprop:Generator_ColumnPropNameInTable="specs_IdColumn" msprop:Generator_ColumnVarNameInTable="columnspecs_Id" msprop:Generator_UserColumnName="specs_Id" type="xs:int" msdata:AllowDBNull="false" use="prohibited" />
+            <xs:attribute name="skill_Id" msprop:Generator_ColumnPropNameInRow="skill_Id" msprop:Generator_ColumnPropNameInTable="skill_IdColumn" msprop:Generator_ColumnVarNameInTable="columnskill_Id" msprop:Generator_UserColumnName="skill_Id" type="xs:int" use="prohibited" />
           </xs:complexType>
         </xs:element>
-        <xs:element name="source" type="xs:string" minOccurs="0" maxOccurs="1" />
-        <xs:element name="page" type="xs:string" minOccurs="0" maxOccurs="1" />
       </xs:sequence>
+      <xs:attribute name="skill_Id" msdata:AutoIncrement="true" msprop:Generator_ColumnPropNameInRow="skill_Id" msprop:Generator_ColumnPropNameInTable="skill_IdColumn" msprop:Generator_ColumnVarNameInTable="columnskill_Id" msprop:Generator_UserColumnName="skill_Id" type="xs:int" msdata:AllowDBNull="false" use="prohibited" />
+      <xs:attribute name="skills_Id" msprop:Generator_ColumnPropNameInRow="skills_Id" msprop:Generator_ColumnPropNameInTable="skills_IdColumn" msprop:Generator_ColumnVarNameInTable="columnskills_Id" msprop:Generator_UserColumnName="skills_Id" type="xs:int" use="prohibited" />
+      <xs:attribute name="knowledgeskills_Id" msprop:Generator_ColumnPropNameInRow="knowledgeskills_Id" msprop:Generator_ColumnPropNameInTable="knowledgeskills_IdColumn" msprop:Generator_ColumnVarNameInTable="columnknowledgeskills_Id" msprop:Generator_UserColumnName="knowledgeskills_Id" type="xs:int" use="prohibited" />
     </xs:complexType>
   </xs:element>
-  <xs:element name="chummer">
+  <xs:element name="chummer" msprop:Generator_RowEvHandlerName="chummerRowChangeEventHandler" msprop:Generator_RowDeletedName="chummerRowDeleted" msprop:Generator_RowDeletingName="chummerRowDeleting" msprop:Generator_RowEvArgName="chummerRowChangeEvent" msprop:Generator_TablePropName="chummer" msprop:Generator_RowChangedName="chummerRowChanged" msprop:Generator_RowChangingName="chummerRowChanging" msprop:Generator_TableClassName="chummerDataTable" msprop:Generator_RowClassName="chummerRow" msprop:Generator_TableVarName="tablechummer" msprop:Generator_UserTableName="chummer">
     <xs:complexType>
       <xs:sequence>
-        <xs:element name="version" type="xs:string" minOccurs="0" />
-        <xs:element name="skillgroups" minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="version" msprop:Generator_ColumnPropNameInRow="version" msprop:Generator_ColumnPropNameInTable="versionColumn" msprop:Generator_ColumnVarNameInTable="columnversion" msprop:Generator_UserColumnName="version" type="xs:string" minOccurs="0" />
+        <xs:element name="categories" msprop:Generator_RowEvHandlerName="categoriesRowChangeEventHandler" msprop:Generator_RowDeletedName="categoriesRowDeleted" msprop:Generator_RowDeletingName="categoriesRowDeleting" msprop:Generator_RowEvArgName="categoriesRowChangeEvent" msprop:Generator_TablePropName="categories" msprop:Generator_RowChangedName="categoriesRowChanged" msprop:Generator_RowChangingName="categoriesRowChanging" msprop:Generator_TableClassName="categoriesDataTable" msprop:Generator_RowClassName="categoriesRow" msprop:Generator_TableVarName="tablecategories" msprop:Generator_UserTableName="categories" minOccurs="0" maxOccurs="unbounded">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="name" nillable="true" minOccurs="0" maxOccurs="unbounded">
+              <xs:element name="category" nillable="true" msprop:Generator_RowEvHandlerName="categoryRowChangeEventHandler" msprop:Generator_RowDeletedName="categoryRowDeleted" msprop:Generator_RowDeletingName="categoryRowDeleting" msprop:Generator_RowEvArgName="categoryRowChangeEvent" msprop:Generator_TablePropName="category" msprop:Generator_RowChangedName="categoryRowChanged" msprop:Generator_RowChangingName="categoryRowChanging" msprop:Generator_TableClassName="categoryDataTable" msprop:Generator_RowClassName="categoryRow" msprop:Generator_TableVarName="tablecategory" msprop:Generator_UserTableName="category" minOccurs="0" maxOccurs="unbounded">
                 <xs:complexType>
-                  <xs:simpleContent msdata:ColumnName="name_Text" msdata:Ordinal="0">
+                  <xs:simpleContent msprop:Generator_ColumnPropNameInRow="category_Text" msprop:Generator_ColumnPropNameInTable="category_TextColumn" msprop:Generator_ColumnVarNameInTable="columncategory_Text" msprop:Generator_UserColumnName="category_Text" msdata:ColumnName="category_Text" msdata:Ordinal="0">
                     <xs:extension base="xs:string">
+                      <xs:attribute name="type" msprop:Generator_ColumnPropNameInRow="type" msprop:Generator_ColumnPropNameInTable="typeColumn" msprop:Generator_ColumnVarNameInTable="columntype" msprop:Generator_UserColumnName="type" type="xs:string" use="required" />
+                      <xs:attribute name="categories_Id" msprop:Generator_ColumnPropNameInRow="categories_Id" msprop:Generator_ColumnPropNameInTable="categories_IdColumn" msprop:Generator_ColumnVarNameInTable="columncategories_Id" msprop:Generator_UserColumnName="categories_Id" type="xs:int" use="prohibited" />
                     </xs:extension>
                   </xs:simpleContent>
                 </xs:complexType>
               </xs:element>
             </xs:sequence>
+            <xs:attribute name="categories_Id" msdata:AutoIncrement="true" msprop:Generator_ColumnPropNameInRow="categories_Id" msprop:Generator_ColumnPropNameInTable="categories_IdColumn" msprop:Generator_ColumnVarNameInTable="columncategories_Id" msprop:Generator_UserColumnName="categories_Id" type="xs:int" msdata:AllowDBNull="false" use="prohibited" />
+            <xs:attribute name="chummer_Id" msprop:Generator_ColumnPropNameInRow="chummer_Id" msprop:Generator_ColumnPropNameInTable="chummer_IdColumn" msprop:Generator_ColumnVarNameInTable="columnchummer_Id" msprop:Generator_UserColumnName="chummer_Id" type="xs:int" use="prohibited" />
           </xs:complexType>
         </xs:element>
-        <xs:element name="categories" minOccurs="0" maxOccurs="unbounded">
-          <xs:complexType>
-            <xs:sequence>
-              <xs:element name="category" nillable="true" minOccurs="0" maxOccurs="unbounded">
-                <xs:complexType>
-                  <xs:simpleContent msdata:ColumnName="category_Text" msdata:Ordinal="0">
-                    <xs:extension base="xs:string">
-            <xs:attribute name="type" type="xs:string" use="required" />
-                    </xs:extension>
-                  </xs:simpleContent>
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-        <xs:element name="skills" minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="skills" msprop:Generator_RowEvHandlerName="skillsRowChangeEventHandler" msprop:Generator_RowDeletedName="skillsRowDeleted" msprop:Generator_RowDeletingName="skillsRowDeleting" msprop:Generator_RowEvArgName="skillsRowChangeEvent" msprop:Generator_TablePropName="skills" msprop:Generator_RowChangedName="skillsRowChanged" msprop:Generator_RowChangingName="skillsRowChanging" msprop:Generator_TableClassName="skillsDataTable" msprop:Generator_RowClassName="skillsRow" msprop:Generator_TableVarName="tableskills" msprop:Generator_UserTableName="skills" minOccurs="0" maxOccurs="unbounded">
           <xs:complexType>
             <xs:sequence>
               <xs:element ref="skill" minOccurs="0" maxOccurs="unbounded" />
             </xs:sequence>
+            <xs:attribute name="chummer_Id" msprop:Generator_ColumnPropNameInRow="chummer_Id" msprop:Generator_ColumnPropNameInTable="chummer_IdColumn" msprop:Generator_ColumnVarNameInTable="columnchummer_Id" msprop:Generator_UserColumnName="chummer_Id" type="xs:int" use="prohibited" />
           </xs:complexType>
         </xs:element>
-        <xs:element name="knowledgeskills" minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="knowledgeskills" msprop:Generator_RowEvHandlerName="knowledgeskillsRowChangeEventHandler" msprop:Generator_RowDeletedName="knowledgeskillsRowDeleted" msprop:Generator_RowDeletingName="knowledgeskillsRowDeleting" msprop:Generator_RowEvArgName="knowledgeskillsRowChangeEvent" msprop:Generator_TablePropName="knowledgeskills" msprop:Generator_RowChangedName="knowledgeskillsRowChanged" msprop:Generator_RowChangingName="knowledgeskillsRowChanging" msprop:Generator_TableClassName="knowledgeskillsDataTable" msprop:Generator_RowClassName="knowledgeskillsRow" msprop:Generator_TableVarName="tableknowledgeskills" msprop:Generator_UserTableName="knowledgeskills" minOccurs="0" maxOccurs="unbounded">
           <xs:complexType>
             <xs:sequence>
               <xs:element ref="skill" minOccurs="0" maxOccurs="unbounded" />
             </xs:sequence>
+            <xs:attribute name="chummer_Id" msprop:Generator_ColumnPropNameInRow="chummer_Id" msprop:Generator_ColumnPropNameInTable="chummer_IdColumn" msprop:Generator_ColumnVarNameInTable="columnchummer_Id" msprop:Generator_UserColumnName="chummer_Id" type="xs:int" use="prohibited" />
           </xs:complexType>
         </xs:element>
       </xs:sequence>
+      <xs:attribute name="chummer_Id" msdata:AutoIncrement="true" msprop:Generator_ColumnPropNameInRow="chummer_Id" msprop:Generator_ColumnPropNameInTable="chummer_IdColumn" msprop:Generator_ColumnVarNameInTable="columnchummer_Id" msprop:Generator_UserColumnName="chummer_Id" type="xs:int" msdata:AllowDBNull="false" use="prohibited" />
     </xs:complexType>
   </xs:element>
-  <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true">
+  <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msprop:Generator_UserDSName="NewDataSet" msprop:Generator_DataSetName="NewDataSet">
     <xs:complexType>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
         <xs:element ref="skill" />
         <xs:element ref="chummer" />
       </xs:choice>
     </xs:complexType>
+    <xs:unique name="specs_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//specs" />
+      <xs:field xpath="@specs_Id" />
+    </xs:unique>
+    <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//skill" />
+      <xs:field xpath="@skill_Id" />
+    </xs:unique>
+    <xs:unique name="categories_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//categories" />
+      <xs:field xpath="@categories_Id" />
+    </xs:unique>
+    <xs:unique name="chummer_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//chummer" />
+      <xs:field xpath="@chummer_Id" />
+    </xs:unique>
+    <xs:keyref name="chummer_knowledgeskills" refer="chummer_Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="chummer" msprop:rel_Generator_UserChildTable="knowledgeskills" msprop:rel_Generator_RelationVarName="relationchummer_knowledgeskills" msprop:rel_Generator_ChildPropName="GetknowledgeskillsRows" msprop:rel_Generator_ParentPropName="chummerRow" msprop:rel_Generator_UserRelationName="chummer_knowledgeskills">
+      <xs:selector xpath=".//knowledgeskills" />
+      <xs:field xpath="@chummer_Id" />
+    </xs:keyref>
+    <xs:keyref name="chummer_skills" refer="chummer_Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="chummer" msprop:rel_Generator_UserChildTable="skills" msprop:rel_Generator_RelationVarName="relationchummer_skills" msprop:rel_Generator_ChildPropName="GetskillsRows" msprop:rel_Generator_ParentPropName="chummerRow" msprop:rel_Generator_UserRelationName="chummer_skills">
+      <xs:selector xpath=".//skills" />
+      <xs:field xpath="@chummer_Id" />
+    </xs:keyref>
+    <xs:keyref name="chummer_categories" refer="chummer_Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="chummer" msprop:rel_Generator_UserChildTable="categories" msprop:rel_Generator_RelationVarName="relationchummer_categories" msprop:rel_Generator_ChildPropName="GetcategoriesRows" msprop:rel_Generator_ParentPropName="chummerRow" msprop:rel_Generator_UserRelationName="chummer_categories">
+      <xs:selector xpath=".//categories" />
+      <xs:field xpath="@chummer_Id" />
+    </xs:keyref>
+    <xs:keyref name="categories_category" refer="categories_Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="categories" msprop:rel_Generator_UserChildTable="category" msprop:rel_Generator_RelationVarName="relationcategories_category" msprop:rel_Generator_ChildPropName="GetcategoryRows" msprop:rel_Generator_ParentPropName="categoriesRow" msprop:rel_Generator_UserRelationName="categories_category">
+      <xs:selector xpath=".//category" />
+      <xs:field xpath="@categories_Id" />
+    </xs:keyref>
+    <xs:keyref name="knowledgeskills_skill" refer="knowledgeskills_Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="knowledgeskills" msprop:rel_Generator_UserChildTable="skill" msprop:rel_Generator_RelationVarName="relationknowledgeskills_skill" msprop:rel_Generator_UserRelationName="knowledgeskills_skill" msprop:rel_Generator_ChildPropName="GetskillRows" msprop:rel_Generator_ParentPropName="knowledgeskillsRow">
+      <xs:selector xpath=".//skill" />
+      <xs:field xpath="@knowledgeskills_Id" />
+    </xs:keyref>
+    <xs:keyref name="skills_skill" refer="skills_Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="skills" msprop:rel_Generator_UserChildTable="skill" msprop:rel_Generator_RelationVarName="relationskills_skill" msprop:rel_Generator_UserRelationName="skills_skill" msprop:rel_Generator_ChildPropName="GetskillRows" msprop:rel_Generator_ParentPropName="skillsRow">
+      <xs:selector xpath=".//skill" />
+      <xs:field xpath="@skills_Id" />
+    </xs:keyref>
+    <xs:keyref name="skill_specs" refer="Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="skill" msprop:rel_Generator_UserChildTable="specs" msprop:rel_Generator_RelationVarName="relationskill_specs" msprop:rel_Generator_ChildPropName="GetspecsRows" msprop:rel_Generator_ParentPropName="skillRow" msprop:rel_Generator_UserRelationName="skill_specs">
+      <xs:selector xpath=".//specs" />
+      <xs:field xpath="@skill_Id" />
+    </xs:keyref>
+    <xs:keyref name="specs_spec" refer="specs_Constraint1" msdata:IsNested="true" msprop:rel_Generator_UserParentTable="specs" msprop:rel_Generator_UserChildTable="spec" msprop:rel_Generator_RelationVarName="relationspecs_spec" msprop:rel_Generator_ChildPropName="GetspecRows" msprop:rel_Generator_ParentPropName="specsRow" msprop:rel_Generator_UserRelationName="specs_spec">
+      <xs:selector xpath=".//spec" />
+      <xs:field xpath="@specs_Id" />
+    </xs:keyref>
   </xs:element>
 </xs:schema>
