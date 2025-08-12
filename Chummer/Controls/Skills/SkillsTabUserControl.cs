@@ -58,11 +58,7 @@ namespace Chummer.UI.Skills
 
             Disposed += (sender, args) => UnbindSkillsTabUserControl(CancellationToken.None);
 
-            lblGroupKarma.Margin = new Padding(
-                lblGroupKarma.Margin.Left,
-                lblGroupKarma.Margin.Top,
-                lblGroupKarma.Margin.Right + SystemInformation.VerticalScrollBarWidth,
-                lblGroupKarma.Margin.Bottom);
+      
             this.UpdateLightDarkMode(token: objMyToken);
             this.TranslateWinForm(token: objMyToken);
 
@@ -119,7 +115,6 @@ namespace Chummer.UI.Skills
                         {
                             x.RefreshSkillLabels(MyToken);
                             x.RefreshKnowledgeSkillLabels(MyToken);
-                            x.RefreshSkillGroupLabels(MyToken);
                         }
                         finally
                         {
@@ -206,7 +201,6 @@ namespace Chummer.UI.Skills
                         parts.Start();
                         SuspendLayout();
                         tlpActiveSkills.SuspendLayout();
-                        tlpSkillGroups.SuspendLayout();
                         tlpBottomPanel.SuspendLayout();
                         try
                         {
@@ -246,38 +240,11 @@ namespace Chummer.UI.Skills
 
                             parts.TaskEnd("_lstKnowledgeSkills add");
 
-                            if (lstSkillGroups.Count > 0)
-                            {
-                                _lstSkillGroups = new BindingListDisplay<SkillGroup>(
-                                    lstSkillGroups,
-                                    group => new SkillGroupControl(group, objMyToken))
-                                {
-                                    Dock = DockStyle.Fill
-                                };
-                                Disposed += (sender, args) => _lstSkillGroups.Dispose();
-                                _lstSkillGroups.Filter(
-                                    z => z.SkillList.Any(y =>
-                                        _objCharacter.SkillsSection.HasActiveSkill(y.DictionaryKey)),
-                                    (z, t) => z.SkillList.AnyAsync(async y =>
-                                        await (await _objCharacter.GetSkillsSectionAsync(t).ConfigureAwait(false)).HasActiveSkillAsync(
-                                            await y.GetDictionaryKeyAsync(t).ConfigureAwait(false), t).ConfigureAwait(false), t),
-                                    true);
-                                _lstSkillGroups.Sort(new SkillGroupSorter(SkillsSection.CompareSkillGroups));
-
-                                parts.TaskEnd("_lstSkillGroups");
-
-                                tlpSkillGroups.Controls.Add(_lstSkillGroups, 0, 1);
-                                tlpSkillGroups.SetColumnSpan(_lstSkillGroups, 3);
-
-                                parts.TaskEnd("_lstSkillGroups add");
-                            }
-                            else
-                            {
-                                tlpSkillGroups.Visible = false;
+                             
                                 tlpActiveSkills.Margin = new Padding(0);
                                 tlpTopPanel.ColumnStyles[0] = new ColumnStyle(SizeType.AutoSize);
                                 tlpTopPanel.ColumnStyles[1] = new ColumnStyle(SizeType.Percent, 100F);
-                            }
+                            
 
                             parts.TaskEnd("MakeSkillDisplay()");
 
@@ -352,8 +319,6 @@ namespace Chummer.UI.Skills
 
                             if (_objCharacter.Created)
                             {
-                                lblGroupsSp.Visible = false;
-                                lblGroupKarma.Visible = false;
                                 lblActiveSp.Visible = false;
                                 lblActiveKarma.Visible = false;
                                 lblBuyWithKarma.Visible = false;
@@ -369,7 +334,6 @@ namespace Chummer.UI.Skills
                         finally
                         {
                             tlpBottomPanel.ResumeLayout(false);
-                            tlpSkillGroups.ResumeLayout(false);
                             tlpActiveSkills.ResumeLayout(false);
                             ResumeLayout(true);
                         }
@@ -380,18 +344,9 @@ namespace Chummer.UI.Skills
                     .Select(x => x.DoLoad(token))).ConfigureAwait(false);
                 await Task.WhenAll(_lstKnowledgeSkills.ContentControls.OfType<KnowledgeSkillControl>()
                     .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-                await Task.WhenAll(_lstSkillGroups.ContentControls.OfType<SkillGroupControl>()
-                    .Select(x => x.DoLoad(token))).ConfigureAwait(false);
 
                 if (!await _objCharacter.GetCreatedAsync(token).ConfigureAwait(false))
                 {
-                    await lblGroupsSp.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
-                            nameof(Character
-                                .EffectiveBuildMethodUsesPriorityTables),
-                            x => x
-                                .GetEffectiveBuildMethodUsesPriorityTablesAsync(
-                                    objMyToken), token)
-                        .ConfigureAwait(false);
                     await lblActiveSp.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
                             nameof(Character
                                 .EffectiveBuildMethodUsesPriorityTables),
@@ -428,7 +383,6 @@ namespace Chummer.UI.Skills
                 {
                     token.ThrowIfCancellationRequested();
                     lstSkills.ListChangedAsync += SkillsOnListChanged;
-                    lstSkillGroups.ListChanged += SkillGroupsOnListChanged;
                     lstKnoSkills.ListChanged += KnowledgeSkillsOnListChanged;
                     objSkillSection.MultiplePropertiesChangedAsync += SkillsSectionOnPropertyChanged;
                 }
@@ -470,27 +424,6 @@ namespace Chummer.UI.Skills
             catch (OperationCanceledException)
             {
                 //swallow this
-            }
-        }
-
-        private void RefreshSkillGroupLabels(CancellationToken token = default)
-        {
-            token.ThrowIfCancellationRequested();
-            if (_lstSkillGroups == null)
-                return;
-            int intNameLabelWidth = lblSkillGroups.PreferredWidth;
-            foreach (SkillGroupControl sg in _lstSkillGroups.DisplayPanel.Controls)
-            {
-                token.ThrowIfCancellationRequested();
-                intNameLabelWidth = Math.Max(sg.NameWidth, intNameLabelWidth);
-            }
-            token.ThrowIfCancellationRequested();
-            lblSkillGroups.MinimumSize = new Size(intNameLabelWidth, lblSkillGroups.MinimumSize.Height);
-            token.ThrowIfCancellationRequested();
-            foreach (SkillGroupControl s in _lstSkillGroups.DisplayPanel.Controls)
-            {
-                token.ThrowIfCancellationRequested();
-                s.MoveControls(intNameLabelWidth);
             }
         }
 
@@ -553,24 +486,7 @@ namespace Chummer.UI.Skills
                 lblKnoBwk.Margin.Top,
                 Math.Max(0, lblKnoBwk.Margin.Left + intRightButtonsWidth + SystemInformation.VerticalScrollBarWidth - lblKnoBwk.PreferredWidth / 2),
                 lblKnoBwk.Margin.Bottom);
-        }
-
-        private void SkillGroupsOnListChanged(object sender, ListChangedEventArgs e)
-        {
-            if (e.ListChangedType != ListChangedType.Reset
-                && e.ListChangedType != ListChangedType.ItemAdded
-                && e.ListChangedType != ListChangedType.ItemDeleted)
-                return;
-
-            try
-            {
-                Utils.RunOnMainThread(() => RefreshSkillGroupLabels(MyToken), token: MyToken);
-            }
-            catch (OperationCanceledException)
-            {
-                // swallow this
-            }
-        }
+        }        
 
         private async Task SkillsOnListChanged(object sender, ListChangedEventArgs e, CancellationToken token = default)
         {
@@ -650,7 +566,6 @@ namespace Chummer.UI.Skills
                     using (_objCharacter.SkillsSection.LockObject.EnterWriteLock(token))
                     {
                         _objCharacter.SkillsSection.Skills.ListChangedAsync -= SkillsOnListChanged;
-                        _objCharacter.SkillsSection.SkillGroups.ListChanged -= SkillGroupsOnListChanged;
                         _objCharacter.SkillsSection.KnowledgeSkills.ListChanged -= KnowledgeSkillsOnListChanged;
                         _objCharacter.SkillsSection.MultiplePropertiesChangedAsync -= SkillsSectionOnPropertyChanged;
                     }
@@ -1004,7 +919,6 @@ namespace Chummer.UI.Skills
         {
             try
             {
-                RefreshSkillGroupLabels(MyToken);
                 RefreshSkillLabels(MyToken);
             }
             catch (OperationCanceledException)
@@ -1380,7 +1294,6 @@ namespace Chummer.UI.Skills
         {
             try
             {
-                RefreshSkillGroupLabels(MyToken);
                 RefreshSkillLabels(MyToken);
                 RefreshKnowledgeSkillLabels(MyToken);
             }
