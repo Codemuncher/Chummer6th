@@ -106,7 +106,7 @@ namespace Chummer
                 read = (T)Convert.ChangeType(fieldValue, typeof(T), GlobalSettings.InvariantCultureInfo);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
                 //If we are debugging, great
                 //Utils.BreakIfDebug();
@@ -125,7 +125,7 @@ namespace Chummer
 #else
                 string errorMsg = "Tried to read missing field \"" + field + '\"';
 #endif
-                Log.Error(errorMsg);
+                Log.Error(ex, errorMsg);
                 //Finally, we have to assign an out parameter something, so default
                 //null or 0 most likely
                 read = onError;
@@ -449,14 +449,23 @@ namespace Chummer
         {
             if (node == null || string.IsNullOrEmpty(strPath) || string.IsNullOrEmpty(strId))
                 return null;
+            XmlNode objReturn;
             if (Guid.TryParse(strId, out Guid guidId))
             {
-                XmlNode objReturn = node.TryGetNodeById(strPath, guidId, strExtraXPath);
+                objReturn = node.TryGetNodeById(strPath, guidId, strExtraXPath);
                 if (objReturn != null)
                     return objReturn;
             }
 
-            return node.SelectSingleNode(strPath + "[name = " + strId.CleanXPath()
+            string strIdCleaned = strId.CleanXPath();
+            objReturn = node.SelectSingleNode(strPath + "[name = " + strIdCleaned
+                                         + (string.IsNullOrEmpty(strExtraXPath)
+                                             ? "]"
+                                             : " and (" + strExtraXPath + ")]"));
+            if (objReturn != null)
+                return objReturn;
+            // There are cases where we use ids that are not Guids (e.g., custom improvements), so we need this part as well.
+            return node.SelectSingleNode(strPath + "[id = " + strIdCleaned
                                          + (string.IsNullOrEmpty(strExtraXPath)
                                              ? "]"
                                              : " and (" + strExtraXPath + ")]"));
