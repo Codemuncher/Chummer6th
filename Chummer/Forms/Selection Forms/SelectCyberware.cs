@@ -17,19 +17,19 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Attributes;
+using Chummer.Backend.Equipment;
+using NLog;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using Chummer.Backend.Attributes;
-using Chummer.Backend.Equipment;
-using NLog;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -572,7 +572,7 @@ namespace Chummer
                             string strMinRating = xmlCyberware.SelectSingleNodeAndCacheExpression("minrating", token)?.Value ?? string.Empty;
                             string strMaxRating = xmlRatingNode.Value;
                             // Not a simple integer, so we need to start mucking around with strings
-                            (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strMinRating, 1, int.MaxValue, token).ConfigureAwait(false);
+                            (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strMinRating, 1, 0, token).ConfigureAwait(false);
                             int intMinRating = blnIsSuccess ? decValue.StandardRound() : 1;
                             await nudRating.DoThreadSafeAsync(x => x.Minimum = intMinRating, token: token).ConfigureAwait(false);
                             (decValue, blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strMaxRating, intMinRating, intMinRating, token).ConfigureAwait(false);
@@ -1007,7 +1007,6 @@ namespace Chummer
         /// <summary>
         /// Whether the bioware should be discounted by Prototype Transhuman.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool PrototypeTranshuman => _blnPrototypeTranshumanAllowed && chkPrototypeTranshuman.Checked;
 
         /// <summary>
@@ -1636,7 +1635,7 @@ namespace Chummer
                         // If our rating tag is a complex property, check to make sure our maximum rating is not less than our minimum rating
                         if (!string.IsNullOrEmpty(strMinRating) && !int.TryParse(strMinRating, out intMinRating))
                         {
-                            (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strMinRating, 1, int.MaxValue, token).ConfigureAwait(false);
+                            (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strMinRating, 1, 0, token).ConfigureAwait(false);
                             if (blnIsSuccess)
                                 intMinRating = decValue.StandardRound();
                             else

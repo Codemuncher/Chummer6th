@@ -17,16 +17,16 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Equipment;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using Chummer.Backend.Equipment;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -180,12 +180,18 @@ namespace Chummer
         /// Categories that the Armor allows to be used.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Categories that the Armor allows to be used.
+        /// </summary>
         public string AllowedCategories { get; set; } = string.Empty;
 
         /// <summary>
         /// Whether the General category should be included.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether the General category should be included.
+        /// </summary>
         public bool ExcludeGeneralCategory { get; set; }
 
         /// <summary>
@@ -247,7 +253,7 @@ namespace Chummer
                 int intMaxRating = int.MaxValue;
                 if (!string.IsNullOrEmpty(strExpression))
                 {
-                    intMaxRating = (await ProcessInvariantXPathExpression(strExpression, int.MaxValue, token).ConfigureAwait(false)).Item1.StandardRound();
+                    intMaxRating = (await ProcessInvariantXPathExpression(strExpression, 0, token).ConfigureAwait(false)).Item1.StandardRound();
                 }
 
                 if (intMaxRating > 0 && intMaxRating != int.MaxValue)

@@ -204,10 +204,10 @@ namespace Chummer.UI.Attributes
                             await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
                                 .GetCanUpgradeCareerAsync(token).ConfigureAwait(false);
                         await cmdImproveATT.DoThreadSafeAsync(x =>
-                            {
-                                x.Enabled = blnCanUpgradeCareer;
-                                x.ToolTipText = strUpgradeToolTip;
-                            }, token)
+                        {
+                            x.Enabled = blnCanUpgradeCareer;
+                            x.ToolTipText = strUpgradeToolTip;
+                        }, token)
                             .ConfigureAwait(false);
                     }
                     else
@@ -241,19 +241,19 @@ namespace Chummer.UI.Attributes
                                 await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetBaseAsync(token)
                                     .ConfigureAwait(false);
                             await nudBase.DoThreadSafeAsync(x =>
-                                {
-                                    x.Maximum = intPriorityMaximum;
-                                    x.Enabled = blnBaseUnlocked;
-                                    x.Value = intBase;
-                                }, token)
+                            {
+                                x.Maximum = intPriorityMaximum;
+                                x.Enabled = blnBaseUnlocked;
+                                x.Value = intBase;
+                            }, token)
                                 .ConfigureAwait(false);
                         }
                         else
                             await nudBase.DoThreadSafeAsync(x =>
-                                {
-                                    x.Maximum = intPriorityMaximum;
-                                    x.Enabled = blnBaseUnlocked;
-                                }, token)
+                            {
+                                x.Maximum = intPriorityMaximum;
+                                x.Enabled = blnBaseUnlocked;
+                            }, token)
                                 .ConfigureAwait(false);
                     }
                     else if (e.PropertyNames.Contains(nameof(CharacterAttrib.Base)) && _intChangingBase == 0)
@@ -262,10 +262,10 @@ namespace Chummer.UI.Attributes
                             await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetBaseAsync(token)
                                 .ConfigureAwait(false);
                         await nudBase.DoThreadSafeAsync(x =>
-                            {
-                                x.Maximum = intPriorityMaximum;
-                                x.Value = intBase;
-                            }, token)
+                        {
+                            x.Maximum = intPriorityMaximum;
+                            x.Value = intBase;
+                        }, token)
                             .ConfigureAwait(false);
                     }
                     else
@@ -283,10 +283,10 @@ namespace Chummer.UI.Attributes
                             await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetBaseAsync(token)
                                 .ConfigureAwait(false);
                         await nudBase.DoThreadSafeAsync(x =>
-                            {
-                                x.Enabled = blnBaseUnlocked;
-                                x.Value = intBase;
-                            }, token)
+                        {
+                            x.Enabled = blnBaseUnlocked;
+                            x.Value = intBase;
+                        }, token)
                             .ConfigureAwait(false);
                     }
                     else
@@ -313,10 +313,10 @@ namespace Chummer.UI.Attributes
                             await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetKarmaAsync(token)
                                 .ConfigureAwait(false);
                         await nudKarma.DoThreadSafeAsync(x =>
-                            {
-                                x.Maximum = intKarmaMaximum;
-                                x.Value = intKarma;
-                            }, token)
+                        {
+                            x.Maximum = intKarmaMaximum;
+                            x.Value = intKarma;
+                        }, token)
                             .ConfigureAwait(false);
                     }
                     else
@@ -367,10 +367,10 @@ namespace Chummer.UI.Attributes
                             bool blnCanUpgradeCareer =
                                 await objAttrib.GetCanUpgradeCareerAsync(_objMyToken).ConfigureAwait(false);
                             await cmdImproveATT.DoThreadSafeAsync(x =>
-                                {
-                                    x.ToolTipText = strUpgradeToolTip;
-                                    x.Enabled = blnCanUpgradeCareer;
-                                }, _objMyToken)
+                            {
+                                x.ToolTipText = strUpgradeToolTip;
+                                x.Enabled = blnCanUpgradeCareer;
+                            }, _objMyToken)
                                 .ConfigureAwait(false);
                         }
                         else
@@ -386,17 +386,17 @@ namespace Chummer.UI.Attributes
                             int intKarma =
                                 await objAttrib.GetKarmaAsync(_objMyToken).ConfigureAwait(false);
                             await nudKarma.DoThreadSafeAsync(x =>
-                                {
-                                    x.Maximum = intKarmaMaximum;
-                                    x.Value = intKarma;
-                                }, _objMyToken)
+                            {
+                                x.Maximum = intKarmaMaximum;
+                                x.Value = intKarma;
+                            }, _objMyToken)
                                 .ConfigureAwait(false);
                             await nudBase.DoThreadSafeAsync(x =>
-                                {
-                                    x.Enabled = blnBaseUnlocked;
-                                    x.Maximum = intPriorityMaximum;
-                                    x.Value = intBase;
-                                }, _objMyToken)
+                            {
+                                x.Enabled = blnBaseUnlocked;
+                                x.Maximum = intPriorityMaximum;
+                                x.Value = intBase;
+                            }, _objMyToken)
                                 .ConfigureAwait(false);
                             await nudBase.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
                                     nameof(Character.EffectiveBuildMethodUsesPriorityTables),
@@ -512,7 +512,8 @@ namespace Chummer.UI.Attributes
         {
             _tmrKarmaChangeTimer?.Dispose();
             _tmrBaseChangeTimer?.Dispose();
-            _objCharacter.AttributeSection.DeregisterAsyncPropertyChangedForActiveAttribute(AttributeName, OnAttributePropertyChanged);
+            if (!_objCharacter.IsDisposed)
+                _objCharacter.AttributeSection.DeregisterAsyncPropertyChangedForActiveAttribute(AttributeName, OnAttributePropertyChanged);
         }
 
         private async void cmdImproveATT_Click(object sender, EventArgs e)
