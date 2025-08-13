@@ -56,9 +56,8 @@ namespace Chummer.UI.Skills
         {
             InitializeComponent();
 
-            Disposed += (sender, args) => UnbindSkillsTabUserControl(CancellationToken.None);
-
-      
+            Disposed += UnbindSkillsTabUserControlAsync;
+                     
             this.UpdateLightDarkMode(token: objMyToken);
             this.TranslateWinForm(token: objMyToken);
 
@@ -240,7 +239,7 @@ namespace Chummer.UI.Skills
 
                             parts.TaskEnd("_lstKnowledgeSkills add");
 
-                             
+                           
                                 tlpActiveSkills.Margin = new Padding(0);
                                 tlpTopPanel.ColumnStyles[0] = new ColumnStyle(SizeType.AutoSize);
                                 tlpTopPanel.ColumnStyles[1] = new ColumnStyle(SizeType.Percent, 100F);
@@ -347,7 +346,7 @@ namespace Chummer.UI.Skills
 
                 if (!await _objCharacter.GetCreatedAsync(token).ConfigureAwait(false))
                 {
-                    await lblActiveSp.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
+                   await lblActiveSp.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
                             nameof(Character
                                 .EffectiveBuildMethodUsesPriorityTables),
                             x => x
@@ -427,6 +426,7 @@ namespace Chummer.UI.Skills
             }
         }
 
+       
         private void RefreshSkillLabels(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -486,8 +486,8 @@ namespace Chummer.UI.Skills
                 lblKnoBwk.Margin.Top,
                 Math.Max(0, lblKnoBwk.Margin.Left + intRightButtonsWidth + SystemInformation.VerticalScrollBarWidth - lblKnoBwk.PreferredWidth / 2),
                 lblKnoBwk.Margin.Bottom);
-        }        
-
+        }
+       
         private async Task SkillsOnListChanged(object sender, ListChangedEventArgs e, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -557,17 +557,54 @@ namespace Chummer.UI.Skills
             }
         }
 
-        private void UnbindSkillsTabUserControl(CancellationToken token = default)
+        private void UnbindSkillsTabUserControl()
         {
-            if (_objCharacter?.IsDisposed == false)
+            Character objCharacter = _objCharacter; // for thread safety
+            if (objCharacter?.IsDisposed == false)
             {
                 try
                 {
-                    using (_objCharacter.SkillsSection.LockObject.EnterWriteLock(token))
+                    SkillsSection objSkillsSection = objCharacter.SkillsSection;
+                    using (objSkillsSection.LockObject.EnterWriteLock())
                     {
-                        _objCharacter.SkillsSection.Skills.ListChangedAsync -= SkillsOnListChanged;
-                        _objCharacter.SkillsSection.KnowledgeSkills.ListChanged -= KnowledgeSkillsOnListChanged;
-                        _objCharacter.SkillsSection.MultiplePropertiesChangedAsync -= SkillsSectionOnPropertyChanged;
+                        objSkillsSection.MultiplePropertiesChangedAsync -= SkillsSectionOnPropertyChanged;
+                        ThreadSafeBindingList<Skill> lstSkills = objSkillsSection.Skills;
+                        if (lstSkills?.IsDisposed == false)
+                            lstSkills.ListChangedAsync -= SkillsOnListChanged;
+                        ThreadSafeBindingList<KnowledgeSkill> lstKnoSkills = objSkillsSection.KnowledgeSkills;
+                        if (lstKnoSkills?.IsDisposed == false)
+                            lstKnoSkills.ListChanged -= KnowledgeSkillsOnListChanged;
+                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                    //swallow this
+                }
+            }
+        }
+
+        private async void UnbindSkillsTabUserControlAsync(object sender, EventArgs e)
+        {
+            Character objCharacter = _objCharacter; // for thread safety
+            if (objCharacter?.IsDisposed == false)
+            {
+                try
+                {
+                    SkillsSection objSkillsSection = await objCharacter.GetSkillsSectionAsync().ConfigureAwait(false);
+                    IAsyncDisposable objLocker = await objSkillsSection.LockObject.EnterWriteLockAsync();
+                    try
+                    {
+                        objSkillsSection.MultiplePropertiesChangedAsync -= SkillsSectionOnPropertyChanged;
+                        ThreadSafeBindingList<Skill> lstSkills = await objSkillsSection.GetSkillsAsync().ConfigureAwait(false);
+                        if (lstSkills?.IsDisposed == false)
+                            lstSkills.ListChangedAsync -= SkillsOnListChanged;
+                        ThreadSafeBindingList<KnowledgeSkill> lstKnoSkills = await objSkillsSection.GetKnowledgeSkillsAsync().ConfigureAwait(false);
+                        if (lstKnoSkills?.IsDisposed == false)
+                            lstKnoSkills.ListChanged -= KnowledgeSkillsOnListChanged;
+                    }
+                    finally
+                    {
+                        await objLocker.DisposeAsync().ConfigureAwait(false);
                     }
                 }
                 catch (ObjectDisposedException)

@@ -928,27 +928,23 @@ namespace Chummer.UI.Skills
         {
             _tmrNameChangeTimer?.Dispose();
             _tmrSpecChangeTimer?.Dispose();
-            try
+            if (_objSkill?.IsDisposed == false)
             {
-                _objSkill.MultiplePropertiesChangedAsync -= Skill_PropertyChanged;
                 try
                 {
-                    _objSkill.CharacterObject.SkillsSection.PropertyChangedAsync -= OnSkillsSectionPropertyChanged;
+                    _objSkill.MultiplePropertiesChangedAsync -= Skill_PropertyChanged;
+                    Character objCharacter = _objSkill.CharacterObject;
+                    if (objCharacter?.IsDisposed == false)
+                        objCharacter.SkillsSection.PropertyChangedAsync -= OnSkillsSectionPropertyChanged;
                 }
                 catch (ObjectDisposedException)
                 {
                     // swallow this
                 }
             }
-            catch (ObjectDisposedException)
-            {
-                // swallow this
-            }
 
             foreach (Control objControl in Controls)
-            {
                 objControl.DataBindings.Clear();
-            }
         }
 
         private async void btnCareerIncrease_Click(object sender, EventArgs e)
@@ -1018,19 +1014,19 @@ namespace Chummer.UI.Skills
                             || (objLoopImprovement.Condition == "create") != blnCreated)
                         && objLoopImprovement.Enabled
                         && objLoopImprovement.ImprovedName == _objSkill.SkillCategory, objLoopImprovement =>
-                    {
-                        switch (objLoopImprovement.ImproveType)
                         {
-                            case Improvement.ImprovementType.SkillCategorySpecializationKarmaCost:
-                                return objLoopImprovement.Value;
+                            switch (objLoopImprovement.ImproveType)
+                            {
+                                case Improvement.ImprovementType.SkillCategorySpecializationKarmaCost:
+                                    return objLoopImprovement.Value;
 
-                            case Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier:
-                                decSpecCostMultiplier *= objLoopImprovement.Value / 100.0m;
-                                break;
-                        }
+                                case Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier:
+                                    decSpecCostMultiplier *= objLoopImprovement.Value / 100.0m;
+                                    break;
+                            }
 
-                        return 0;
-                    }, token: _objMyToken);
+                            return 0;
+                        }, token: _objMyToken);
 
                     if (decSpecCostMultiplier != 1.0m)
                         intPrice = (intPrice * decSpecCostMultiplier + decExtraSpecCost).StandardRound();
@@ -1048,7 +1044,7 @@ namespace Chummer.UI.Skills
 
                     using (ThreadSafeForm<SelectSpec> selectForm =
                            await ThreadSafeForm<SelectSpec>.GetAsync(() => new SelectSpec(_objSkill)
-                               { Mode = "Knowledge" }, _objMyToken).ConfigureAwait(false))
+                           { Mode = "Knowledge" }, _objMyToken).ConfigureAwait(false))
                     {
                         if (await selectForm.ShowDialogSafeAsync(objCharacter, _objMyToken)
                                 .ConfigureAwait(false)

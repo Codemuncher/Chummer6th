@@ -775,9 +775,7 @@
     <Compile Update="Controls\Skills\KnowledgeSkillControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Controls\Skills\SkillControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Update="Controls\Skills\SkillControl.cs" />
     <Compile Update="Controls\Skills\SkillGroupControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

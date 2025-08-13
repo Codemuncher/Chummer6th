@@ -30,7 +30,6 @@ using System.Xml;
 using Chummer.Backend.Equipment;
 using Chummer.Properties;
 using Chummer.UI.Table;
-using System.ComponentModel;
 
 // ReSharper disable StringCompareToIsCultureSpecific
 
@@ -160,7 +159,7 @@ namespace Chummer.UI.Powers
                     await this.DoThreadSafeAsync(x => x.SuspendLayout(), token: token).ConfigureAwait(false);
                     try
                     {
-                        using (new FetchSafelyFromPool<Stopwatch>(Utils.StopwatchPool, out Stopwatch parts))
+                        using (new FetchSafelyFromSafeObjectPool<Stopwatch>(Utils.StopwatchPool, out Stopwatch parts))
                         {
                             parts.Start();
                             parts.TaskEnd("MakePowerDisplay()");
@@ -225,10 +224,13 @@ namespace Chummer.UI.Powers
 
         private void UnbindPowersTabUserControl()
         {
-            if (_objCharacter?.IsDisposed == false)
+            Character objCharacter = _objCharacter; // for thread safety
+            if (objCharacter?.IsDisposed == false)
             {
-                _objCharacter.Powers.ListChangedAsync -= OnPowersListChanged;
-                _objCharacter.MultiplePropertiesChangedAsync -= OnCharacterPropertyChanged;
+                objCharacter.MultiplePropertiesChangedAsync -= OnCharacterPropertyChanged;
+                ThreadSafeBindingList<Power> lstPowers = objCharacter.Powers;
+                if (lstPowers?.IsDisposed == false)
+                    lstPowers.ListChangedAsync -= OnPowersListChanged;
             }
         }
 
@@ -259,16 +261,16 @@ namespace Chummer.UI.Powers
                     switch (e.ListChangedType)
                     {
                         case ListChangedType.ItemChanged:
-                        {
-                            string propertyName = e.PropertyDescriptor?.Name;
-                            if (propertyName == nameof(Power.FreeLevels) || propertyName == nameof(Power.TotalRating))
                             {
-                                // recalculation of power points on rating/free levels change
-                                await CalculatePowerPoints(token).ConfigureAwait(false);
-                            }
+                                string propertyName = e.PropertyDescriptor?.Name;
+                                if (propertyName == nameof(Power.FreeLevels) || propertyName == nameof(Power.TotalRating))
+                                {
+                                    // recalculation of power points on rating/free levels change
+                                    await CalculatePowerPoints(token).ConfigureAwait(false);
+                                }
 
-                            break;
-                        }
+                                break;
+                            }
                         case ListChangedType.Reset:
                         case ListChangedType.ItemAdded:
                         case ListChangedType.ItemDeleted:

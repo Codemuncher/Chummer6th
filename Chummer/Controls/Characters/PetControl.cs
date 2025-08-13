@@ -87,9 +87,7 @@ namespace Chummer
         {
             _tmrMetatypeChangeTimer.Dispose();
             foreach (Control objControl in Controls)
-            {
                 objControl.DataBindings.Clear();
-            }
         }
 
         private void cboMetatype_TextChanged(object sender, EventArgs e)
@@ -393,7 +391,7 @@ namespace Chummer
 
         private async Task LoadContactList(CancellationToken token = default)
         {
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetatypes))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetatypes))
             {
                 lstMetatypes.Add(ListItem.Blank);
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
