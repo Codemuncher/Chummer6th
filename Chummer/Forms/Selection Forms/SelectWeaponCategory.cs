@@ -1,0 +1,149 @@
+/*  This file is part of Chummer5a.
+ *
+ *  Chummer5a is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Chummer5a is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Chummer5a.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  You can obtain the full source code for Chummer5a at
+ *  https://github.com/chummer5a/chummer5a
+ */
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Windows.Forms;
+using System.Xml.XPath;
+
+namespace Chummer
+{
+    public partial class SelectWeaponCategory : Form
+    {
+        private string _strSelectedCategory = string.Empty;
+        private string _strForceCategory = string.Empty;
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public string WeaponType { get; set; }
+
+        private readonly Character _objCharacter;
+
+        #region Control Events
+
+        public SelectWeaponCategory(Character objCharacter)
+        {
+            _objCharacter = objCharacter ?? throw new ArgumentNullException(nameof(objCharacter));
+            InitializeComponent();
+            this.UpdateLightDarkMode();
+            this.TranslateWinForm();
+        }
+
+        private async void SelectWeaponCategory_Load(object sender, EventArgs e)
+        {
+            // Build a list of Weapon Categories found in the Weapons file.
+            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstCategory))
+            {
+                XPathNavigator objXmlDocument = await XmlManager.LoadXPathAsync("weapons.xml", _objCharacter != null ? await
+                    (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).GetEnabledCustomDataDirectoryPathsAsync().ConfigureAwait(false) : null).ConfigureAwait(false);
+                foreach (XPathNavigator objXmlCategory in !string.IsNullOrEmpty(OnlyCategory)
+                             ? objXmlDocument.Select("/chummer/categories/category[. = "
+                                                      + OnlyCategory.CleanXPath() + ']')
+                             : objXmlDocument.SelectAndCacheExpression("/chummer/categories/category"))
+                {
+                    if (!string.IsNullOrEmpty(WeaponType) && objXmlCategory.Value != "Exotic Ranged Weapons")
+                    {
+                        string strType = objXmlCategory.SelectSingleNodeAndCacheExpression("@type")?.Value;
+                        if (string.IsNullOrEmpty(strType) || strType != WeaponType)
+                            continue;
+                    }
+
+                    string strInnerText = objXmlCategory.Value;
+                    lstCategory.Add(new ListItem(strInnerText,
+                                                 objXmlCategory.SelectSingleNodeAndCacheExpression("@translate")?.Value
+                                                 ?? strInnerText));
+                }
+
+                // Add the Cyberware Category.
+                if (lstCategory.Count == 0 && (OnlyCategory == "Cyberware" || OnlyCategory == "Cyberweapon"))
+                {
+                    lstCategory.Add(new ListItem("Cyberware", await LanguageManager.GetStringAsync("String_Cyberware").ConfigureAwait(false)));
+                }
+
+                switch (lstCategory.Count)
+                {
+                    case 0:
+                        await this.DoThreadSafeAsync(x => x.ConfirmSelection(string.Empty)).ConfigureAwait(false);
+                        return;
+
+                    case 1:
+                        string strSelect = lstCategory[0].Value.ToString();
+                        await this.DoThreadSafeAsync(x => x.ConfirmSelection(strSelect)).ConfigureAwait(false);
+                        return;
+                }
+
+                await cboCategory.PopulateWithListItemsAsync(lstCategory).ConfigureAwait(false);
+                await cboCategory.DoThreadSafeAsync(x =>
+                {
+                    // Select the first Skill in the list.
+                    if (x.Items.Count > 0)
+                        x.SelectedIndex = 0;
+                }).ConfigureAwait(false);
+            }
+        }
+
+        private void cmdOK_Click(object sender, EventArgs e)
+        {
+            ConfirmSelection(cboCategory.SelectedValue.ToString());
+        }
+
+        private void cmdCancel_Click(object sender, EventArgs e)
+        {
+            DialogResult = DialogResult.Cancel;
+            Close();
+        }
+
+        #endregion Control Events
+
+        private void ConfirmSelection(string strSelection)
+        {
+            _strSelectedCategory = strSelection;
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+
+        #region Properties
+
+        /// <summary>
+        /// Weapon Category that was selected in the dialogue.
+        /// </summary>
+        public string SelectedCategory => _strSelectedCategory;
+
+        /// <summary>
+        /// Description to show in the window.
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public string Description
+        {
+            set => lblDescription.Text = value;
+        }
+
+        /// <summary>
+        /// Restrict the list to only a single Category.
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public string OnlyCategory
+        {
+            get => _strForceCategory;
+            set => _strForceCategory = value == "Cyberware" ? "Cyberweapon" : value;
+        }
+
+        #endregion Properties
+    }
+}

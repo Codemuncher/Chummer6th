@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--This file is part of Chummer5a.
+
+    Chummer5a is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Chummer5a is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Chummer5a.  If not, see <http://www.gnu.org/licenses/>.
+
+    You can obtain the full source code for Chummer5a at
+    https://github.com/chummer5a/chummer5a
+-->
+<chummer xmlns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.w3.org/2001/XMLSchema books.xsd">
+
+  <books>
+    <book>
+      <id>8e46b49e-b9b2-414a-8d64-fdc6263f10b8</id>
+      <name>Shadowrun 6th Edition</name>
+      <code>SR6</code>
+      <matches>
+        <match>
+          <language>en-us</language>
+          <text>Welcome to Shadowrun, Sixth Edition. Welcome to the</text>
+          <page>8</page>
+        </match>        
+      </matches>
+    </book>
+      <book>
+        <id>5b10e18f-b180-4d25-8e92-5ce7790b1d25</id>
+        <name>Shadowrun Sixth World Companion</name>
+        <code>SWC</code>
+        <matches>
+          <match>
+            <language>en-us</language>
+            <text>So Dive in and get running!</text>
+            <page>5</page>
+          </match>
+        </matches>
+      </book>      
+  </books>
+</chummer>

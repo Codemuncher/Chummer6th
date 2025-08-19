@@ -1,0 +1,102 @@
+/*  This file is part of Chummer5a.
+ *
+ *  Chummer5a is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  Chummer5a is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with Chummer5a.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  You can obtain the full source code for Chummer5a at
+ *  https://github.com/chummer5a/chummer5a
+ */
+
+using System;
+using System.ComponentModel;
+using System.Windows.Forms;
+using System.ComponentModel;
+
+namespace Chummer
+{
+    public partial class ConditionMonitorUserControl : UserControl
+    {
+        #region Properties
+
+        /// <summary>
+        /// The HP of the character
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int MaxPhysical
+        {
+            get => _progressBarPhysical.DoThreadSafeFunc(x => x.Maximum);
+            set => _progressBarPhysical.DoThreadSafe(x => x.Maximum = value);
+        }
+
+        /// <summary>
+        /// The stun chart of the character
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int MaxStun
+        {
+            get => _progressBarStun.DoThreadSafeFunc(x => x.Maximum);
+            set => _progressBarStun.DoThreadSafe(x => x.Maximum = value);
+        }
+
+        /// <summary>
+        /// The physical health of the current npc
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Physical
+        {
+            get => _progressBarPhysical.DoThreadSafeFunc(x => x.Value);
+            set => _progressBarPhysical.DoThreadSafe(x => x.Value = value);
+        }
+
+        /// <summary>
+        /// The stun health of the current npc
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public int Stun
+        {
+            get => _progressBarStun.DoThreadSafeFunc(x => x.Value);
+            set => _progressBarStun.DoThreadSafe(x => x.Value = value);
+        }
+
+        #endregion Properties
+
+        public ConditionMonitorUserControl()
+        {
+            InitializeComponent();
+        }
+
+        private void _btnPhysical_Click(object sender, EventArgs e)
+        {
+            int val = _nudPhysical.ValueAsInt;
+            if (val + _progressBarPhysical.Value < 0)
+                _progressBarPhysical.Value = 0;
+            else if (val + _progressBarPhysical.Value > _progressBarPhysical.Maximum)
+                _progressBarPhysical.Value = _progressBarPhysical.Maximum;
+            else
+                _progressBarPhysical.Value += val > _progressBarPhysical.Maximum ?
+                    _progressBarPhysical.Maximum : val;
+        }
+
+        private void _btnApplyStun_Click(object sender, EventArgs e)
+        {
+            int val = nudStun.ValueAsInt;
+            if (val + _progressBarStun.Value < 0)
+                _progressBarStun.Value = 0;
+            else if (val + _progressBarStun.Value > _progressBarStun.Value)
+                _progressBarStun.Value = _progressBarStun.Maximum;
+            else
+                _progressBarStun.Value += val > _progressBarStun.Maximum ?
+                    _progressBarStun.Maximum : val;
+        }
+    }
+}

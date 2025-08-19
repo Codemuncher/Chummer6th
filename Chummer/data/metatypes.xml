@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--This file is part of Chummer5a.
+
+    Chummer5a is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Chummer5a is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Chummer5a.  If not, see <http://www.gnu.org/licenses/>.
+
+    You can obtain the full source code for Chummer5a at
+    https://github.com/chummer5a/chummer5a
+-->
+<chummer xmlns="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://www.w3.org/2001/XMLSchema metatypes.xsd">
+  <categories>
+    <category>Metahuman</category>
+    <category>Metavariant</category>
+    <category>Metasapient</category>
+    <category>Shapeshifter</category>
+  </categories>
+  <metatypes>
+    <!-- Region Metahuman -->
+   
+    <!-- End Region -->
+    <!-- Metatypes 6th edition Region-->
+    <metatype>
+      <id>dadaadbf-f81b-4636-a411-0bfd1359be07</id>
+      <name>Human</name>
+      <karma>0</karma>
+      <category>Metahuman</category>
+      <bodmin>1</bodmin>
+      <bodmax>6</bodmax>
+      <bodaug>10</bodaug>
+      <agimin>1</agimin>
+      <agimax>6</agimax>
+      <agiaug>10</agiaug>
+      <reamin>1</reamin>
+      <reamax>6</reamax>
+      <reaaug>10</reaaug>
+      <strmin>1</strmin>
+      <strmax>6</strmax>
+      <straug>10</straug>
+      <chamin>1</chamin>
+      <chamax>6</chamax>
+      <chaaug>10</chaaug>
+      <intmin>1</intmin>
+      <intmax>6</intmax>
+      <intaug>10</intaug>
+      <logmin>1</logmin>
+      <logmax>6</logmax>
+      <logaug>10</logaug>
+      <wilmin>1</wilmin>
+      <wilmax>6</wilmax>
+      <wilaug>10</wilaug>
+      <inimin>2</inimin>
+      <inimax>12</inimax>
+      <iniaug>20</iniaug>
+      <edgmin>1</edgmin>
+      <edgmax>7</edgmax>
+      <edgaug>7</edgaug>
+      <magmin>1</magmin>
+      <magmax>6</magmax>
+      <magaug>6</magaug>
+      <resmin>1</resmin>
+      <resmax>6</resmax>
+      <resaug>6</resaug>
+      <essmin>0</essmin>
+      <essmax>6</essmax>
+      <essaug>6</essaug>
+      <depmin>0</depmin>
+      <depmax>0</depmax>
+      <depaug>0</depaug>
+      <walk>2/1/0</walk>
+      <run>4/0/0</run>
+      <sprint>2/1/0</sprint>
+      <bonus />
+      <source>SR6</source>
+      <page>55</page>
+      <metavariants>
+        <metavariant>
+          <id>8e81e185-9625-40db-a62a-4d7c9eaa756d</id>
+          <name>Nartaki</name>
+          <category>Metavariant</category>
+          <karma>40</karma>
+          <bodmin>1</bodmin>
+          <bodmax>6</bodmax>
+          <bodaug>10</bodaug>
+          <agimin>1</agimin>
+          <agimax>6</agimax>
+          <agiaug>10</agiaug>
+          <reamin>1</reamin>
+          <reamax>6</reamax>
+          <reaaug>10</reaaug>
+          <strmin>1</strmin>
+          <strmax>6</strmax>
+          <straug>10</straug>
+          <chamin>1</chamin>
+          <chamax>6</chamax>
+          <chaaug>10</chaaug>
+          <intmin>1</intmin>
+          <intmax>6</intmax>
+          <intaug>10</intaug>
+          <logmin>1</logmin>
+          <logmax>6</logmax>
+          <logaug>10</logaug>
+          <wilmin>1</wilmin>
+          <wilmax>6</wilmax>
+          <wilaug>10</wilaug>
+          <inimin>2</inimin>
+          <inimax>12</inimax>
+          <iniaug>20</iniaug>
+          <edgmin>2</edgmin>
+          <edgmax>7</edgmax>
+          <edgaug>7</edgaug>
+          <magmin>1</magmin>
+          <magmax>6</magmax>
+          <magaug>6</magaug>
+          <resmin>1</resmin>
+          <resmax>6</resmax>
+          <resaug>6</resaug>
+          <essmin>0</essmin>
+          <essmax>6</essmax>
+          <essaug>6</essaug>
+          <depmin>0</depmin>
+          <depmax>0</depmax>
+          <depaug>0</depaug>
+          <qualities>
+            <positive>
+              <quality>Shiva Arms (Pair)</quality>
+            </positive>
+            <negative>
+              <quality>Striking Skin Pigmentation</quality>
+            </negative>
+          </qualities>
+          <bonus />
+          <source>SWC</source>
+          <page>81</page>
+        </metavariant>
+      </metavariants>
+    </metatype>
+      <metatype>
+        <id>b16b7d1b-111a-43d4-aa33-79f98e2de3bd</id>
+        <name>Dwarf</name>
+        <karma>50</karma>
+        <category>Metahuman</category>
+        <bodmin>1</bodmin>
+        <bodmax>7</bodmax>
+        <bodaug>12</bodaug>
+        <agimin>1</agimin>
+        <agimax>6</agimax>
+        <agiaug>10</agiaug>
+        <reamin>1</reamin>
+        <reamax>6</reamax>
+        <reaaug>9</reaaug>
+        <strmin>1</strmin>
+        <strmax>6</strmax>
+        <straug>12</straug>
+        <chamin>1</chamin>
+        <chamax>6</chamax>
+        <chaaug>10</chaaug>
+        <intmin>1</intmin>
+        <intmax>6</intmax>
+        <intaug>10</intaug>
+        <logmin>1</logmin>
+        <logmax>6</logmax>
+        <logaug>10</logaug>
+        <wilmin>1</wilmin>
+        <wilmax>6</wilmax>
+        <wilaug>11</wilaug>
+        <inimin>2</inimin>
+        <inimax>11</inimax>
+        <iniaug>19</iniaug>
+        <edgmin>1</edgmin>
+        <edgmax>6</edgmax>
+        <edgaug>6</edgaug>
+        <magmin>1</magmin>
+        <magmax>6</magmax>
+        <magaug>6</magaug>
+        <resmin>1</resmin>
+        <resmax>6</resmax>
+        <resaug>6</resaug>
+        <essmin>0</essmin>
+        <essmax>6</essmax>
+        <essaug>6</essaug>
+        <depmin>0</depmin>
+        <depmax>0</depmax>
+        <depaug>0</depaug>
+        <walk>2/1/0</walk>
+        <run>4/0/0</run>
+        <sprint>1/1/0</sprint>
+        <qualities>
+          <positive>
+            <quality>Thermographic Vision</quality>
+            <quality>Resistance to Pathogens/Toxins</quality>
+          </positive>
+        </qualities>
+        <bonus>
+          <lifestylecost>20</lifestylecost>
+        </bonus>
+        <source>SR6</source>
+        <page>53</page>
+      </metatype>     
+    <metatype>
+      <id>dc371e80-9a94-421f-b14b-8e99fb9a967f</id>
+      <name>Elf</name>
+      <karma>40</karma>
+      <category>Metahuman</category>
+      <bodmin>1</bodmin>
+      <bodmax>6</bodmax>
+      <bodaug>10</bodaug>
+      <agimin>2</agimin>
+      <agimax>7</agimax>
+      <agiaug>11</agiaug>
+      <reamin>1</reamin>
+      <reamax>6</reamax>
+      <reaaug>10</reaaug>
+      <strmin>1</strmin>
+      <strmax>6</strmax>
+      <straug>10</straug>
+      <chamin>3</chamin>
+      <chamax>8</chamax>
+      <chaaug>12</chaaug>
+      <intmin>1</intmin>
+      <intmax>6</intmax>
+      <intaug>10</intaug>
+      <logmin>1</logmin>
+      <logmax>6</logmax>
+      <logaug>10</logaug>
+      <wilmin>1</wilmin>
+      <wilmax>6</wilmax>
+      <wilaug>10</wilaug>
+      <inimin>2</inimin>
+      <inimax>12</inimax>
+      <iniaug>20</iniaug>
+      <edgmin>1</edgmin>
+      <edgmax>6</edgmax>
+      <edgaug>6</edgaug>
+      <magmin>1</magmin>
+      <magmax>6</magmax>
+      <magaug>6</magaug>
+      <resmin>1</resmin>
+      <resmax>6</resmax>
+      <resaug>6</resaug>
+      <essmin>0</essmin>
+      <essmax>6</essmax>
+      <essaug>6</essaug>
+      <depmin>0</depmin>
+      <depmax>0</depmax>
+      <depaug>0</depaug>
+      <walk>2/1/0</walk>
+      <run>4/0/0</run>
+      <sprint>2/1/0</sprint>
+      <qualities>
+        <positive>
+          <quality>Low-Light Vision</quality>
+        </positive>
+      </qualities>
+      <bonus />
+      <source>SR6</source>
+      <page>50</page>
+    </metatype>
+    <metatype>
+      <id>a5daa237-39a2-40e4-b277-1678ccef6aa3</id>
+      <name>Ork</name>
+      <karma>50</karma>
+      <category>Metahuman</category>
+      <bodmin>4</bodmin>
+      <bodmax>9</bodmax>
+      <bodaug>13</bodaug>
+      <agimin>1</agimin>
+      <agimax>6</agimax>
+      <agiaug>10</agiaug>
+      <reamin>1</reamin>
+      <reamax>6</reamax>
+      <reaaug>10</reaaug>
+      <strmin>3</strmin>
+      <strmax>8</strmax>
+      <straug>12</straug>
+      <chamin>1</chamin>
+      <chamax>5</chamax>
+      <chaaug>9</chaaug>
+      <intmin>1</intmin>
+      <intmax>6</intmax>
+      <intaug>10</intaug>
+      <logmin>1</logmin>
+      <logmax>5</logmax>
+      <logaug>9</logaug>
+      <wilmin>1</wilmin>
+      <wilmax>6</wilmax>
+      <wilaug>10</wilaug>
+      <inimin>2</inimin>
+      <inimax>12</inimax>
+      <iniaug>20</iniaug>
+      <edgmin>1</edgmin>
+      <edgmax>6</edgmax>
+      <edgaug>6</edgaug>
+      <magmin>1</magmin>
+      <magmax>6</magmax>
+      <magaug>6</magaug>
+      <resmin>1</resmin>
+      <resmax>6</resmax>
+      <resaug>6</resaug>
+      <essmin>0</essmin>
+      <essmax>6</essmax>
+      <essaug>6</essaug>
+      <depmin>0</depmin>
+      <depmax>0</depmax>
+      <depaug>0</depaug>
+      <walk>2/1/0</walk>
+      <run>4/0/0</run>
+      <sprint>2/1/0</sprint>
+      <qualities>
+        <positive>
+          <quality>Low-Light Vision</quality>
+        </positive>
+      </qualities>
+      <bonus />
+      <source>SR6</source>
+      <page>50</page>
+    </metatype>
+    <metatype>
+      <id>77fa1ed8-f4e6-4763-9f0b-f125318b9782</id>
+      <name>Troll</name>
+      <karma>90</karma>
+      <category>Metahuman</category>
+      <bodmin>5</bodmin>
+      <bodmax>10</bodmax>
+      <bodaug>14</bodaug>
+      <agimin>1</agimin>
+      <agimax>5</agimax>
+      <agiaug>9</agiaug>
+      <reamin>1</reamin>
+      <reamax>6</reamax>
+      <reaaug>10</reaaug>
+      <strmin>5</strmin>
+      <strmax>10</strmax>
+      <straug>14</straug>
+      <chamin>1</chamin>
+      <chamax>4</chamax>
+      <chaaug>8</chaaug>
+      <intmin>1</intmin>
+      <intmax>5</intmax>
+      <intaug>9</intaug>
+      <logmin>1</logmin>
+      <logmax>5</logmax>
+      <logaug>9</logaug>
+      <wilmin>1</wilmin>
+      <wilmax>6</wilmax>
+      <wilaug>10</wilaug>
+      <inimin>2</inimin>
+      <inimax>11</inimax>
+      <iniaug>19</iniaug>
+      <edgmin>1</edgmin>
+      <edgmax>6</edgmax>
+      <edgaug>6</edgaug>
+      <magmin>1</magmin>
+      <magmax>6</magmax>
+      <magaug>6</magaug>
+      <resmin>1</resmin>
+      <resmax>6</resmax>
+      <resaug>6</resaug>
+      <essmin>0</essmin>
+      <essmax>6</essmax>
+      <essaug>6</essaug>
+      <depmin>0</depmin>
+      <depmax>0</depmax>
+      <depaug>0</depaug>
+      <walk>2/1/0</walk>
+      <run>4/0/0</run>
+      <sprint>1/1/0</sprint>
+      <qualities>
+        <positive>
+          <quality>Thermographic Vision</quality>
+        </positive>
+      </qualities>
+      <bonus>
+        <armor group="0">1</armor>
+        <reach>1</reach>
+        <lifestylecost>100</lifestylecost>
+      </bonus>
+      <source>SR6</source>
+      <page>50</page>
+    </metatype>
+    
+   
+
+    <!-- Region Metasapient -->
+  
+    <!-- End Region -->
+    <!-- Region Shapeshifter -->
+    <!-- TODO: Review after this point -->
+
+    <!-- End Region -->
+  
+
+  </metatypes>
+</chummer>
