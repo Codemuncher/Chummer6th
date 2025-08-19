@@ -17,6 +17,7 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using System;
 using System.Buffers;
@@ -926,7 +927,7 @@ namespace Chummer
                     decimal decItemCost = 0.0m;
                     if (await chkFreeItem.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false))
                     {
-                        string strCost = 0.0m.ToString(await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo)
+                        string strCost = 0.0m.ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo)
                                           + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                         await lblCost.DoThreadSafeAsync(x => x.Text = strCost, token: token).ConfigureAwait(false);
                     }
@@ -987,16 +988,16 @@ namespace Chummer
                                                                GlobalSettings.InvariantCultureInfo);
                                 }
 
+                                string strFormat = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false);
                                 if (decMax == decimal.MaxValue)
                                 {
-                                    strCost = decMin.ToString(await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false),
+                                    strCost = decMin.ToString(strFormat,
                                                               GlobalSettings.CultureInfo)
                                               + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token)
                                                                      .ConfigureAwait(false) + '+';
                                 }
                                 else
                                 {
-                                    string strFormat = await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false);
                                     string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
                                     strCost = decMin.ToString(strFormat, GlobalSettings.CultureInfo)
                                                                           + strSpace + '-' + strSpace
@@ -1015,7 +1016,7 @@ namespace Chummer
                                     decCost *= 1 + await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token: token).ConfigureAwait(false) / 100.0m;
                                     if (await chkBlackMarketDiscount.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false))
                                         decCost *= 0.9m;
-                                    strCost = (decCost * _intCostMultiplier).ToString(await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo)
+                                    strCost = (decCost * _intCostMultiplier).ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo)
                                         + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                                     decItemCost = decCost;
                                 }
@@ -1024,7 +1025,7 @@ namespace Chummer
                                     if (decimal.TryParse(strCost, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decTemp))
                                     {
                                         decItemCost = decTemp;
-                                        strCost = (decItemCost * _intCostMultiplier).ToString(await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo)
+                                        strCost = (decItemCost * _intCostMultiplier).ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo)
                                             + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                                     }
                                 }
@@ -1142,7 +1143,7 @@ namespace Chummer
             string strFilter = string.Empty;
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
             {
-                sbdFilter.Append('(').Append(await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
+                sbdFilter.Append('(').Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
 
                 // Only add in category filter if we either are not searching or we have the option set to only search in categories
                 if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"

@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 
 namespace Chummer
 {
-    public class ThreadSafeObservableCollection<T> : IDisposable, IAsyncDisposable, IAsyncList<T>, IList, IAsyncReadOnlyList<T>, INotifyCollectionChanged, IAsyncProducerConsumerCollection<T>, IAsyncEnumerableWithSideEffects<T>, IHasLockObject
+    public class ThreadSafeObservableCollection<T> : IAsyncList<T>, IList, IAsyncReadOnlyList<T>, INotifyCollectionChanged, IAsyncProducerConsumerCollection<T>, IAsyncEnumerableWithSideEffects<T>, IHasLockObject
     {
         [CLSCompliant(false)]
         protected readonly EnhancedObservableCollection<T> _lstData;
@@ -38,28 +38,19 @@ namespace Chummer
         public ThreadSafeObservableCollection(AsyncFriendlyReaderWriterLock objParentLock = null, bool blnLockReadOnlyForParent = false)
         {
             LockObject = new AsyncFriendlyReaderWriterLock(objParentLock, blnLockReadOnlyForParent);
-            _lstData = new EnhancedObservableCollection<T>
-            {
-                CollectionChangedLock = LockObject
-            };
+            _lstData = new EnhancedObservableCollection<T>(LockObject);
         }
 
         public ThreadSafeObservableCollection(IEnumerable<T> collection, AsyncFriendlyReaderWriterLock objParentLock = null, bool blnLockReadOnlyForParent = false)
         {
             LockObject = new AsyncFriendlyReaderWriterLock(objParentLock, blnLockReadOnlyForParent);
-            _lstData = new EnhancedObservableCollection<T>(collection)
-            {
-                CollectionChangedLock = LockObject
-            };
+            _lstData = new EnhancedObservableCollection<T>(LockObject, collection);
         }
 
         public ThreadSafeObservableCollection(List<T> list, AsyncFriendlyReaderWriterLock objParentLock = null, bool blnLockReadOnlyForParent = false)
         {
             LockObject = new AsyncFriendlyReaderWriterLock(objParentLock, blnLockReadOnlyForParent);
-            _lstData = new EnhancedObservableCollection<T>(list)
-            {
-                CollectionChangedLock = LockObject
-            };
+            _lstData = new EnhancedObservableCollection<T>(LockObject, list);
         }
 
         /// <inheritdoc cref="ObservableCollection{T}.Count" />

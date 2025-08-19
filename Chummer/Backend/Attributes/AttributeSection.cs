@@ -32,6 +32,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
 using Chummer.Annotations;
+using Chummer.Backend.Enums;
 
 namespace Chummer.Backend.Attributes
 {
@@ -511,10 +512,10 @@ namespace Chummer.Backend.Attributes
             }
         }
 
-        private readonly ConcurrentDictionary<Tuple<string, CharacterAttrib.AttributeCategory>, CharacterAttrib>
-            _dicAttributes = new ConcurrentDictionary<Tuple<string, CharacterAttrib.AttributeCategory>, CharacterAttrib>();
+        private readonly ConcurrentDictionary<Tuple<string, AttributeCategory>, CharacterAttrib>
+            _dicAttributes = new ConcurrentDictionary<Tuple<string, AttributeCategory>, CharacterAttrib>();
         private readonly Character _objCharacter;
-        private CharacterAttrib.AttributeCategory _eAttributeCategory = CharacterAttrib.AttributeCategory.Standard;
+        private AttributeCategory _eAttributeCategory = AttributeCategory.Standard;
         private readonly ThreadSafeObservableCollection<CharacterAttrib> _lstNormalAttributes;
         private readonly ThreadSafeObservableCollection<CharacterAttrib> _lstSpecialAttributes;
 
@@ -605,8 +606,8 @@ namespace Chummer.Backend.Attributes
                     objAttribute.MultiplePropertiesChangedAsync -= RunExtraAsyncPropertyChanged(objAttribute.Abbrev);
                 }
 
-                Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                    new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                Tuple<string, AttributeCategory> tupKey =
+                    new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                         objAttribute.MetatypeCategory);
                 _dicAttributes.TryRemove(tupKey, out _);
                 await objAttribute.DisposeAsync().ConfigureAwait(false);
@@ -624,8 +625,8 @@ namespace Chummer.Backend.Attributes
                     objAttribute.MultiplePropertiesChangedAsync -= RunExtraAsyncPropertyChanged(objAttribute.Abbrev);
                 }
 
-                Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                    new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                Tuple<string, AttributeCategory> tupKey =
+                    new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                         objAttribute.MetatypeCategory);
                 _dicAttributes.TryRemove(tupKey, out _);
                 await objAttribute.DisposeAsync().ConfigureAwait(false);
@@ -641,8 +642,8 @@ namespace Chummer.Backend.Attributes
                 case NotifyCollectionChangedAction.Add:
                     foreach (CharacterAttrib objAttribute in e.NewItems)
                     {
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.AddOrUpdate(tupKey, objAttribute, (x, y) =>
                         {
@@ -667,8 +668,8 @@ namespace Chummer.Backend.Attributes
                             objAttribute.MultiplePropertiesChangedAsync -= RunExtraAsyncPropertyChanged(objAttribute.Abbrev);
                         }
 
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.TryRemove(tupKey, out _);
                         await objAttribute.DisposeAsync().ConfigureAwait(false);
@@ -688,8 +689,8 @@ namespace Chummer.Backend.Attributes
                             objAttribute.MultiplePropertiesChangedAsync -= RunExtraAsyncPropertyChanged(objAttribute.Abbrev);
                         }
 
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.TryRemove(tupKey, out _);
                         await objAttribute.DisposeAsync().ConfigureAwait(false);
@@ -697,8 +698,8 @@ namespace Chummer.Backend.Attributes
 
                     foreach (CharacterAttrib objAttribute in setNewAttribs)
                     {
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.AddOrUpdate(tupKey, objAttribute, (x, y) =>
                         {
@@ -716,8 +717,8 @@ namespace Chummer.Backend.Attributes
                 case NotifyCollectionChangedAction.Reset:
                     await AttributeList.ForEachAsync(async objAttribute =>
                     {
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.AddOrUpdate(tupKey, objAttribute, (x, y) =>
                         {
@@ -744,8 +745,8 @@ namespace Chummer.Backend.Attributes
                 case NotifyCollectionChangedAction.Add:
                     foreach (CharacterAttrib objAttribute in e.NewItems)
                     {
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.AddOrUpdate(tupKey, objAttribute, (x, y) =>
                         {
@@ -770,8 +771,8 @@ namespace Chummer.Backend.Attributes
                             objAttribute.MultiplePropertiesChangedAsync -= RunExtraAsyncPropertyChanged(objAttribute.Abbrev);
                         }
 
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.TryRemove(tupKey, out _);
                         await objAttribute.DisposeAsync().ConfigureAwait(false);
@@ -791,8 +792,8 @@ namespace Chummer.Backend.Attributes
                             objAttribute.MultiplePropertiesChangedAsync -= RunExtraAsyncPropertyChanged(objAttribute.Abbrev);
                         }
 
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.TryRemove(tupKey, out _);
                         await objAttribute.DisposeAsync().ConfigureAwait(false);
@@ -800,8 +801,8 @@ namespace Chummer.Backend.Attributes
 
                     foreach (CharacterAttrib objAttribute in setNewAttribs)
                     {
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.AddOrUpdate(tupKey, objAttribute, (x, y) =>
                         {
@@ -819,8 +820,8 @@ namespace Chummer.Backend.Attributes
                 case NotifyCollectionChangedAction.Reset:
                     await SpecialAttributeList.ForEachAsync(async objAttribute =>
                     {
-                        Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(objAttribute.Abbrev,
+                        Tuple<string, AttributeCategory> tupKey =
+                            new Tuple<string, AttributeCategory>(objAttribute.Abbrev,
                                 objAttribute.MetatypeCategory);
                         _dicAttributes.AddOrUpdate(tupKey, objAttribute, (x, y) =>
                         {
@@ -957,15 +958,15 @@ namespace Chummer.Backend.Attributes
                             CharacterAttrib objAttribute;
                             switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                             {
-                                case CharacterAttrib.AttributeCategory.Special:
+                                case AttributeCategory.Special:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                       CharacterAttrib.AttributeCategory.Special);
+                                                                       AttributeCategory.Special);
                                     SpecialAttributeList.Add(objAttribute);
                                     break;
 
-                                case CharacterAttrib.AttributeCategory.Standard:
+                                case AttributeCategory.Standard:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                       CharacterAttrib.AttributeCategory.Standard);
+                                                                       AttributeCategory.Standard);
                                     AttributeList.Add(objAttribute);
                                     break;
 
@@ -1182,15 +1183,15 @@ namespace Chummer.Backend.Attributes
                             CharacterAttrib objAttribute;
                             switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                             {
-                                case CharacterAttrib.AttributeCategory.Special:
+                                case AttributeCategory.Special:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                        CharacterAttrib.AttributeCategory.Special);
+                                        AttributeCategory.Special);
                                     await SpecialAttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
                                     break;
 
-                                case CharacterAttrib.AttributeCategory.Standard:
+                                case AttributeCategory.Standard:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                        CharacterAttrib.AttributeCategory.Standard);
+                                        AttributeCategory.Standard);
                                     await AttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
                                     break;
 
@@ -1377,7 +1378,7 @@ namespace Chummer.Backend.Attributes
                                     Math.Min(intOldMAGKarma,
                                         await objMag.GetKarmaMaximumAsync(token).ConfigureAwait(false)), token)
                                 .ConfigureAwait(false);
-                            if (await _objCharacter.Settings.GetMysAdeptSecondMAGAttributeAsync(token)
+                            if (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetMysAdeptSecondMAGAttributeAsync(token)
                                     .ConfigureAwait(false)
                                 && await _objCharacter.GetIsMysticAdeptAsync(token).ConfigureAwait(false))
                             {
@@ -1470,8 +1471,8 @@ namespace Chummer.Backend.Attributes
                     }
                     else
                     {
-                        await AttributeList.ClearAsync(token).ConfigureAwait(false);
-                        await SpecialAttributeList.ClearAsync(token).ConfigureAwait(false);
+                        await (await GetAttributeListAsync(token).ConfigureAwait(false)).ClearAsync(token).ConfigureAwait(false);
+                        await (await GetSpecialAttributeListAsync(token).ConfigureAwait(false)).ClearAsync(token).ConfigureAwait(false);
                     }
 
                     XPathNavigator xmlCharNode = blnSync
@@ -1499,9 +1500,9 @@ namespace Chummer.Backend.Attributes
                             CharacterAttrib objAttribute;
                             switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                             {
-                                case CharacterAttrib.AttributeCategory.Special:
+                                case AttributeCategory.Special:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                       CharacterAttrib.AttributeCategory.Special);
+                                                                       AttributeCategory.Special);
                                     if (blnSync)
                                     {
                                         // ReSharper disable once MethodHasAsyncOverload
@@ -1512,14 +1513,14 @@ namespace Chummer.Backend.Attributes
                                     else
                                     {
                                         objAttribute = await RemakeAttributeAsync(objAttribute, xmlCharNode, token).ConfigureAwait(false);
-                                        await SpecialAttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
+                                        await (await GetSpecialAttributeListAsync(token).ConfigureAwait(false)).AddAsync(objAttribute, token).ConfigureAwait(false);
                                     }
 
                                     break;
 
-                                case CharacterAttrib.AttributeCategory.Standard:
+                                case AttributeCategory.Standard:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                       CharacterAttrib.AttributeCategory.Standard);
+                                                                       AttributeCategory.Standard);
                                     if (blnSync)
                                     {
                                         // ReSharper disable once MethodHasAsyncOverload
@@ -1530,7 +1531,7 @@ namespace Chummer.Backend.Attributes
                                     else
                                     {
                                         objAttribute = await RemakeAttributeAsync(objAttribute, xmlCharNode, token).ConfigureAwait(false);
-                                        await AttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
+                                        await (await GetAttributeListAsync(token).ConfigureAwait(false)).AddAsync(objAttribute, token).ConfigureAwait(false);
                                     }
 
                                     break;
@@ -1542,27 +1543,27 @@ namespace Chummer.Backend.Attributes
                             if (xmlCharNodeAnimalForm == null)
                                 continue;
                             objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                               CharacterAttrib.AttributeCategory.Shapeshifter);
+                                                               AttributeCategory.Shapeshifter);
                             objAttribute = blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? RemakeAttribute(objAttribute, xmlCharNodeAnimalForm, token)
                                 : await RemakeAttributeAsync(objAttribute, xmlCharNodeAnimalForm, token).ConfigureAwait(false);
                             switch (CharacterAttrib.ConvertToAttributeCategory(objAttribute.Abbrev))
                             {
-                                case CharacterAttrib.AttributeCategory.Special:
+                                case AttributeCategory.Special:
                                     if (blnSync)
                                         // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                         SpecialAttributeList.Add(objAttribute);
                                     else
-                                        await SpecialAttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
+                                        await (await GetSpecialAttributeListAsync(token).ConfigureAwait(false)).AddAsync(objAttribute, token).ConfigureAwait(false);
                                     break;
 
-                                case CharacterAttrib.AttributeCategory.Standard:
+                                case AttributeCategory.Standard:
                                     if (blnSync)
                                         // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                         AttributeList.Add(objAttribute);
                                     else
-                                        await AttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
+                                        await (await GetAttributeListAsync(token).ConfigureAwait(false)).AddAsync(objAttribute, token).ConfigureAwait(false);
                                     break;
 
                                 default:
@@ -1576,26 +1577,26 @@ namespace Chummer.Backend.Attributes
                                 CharacterAttrib objAttribute;
                                 switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                                 {
-                                    case CharacterAttrib.AttributeCategory.Special:
+                                    case AttributeCategory.Special:
                                         objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                           CharacterAttrib.AttributeCategory.Special);
+                                                                           AttributeCategory.Special);
                                         objAttribute.Load(xmlAttributeNode);
                                         if (blnSync)
                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                             SpecialAttributeList.Add(objAttribute);
                                         else
-                                            await SpecialAttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
+                                            await (await GetSpecialAttributeListAsync(token).ConfigureAwait(false)).AddAsync(objAttribute, token).ConfigureAwait(false);
                                         break;
 
-                                    case CharacterAttrib.AttributeCategory.Standard:
+                                    case AttributeCategory.Standard:
                                         objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                           CharacterAttrib.AttributeCategory.Standard);
+                                                                           AttributeCategory.Standard);
                                         objAttribute.Load(xmlAttributeNode);
                                         if (blnSync)
                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                             AttributeList.Add(objAttribute);
                                         else
-                                            await AttributeList.AddAsync(objAttribute, token).ConfigureAwait(false);
+                                            await (await GetAttributeListAsync(token).ConfigureAwait(false)).AddAsync(objAttribute, token).ConfigureAwait(false);
                                         break;
 
                                     default:
@@ -1653,16 +1654,16 @@ namespace Chummer.Backend.Attributes
                         CharacterAttrib objAttribute = null;
                         switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                         {
-                            case CharacterAttrib.AttributeCategory.Special:
+                            case AttributeCategory.Special:
                                 objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                    CharacterAttrib.AttributeCategory.Special);
+                                    AttributeCategory.Special);
                                 objAttribute = RemakeAttribute(objAttribute, xmlCharNode, token);
                                 SpecialAttributeList.Add(objAttribute);
                                 break;
 
-                            case CharacterAttrib.AttributeCategory.Standard:
+                            case AttributeCategory.Standard:
                                 objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                    CharacterAttrib.AttributeCategory.Standard);
+                                    AttributeCategory.Standard);
                                 objAttribute = RemakeAttribute(objAttribute, xmlCharNode, token);
                                 AttributeList.Add(objAttribute);
                                 break;
@@ -1672,16 +1673,16 @@ namespace Chummer.Backend.Attributes
                         {
                             switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                             {
-                                case CharacterAttrib.AttributeCategory.Special:
+                                case AttributeCategory.Special:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                        CharacterAttrib.AttributeCategory.Special);
+                                        AttributeCategory.Special);
                                     objAttribute = RemakeAttribute(objAttribute, xmlCharNodeAnimalForm, token);
                                     SpecialAttributeList.Add(objAttribute);
                                     break;
 
-                                case CharacterAttrib.AttributeCategory.Shapeshifter:
+                                case AttributeCategory.Shapeshifter:
                                     objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                        CharacterAttrib.AttributeCategory
+                                        AttributeCategory
                                             .Shapeshifter);
                                     objAttribute = RemakeAttribute(objAttribute, xmlCharNodeAnimalForm, token);
                                     AttributeList.Add(objAttribute);
@@ -1966,7 +1967,7 @@ namespace Chummer.Backend.Attributes
                 {
                     XPathNavigator xmlNode = await _objCharacter.GetNodeXPathAsync(true, token: token).ConfigureAwait(false);
 
-                    if (AttributeCategory == CharacterAttrib.AttributeCategory.Standard)
+                    if (AttributeCategory == AttributeCategory.Standard)
                     {
                         await objWriter.WriteElementStringAsync("attributecategory",
                                                                 xmlNode != null
@@ -2007,12 +2008,12 @@ namespace Chummer.Backend.Attributes
             {
                 using (LockObject.EnterReadLock(token))
                 {
-                    Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                        new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev, AttributeCategory);
+                    Tuple<string, AttributeCategory> tupKey =
+                        new Tuple<string, AttributeCategory>(abbrev, AttributeCategory);
                     if (_dicAttributes.TryGetValue(tupKey, out objReturn))
                         return objReturn;
                     _dicAttributes.TryGetValue(
-                        new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev, CharacterAttrib.AttributeCategory.Special),
+                        new Tuple<string, AttributeCategory>(abbrev, AttributeCategory.Special),
                         out objReturn);
                 }
             }
@@ -2021,11 +2022,11 @@ namespace Chummer.Backend.Attributes
                 using (LockObject.EnterReadLock(token))
                 {
                     if (_dicAttributes.TryGetValue(
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev,
-                                CharacterAttrib.AttributeCategory.Standard), out objReturn))
+                            new Tuple<string, AttributeCategory>(abbrev,
+                                AttributeCategory.Standard), out objReturn))
                         return objReturn;
                     _dicAttributes.TryGetValue(
-                        new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev, CharacterAttrib.AttributeCategory.Special),
+                        new Tuple<string, AttributeCategory>(abbrev, AttributeCategory.Special),
                         out objReturn);
                 }
             }
@@ -2044,13 +2045,13 @@ namespace Chummer.Backend.Attributes
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    Tuple<string, CharacterAttrib.AttributeCategory> tupKey =
-                        new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev, await GetAttributeCategoryAsync(token).ConfigureAwait(false));
+                    Tuple<string, AttributeCategory> tupKey =
+                        new Tuple<string, AttributeCategory>(abbrev, await GetAttributeCategoryAsync(token).ConfigureAwait(false));
                     if (_dicAttributes.TryGetValue(tupKey, out objReturn))
                         return objReturn;
                     _dicAttributes.TryGetValue(
-                        new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev,
-                            CharacterAttrib.AttributeCategory.Special), out objReturn);
+                        new Tuple<string, AttributeCategory>(abbrev,
+                            AttributeCategory.Special), out objReturn);
                 }
                 finally
                 {
@@ -2065,12 +2066,12 @@ namespace Chummer.Backend.Attributes
                 {
                     token.ThrowIfCancellationRequested();
                     if (_dicAttributes.TryGetValue(
-                            new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev,
-                                CharacterAttrib.AttributeCategory.Standard), out objReturn))
+                            new Tuple<string, AttributeCategory>(abbrev,
+                                AttributeCategory.Standard), out objReturn))
                         return objReturn;
                     _dicAttributes.TryGetValue(
-                        new Tuple<string, CharacterAttrib.AttributeCategory>(abbrev,
-                            CharacterAttrib.AttributeCategory.Special), out objReturn);
+                        new Tuple<string, AttributeCategory>(abbrev,
+                            AttributeCategory.Special), out objReturn);
                 }
                 finally
                 {
@@ -2583,6 +2584,8 @@ namespace Chummer.Backend.Attributes
         {
             token.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(strInput))
+                return string.Empty;
+            if (!strInput.Contains('{'))
                 return strInput;
             using (LockObject.EnterReadLock(token))
             {
@@ -2629,6 +2632,8 @@ namespace Chummer.Backend.Attributes
             token.ThrowIfCancellationRequested();
             if (sbdInput == null || sbdInput.Length <= 0)
                 return;
+            if (!sbdInput.HasValuesNeedingReplacementForXPathProcessing(false))
+                return;
             if (string.IsNullOrEmpty(strOriginal))
                 strOriginal = sbdInput.ToString();
             using (LockObject.EnterReadLock(token))
@@ -2669,7 +2674,10 @@ namespace Chummer.Backend.Attributes
 
         public async Task<string> ProcessAttributesInXPathAsync(string strInput, IReadOnlyDictionary<string, int> dicValueOverrides = null, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(strInput))
+                return string.Empty;
+            if (!strInput.Contains('{'))
                 return strInput;
             IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
             try
@@ -2722,7 +2730,10 @@ namespace Chummer.Backend.Attributes
 
         public async Task ProcessAttributesInXPathAsync(StringBuilder sbdInput, string strOriginal = "", IReadOnlyDictionary<string, int> dicValueOverrides = null, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (sbdInput == null || sbdInput.Length <= 0)
+                return;
+            if (!sbdInput.HasValuesNeedingReplacementForXPathProcessing(false))
                 return;
             if (string.IsNullOrEmpty(strOriginal))
                 strOriginal = sbdInput.ToString();
@@ -2771,7 +2782,10 @@ namespace Chummer.Backend.Attributes
 
         public string ProcessAttributesInXPathForTooltip(string strInput, CultureInfo objCultureInfo = null, string strLanguage = "", bool blnShowValues = true, IReadOnlyDictionary<string, int> dicValueOverrides = null, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(strInput))
+                return string.Empty;
+            if (!strInput.Contains('{'))
                 return strInput;
             if (objCultureInfo == null)
                 objCultureInfo = GlobalSettings.CultureInfo;
@@ -2877,7 +2891,10 @@ namespace Chummer.Backend.Attributes
 
         public void ProcessAttributesInXPathForTooltip(StringBuilder sbdInput, string strOriginal = "", CultureInfo objCultureInfo = null, string strLanguage = "", bool blnShowValues = true, IReadOnlyDictionary<string, int> dicValueOverrides = null, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (sbdInput == null || sbdInput.Length <= 0)
+                return;
+            if (!sbdInput.HasValuesNeedingReplacementForXPathProcessing(false))
                 return;
             if (string.IsNullOrEmpty(strOriginal))
                 strOriginal = sbdInput.ToString();
@@ -2975,7 +2992,10 @@ namespace Chummer.Backend.Attributes
 
         public async Task<string> ProcessAttributesInXPathForTooltipAsync(string strInput, CultureInfo objCultureInfo = null, string strLanguage = "", bool blnShowValues = true, IAsyncReadOnlyDictionary<string, int> dicValueOverrides = null, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(strInput))
+                return string.Empty;
+            if (!strInput.Contains('{'))
                 return strInput;
             if (objCultureInfo == null)
                 objCultureInfo = GlobalSettings.CultureInfo;
@@ -3115,7 +3135,10 @@ namespace Chummer.Backend.Attributes
             CultureInfo objCultureInfo = null, string strLanguage = "", bool blnShowValues = true,
             IAsyncReadOnlyDictionary<string, int> dicValueOverrides = null, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (sbdInput == null || sbdInput.Length <= 0)
+                return;
+            if (!sbdInput.HasValuesNeedingReplacementForXPathProcessing(false))
                 return;
             if (string.IsNullOrEmpty(strOriginal))
                 strOriginal = sbdInput.ToString();
@@ -3254,15 +3277,15 @@ namespace Chummer.Backend.Attributes
                         CharacterAttrib objAttribute;
                         switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                         {
-                            case CharacterAttrib.AttributeCategory.Special:
+                            case AttributeCategory.Special:
                                 objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                   CharacterAttrib.AttributeCategory.Special);
+                                                                   AttributeCategory.Special);
                                 SpecialAttributeList.Add(objAttribute);
                                 break;
 
-                            case CharacterAttrib.AttributeCategory.Standard:
+                            case AttributeCategory.Standard:
                                 objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                   CharacterAttrib.AttributeCategory.Standard);
+                                                                   AttributeCategory.Standard);
                                 AttributeList.Add(objAttribute);
                                 break;
                             default:
@@ -3302,15 +3325,15 @@ namespace Chummer.Backend.Attributes
                         CharacterAttrib objAttribute;
                         switch (CharacterAttrib.ConvertToAttributeCategory(strAttribute))
                         {
-                            case CharacterAttrib.AttributeCategory.Special:
+                            case AttributeCategory.Special:
                                 objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                   CharacterAttrib.AttributeCategory.Special);
+                                                                   AttributeCategory.Special);
                                 await lstSpecialAttributes.AddAsync(objAttribute, token).ConfigureAwait(false);
                                 break;
 
-                            case CharacterAttrib.AttributeCategory.Standard:
+                            case AttributeCategory.Standard:
                                 objAttribute = new CharacterAttrib(_objCharacter, strAttribute,
-                                                                   CharacterAttrib.AttributeCategory.Standard);
+                                                                   AttributeCategory.Standard);
                                 await lstAttributes.AddAsync(objAttribute, token).ConfigureAwait(false);
                                 break;
                             default:
@@ -3336,21 +3359,21 @@ namespace Chummer.Backend.Attributes
             }
         }
 
-        public static CharacterAttrib.AttributeCategory ConvertAttributeCategory(string s)
+        public static AttributeCategory ConvertAttributeCategory(string s)
         {
             switch (s)
             {
                 case "Shapeshifter":
-                    return CharacterAttrib.AttributeCategory.Shapeshifter;
+                    return AttributeCategory.Shapeshifter;
 
                 case "Special":
-                    return CharacterAttrib.AttributeCategory.Special;
+                    return AttributeCategory.Special;
 
                 case "Metahuman":
                 case "Standard":
-                    return CharacterAttrib.AttributeCategory.Standard;
+                    return AttributeCategory.Standard;
             }
-            return CharacterAttrib.AttributeCategory.Standard;
+            return AttributeCategory.Standard;
         }
 
         /// <summary>
@@ -3534,9 +3557,9 @@ namespace Chummer.Backend.Attributes
                 if (await _objCharacter.GetCreatedAsync(token).ConfigureAwait(false)
                     || await _objCharacter.GetIgnoreRulesAsync(token).ConfigureAwait(false))
                     return true;
-                CharacterAttrib.AttributeCategory eCategory = objAttribute.MetatypeCategory;
-                if (eCategory == CharacterAttrib.AttributeCategory.Special
-                    || await _objCharacter.Settings.GetMaxNumberMaxAttributesCreateAsync(token).ConfigureAwait(false)
+                AttributeCategory eCategory = objAttribute.MetatypeCategory;
+                if (eCategory == AttributeCategory.Special
+                    || await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetMaxNumberMaxAttributesCreateAsync(token).ConfigureAwait(false)
                     >= await AttributeList.GetCountAsync(token).ConfigureAwait(false))
                     return true;
                 return await AttributeList.CountAsync(async x => x.MetatypeCategory == eCategory
@@ -3544,7 +3567,7 @@ namespace Chummer.Backend.Attributes
                                                                  && await x.GetAtMetatypeMaximumAsync(token)
                                                                            .ConfigureAwait(false), token)
                                           .ConfigureAwait(false)
-                       < await _objCharacter.Settings.GetMaxNumberMaxAttributesCreateAsync(token).ConfigureAwait(false);
+                       < await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetMaxNumberMaxAttributesCreateAsync(token).ConfigureAwait(false);
             }
             finally
             {
@@ -3632,7 +3655,7 @@ namespace Chummer.Backend.Attributes
             }
         }
 
-        public CharacterAttrib.AttributeCategory AttributeCategory
+        public AttributeCategory AttributeCategory
         {
             get
             {
@@ -3651,7 +3674,7 @@ namespace Chummer.Backend.Attributes
             }
         }
 
-        public async Task<CharacterAttrib.AttributeCategory> GetAttributeCategoryAsync(CancellationToken token = default)
+        public async Task<AttributeCategory> GetAttributeCategoryAsync(CancellationToken token = default)
         {
             IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
             try
@@ -3665,7 +3688,7 @@ namespace Chummer.Backend.Attributes
             }
         }
 
-        public async Task SetAttributeCategoryAsync(CharacterAttrib.AttributeCategory value, CancellationToken token = default)
+        public async Task SetAttributeCategoryAsync(AttributeCategory value, CancellationToken token = default)
         {
             IAsyncDisposable objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
             try

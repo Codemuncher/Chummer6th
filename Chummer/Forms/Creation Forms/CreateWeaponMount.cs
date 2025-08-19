@@ -17,10 +17,8 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -28,6 +26,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+using Chummer.Backend.Equipment;
 
 namespace Chummer
 {
@@ -426,22 +425,22 @@ namespace Chummer
                     WeaponMountOption objControlOption = new WeaponMountOption(_objCharacter);
                     if (await objControlOption.CreateAsync(xmlSelectedControl, _objGenericToken).ConfigureAwait(false))
                     {
-                        _objMount.WeaponMountOptions.RemoveAll(x => x.Category == "Control");
-                        _objMount.WeaponMountOptions.Add(objControlOption);
+                        await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Control", _objGenericToken).ConfigureAwait(false);
+                        await _objMount.WeaponMountOptions.AddAsync(objControlOption, _objGenericToken).ConfigureAwait(false);
                     }
 
                     WeaponMountOption objFlexibilityOption = new WeaponMountOption(_objCharacter);
                     if (await objFlexibilityOption.CreateAsync(xmlSelectedFlexibility, _objGenericToken).ConfigureAwait(false))
                     {
-                        _objMount.WeaponMountOptions.RemoveAll(x => x.Category == "Flexibility");
-                        _objMount.WeaponMountOptions.Add(objFlexibilityOption);
+                        await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Flexibility", _objGenericToken).ConfigureAwait(false);
+                        await _objMount.WeaponMountOptions.AddAsync(objFlexibilityOption, _objGenericToken).ConfigureAwait(false);
                     }
 
                     WeaponMountOption objVisibilityOption = new WeaponMountOption(_objCharacter);
                     if (await objVisibilityOption.CreateAsync(xmlSelectedVisibility, _objGenericToken).ConfigureAwait(false))
                     {
-                        _objMount.WeaponMountOptions.RemoveAll(x => x.Category == "Visibility");
-                        _objMount.WeaponMountOptions.Add(objVisibilityOption);
+                        await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Visibility", _objGenericToken).ConfigureAwait(false);
+                        await _objMount.WeaponMountOptions.AddAsync(objVisibilityOption, _objGenericToken).ConfigureAwait(false);
                     }
                 }
 
@@ -618,7 +617,6 @@ namespace Chummer
             }
         }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool AllowDiscounts { get; set; }
 
         private async Task UpdateInfo(CancellationToken token = default)
@@ -869,7 +867,7 @@ namespace Chummer
                 decimal decMarkup = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token).ConfigureAwait(false) / 100.0m;
                 decCost *= 1 + decMarkup;
                 _decCurrentBaseCost *= 1 + decMarkup;
-                string strCost = decCost.ToString(await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
+                string strCost = decCost.ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                 await lblCost.DoThreadSafeAsync(x => x.Text = strCost, token).ConfigureAwait(false);
                 await lblSlots.DoThreadSafeAsync(x => x.Text = intSlots.ToString(GlobalSettings.CultureInfo), token).ConfigureAwait(false);
                 await lblAvailability.DoThreadSafeAsync(x => x.Text = strAvailText, token).ConfigureAwait(false);
@@ -1070,8 +1068,9 @@ namespace Chummer
                 using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstControl))
                 {
                     // Populate the Weapon Mount Category list.
-                    string strFilter = "category != \"Size\" and " + await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false);
-                    if (!_objVehicle.IsDrone && await _objCharacter.Settings.GetDroneModsAsync(token).ConfigureAwait(false))
+                    CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false);
+                    string strFilter = "category != \"Size\" and " + await objSettings.BookXPathAsync(token: token).ConfigureAwait(false);
+                    if (!_objVehicle.IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
                         strFilter += " and not(optionaldrone)";
                     XPathNodeIterator xmlWeaponMountOptionNodeList
                         = _xmlDocXPath.Select("/chummer/weaponmounts/weaponmount[" + strFilter + ']');

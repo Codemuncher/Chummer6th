@@ -198,27 +198,34 @@ namespace Chummer
                 string strSelectedComplexFormName = xmlComplexForm.SelectSingleNodeAndCacheExpression("name")?.Value ?? string.Empty;
                 if (strFv.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                 {
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
-                                                                      out StringBuilder sbdReturn))
+                    if (strFv.HasValuesNeedingReplacementForXPathProcessing())
                     {
-                        sbdReturn.Append(strFv);
-                        foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
-                            _objCharacter, Improvement.ImprovementType.FadingValue, strSelectedComplexFormName, true).ConfigureAwait(false))
+                        using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
+                                                                          out StringBuilder sbdFv))
                         {
-                            sbdReturn.AppendFormat(GlobalSettings.InvariantCultureInfo, "{0:+0;-0;+0}",
-                                               objImprovement.Value);
-                        }
+                            sbdFv.Append('(').Append(strFv).Append(')');
+                            foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
+                                _objCharacter, Improvement.ImprovementType.FadingValue, strSelectedComplexFormName, true).ConfigureAwait(false))
+                            {
+                                sbdFv.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                            }
 
-                        (bool blnIsSuccess, object xprResult) = await CommonFunctions.EvaluateInvariantXPathAsync(sbdReturn.ToString()).ConfigureAwait(false);
-                        if (blnIsSuccess)
-                            intFadingDv = ((double)xprResult).StandardRound();
-                        else
-                            strToAppend = sbdReturn.ToString();
+                            await _objCharacter.ProcessAttributesInXPathAsync(sbdFv).ConfigureAwait(false);
+                            strFv = sbdFv.ToString();
+                        }
                     }
+                    (bool blnIsSuccess, object xprResult) = await CommonFunctions.EvaluateInvariantXPathAsync(strFv).ConfigureAwait(false);
+                    if (blnIsSuccess)
+                        intFadingDv = ((double)xprResult).StandardRound();
+                    else
+                        strToAppend = strFv;
                 }
                 else
                 {
-                    int intDv = decValue.StandardRound();
+                    foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
+                            _objCharacter, Improvement.ImprovementType.FadingValue, strSelectedComplexFormName, true).ConfigureAwait(false))
+                        decValue += objImprovement.Value;
+                    intFadingDv = decValue.StandardRound();
                 }
 
                 // Fading always minimum 2
@@ -341,12 +348,12 @@ namespace Chummer
             if (_blnLoading)
                 return;
 
-            string strFilter = '(' + await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false) + ')';
+            string strFilter = '(' + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ')';
             string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(strSearch))
                 strFilter += " and " + CommonFunctions.GenerateSearchXPath(strSearch);
             // Populate the Complex Form list.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstComplexFormItems))
             {
                 foreach (XPathNavigator xmlComplexForm in _xmlBaseComplexFormsNode.Select(

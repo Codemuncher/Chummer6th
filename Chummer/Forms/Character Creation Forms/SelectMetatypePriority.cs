@@ -30,6 +30,7 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
 using Chummer.Backend.Attributes;
+using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using Chummer.Backend.Skills;
 using Microsoft.VisualStudio.Threading;
@@ -161,10 +162,11 @@ namespace Chummer
                 _dicSumtoTenValues.Add("E", 0);
             }
 
-            if (!string.IsNullOrEmpty(_objCharacter.Settings.PriorityArray))
+            string strPriorityArray = _objCharacter.Settings.PriorityArray;
+            if (!string.IsNullOrEmpty(strPriorityArray))
             {
                 _lstPriorities = new List<string>(5);
-                foreach (char c in _objCharacter.Settings.PriorityArray)
+                foreach (char c in strPriorityArray)
                 {
                     _lstPriorities.Add(c.ToString());
                 }
@@ -189,7 +191,7 @@ namespace Chummer
                     await this.DoThreadSafeAsync(x => x.SuspendLayout(), _objGenericToken).ConfigureAwait(false);
                     try
                     {
-                        if (_objCharacter.EffectiveBuildMethod == CharacterBuildMethod.SumtoTen)
+                        if (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false) == CharacterBuildMethod.SumtoTen)
                         {
                             await lblSumtoTen.DoThreadSafeAsync(x => x.Visible = true, _objGenericToken).ConfigureAwait(false);
                         }
@@ -205,7 +207,7 @@ namespace Chummer
                                 XPathNodeIterator objItems = xmlBasePrioritiesNode.Select(
                                     "priority[category = " + objXmlPriorityCategory.Value.CleanXPath()
                                                            + " and prioritytable = "
-                                                           + _objCharacter.Settings.PriorityTable.CleanXPath() + ']');
+                                                           + (await (await _objCharacter.GetSettingsAsync(_objGenericToken).ConfigureAwait(false)).GetPriorityTableAsync(_objGenericToken).ConfigureAwait(false)).CleanXPath() + ']');
 
                                 if (objItems.Count == 0)
                                 {
@@ -362,7 +364,7 @@ namespace Chummer
 
                             await ProcessTalentsIndexChanged(_objGenericToken).ConfigureAwait(false);
 
-                            switch (_objCharacter.EffectiveBuildMethod)
+                            switch (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false))
                             {
                                 case CharacterBuildMethod.Priority:
                                     await ManagePriorityItems(cboHeritage, token: _objGenericToken).ConfigureAwait(false);
@@ -394,7 +396,7 @@ namespace Chummer
                             await PopulateMetavariants(token: _objGenericToken).ConfigureAwait(false);
                             await PopulateTalents(token: _objGenericToken).ConfigureAwait(false);
                             await RefreshSelectedMetatype(token: _objGenericToken).ConfigureAwait(false);
-                            if (_objCharacter.EffectiveBuildMethod == CharacterBuildMethod.SumtoTen)
+                            if (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false) == CharacterBuildMethod.SumtoTen)
                                 await SumToTen(token: _objGenericToken).ConfigureAwait(false);
                         }
 
@@ -538,7 +540,7 @@ namespace Chummer
                     await this.DoThreadSafeAsync(x => x.SuspendLayout(), _objGenericToken).ConfigureAwait(false);
                     try
                     {
-                        if (_objCharacter.EffectiveBuildMethod == CharacterBuildMethod.SumtoTen)
+                        if (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false) == CharacterBuildMethod.SumtoTen)
                         {
                             await SumToTen(token: _objGenericToken).ConfigureAwait(false);
                         }
@@ -629,7 +631,7 @@ namespace Chummer
                 await cboSkill2.DoThreadSafeAsync(x => x.Visible = false, token).ConfigureAwait(false);
                 await cboSkill3.DoThreadSafeAsync(x => x.Visible = false, token).ConfigureAwait(false);
                 await lblMetatypeSkillSelection.DoThreadSafeAsync(x => x.Visible = false, token).ConfigureAwait(false);
-
+                string strPriorityTable = (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath();
                 string strSelectedTalents = await cboTalents.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token)
                                                             .ConfigureAwait(false);
                 if (!string.IsNullOrEmpty(strSelectedTalents))
@@ -639,8 +641,7 @@ namespace Chummer
                         "priorities/priority[category = \"Talent\" and value = "
                         + (await cboTalent.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token)
                                           .ConfigureAwait(false) ?? string.Empty).CleanXPath()
-                        + " and (not(prioritytable) or prioritytable = " + _objCharacter.Settings.PriorityTable.CleanXPath()
-                        + ")]");
+                        + " and (not(prioritytable) or prioritytable = " + strPriorityTable + ")]");
                     foreach (XPathNavigator xmlBaseTalentPriority in xmlBaseTalentPriorityList)
                     {
                         if (xmlBaseTalentPriorityList.Count == 1 || xmlBaseTalentPriority
@@ -937,7 +938,7 @@ namespace Chummer
                                     + (await cboHeritage.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token)
                                                         .ConfigureAwait(false) ?? string.Empty).CleanXPath()
                                     + " and (not(prioritytable) or prioritytable = "
-                                    + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                                    + strPriorityTable + ")]");
                                 foreach (XPathNavigator xmlBaseMetatypePriority in xmlBaseMetatypePriorityList)
                                 {
                                     if (xmlBaseMetatypePriorityList.Count == 1 || xmlBaseMetatypePriority
@@ -975,7 +976,7 @@ namespace Chummer
                     await cboTalents.DoThreadSafeAsync(x => x.SelectedIndex = 0, token).ConfigureAwait(false);
                 }
 
-                if (_objCharacter.EffectiveBuildMethod == CharacterBuildMethod.SumtoTen)
+                if (await _objCharacter.GetEffectiveBuildMethodAsync(token).ConfigureAwait(false) == CharacterBuildMethod.SumtoTen)
                 {
                     await SumToTen(true, token).ConfigureAwait(false);
                 }
@@ -1010,7 +1011,7 @@ namespace Chummer
                         {
                             //swallow this and move on in case this was canceled internally because of a duplicate call
                         }
-                        if (_objCharacter.EffectiveBuildMethod == CharacterBuildMethod.SumtoTen)
+                        if (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false) == CharacterBuildMethod.SumtoTen)
                         {
                             await SumToTen(token: _objGenericToken).ConfigureAwait(false);
                         }
@@ -1057,7 +1058,7 @@ namespace Chummer
                         {
                             //swallow this and move on in case this was canceled internally because of a duplicate call
                         }
-                        if (_objCharacter.EffectiveBuildMethod == CharacterBuildMethod.SumtoTen)
+                        if (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false) == CharacterBuildMethod.SumtoTen)
                         {
                             await SumToTen(token: _objGenericToken).ConfigureAwait(false);
                         }
@@ -1092,7 +1093,7 @@ namespace Chummer
                     {
                         try
                         {
-                            switch (_objCharacter.EffectiveBuildMethod)
+                            switch (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false))
                             {
                                 case CharacterBuildMethod.Priority:
                                     await ManagePriorityItems(cboHeritage, token: _objGenericToken).ConfigureAwait(false);
@@ -1164,7 +1165,7 @@ namespace Chummer
                     {
                         try
                         {
-                            switch (_objCharacter.EffectiveBuildMethod)
+                            switch (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false))
                             {
                                 case CharacterBuildMethod.Priority:
                                     await ManagePriorityItems(cboTalent, token: _objGenericToken).ConfigureAwait(false);
@@ -1210,7 +1211,7 @@ namespace Chummer
                     await this.DoThreadSafeAsync(x => x.SuspendLayout(), _objGenericToken).ConfigureAwait(false);
                     try
                     {
-                        switch (_objCharacter.EffectiveBuildMethod)
+                        switch (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false))
                         {
                             case CharacterBuildMethod.Priority:
                                 await ManagePriorityItems(cboAttributes, token: _objGenericToken).ConfigureAwait(false);
@@ -1249,7 +1250,7 @@ namespace Chummer
                     await this.DoThreadSafeAsync(x => x.SuspendLayout(), _objGenericToken).ConfigureAwait(false);
                     try
                     {
-                        switch (_objCharacter.EffectiveBuildMethod)
+                        switch (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false))
                         {
                             case CharacterBuildMethod.Priority:
                                 await ManagePriorityItems(cboSkills, token: _objGenericToken).ConfigureAwait(false);
@@ -1288,7 +1289,7 @@ namespace Chummer
                     await this.DoThreadSafeAsync(x => x.SuspendLayout(), _objGenericToken).ConfigureAwait(false);
                     try
                     {
-                        switch (_objCharacter.EffectiveBuildMethod)
+                        switch (await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false))
                         {
                             case CharacterBuildMethod.Priority:
                                 await ManagePriorityItems(cboResources, token: _objGenericToken).ConfigureAwait(false);
@@ -1630,12 +1631,13 @@ namespace Chummer
                         await _objCharacter.PriorityBonusSkillList.AddAsync(strSkill3, token: token)
                             .ConfigureAwait(false);
 
+                    string strPriorityTable = (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath();
                     // Set starting nuyen
                     XPathNodeIterator xmlResourcesPriorityList = _xmlBasePriorityDataNode.Select(
                         "priorities/priority[category = \"Resources\" and value = "
                         + (await _objCharacter.GetResourcesPriorityAsync(token).ConfigureAwait(false)).CleanXPath() +
                         " and (not(prioritytable) or prioritytable = "
-                        + _objCharacter.Settings.PriorityTable.CleanXPath()
+                        + strPriorityTable
                         + ")]");
                     foreach (XPathNavigator xmlResourcesPriority in xmlResourcesPriorityList)
                     {
@@ -1674,9 +1676,9 @@ namespace Chummer
                         bool blnRemoveFreeSkills = true;
                         XPathNodeIterator xmlBaseTalentPriorityList = _xmlBasePriorityDataNode.Select(
                             "priorities/priority[category = \"Talent\" and value = "
-                            + _objCharacter.SpecialPriority.CleanXPath() +
+                            + (await _objCharacter.GetSpecialPriorityAsync(token).ConfigureAwait(false)).CleanXPath() +
                             " and (not(prioritytable) or prioritytable = "
-                            + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                            + strPriorityTable + ")]");
                         string strSkill1XPath = strSkill1.CleanXPath();
                         string strSkill2XPath = strSkill2.CleanXPath();
                         string strSkill3XPath = strSkill3.CleanXPath();
@@ -1924,9 +1926,9 @@ namespace Chummer
                     int intMetatypeBP = 0;
                     XPathNodeIterator xmlBaseMetatypePriorityList = _xmlBasePriorityDataNode.Select(
                         "priorities/priority[category = \"Heritage\" and value = "
-                        + _objCharacter.MetatypePriority.CleanXPath()
+                        + (await _objCharacter.GetMetatypePriorityAsync(token).ConfigureAwait(false)).CleanXPath()
                         + " and (not(prioritytable) or prioritytable = "
-                        + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                        + strPriorityTable + ")]");
                     foreach (XPathNavigator xmlBaseMetatypePriority in xmlBaseMetatypePriorityList)
                     {
                         if (xmlBaseMetatypePriorityList.Count == 1
@@ -1957,14 +1959,14 @@ namespace Chummer
 
                     await _objCharacter.SetSpecialAsync(intSpecialAttribPoints, token).ConfigureAwait(false);
                     await _objCharacter.SetTotalSpecialAsync(intSpecialAttribPoints, token).ConfigureAwait(false);
-                    _objCharacter.MetatypeBP = intMetatypeBP;
+                    await _objCharacter.SetMetatypeBPAsync(intMetatypeBP, token).ConfigureAwait(false);
 
                     // Set Attributes
                     XPathNodeIterator objXmlAttributesPriorityList = _xmlBasePriorityDataNode.Select(
                         "priorities/priority[category = \"Attributes\" and value = "
-                        + _objCharacter.AttributesPriority.CleanXPath() +
+                        + (await _objCharacter.GetAttributesPriorityAsync(token).ConfigureAwait(false)).CleanXPath() +
                         " and (not(prioritytable) or prioritytable = "
-                        + _objCharacter.Settings.PriorityTable.CleanXPath()
+                        + strPriorityTable
                         + ")]");
                     foreach (XPathNavigator objXmlAttributesPriority in objXmlAttributesPriorityList)
                     {
@@ -1985,11 +1987,9 @@ namespace Chummer
                     // Set Skills and Skill Groups
                     XPathNodeIterator objXmlSkillsPriorityList = _xmlBasePriorityDataNode.Select(
                         "priorities/priority[category = \"Skills\" and value = "
-                        + _objCharacter.SkillsPriority.CleanXPath()
-                        +
-                        " and (not(prioritytable) or prioritytable = "
-                        + _objCharacter.Settings.PriorityTable
-                            .CleanXPath() + ")]");
+                        + (await _objCharacter.GetSkillsPriorityAsync(token).ConfigureAwait(false)).CleanXPath()
+                        + " and (not(prioritytable) or prioritytable = "
+                        + strPriorityTable + ")]");
                     foreach (XPathNavigator objXmlSkillsPriority in objXmlSkillsPriorityList)
                     {
                         if (objXmlSkillsPriorityList.Count == 1 ||
@@ -2320,7 +2320,7 @@ namespace Chummer
         private async Task ManagePriorityItems(ComboBox comboBox, bool blnForce = false, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            if (!blnForce && _objCharacter.EffectiveBuildMethod != CharacterBuildMethod.Priority)
+            if (!blnForce && await _objCharacter.GetEffectiveBuildMethodAsync(_objGenericToken).ConfigureAwait(false) != CharacterBuildMethod.Priority)
                 return;
             CancellationTokenSource objNewCancellationTokenSource = new CancellationTokenSource();
             CancellationToken objNewToken = objNewCancellationTokenSource.Token;
@@ -2430,7 +2430,7 @@ namespace Chummer
                     intReturn += _dicSumtoTenValues[await cboResources.DoThreadSafeFuncAsync(x => x.SelectedValue.ToString(), token).ConfigureAwait(false)];
 
                     string strText = intReturn.ToString(GlobalSettings.CultureInfo) + '/'
-                                                                + _objCharacter.Settings.SumtoTen.ToString(GlobalSettings.CultureInfo);
+                                                                + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetSumtoTenAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
                     await lblSumtoTen.DoThreadSafeAsync(x => x.Text = strText, token).ConfigureAwait(false);
                 }
             }
@@ -2475,7 +2475,7 @@ namespace Chummer
                 XPathNodeIterator xmlBaseMetatypePriorityList = _xmlBasePriorityDataNode.Select(
                     "priorities/priority[category = \"Heritage\" and value = " + strSelectedHeritage.CleanXPath()
                                                                                + " and (not(prioritytable) or prioritytable = "
-                                                                               + _objCharacter.Settings.PriorityTable
+                                                                               + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false))
                                                                                    .CleanXPath() + ")]");
                 foreach (XPathNavigator xmlBaseMetatypePriority in xmlBaseMetatypePriorityList)
                 {
@@ -2610,7 +2610,7 @@ namespace Chummer
                         "priorities/priority[category = \"Talent\" and value = "
                         + (await cboTalent.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath()
                         + " and (not(prioritytable) or prioritytable = "
-                        + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                        + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath() + ")]");
                     foreach (XPathNavigator xmlBaseTalentPriority in xmlBaseTalentPriorityList)
                     {
                         if (xmlBaseTalentPriorityList.Count == 1
@@ -2853,7 +2853,7 @@ namespace Chummer
                         "priorities/priority[category = \"Talent\" and value = "
                         + (await cboTalent.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath()
                         + " and (not(prioritytable) or prioritytable = "
-                        + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                        + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath() + ")]");
                     foreach (XPathNavigator xmlBaseTalentPriority in xmlBaseTalentPriorityList)
                     {
                         if (xmlBaseTalentPriorityList.Count == 1
@@ -2890,7 +2890,7 @@ namespace Chummer
                         "priorities/priority[category = \"Talent\" and value = "
                         + (await cboTalent.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath()
                         + " and (not(prioritytable) or prioritytable = "
-                        + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                        + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath() + ")]");
                     foreach (XPathNavigator xmlBaseTalentPriority in xmlBaseTalentPriorityList)
                     {
                         if (xmlBaseTalentPriorityList.Count == 1
@@ -2964,7 +2964,7 @@ namespace Chummer
                     XPathNodeIterator xmlBaseTalentPriorityList = _xmlBasePriorityDataNode.Select(
                         "priorities/priority[category = \"Talent\" and value = "
                         + (await cboTalent.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath()
-                        + " and (not(prioritytable) or prioritytable = " + _objCharacter.Settings.PriorityTable.CleanXPath()
+                        + " and (not(prioritytable) or prioritytable = " + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath()
                         + ")]");
                     foreach (XPathNavigator xmlBaseTalentPriority in xmlBaseTalentPriorityList)
                     {
@@ -2984,7 +2984,7 @@ namespace Chummer
                                                  "quality", token))
                                     {
                                         if (_xmlBaseQualityDataNode.TryGetNodeByNameOrId(
-                                                "qualities/quality", xmlQuality.Value, await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false)) == null)
+                                                "qualities/quality", xmlQuality.Value, await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)) == null)
                                         {
                                             blnFoundUnavailableQuality = true;
                                             break;
@@ -3167,7 +3167,7 @@ namespace Chummer
                     XPathNodeIterator xmlBaseMetatypePriorityList = _xmlBasePriorityDataNode.Select(
                         "priorities/priority[category = \"Heritage\" and value = " + strSelectedHeritage.CleanXPath()
                                                                                    + " and (not(prioritytable) or prioritytable = "
-                                                                                   + _objCharacter.Settings.PriorityTable
+                                                                                   + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false))
                                                                                        .CleanXPath() + ")]");
                     foreach (XPathNavigator xmlBaseMetatypePriority in xmlBaseMetatypePriorityList)
                     {
@@ -3192,7 +3192,7 @@ namespace Chummer
                                                                          .ConfigureAwait(false)));
                             // Retrieve the list of Metavariants for the selected Metatype.
                             foreach (XPathNavigator objXmlMetavariant in objXmlMetatype.Select(
-                                         "metavariants/metavariant[" + await _objCharacter.Settings
+                                         "metavariants/metavariant[" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false))
                                              .BookXPathAsync(token: token).ConfigureAwait(false) + ']'))
                             {
                                 string strId = objXmlMetavariant
@@ -3364,7 +3364,7 @@ namespace Chummer
                             + (await cboHeritage.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token)
                                                 .ConfigureAwait(false) ?? string.Empty).CleanXPath()
                             + " and (not(prioritytable) or prioritytable = "
-                            + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                            + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath() + ")]");
                         foreach (XPathNavigator xmlBaseMetatypePriority in xmlBaseMetatypePriorityList)
                         {
                             if (xmlBaseMetatypePriorityList.Count == 1
@@ -3373,7 +3373,7 @@ namespace Chummer
                             {
                                 foreach (XPathNavigator objXmlMetatype in _xmlBaseMetatypeDataNode.Select(
                                              "metatypes/metatype[("
-                                             + await _objCharacter.Settings.BookXPathAsync(token: token)
+                                             + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token)
                                                                   .ConfigureAwait(false)
                                              + ") and category = " + strSelectedCategory.CleanXPath()
                                              + ']'))
@@ -3500,7 +3500,7 @@ namespace Chummer
                             + (await cboHeritage.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token)
                                                 .ConfigureAwait(false) ?? string.Empty).CleanXPath()
                             + " and (not(prioritytable) or prioritytable = "
-                            + _objCharacter.Settings.PriorityTable.CleanXPath() + ")]");
+                            + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetPriorityTableAsync(token).ConfigureAwait(false)).CleanXPath() + ")]");
                         bool blnRemoveCategory = true;
                         foreach (XPathNavigator xmlBaseMetatypePriority in xmlBaseMetatypePriorityList)
                         {
@@ -3510,7 +3510,7 @@ namespace Chummer
                             {
                                 foreach (XPathNavigator objXmlMetatype in _xmlBaseMetatypeDataNode.Select(
                                              "metatypes/metatype[category = " + objXmlCategory.Value.CleanXPath() + " and ("
-                                             + await _objCharacter.Settings.BookXPathAsync(token: token)
+                                             + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token)
                                                                   .ConfigureAwait(false) + ")]"))
                                 {
                                     if (xmlBaseMetatypePriority.TryGetNodeByNameOrId(

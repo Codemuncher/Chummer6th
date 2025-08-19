@@ -1641,7 +1641,7 @@ namespace Chummer.Backend.Equipment
             if (await _objCharacter.Improvements.AnyAsync(ig => ig.SourceName == InternalId, token: token)
                     .ConfigureAwait(false))
                 return;
-            await _objCharacter.ImprovementGroups.AddAsync(Name, token).ConfigureAwait(false);
+            await (await _objCharacter.GetImprovementGroupsAsync(token).ConfigureAwait(false)).AddAsync(Name, token).ConfigureAwait(false);
             string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
             string strNamePrefix = await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false) + strSpace + '-' +
                                    strSpace;
@@ -1658,7 +1658,7 @@ namespace Chummer.Backend.Equipment
                         Augmented = kvpAttribute.Value,
                         ImprovedName = kvpAttribute.Key,
                         CustomName =
-                        strNamePrefix + LanguageManager.GetString("String_Attribute" + kvpAttribute.Key + "Short", token: token)
+                        strNamePrefix + await LanguageManager.GetStringAsync("String_Attribute" + kvpAttribute.Key + "Short", token: token).ConfigureAwait(false)
                                       + strSpace +
                                       kvpAttribute.Value.ToString("+#,0;-#,0;0", GlobalSettings.CultureInfo)
                     });

@@ -68,7 +68,7 @@ namespace Chummer
         {
             bool blnForcedExotic = false;
             string strForcedExoticSkillName = string.Empty;
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkills))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkills))
             {
                 // Build the list of non-Exotic Skills from the Skills file.
                 XPathNodeIterator objXmlSkillList;
@@ -81,7 +81,7 @@ namespace Chummer
                         objXmlSkillList = _objXmlDocument.Select("/chummer/skills/skill[name = "
                                                                  + strForcedExoticSkillName.CleanXPath()
                                                                  + " and exotic = 'True' and ("
-                                                                 + await _objCharacter.Settings.BookXPathAsync()
+                                                                 + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync()
                                                                      .ConfigureAwait(false) + ")]");
                     }
                     else
@@ -89,7 +89,7 @@ namespace Chummer
                         objXmlSkillList = _objXmlDocument.Select("/chummer/skills/skill[name = "
                                                                  + _strForceSkill.CleanXPath()
                                                                  + " and not(exotic = 'True') and ("
-                                                                 + await _objCharacter.Settings.BookXPathAsync()
+                                                                 + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync()
                                                                      .ConfigureAwait(false) + ")]");
                     }
                 }
@@ -98,19 +98,19 @@ namespace Chummer
                     objXmlSkillList = _objXmlDocument.Select(
                         "/chummer/skills/skill["
                         + _strLimitToCategories + " and ("
-                        + await _objCharacter.Settings.BookXPathAsync()
+                        + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync()
                                              .ConfigureAwait(false) + ")]");
                 }
                 else
                 {
                     string strFilter = string.Empty;
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                     {
                         // If we don't have a minimum rating, include exotic skills as normal because they'll just make the second dropdown appear when selected
                         if (_intMinimumRating > 0)
                             sbdFilter.Append("not(exotic = 'True') and ");
                         sbdFilter.Append('(')
-                                 .Append(await _objCharacter.Settings.BookXPathAsync().ConfigureAwait(false))
+                                 .Append(await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false))
                                  .Append(')');
                         if (!string.IsNullOrEmpty(_strIncludeCategory))
                         {
@@ -252,7 +252,7 @@ namespace Chummer
                         x.AutoCompleteMode = AutoCompleteMode.None;
                         x.DropDownStyle = ComboBoxStyle.DropDownList;
                     }).ConfigureAwait(false);
-                    using (new FetchSafelyFromPool<HashSet<string>>(Utils.StringHashSetPool,
+                    using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                                     out HashSet<string> setAddedExotics))
                     {
                         await _objCharacter.SkillsSection.Skills.ForEachAsync(async objSkill =>
@@ -348,7 +348,7 @@ namespace Chummer
                 Tuple<string, bool> tupSelected
                     = blnForcedExotic
                         ? new Tuple<string, bool>(strForcedExoticSkillName, true)
-                        : (Tuple<string, bool>) await cboSkill.DoThreadSafeFuncAsync(x => x.SelectedValue)
+                        : (Tuple<string, bool>)await cboSkill.DoThreadSafeFuncAsync(x => x.SelectedValue)
                                                               .ConfigureAwait(false);
                 if (!tupSelected.Item2)
                 {
@@ -449,7 +449,7 @@ namespace Chummer
                 {
                     if (xmlCategoryList == null)
                         return;
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdLimitToCategories))
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdLimitToCategories))
                     {
                         foreach (XmlNode objNode in xmlCategoryList)
                         {
@@ -570,16 +570,17 @@ namespace Chummer
         {
             if (string.IsNullOrEmpty(strSelectedCategory))
                 return;
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkillSpecializations))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkillSpecializations))
             {
                 if (_intMinimumRating <= 0)
                 {
+                    CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false);
                     XPathNodeIterator xmlWeaponList = (await _objCharacter.LoadDataXPathAsync("weapons.xml", token: token).ConfigureAwait(false))
                         .Select("/chummer/weapons/weapon[(category = "
                                 + (strSelectedCategory + 's').CleanXPath()
                                 + " or useskill = "
                                 + strSelectedCategory.CleanXPath() + ") and ("
-                                + await _objCharacter.Settings.BookXPathAsync(false, token).ConfigureAwait(false) + ")]");
+                                + await objSettings.BookXPathAsync(false, token).ConfigureAwait(false) + ")]");
                     if (xmlWeaponList.Count > 0)
                     {
                         foreach (XPathNavigator xmlWeapon in xmlWeaponList)
@@ -600,7 +601,7 @@ namespace Chummer
                                                               .ConfigureAwait(false))
                              .Select("/chummer/skills/skill[name = "
                                      + strSelectedCategory.CleanXPath() + " and ("
-                                     + await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false)
+                                     + await objSettings.BookXPathAsync(token: token).ConfigureAwait(false)
                                      + ")]/specs/spec"))
                     {
                         string strName = xmlSpec.Value;
@@ -618,7 +619,7 @@ namespace Chummer
                 {
                     if (await objSkill.GetNameAsync(token).ConfigureAwait(false) != strSelectedCategory)
                         continue;
-                    ExoticSkill objExoticSkill = (ExoticSkill) objSkill;
+                    ExoticSkill objExoticSkill = (ExoticSkill)objSkill;
                     string strSpecific = await objExoticSkill.GetSpecificAsync(token).ConfigureAwait(false);
                     if (_intMinimumRating > 0 || _intMaximumRating < int.MaxValue)
                     {

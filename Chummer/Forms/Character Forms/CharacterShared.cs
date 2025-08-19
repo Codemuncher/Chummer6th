@@ -34,6 +34,7 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
 using Chummer.Backend.Attributes;
+using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using Chummer.UI.Attributes;
 using Microsoft.ApplicationInsights;
@@ -3067,7 +3068,7 @@ namespace Chummer
 
                     case NotifyCollectionChangedAction.Reset:
                         {
-                            await CharacterObject.ImprovementGroups.ForEachAsync(async strLocation =>
+                            await (await CharacterObject.GetImprovementGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(async strLocation =>
                             {
                                 TreeNode objLocation
                                     = await treImprovements.DoThreadSafeFuncAsync(
@@ -7329,7 +7330,7 @@ namespace Chummer
                                 .ConfigureAwait(false);
 
                             // Add the Locations.
-                            await CharacterObject.ImprovementGroups.ForEachAsync(strGroup =>
+                            await (await CharacterObject.GetImprovementGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(strGroup =>
                             {
                                 TreeNode objGroup = new TreeNode
                                 {
@@ -7340,7 +7341,7 @@ namespace Chummer
                                 return treImprovements.DoThreadSafeAsync(x => x.Nodes.Add(objGroup), token);
                             }, token).ConfigureAwait(false);
 
-                            await CharacterObject.Improvements.ForEachAsync(objImprovement =>
+                            await (await CharacterObject.GetImprovementsAsync(token).ConfigureAwait(false)).ForEachAsync(objImprovement =>
                             {
                                 if (objImprovement.ImproveSource == Improvement.ImprovementSource.Custom ||
                                     objImprovement.ImproveSource == Improvement.ImprovementSource.Drug)
@@ -7889,13 +7890,14 @@ namespace Chummer
                 SkipUpdate = true;
                 try
                 {
+                    ThreadSafeBindingList<CalendarWeek> lstCalendarWeeks = await CharacterObject.GetCalendarAsync(token).ConfigureAwait(false);
                     if (listChangedEventArgs == null || listChangedEventArgs.ListChangedType == ListChangedType.Reset)
                     {
                         await lstCalendar.DoThreadSafeAsync(x => x.SuspendLayout(), token).ConfigureAwait(false);
                         try
                         {
                             await lstCalendar.DoThreadSafeAsync(x => x.Items.Clear(), token).ConfigureAwait(false);
-                            await CharacterObject.Calendar.ForEachAsync(async objWeek =>
+                            await lstCalendarWeeks.ForEachAsync(async objWeek =>
                             {
                                 Color objColor = await objWeek.GetPreferredColorAsync(token).ConfigureAwait(false);
                                 ListViewItem.ListViewSubItem objNoteItem = new ListViewItem.ListViewSubItem
@@ -7934,7 +7936,7 @@ namespace Chummer
                             case ListChangedType.ItemAdded:
                                 {
                                     int intInsertIndex = listChangedEventArgs.NewIndex;
-                                    CalendarWeek objWeek = await CharacterObject.Calendar.GetValueAtAsync(intInsertIndex, token).ConfigureAwait(false);
+                                    CalendarWeek objWeek = await lstCalendarWeeks.GetValueAtAsync(intInsertIndex, token).ConfigureAwait(false);
                                     Color objColor = await objWeek.GetPreferredColorAsync(token).ConfigureAwait(false);
                                     ListViewItem.ListViewSubItem objNoteItem = new ListViewItem.ListViewSubItem
                                     {
@@ -7974,7 +7976,7 @@ namespace Chummer
                                         x => x.Items.RemoveAt(listChangedEventArgs.NewIndex),
                                         token).ConfigureAwait(false);
                                     int intInsertIndex = listChangedEventArgs.NewIndex;
-                                    CalendarWeek objWeek = await CharacterObject.Calendar.GetValueAtAsync(intInsertIndex, token).ConfigureAwait(false);
+                                    CalendarWeek objWeek = await lstCalendarWeeks.GetValueAtAsync(intInsertIndex, token).ConfigureAwait(false);
                                     Color objColor = await objWeek.GetPreferredColorAsync(token).ConfigureAwait(false);
                                     ListViewItem.ListViewSubItem objNoteItem = new ListViewItem.ListViewSubItem
                                     {
@@ -8006,7 +8008,7 @@ namespace Chummer
                                         x => x.Items.RemoveAt(listChangedEventArgs.OldIndex),
                                         token).ConfigureAwait(false);
                                     int intInsertIndex = listChangedEventArgs.NewIndex;
-                                    CalendarWeek objWeek = await CharacterObject.Calendar.GetValueAtAsync(intInsertIndex, token).ConfigureAwait(false);
+                                    CalendarWeek objWeek = await lstCalendarWeeks.GetValueAtAsync(intInsertIndex, token).ConfigureAwait(false);
                                     Color objColor = await objWeek.GetPreferredColorAsync(token).ConfigureAwait(false);
                                     ListViewItem.ListViewSubItem objNoteItem = new ListViewItem.ListViewSubItem
                                     {
@@ -10199,7 +10201,7 @@ namespace Chummer
                 await CharacterObject.GetBoundSpiritLimitAsync(token).ConfigureAwait(false))
             {
                 string strExpression = await CharacterObject.ProcessAttributesInXPathForTooltipAsync(
-                    await CharacterObject.Settings.GetBoundSpiritExpressionAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
+                    await CharacterObjectSettings.GetBoundSpiritExpressionAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
                 await Program.ShowScrollableMessageBoxAsync(
                     this,
                     string.Format(GlobalSettings.CultureInfo,
@@ -10213,11 +10215,9 @@ namespace Chummer
                 return;
             }
 
-            Spirit objSpirit = new Spirit(CharacterObject)
-            {
-                EntityType = SpiritType.Spirit,
-                Force = await CharacterObject.GetMaxSpiritForceAsync(token).ConfigureAwait(false)
-            };
+            Spirit objSpirit = new Spirit(CharacterObject);
+            await objSpirit.SetEntityTypeAsync(SpiritType.Spirit, token).ConfigureAwait(false);
+            await objSpirit.SetForceAsync(await CharacterObject.GetMaxSpiritForceAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
             await CharacterObject.Spirits.AddAsync(objSpirit, token: token).ConfigureAwait(false);
             await MakeDirtyWithCharacterUpdate(token).ConfigureAwait(false);
         }
@@ -10234,7 +10234,7 @@ namespace Chummer
                 await CharacterObject.GetRegisteredSpriteLimitAsync(token).ConfigureAwait(false))
             {
                 string strExpression = await CharacterObject.ProcessAttributesInXPathForTooltipAsync(
-                    await CharacterObject.Settings.GetRegisteredSpriteExpressionAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
+                    await CharacterObjectSettings.GetRegisteredSpriteExpressionAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
                 await Program.ShowScrollableMessageBoxAsync(
                     this,
                     string.Format(GlobalSettings.CultureInfo,
@@ -10248,11 +10248,9 @@ namespace Chummer
                 return;
             }
 
-            Spirit objSprite = new Spirit(CharacterObject)
-            {
-                EntityType = SpiritType.Sprite,
-                Force = await CharacterObject.GetMaxSpriteLevelAsync(token).ConfigureAwait(false)
-            };
+            Spirit objSprite = new Spirit(CharacterObject);
+            await objSprite.SetEntityTypeAsync(SpiritType.Sprite, token).ConfigureAwait(false);
+            await objSprite.SetForceAsync(await CharacterObject.GetMaxSpriteLevelAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
             await CharacterObject.Spirits.AddAsync(objSprite, token: token).ConfigureAwait(false);
             await MakeDirtyWithCharacterUpdate(token).ConfigureAwait(false);
         }
@@ -10402,13 +10400,13 @@ namespace Chummer
 
                         if (bmpMugshot.PixelFormat == PixelFormat.Format32bppPArgb)
                         {
-                            await CharacterObject.Mugshots.AddAsync(
+                            await (await CharacterObject.GetMugshotsAsync(GenericToken).ConfigureAwait(false)).AddAsync(
                                     bmpMugshot.Clone() as Bitmap, token)
                                 .ConfigureAwait(false); // Clone makes sure file handle is closed
                         }
                         else
                         {
-                            await CharacterObject.Mugshots.AddAsync(
+                            await (await CharacterObject.GetMugshotsAsync(GenericToken).ConfigureAwait(false)).AddAsync(
                                     bmpMugshot.ConvertPixelFormat(PixelFormat.Format32bppPArgb), token)
                                 .ConfigureAwait(false);
                         }
@@ -10421,7 +10419,7 @@ namespace Chummer
                     if (await CharacterObject.GetMainMugshotIndexAsync(token).ConfigureAwait(false) == -1)
                         await CharacterObject
                             .SetMainMugshotIndexAsync(
-                                await CharacterObject.Mugshots.GetCountAsync(token).ConfigureAwait(false) - 1, token)
+                                await (await CharacterObject.GetMugshotsAsync(GenericToken).ConfigureAwait(false)).GetCountAsync(token).ConfigureAwait(false) - 1, token)
                             .ConfigureAwait(false);
 
                     return true;
@@ -10446,15 +10444,20 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (picMugshot == null)
                 return;
-            if (intCurrentMugshotIndexInList < 0
-                || intCurrentMugshotIndexInList >=
-                await CharacterObject.Mugshots.GetCountAsync(token).ConfigureAwait(false))
+            if (intCurrentMugshotIndexInList < 0)
             {
                 await picMugshot.DoThreadSafeAsync(x => x.Image = null, token: token).ConfigureAwait(false);
                 return;
             }
 
-            Image imgMugshot = await CharacterObject.Mugshots.GetValueAtAsync(intCurrentMugshotIndexInList, token)
+            ThreadSafeList<Image> lstMugshots = await CharacterObject.GetMugshotsAsync(token).ConfigureAwait(false);
+            if (intCurrentMugshotIndexInList >= await lstMugshots.GetCountAsync(token).ConfigureAwait(false))
+            {
+                await picMugshot.DoThreadSafeAsync(x => x.Image = null, token: token).ConfigureAwait(false);
+                return;
+            }
+
+            Image imgMugshot = await lstMugshots.GetValueAtAsync(intCurrentMugshotIndexInList, token)
                 .ConfigureAwait(false);
             if (imgMugshot == null)
             {
@@ -10483,25 +10486,26 @@ namespace Chummer
         /// Remove a mugshot of a character.
         /// </summary>
         /// <param name="intCurrentMugshotIndexInList"></param>
-        protected async Task RemoveMugshot(int intCurrentMugshotIndexInList)
+        protected async Task RemoveMugshot(int intCurrentMugshotIndexInList, CancellationToken token = default)
         {
-            if (intCurrentMugshotIndexInList < 0 || intCurrentMugshotIndexInList >=
-                await CharacterObject.Mugshots.GetCountAsync(GenericToken).ConfigureAwait(false))
-            {
+            token.ThrowIfCancellationRequested();
+            if (intCurrentMugshotIndexInList < 0)
                 return;
-            }
 
-            await CharacterObject.Mugshots.RemoveAtAsync(intCurrentMugshotIndexInList, GenericToken)
-                .ConfigureAwait(false);
+            ThreadSafeList<Image> lstMugshots = await CharacterObject.GetMugshotsAsync(token).ConfigureAwait(false);
+            if (intCurrentMugshotIndexInList >= await lstMugshots.GetCountAsync(token).ConfigureAwait(false))
+                return;
+
+            await lstMugshots.RemoveAtAsync(intCurrentMugshotIndexInList, token).ConfigureAwait(false);
             int intMainMugshotIndex =
-                await CharacterObject.GetMainMugshotIndexAsync(GenericToken).ConfigureAwait(false);
+                await CharacterObject.GetMainMugshotIndexAsync(token).ConfigureAwait(false);
             if (intCurrentMugshotIndexInList == intMainMugshotIndex)
             {
-                await CharacterObject.SetMainMugshotIndexAsync(-1, GenericToken).ConfigureAwait(false);
+                await CharacterObject.SetMainMugshotIndexAsync(-1, token).ConfigureAwait(false);
             }
             else if (intCurrentMugshotIndexInList < intMainMugshotIndex)
             {
-                await CharacterObject.ModifyMainMugshotIndexAsync(-1, GenericToken).ConfigureAwait(false);
+                await CharacterObject.ModifyMainMugshotIndexAsync(-1, token).ConfigureAwait(false);
             }
         }
 
@@ -10672,7 +10676,6 @@ namespace Chummer
                     Interlocked.Increment(ref _intRefreshingCount);
             }
         }
-
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool IsLoading

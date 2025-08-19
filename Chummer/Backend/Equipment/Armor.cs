@@ -32,6 +32,7 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
 using NLog;
+using Chummer.Backend.Enums;
 
 namespace Chummer.Backend.Equipment
 {

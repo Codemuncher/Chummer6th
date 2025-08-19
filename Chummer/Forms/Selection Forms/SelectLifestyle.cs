@@ -28,6 +28,7 @@ using System.Xml;
 using System.Xml.XPath;
 using Chummer.Backend.Equipment;
 using Timer = System.Windows.Forms.Timer;
+using Chummer.Backend.Enums;
 
 namespace Chummer
 {

@@ -51,6 +51,7 @@ using Newtonsoft.Json;
 using NLog;
 using Application = System.Windows.Forms.Application;
 using System.Buffers;
+using Chummer.Backend.Enums;
 
 namespace Chummer
 {
@@ -377,7 +378,7 @@ namespace Chummer
         private async Task CalendarOnBeforeRemove(object sender, RemovingOldEventArgs e, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            await (await Calendar.GetValueAtAsync(e.OldIndex, token).ConfigureAwait(false)).DisposeAsync()
+            await (await (await GetCalendarAsync(token).ConfigureAwait(false)).GetValueAtAsync(e.OldIndex, token).ConfigureAwait(false)).DisposeAsync()
                     .ConfigureAwait(false);
         }
 
@@ -1076,7 +1077,7 @@ namespace Chummer
                                         await this.GetNodeXPathAsync(token: token).ConfigureAwait(false);
                                     if (objNode?.SelectSingleNodeAndCacheExpression("initiativedice", token: token) == null)
                                     {
-                                        _intInitiativeDice = await Settings.GetMinInitiativeDiceAsync(token).ConfigureAwait(false);
+                                        _intInitiativeDice = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetMinInitiativeDiceAsync(token).ConfigureAwait(false);
                                         setPropertiesToRefresh.Add(nameof(InitiativeDice));
                                     }
                                 }
@@ -1131,22 +1132,22 @@ namespace Chummer
                             break;
 
                         case nameof(CharacterSettings.EncumbrancePenaltyPhysicalLimit):
-                            if (await Settings.GetDoEncumbrancePenaltyPhysicalLimitAsync(token).ConfigureAwait(false))
+                            if (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetDoEncumbrancePenaltyPhysicalLimitAsync(token).ConfigureAwait(false))
                                 setPropertiesToRefresh.Add(nameof(Encumbrance));
                             break;
 
                         case nameof(CharacterSettings.EncumbrancePenaltyMovementSpeed):
-                            if (await Settings.GetDoEncumbrancePenaltyMovementSpeedAsync(token).ConfigureAwait(false))
+                            if (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetDoEncumbrancePenaltyMovementSpeedAsync(token).ConfigureAwait(false))
                                 setPropertiesToRefresh.Add(nameof(Encumbrance));
                             break;
 
                         case nameof(CharacterSettings.EncumbrancePenaltyAgility):
-                            if (await Settings.GetDoEncumbrancePenaltyAgilityAsync(token).ConfigureAwait(false))
+                            if (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetDoEncumbrancePenaltyAgilityAsync(token).ConfigureAwait(false))
                                 setPropertiesToRefresh.Add(nameof(Encumbrance));
                             break;
 
                         case nameof(CharacterSettings.EncumbrancePenaltyReaction):
-                            if (await Settings.GetDoEncumbrancePenaltyReactionAsync(token).ConfigureAwait(false))
+                            if (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetDoEncumbrancePenaltyReactionAsync(token).ConfigureAwait(false))
                                 setPropertiesToRefresh.Add(nameof(Encumbrance));
                             break;
 
@@ -1156,7 +1157,7 @@ namespace Chummer
                             break;
 
                         case nameof(CharacterSettings.EncumbrancePenaltyWoundModifier):
-                            if (await Settings.GetDoEncumbrancePenaltyWoundModifierAsync(token).ConfigureAwait(false))
+                            if (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetDoEncumbrancePenaltyWoundModifierAsync(token).ConfigureAwait(false))
                             {
                                 setPropertiesToRefresh.Add(nameof(WoundModifier));
                                 setPropertiesToRefresh.Add(nameof(Encumbrance));
@@ -2447,6 +2448,7 @@ namespace Chummer
                         {
                             case NotifyCollectionChangedAction.Add:
                                 {
+                                    CharacterSettings objSettings = await GetSettingsAsync(token).ConfigureAwait(false);
                                     foreach (Cyberware objNewItem in e.NewItems)
                                     {
                                         token.ThrowIfCancellationRequested();
@@ -2484,11 +2486,11 @@ namespace Chummer
                                         }
 
                                         if (!blnDoCyberlimbAttributesRefresh
-                                            && !await Settings.GetDontUseCyberlimbCalculationAsync(token)
+                                            && !await objSettings.GetDontUseCyberlimbCalculationAsync(token)
                                                 .ConfigureAwait(false) && await objNewItem.GetParentAsync(token).ConfigureAwait(false) == null
                                             && await objNewItem.GetParentVehicleAsync(token).ConfigureAwait(false) == null
                                             && await objNewItem.GetIsLimbAsync(token).ConfigureAwait(false)
-                                            && !(await Settings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
+                                            && !(await objSettings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
                                                 await objNewItem.GetLimbSlotAsync(token).ConfigureAwait(false)))
                                         {
                                             blnDoCyberlimbAttributesRefresh = true;
@@ -2499,6 +2501,7 @@ namespace Chummer
                                 }
                             case NotifyCollectionChangedAction.Remove:
                                 {
+                                    CharacterSettings objSettings = await GetSettingsAsync(token).ConfigureAwait(false);
                                     foreach (Cyberware objOldItem in e.OldItems)
                                     {
                                         token.ThrowIfCancellationRequested();
@@ -2507,11 +2510,11 @@ namespace Chummer
                                             blnDoEncumbranceRefresh = true;
                                         dicChangedProperties[this].Add(await objOldItem.GetEssencePropertyNameAsync(token).ConfigureAwait(false));
                                         if (!blnDoCyberlimbAttributesRefresh
-                                            && !await Settings.GetDontUseCyberlimbCalculationAsync(token)
+                                            && !await objSettings.GetDontUseCyberlimbCalculationAsync(token)
                                                 .ConfigureAwait(false) && await objOldItem.GetParentAsync(token).ConfigureAwait(false) == null
                                             && await objOldItem.GetParentVehicleAsync(token).ConfigureAwait(false) == null
                                             && await objOldItem.GetIsLimbAsync(token).ConfigureAwait(false)
-                                            && !(await Settings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
+                                            && !(await objSettings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
                                                 await objOldItem.GetLimbSlotAsync(token).ConfigureAwait(false)))
                                         {
                                             blnDoCyberlimbAttributesRefresh = true;
@@ -2522,7 +2525,8 @@ namespace Chummer
                                 }
                             case NotifyCollectionChangedAction.Replace:
                                 {
-                                    if (!await Settings.GetDontUseCyberlimbCalculationAsync(token).ConfigureAwait(false))
+                                    CharacterSettings objSettings = await GetSettingsAsync(token).ConfigureAwait(false);
+                                    if (!await objSettings.GetDontUseCyberlimbCalculationAsync(token).ConfigureAwait(false))
                                     {
                                         foreach (Cyberware objOldItem in e.OldItems)
                                         {
@@ -2533,11 +2537,11 @@ namespace Chummer
                                             dicChangedProperties[this]
                                                 .Add(await objOldItem.GetEssencePropertyNameAsync(token).ConfigureAwait(false));
                                             if (!blnDoCyberlimbAttributesRefresh
-                                                && !await Settings.GetDontUseCyberlimbCalculationAsync(token)
+                                                && !await objSettings.GetDontUseCyberlimbCalculationAsync(token)
                                                     .ConfigureAwait(false) && await objOldItem.GetParentAsync(token).ConfigureAwait(false) == null
                                                 && await objOldItem.GetParentVehicleAsync(token).ConfigureAwait(false) == null
                                                 && await objOldItem.GetIsLimbAsync(token).ConfigureAwait(false)
-                                                && !(await Settings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
+                                                && !(await objSettings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
                                                     await objOldItem.GetLimbSlotAsync(token).ConfigureAwait(false)))
                                             {
                                                 blnDoCyberlimbAttributesRefresh = true;
@@ -2553,11 +2557,11 @@ namespace Chummer
                                             dicChangedProperties[this]
                                                 .Add(await objNewItem.GetEssencePropertyNameAsync(token).ConfigureAwait(false));
                                             if (!blnDoCyberlimbAttributesRefresh
-                                                && !await Settings.GetDontUseCyberlimbCalculationAsync(token)
+                                                && !await objSettings.GetDontUseCyberlimbCalculationAsync(token)
                                                     .ConfigureAwait(false) && await objNewItem.GetParentAsync(token).ConfigureAwait(false) == null
                                                 && await objNewItem.GetParentVehicleAsync(token).ConfigureAwait(false) == null
                                                 && await objNewItem.GetIsLimbAsync(token).ConfigureAwait(false)
-                                                && !(await Settings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
+                                                && !(await objSettings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false)).Contains(
                                                     await objNewItem.GetLimbSlotAsync(token).ConfigureAwait(false)))
                                             {
                                                 blnDoCyberlimbAttributesRefresh = true;
@@ -2571,7 +2575,7 @@ namespace Chummer
                                 {
                                     blnDoEncumbranceRefresh = true;
                                     blnDoCyberlimbAttributesRefresh =
-                                        !await Settings.GetDontUseCyberlimbCalculationAsync(token).ConfigureAwait(false);
+                                        !await (await GetSettingsAsync(token).ConfigureAwait(false)).GetDontUseCyberlimbCalculationAsync(token).ConfigureAwait(false);
 
                                     if (!dicChangedProperties.TryGetValue(this,
                                             out HashSet<string> setChangedProperties))
@@ -3455,7 +3459,7 @@ namespace Chummer
                 Page = charNode["page"]?.InnerText ?? "0";
                 _intMetatypeBP = 0;
                 charNode.TryGetInt32FieldQuickly("karma", ref _intMetatypeBP);
-                _intInitiativeDice = Settings.MinInitiativeDice;
+                _intInitiativeDice = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetMinInitiativeDiceAsync(token).ConfigureAwait(false);
                 charNode.TryGetInt32FieldQuickly("initiativedice", ref _intInitiativeDice);
 
                 Movement = objXmlMetatype["movement"]?.InnerText ?? string.Empty;
@@ -7584,7 +7588,7 @@ namespace Chummer
                                             // Cyberadept in these versions was an echo. It is no longer an echo, and so needs a more complicated reapplication
                                             if (blnSync
                                                     ? Settings.SpecialKarmaCostBasedOnShownValue
-                                                    : await Settings.GetSpecialKarmaCostBasedOnShownValueAsync(token).ConfigureAwait(false))
+                                                    : await (await GetSettingsAsync(token).ConfigureAwait(false)).GetSpecialKarmaCostBasedOnShownValueAsync(token).ConfigureAwait(false))
                                             {
                                                 if (blnSync)
                                                     // ReSharper disable once MethodHasAsyncOverloadWithCancellation
@@ -9676,12 +9680,17 @@ namespace Chummer
                                 foreach (XmlNode objXmlWeapon in objXmlNodeList)
                                 {
                                     Weapon objWeapon = new Weapon(this);
-                                    objWeapon.Load(objXmlWeapon);
                                     if (blnSync)
+                                    {
+                                        objWeapon.Load(objXmlWeapon);
                                         // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                         _lstWeapons.Add(objWeapon);
+                                    }
                                     else
+                                    {
+                                        await objWeapon.LoadAsync(objXmlWeapon, token: token).ConfigureAwait(false);
                                         await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                    }
                                 }
 
                                 //Timekeeper.Finish("load_char_weapons");
@@ -9956,8 +9965,7 @@ namespace Chummer
                                 objXmlNodeList = objXmlCharacter.SelectNodes("sustainedobjects");
                                 foreach (XmlNode objXmlSustained in objXmlNodeList)
                                 {
-                                    SustainedObject objSustained = new SustainedObject(this);
-                                    objSustained.Load(objXmlSustained);
+                                    SustainedObject objSustained = new SustainedObject(this, objXmlSustained);
                                     if (!objSustained.InternalId.IsEmptyGuid())
                                     {
                                         if (blnSync)
@@ -10796,7 +10804,7 @@ namespace Chummer
                             token: token).ConfigureAwait(false);
                     // <buildmethod />
                     await objWriter
-                        .WriteElementStringAsync("buildmethod", Settings.BuildMethod.ToString(), token: token)
+                        .WriteElementStringAsync("buildmethod", (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetBuildMethodAsync(token).ConfigureAwait(false)).ToString(), token: token)
                         .ConfigureAwait(false);
                     // <imageformat />
                     await objWriter.WriteElementStringAsync("imageformat",
@@ -16587,9 +16595,10 @@ namespace Chummer
             string strLocation = nodOldNode.Tag.ToString();
             using (LockObject.EnterUpgradeableReadLock(token))
             {
-                if (!ImprovementGroups.Contains(strNewGroup))
+                ThreadSafeObservableCollection<string> lstImprovementGroups = ImprovementGroups;
+                if (!lstImprovementGroups.Contains(strNewGroup))
                     intNewIndex = 0;
-                ImprovementGroups.Move(ImprovementGroups.IndexOf(strLocation), intNewIndex);
+                lstImprovementGroups.Move(lstImprovementGroups.IndexOf(strLocation), intNewIndex);
             }
         }
 
@@ -16620,9 +16629,10 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (!await ImprovementGroups.ContainsAsync(strNewGroup, token).ConfigureAwait(false))
+                ThreadSafeObservableCollection<string> lstImprovementGroups = await GetImprovementGroupsAsync(token).ConfigureAwait(false);
+                if (!await lstImprovementGroups.ContainsAsync(strNewGroup, token).ConfigureAwait(false))
                     intNewIndex = 0;
-                await ImprovementGroups.MoveAsync(await ImprovementGroups.IndexOfAsync(strLocation, token).ConfigureAwait(false), intNewIndex, token).ConfigureAwait(false);
+                await lstImprovementGroups.MoveAsync(await lstImprovementGroups.IndexOfAsync(strLocation, token).ConfigureAwait(false), intNewIndex, token).ConfigureAwait(false);
             }
             finally
             {
@@ -16768,7 +16778,7 @@ namespace Chummer
                         if (i < await lstSpirits.GetCountAsync(token).ConfigureAwait(false))
                         {
                             Spirit objToRemove = await lstSpirits.GetValueAtAsync(i, token).ConfigureAwait(false);
-                            if (objToRemove.EntityType == SpiritType.Spirit)
+                            if (await objToRemove.GetEntityTypeAsync(token).ConfigureAwait(false) == SpiritType.Spirit)
                             {
                                 await lstSpirits.RemoveAtAsync(i, token).ConfigureAwait(false);
                             }
@@ -16969,7 +16979,7 @@ namespace Chummer
                         if (i < await lstSpirits.GetCountAsync(token).ConfigureAwait(false))
                         {
                             Spirit objToRemove = await lstSpirits.GetValueAtAsync(i, token).ConfigureAwait(false);
-                            if (objToRemove.EntityType == SpiritType.Sprite)
+                            if (await objToRemove.GetEntityTypeAsync(token).ConfigureAwait(false) == SpiritType.Sprite)
                             {
                                 await lstSpirits.RemoveAtAsync(i, token).ConfigureAwait(false);
                             }
@@ -17377,7 +17387,7 @@ namespace Chummer
             {
                 using (LockObject.EnterUpgradeableReadLock())
                 {
-                    IDisposable objReaderLock = value?.LockObject.EnterUpgradeableReadLock();
+                    IDisposable objReaderLock = value?.IsDisposed == false ? value.LockObject.EnterUpgradeableReadLock() : null;
                     try
                     {
                         CharacterSettings objOldSettings = Interlocked.Exchange(ref _objSettings, value);
@@ -17387,7 +17397,7 @@ namespace Chummer
                             if (ReferenceEquals(objOldSettings, value))
                                 return;
                             bool blnActuallyDifferentSettings = objOldSettings?.HasIdenticalSettings(value) != false;
-                            if (objOldSettings != null)
+                            if (objOldSettings?.IsDisposed == false)
                             {
                                 try
                                 {
@@ -17398,13 +17408,22 @@ namespace Chummer
                                     //swallow this
                                 }
                             }
-                            if (value != null)
-                                value.MultiplePropertiesChangedAsync += OptionsOnPropertyChanged;
+                            if (value?.IsDisposed == false)
+                            {
+                                try
+                                {
+                                    value.MultiplePropertiesChangedAsync += OptionsOnPropertyChanged;
+                                }
+                                catch (ObjectDisposedException)
+                                {
+                                    //swallow this
+                                }
+                            }
 
                             if (!blnActuallyDifferentSettings || IsLoading)
                                 return;
                             OnPropertyChanged();
-                            if (value != null)
+                            if (value?.IsDisposed == false)
                             {
                                 Utils.SafelyRunSynchronously(async () =>
                                 {
@@ -17465,7 +17484,7 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 IAsyncDisposable objLocker2 = null;
-                if (value != null)
+                if (value?.IsDisposed == false)
                     objLocker2 = await value.LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
                 try
                 {
@@ -17481,14 +17500,14 @@ namespace Chummer
                         if (ReferenceEquals(objOldSettings, value))
                             return;
                         bool blnActuallyDifferentSettings = true;
-                        if (objOldSettings != null)
+                        if (objOldSettings?.IsDisposed == false)
                         {
                             blnActuallyDifferentSettings = !await objOldSettings.HasIdenticalSettingsAsync(value, token)
                                 .ConfigureAwait(false);
                             objOldSettings.MultiplePropertiesChangedAsync -= OptionsOnPropertyChanged;
                         }
 
-                        if (value != null)
+                        if (value?.IsDisposed == false)
                         {
                             value.MultiplePropertiesChangedAsync += OptionsOnPropertyChanged;
                         }
@@ -17496,7 +17515,7 @@ namespace Chummer
                         if (!blnActuallyDifferentSettings || IsLoading)
                             return;
                         await OnPropertyChangedAsync(nameof(Settings), token).ConfigureAwait(false);
-                        if (value != null)
+                        if (value?.IsDisposed == false)
                         {
                             await OptionsOnMultiplePropertyChanged(await value
                                     .GetDifferingPropertyNamesAsync(objOldSettings, token).ConfigureAwait(false), token)
@@ -17785,6 +17804,24 @@ namespace Chummer
         }
 
         /// <summary>
+        /// Character's portraits encoded using Base64.
+        /// </summary>
+        public async Task<ThreadSafeList<Image>> GetMugshotsAsync(CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                return _lstMugshots;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
         /// Character's main portrait encoded using Base64.
         /// </summary>
         public Image MainMugshot
@@ -17838,10 +17875,13 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 int intIndex = await GetMainMugshotIndexAsync(token).ConfigureAwait(false);
-                if (intIndex >= await Mugshots.GetCountAsync(token).ConfigureAwait(false) || intIndex < 0)
+                if (intIndex < 0)
+                    return null;
+                ThreadSafeList<Image> lstMugshots = await GetMugshotsAsync(token).ConfigureAwait(false);
+                if (intIndex >= await lstMugshots.GetCountAsync(token).ConfigureAwait(false))
                     return null;
 
-                return await Mugshots.GetValueAtAsync(intIndex, token).ConfigureAwait(false);
+                return await lstMugshots.GetValueAtAsync(intIndex, token).ConfigureAwait(false);
             }
             finally
             {
@@ -17864,7 +17904,8 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                int intNewMainMugshotIndex = await Mugshots.IndexOfAsync(value, token).ConfigureAwait(false);
+                ThreadSafeList<Image> lstMugshots = await GetMugshotsAsync(token).ConfigureAwait(false);
+                int intNewMainMugshotIndex = await lstMugshots.IndexOfAsync(value, token).ConfigureAwait(false);
                 if (intNewMainMugshotIndex != -1)
                 {
                     await SetMainMugshotIndexAsync(intNewMainMugshotIndex, token).ConfigureAwait(false);
@@ -17875,12 +17916,12 @@ namespace Chummer
                     try
                     {
                         token.ThrowIfCancellationRequested();
-                        IAsyncDisposable objLocker3 = await Mugshots.LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                        IAsyncDisposable objLocker3 = await lstMugshots.LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
                         try
                         {
                             token.ThrowIfCancellationRequested();
-                            await Mugshots.AddAsync(value, token).ConfigureAwait(false);
-                            await SetMainMugshotIndexAsync(await Mugshots.IndexOfAsync(value, token).ConfigureAwait(false), token).ConfigureAwait(false);
+                            await lstMugshots.AddAsync(value, token).ConfigureAwait(false);
+                            await SetMainMugshotIndexAsync(await lstMugshots.IndexOfAsync(value, token).ConfigureAwait(false), token).ConfigureAwait(false);
                         }
                         finally
                         {
@@ -17955,7 +17996,7 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (value >= await Mugshots.GetCountAsync(token).ConfigureAwait(false))
+                if (value >= await (await GetMugshotsAsync(token).ConfigureAwait(false)).GetCountAsync(token).ConfigureAwait(false))
                     value = -1;
                 if (Interlocked.Exchange(ref _intMainMugshotIndex, value) != value)
                     await OnPropertyChangedAsync(nameof(MainMugshotIndex), token).ConfigureAwait(false);
@@ -17980,7 +18021,7 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 int intOldValue = _intMainMugshotIndex;
                 int intNewValue = Interlocked.Add(ref _intMainMugshotIndex, value);
-                if (intNewValue < -1 || intNewValue >= await Mugshots.GetCountAsync(token).ConfigureAwait(false))
+                if (intNewValue < -1 || intNewValue >= await (await GetMugshotsAsync(token).ConfigureAwait(false)).GetCountAsync(token).ConfigureAwait(false))
                     intNewValue = -1;
                 if (intOldValue != intNewValue)
                     await OnPropertyChangedAsync(nameof(MainMugshotIndex), token).ConfigureAwait(false);
@@ -18046,7 +18087,7 @@ namespace Chummer
                     try
                     {
                         token.ThrowIfCancellationRequested();
-                        await Mugshots.ForEachAsync(async imgMugshot =>
+                        await (await GetMugshotsAsync(token).ConfigureAwait(false)).ForEachAsync(async imgMugshot =>
                         {
                             await objWriter.WriteElementStringAsync(
                                 "mugshot",
@@ -18099,7 +18140,7 @@ namespace Chummer
                 }
 
                 // Legacy Shimmer
-                if (Mugshots.Count == 0)
+                if (_lstMugshots.Count == 0)
                 {
                     XPathNavigator objOldMugshotNode = xmlSavedNode.SelectSingleNodeAndCacheExpression("mugshot", token);
                     string strMugshot = objOldMugshotNode?.Value;
@@ -18148,7 +18189,7 @@ namespace Chummer
                 }
 
                 // Legacy Shimmer
-                if (await Mugshots.GetCountAsync(token).ConfigureAwait(false) == 0)
+                if (await _lstMugshots.GetCountAsync(token).ConfigureAwait(false) == 0)
                 {
                     XPathNavigator objOldMugshotNode = xmlSavedNode.SelectSingleNodeAndCacheExpression("mugshot", token);
                     string strMugshot = objOldMugshotNode?.Value;
@@ -18173,7 +18214,8 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (await Mugshots.GetCountAsync(token).ConfigureAwait(false) > 0)
+                ThreadSafeList<Image> lstMugshots = await GetMugshotsAsync(token).ConfigureAwait(false);
+                if (await lstMugshots.GetCountAsync(token).ConfigureAwait(false) > 0)
                 {
                     // Since IE is retarded and can't handle base64 images before IE9, the image needs to be dumped to a temporary directory and its information rewritten.
                     // If you give it an extension of jpg, gif, or png, it expects the file to be in that format and won't render the image unless it was originally that type.
@@ -18202,7 +18244,7 @@ namespace Chummer
 
                     // <othermugshots>
                     await objWriter.WriteElementStringAsync("hasothermugshots",
-                                                            (imgMainMugshot == null || await Mugshots.GetCountAsync(token).ConfigureAwait(false) > 1).ToString(
+                                                            (imgMainMugshot == null || await lstMugshots.GetCountAsync(token).ConfigureAwait(false) > 1).ToString(
                                                                 GlobalSettings.InvariantCultureInfo), token: token).ConfigureAwait(false);
 
                     // <othermugshots>
@@ -18210,11 +18252,11 @@ namespace Chummer
                     try
                     {
                         token.ThrowIfCancellationRequested();
-                        for (int i = 0; i < await Mugshots.GetCountAsync(token).ConfigureAwait(false); ++i)
+                        for (int i = 0; i < await lstMugshots.GetCountAsync(token).ConfigureAwait(false); ++i)
                         {
                             if (i == await GetMainMugshotIndexAsync(token).ConfigureAwait(false))
                                 continue;
-                            Image imgMugshot = await Mugshots.GetValueAtAsync(i, token).ConfigureAwait(false);
+                            Image imgMugshot = await lstMugshots.GetValueAtAsync(i, token).ConfigureAwait(false);
 
                             // <mugshot>
                             XmlElementWriteHelper objMugshotElement = await objWriter.StartElementAsync("mugshot", token: token).ConfigureAwait(false);
@@ -22634,7 +22676,7 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (strAttribute == "MAGAdept" && !blnExplicit && (!await GetIsMysticAdeptAsync(token).ConfigureAwait(false) || !await Settings.GetMysAdeptSecondMAGAttributeAsync(token).ConfigureAwait(false)))
+                if (strAttribute == "MAGAdept" && !blnExplicit && (!await GetIsMysticAdeptAsync(token).ConfigureAwait(false) || !await (await GetSettingsAsync(token).ConfigureAwait(false)).GetMysAdeptSecondMAGAttributeAsync(token).ConfigureAwait(false)))
                     strAttribute = "MAG";
                 return await (await GetAttributeSectionAsync(token).ConfigureAwait(false)).GetAttributeByNameAsync(strAttribute, token).ConfigureAwait(false);
             }
@@ -23613,7 +23655,7 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (_intBoundSpiritLimit == int.MinValue)
                 {
-                    string strExpression = await Settings.GetBoundSpiritExpressionAsync(token).ConfigureAwait(false);
+                    string strExpression = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetBoundSpiritExpressionAsync(token).ConfigureAwait(false);
                     if (strExpression.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                     {
                         strExpression = await ProcessAttributesInXPathAsync(strExpression, token: token).ConfigureAwait(false);
@@ -23715,7 +23757,7 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (_intRegisteredSpriteLimit == int.MinValue)
                 {
-                    string strExpression = await Settings.GetRegisteredSpriteExpressionAsync(token).ConfigureAwait(false);
+                    string strExpression = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetRegisteredSpriteExpressionAsync(token).ConfigureAwait(false);
                     if (strExpression.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                     {
                         strExpression = await ProcessAttributesInXPathAsync(strExpression, token: token).ConfigureAwait(false);
@@ -26947,7 +26989,7 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 return (await GetCyberwareEssenceAsync(token).ConfigureAwait(false)).ToString(
-                    await Settings.GetEssenceFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo);
+                    await (await GetSettingsAsync(token).ConfigureAwait(false)).GetEssenceFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo);
             }
             finally
             {
@@ -26972,7 +27014,7 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 return (await GetBiowareEssenceAsync(token).ConfigureAwait(false)).ToString(
-                    await Settings.GetEssenceFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo);
+                    await (await GetSettingsAsync(token).ConfigureAwait(false)).GetEssenceFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo);
             }
             finally
             {
@@ -26997,7 +27039,7 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 return (await GetEssenceHoleAsync(token).ConfigureAwait(false)).ToString(
-                    await Settings.GetEssenceFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo);
+                    await (await GetSettingsAsync(token).ConfigureAwait(false)).GetEssenceFormatAsync(token).ConfigureAwait(false), GlobalSettings.CultureInfo);
             }
             finally
             {
@@ -27028,13 +27070,12 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
+                string strEssenceFormat = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetEssenceFormatAsync(token).ConfigureAwait(false);
                 return (await GetPrototypeTranshumanEssenceUsedAsync(token).ConfigureAwait(false)).ToString(
-                           await Settings.GetEssenceFormatAsync(token).ConfigureAwait(false),
-                           GlobalSettings.CultureInfo) +
+                           strEssenceFormat, GlobalSettings.CultureInfo) +
                        strSpace + '/' + strSpace +
                        (await GetPrototypeTranshumanAsync(token).ConfigureAwait(false)).ToString(
-                           await Settings.GetEssenceFormatAsync(token).ConfigureAwait(false),
-                           GlobalSettings.CultureInfo);
+                           strEssenceFormat, GlobalSettings.CultureInfo);
             }
             finally
             {
@@ -30225,7 +30266,7 @@ namespace Chummer
                     (await ImprovementManager
                         .ValueOfAsync(this, Improvement.ImprovementType.PublicAwareness, token: token)
                         .ConfigureAwait(false)).StandardRound();
-                if (await Settings.GetUseCalculatedPublicAwarenessAsync(token).ConfigureAwait(false))
+                if (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetUseCalculatedPublicAwarenessAsync(token).ConfigureAwait(false))
                 {
                     // Public Awareness is calculated as (Street Cred + Notoriety) / 3, rounded down.
                     intReturn += (await GetTotalStreetCredAsync(token).ConfigureAwait(false) +
@@ -30417,7 +30458,7 @@ namespace Chummer
                             .Append(objImprovement.Value.ToString(GlobalSettings.CultureInfo)).Append(')');
                     }
 
-                    if (await Settings.GetUseCalculatedPublicAwarenessAsync(token).ConfigureAwait(false))
+                    if (await (await GetSettingsAsync(token).ConfigureAwait(false)).GetUseCalculatedPublicAwarenessAsync(token).ConfigureAwait(false))
                     {
                         sbdReturn.Append(strSpace).Append('+').Append(strSpace).Append('[')
                             .Append(await LanguageManager.GetStringAsync("String_StreetCred", token: token)
@@ -31774,7 +31815,7 @@ namespace Chummer
                     }
                 }
 
-                int intAverageStrength = Settings.UncappedArmorAccessoryBonuses
+                int intAverageStrength = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetUncappedArmorAccessoryBonusesAsync(token).ConfigureAwait(false)
                     ? int.MaxValue
                     : await (await GetAttributeAsync("STR", token: token).ConfigureAwait(false)).GetTotalValueAsync(token).ConfigureAwait(false);
 
@@ -36125,7 +36166,7 @@ namespace Chummer
                 }
 
                 // Run through list of Armor again to cap off any whose stacking bonuses are greater than STR
-                if (!await Settings.GetUncappedArmorAccessoryBonusesAsync(token).ConfigureAwait(false))
+                if (!await (await GetSettingsAsync(token).ConfigureAwait(false)).GetUncappedArmorAccessoryBonusesAsync(token).ConfigureAwait(false))
                 {
                     foreach (Armor objArmor in lstArmorsToConsider)
                     {
@@ -37322,7 +37363,7 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 return '=' + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) +
-                       (await GetTotalStartingNuyenAsync(token).ConfigureAwait(false)).ToString(await Settings.GetNuyenFormatAsync(token).ConfigureAwait(false),
+                       (await GetTotalStartingNuyenAsync(token).ConfigureAwait(false)).ToString(await (await GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false),
                            GlobalSettings.CultureInfo) +
                        await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
             }
@@ -39331,7 +39372,7 @@ namespace Chummer
             get
             {
                 using (LockObject.EnterReadLock())
-                    return AttributeSection.AttributeCategory == CharacterAttrib.AttributeCategory.Standard
+                    return AttributeSection.AttributeCategory == AttributeCategory.Standard
                         ? WalkString
                         : WalkAltString;
             }
@@ -39342,7 +39383,7 @@ namespace Chummer
             get
             {
                 using (LockObject.EnterReadLock())
-                    return AttributeSection.AttributeCategory == CharacterAttrib.AttributeCategory.Standard
+                    return AttributeSection.AttributeCategory == AttributeCategory.Standard
                         ? RunString
                         : RunAltString;
             }
@@ -39353,7 +39394,7 @@ namespace Chummer
             get
             {
                 using (LockObject.EnterReadLock())
-                    return AttributeSection.AttributeCategory == CharacterAttrib.AttributeCategory.Standard
+                    return AttributeSection.AttributeCategory == AttributeCategory.Standard
                         ? SprintString
                         : SprintAltString;
             }
@@ -39367,7 +39408,7 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 return await (await GetAttributeSectionAsync(token).ConfigureAwait(false))
                              .GetAttributeCategoryAsync(token).ConfigureAwait(false)
-                       != CharacterAttrib.AttributeCategory.Standard
+                       != AttributeCategory.Standard
                     ? await GetWalkAltStringAsync(token).ConfigureAwait(false)
                     : await GetWalkStringAsync(token).ConfigureAwait(false);
             }
@@ -39385,7 +39426,7 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 return await (await GetAttributeSectionAsync(token).ConfigureAwait(false))
                              .GetAttributeCategoryAsync(token).ConfigureAwait(false)
-                       != CharacterAttrib.AttributeCategory.Standard
+                       != AttributeCategory.Standard
                     ? await GetRunAltStringAsync(token).ConfigureAwait(false)
                     : await GetRunStringAsync(token).ConfigureAwait(false);
             }
@@ -39403,7 +39444,7 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 return await (await GetAttributeSectionAsync(token).ConfigureAwait(false))
                              .GetAttributeCategoryAsync(token).ConfigureAwait(false)
-                       != CharacterAttrib.AttributeCategory.Standard
+                       != AttributeCategory.Standard
                     ? await GetSprintAltStringAsync(token).ConfigureAwait(false)
                     : await GetSprintStringAsync(token).ConfigureAwait(false);
             }
@@ -39988,6 +40029,11 @@ namespace Chummer
             }
             set
             {
+                using (LockObject.EnterReadLock())
+                {
+                    if (_intMetatypeBP == value)
+                        return;
+                }
                 using (LockObject.EnterUpgradeableReadLock())
                 {
                     if (Interlocked.Exchange(ref _intMetatypeBP, value) == value)
@@ -40011,6 +40057,33 @@ namespace Chummer
             }
         }
 
+        public async Task SetMetatypeBPAsync(int value, CancellationToken token = default)
+        {
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (_intMetatypeBP == value)
+                    return;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+            objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (Interlocked.Exchange(ref _intMetatypeBP, value) == value)
+                    return;
+                await OnPropertyChangedAsync(nameof(MetatypeBP), token).ConfigureAwait(false);
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
         /// <summary>
         /// MetatypeBP as a string, including Karma string and multiplied by options as relevant.
         /// TODO: Belongs in a viewmodel for frmCreate rather than the main character class?
@@ -40019,27 +40092,60 @@ namespace Chummer
         {
             get
             {
-                string s = string.Empty;
+                string strReturn = string.Empty;
                 using (LockObject.EnterReadLock())
                 {
                     switch (EffectiveBuildMethod)
                     {
                         case CharacterBuildMethod.Karma:
                         case CharacterBuildMethod.LifeModule:
-                            s = (MetatypeBP * Settings.MetatypeCostsKarmaMultiplier).ToString(
+                            strReturn = (MetatypeBP * Settings.MetatypeCostsKarmaMultiplier).ToString(
                                 GlobalSettings.CultureInfo);
                             break;
 
                         case CharacterBuildMethod.Priority:
                         case CharacterBuildMethod.SumtoTen:
-                            s = MetatypeBP.ToString(GlobalSettings.CultureInfo);
+                            strReturn = MetatypeBP.ToString(GlobalSettings.CultureInfo);
                             break;
                     }
                 }
 
-                s += LanguageManager.GetString("String_Space") + LanguageManager.GetString("String_Karma");
-                return s;
+                return strReturn + LanguageManager.GetString("String_Space") + LanguageManager.GetString("String_Karma");
             }
+        }
+
+        /// <summary>
+        /// MetatypeBP as a string, including Karma string and multiplied by options as relevant.
+        /// TODO: Belongs in a viewmodel for frmCreate rather than the main character class?
+        /// </summary>
+        public async Task<string> GetDisplayMetatypeBPAsync(CancellationToken token = default)
+        {
+            string strReturn = string.Empty;
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                switch (await GetEffectiveBuildMethodAsync(token).ConfigureAwait(false))
+                {
+                    case CharacterBuildMethod.Karma:
+                    case CharacterBuildMethod.LifeModule:
+                        strReturn = (await GetMetatypeBPAsync(token).ConfigureAwait(false)
+                            * await (await GetSettingsAsync(token).ConfigureAwait(false))
+                                .GetMetatypeCostsKarmaMultiplierAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
+                        break;
+
+                    case CharacterBuildMethod.Priority:
+                    case CharacterBuildMethod.SumtoTen:
+                        strReturn = (await GetMetatypeBPAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
+                        break;
+                }
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+
+            return strReturn + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + await LanguageManager.GetStringAsync("String_Karma", token: token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -47059,10 +47165,11 @@ namespace Chummer
                             await GetPhysicalCMThresholdOffsetAsync(token).ConfigureAwait(false) -
                             intPhysicalCMFilled) / intCMThreshold;
                 int intWoundModifier = intPhysicalCMPenalty + intStunCMPenalty;
-                if (await Settings.GetDoEncumbrancePenaltyWoundModifierAsync(token).ConfigureAwait(false))
+                CharacterSettings objSettings = await GetSettingsAsync(token).ConfigureAwait(false);
+                if (await objSettings.GetDoEncumbrancePenaltyWoundModifierAsync(token).ConfigureAwait(false))
                 {
                     intWoundModifier += await GetEncumbranceAsync(token).ConfigureAwait(false)
-                        * await Settings.GetEncumbrancePenaltyWoundModifierAsync(token).ConfigureAwait(false);
+                        * await objSettings.GetEncumbrancePenaltyWoundModifierAsync(token).ConfigureAwait(false);
                 }
                 _intWoundModifier = intWoundModifier;
             }
@@ -47182,11 +47289,11 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
 
-                int intDicePenaltySustainedSpell = Settings.DicePenaltySustaining;
+                int intDicePenaltySustainedSpell = (await GetSettingsAsync(token).ConfigureAwait(false)).DicePenaltySustaining;
 
                 //The sustaining of Critterpowers doesn't cause any penalties that's why they aren't counted there is no way to change them to self sustained anyway, but just to be sure
                 List<SustainedObject> lstSustainedSpells =
-                    await SustainedCollection.ToListAsync(x => x.GetHasSustainingPenaltyAsync(token), token: token)
+                    await (await GetSustainedCollectionAsync(token).ConfigureAwait(false)).ToListAsync(x => x.GetHasSustainingPenaltyAsync(token), token: token)
                         .ConfigureAwait(false);
                 List<Improvement> lstUsedImprovements
                     = await ImprovementManager
@@ -47243,8 +47350,8 @@ namespace Chummer
                                     lstSupportedObjects.RemoveAt(lstSupportedObjects.Count - 1);
                                 }
 
-                                lstSupportedObjects.AddWithSort(objLoopObject, (x, y) => y.Force.CompareTo(x.Force),
-                                    token: token);
+                                await lstSupportedObjects.AddWithSortAsync(objLoopObject, async (x, y) => (await y.GetForceAsync(token).ConfigureAwait(false))
+                                    .CompareTo(await x.GetForceAsync(token).ConfigureAwait(false)), token: token).ConfigureAwait(false);
                             }
                         }
 
@@ -47393,7 +47500,7 @@ namespace Chummer
                 {
                     token.ThrowIfCancellationRequested();
                     _blnLoadAsDirty = value;
-                    OnPropertyChanged(nameof(LoadAsDirty));
+                    await OnPropertyChangedAsync(nameof(LoadAsDirty), token).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -48366,42 +48473,42 @@ namespace Chummer
                                     new DependencyGraphNode<string, Character>(nameof(CurrentWalkingRateString),
                                         new DependencyGraphNode<string, Character>(nameof(WalkString),
                                             x => x.AttributeSection.AttributeCategory ==
-                                                 CharacterAttrib.AttributeCategory.Standard,
+                                                 AttributeCategory.Standard,
                                             async (x, t) => await (await x.GetAttributeSectionAsync(t).ConfigureAwait(false)).GetAttributeCategoryAsync(t).ConfigureAwait(false) ==
-                                                            CharacterAttrib.AttributeCategory.Standard),
+                                                            AttributeCategory.Standard),
                                         new DependencyGraphNode<string, Character>(nameof(WalkAltString),
                                             x => x.AttributeSection.AttributeCategory !=
-                                                 CharacterAttrib.AttributeCategory.Standard,
+                                                 AttributeCategory.Standard,
                                             async (x, t) => await (await x.GetAttributeSectionAsync(t).ConfigureAwait(false)).GetAttributeCategoryAsync(t).ConfigureAwait(false) !=
-                                                            CharacterAttrib.AttributeCategory.Standard)
+                                                            AttributeCategory.Standard)
                                     )
                                 ),
                                 new DependencyGraphNode<string, Character>(nameof(RunningRate),
                                     new DependencyGraphNode<string, Character>(nameof(CurrentRunningRateString),
                                         new DependencyGraphNode<string, Character>(nameof(RunString),
                                             x => x.AttributeSection.AttributeCategory ==
-                                                 CharacterAttrib.AttributeCategory.Standard,
+                                                 AttributeCategory.Standard,
                                             async (x, t) => await (await x.GetAttributeSectionAsync(t).ConfigureAwait(false)).GetAttributeCategoryAsync(t).ConfigureAwait(false) ==
-                                                            CharacterAttrib.AttributeCategory.Standard),
+                                                            AttributeCategory.Standard),
                                         new DependencyGraphNode<string, Character>(nameof(RunAltString),
                                             x => x.AttributeSection.AttributeCategory !=
-                                                 CharacterAttrib.AttributeCategory.Standard,
+                                                 AttributeCategory.Standard,
                                             async (x, t) => await (await x.GetAttributeSectionAsync(t).ConfigureAwait(false)).GetAttributeCategoryAsync(t).ConfigureAwait(false) !=
-                                                            CharacterAttrib.AttributeCategory.Standard)
+                                                            AttributeCategory.Standard)
                                     )
                                 ),
                                 new DependencyGraphNode<string, Character>(nameof(SprintingRate),
                                     new DependencyGraphNode<string, Character>(nameof(CurrentSprintingRateString),
                                         new DependencyGraphNode<string, Character>(nameof(SprintString),
                                             x => x.AttributeSection.AttributeCategory ==
-                                                 CharacterAttrib.AttributeCategory.Standard,
+                                                 AttributeCategory.Standard,
                                             async (x, t) => await (await x.GetAttributeSectionAsync(t).ConfigureAwait(false)).GetAttributeCategoryAsync(t).ConfigureAwait(false) ==
-                                                            CharacterAttrib.AttributeCategory.Standard),
+                                                            AttributeCategory.Standard),
                                         new DependencyGraphNode<string, Character>(nameof(SprintAltString),
                                             x => x.AttributeSection.AttributeCategory !=
-                                                 CharacterAttrib.AttributeCategory.Standard,
+                                                 AttributeCategory.Standard,
                                             async (x, t) => await (await x.GetAttributeSectionAsync(t).ConfigureAwait(false)).GetAttributeCategoryAsync(t).ConfigureAwait(false) !=
-                                                            CharacterAttrib.AttributeCategory.Standard)
+                                                            AttributeCategory.Standard)
                                     )
                                 )
                             )
@@ -52269,24 +52376,25 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (_intCachedPositiveQualityLimitKarma != int.MinValue)
                     return _intCachedPositiveQualityLimitKarma;
+                CharacterSettings objSettings = await GetSettingsAsync(token).ConfigureAwait(false);
                 int intNewValue
                     = await Qualities.SumAsync(
                         async objQuality => await objQuality.GetTypeAsync(token).ConfigureAwait(false) == QualityType.Positive && objQuality.ContributeToLimit,
-                        objQuality => objQuality.GetBPAsync(token), token).ConfigureAwait(false) * await Settings.GetKarmaQualityAsync(token).ConfigureAwait(false);
+                        objQuality => objQuality.GetBPAsync(token), token).ConfigureAwait(false) * await objSettings.GetKarmaQualityAsync(token).ConfigureAwait(false);
                 // Group contacts are counted as positive qualities
                 intNewValue += await Contacts.SumAsync(async x => await x.GetEntityTypeAsync(token).ConfigureAwait(false) == ContactType.Contact && await x.GetIsGroupAsync(token).ConfigureAwait(false) && !await x.GetFreeAsync(token).ConfigureAwait(false),
                                                        x => x.GetContactPointsAsync(token), token).ConfigureAwait(false)
-                    * await Settings.GetKarmaContactAsync(token).ConfigureAwait(false);
+                    * await objSettings.GetKarmaContactAsync(token).ConfigureAwait(false);
 
                 // Deduct the amount for free Qualities.
                 intNewValue -=
                     (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.FreePositiveQualities, token: token).ConfigureAwait(false) *
-                     await Settings.GetKarmaQualityAsync(token).ConfigureAwait(false)).StandardRound();
+                     await objSettings.GetKarmaQualityAsync(token).ConfigureAwait(false)).StandardRound();
 
                 // If the character is allowed to take as many Positive Qualities as they'd like but all costs in excess are doubled, add the excess to their point cost.
-                if (await Settings.GetExceedPositiveQualitiesCostDoubledAsync(token).ConfigureAwait(false))
+                if (await objSettings.GetExceedPositiveQualitiesCostDoubledAsync(token).ConfigureAwait(false))
                 {
-                    int intPositiveQualityExcess = intNewValue - await Settings.GetQualityKarmaLimitAsync(token).ConfigureAwait(false);
+                    int intPositiveQualityExcess = intNewValue - await objSettings.GetQualityKarmaLimitAsync(token).ConfigureAwait(false);
                     if (intPositiveQualityExcess > 0)
                     {
                         intNewValue += intPositiveQualityExcess;

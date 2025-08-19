@@ -30,6 +30,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
 using NLog;
+using Chummer.Backend.Enums;
 
 namespace Chummer
 {

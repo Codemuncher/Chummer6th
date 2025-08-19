@@ -118,7 +118,7 @@ namespace Chummer
                     await lblKarmaCostLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strKarmaCost)).ConfigureAwait(false);
 
                     string strTechniques;
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdTechniques))
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdTechniques))
                     {
                         foreach (XPathNavigator xmlMartialArtsTechnique in objXmlArt.SelectAndCacheExpression(
                                      "techniques/technique"))
@@ -131,7 +131,7 @@ namespace Chummer
                                 XPathNavigator xmlTechniqueNode
                                     = _xmlBaseMartialArtsTechniquesNode.SelectSingleNode(
                                         "technique[name = " + strLoopTechniqueName.CleanXPath() + " and ("
-                                        + await _objCharacter.Settings.BookXPathAsync().ConfigureAwait(false) + ")]");
+                                        + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false) + ")]");
                                 if (xmlTechniqueNode != null)
                                 {
                                     if (sbdTechniques.Length > 0)
@@ -156,7 +156,7 @@ namespace Chummer
                     string strPage = objXmlArt.SelectSingleNodeAndCacheExpression("altpage")?.Value ?? objXmlArt.SelectSingleNodeAndCacheExpression("page")?.Value ?? await LanguageManager.GetStringAsync("String_Unknown").ConfigureAwait(false);
                     SourceString objSourceString = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language, GlobalSettings.CultureInfo, _objCharacter).ConfigureAwait(false);
                     await objSourceString.SetControlAsync(lblSource).ConfigureAwait(false);
-                    string strSourceText = objSourceString.ToString();
+                    string strSourceText = await objSourceString.ToStringAsync().ConfigureAwait(false);
                     await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strSourceText)).ConfigureAwait(false);
                     await tlpRight.DoThreadSafeAsync(x => x.Visible = true).ConfigureAwait(false);
                 }
@@ -241,7 +241,7 @@ namespace Chummer
         /// </summary>
         private async Task RefreshArtList(CancellationToken token = default)
         {
-            string strFilter = '(' + await _objCharacter.Settings.BookXPathAsync(token: token).ConfigureAwait(false) + ')';
+            string strFilter = '(' + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ')';
             if (ShowQualities)
                 strFilter += " and isquality = " + bool.TrueString.CleanXPath();
             else
@@ -252,7 +252,7 @@ namespace Chummer
 
             XPathNodeIterator objArtList = _xmlBaseMartialArtsNode.Select("martialart[" + strFilter + ']');
 
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMartialArt))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMartialArt))
             {
                 foreach (XPathNavigator objXmlArt in objArtList)
                 {

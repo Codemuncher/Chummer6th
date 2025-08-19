@@ -952,7 +952,7 @@ namespace Chummer
         public async Task<TreeNode> CreateTreeNode(ContextMenuStrip cmsEnhancement, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            if (Grade < 0 && !string.IsNullOrEmpty(Source) && !await _objCharacter.Settings.BookEnabledAsync(Source, token).ConfigureAwait(false))
+            if (Grade < 0 && !string.IsNullOrEmpty(Source) && !await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookEnabledAsync(Source, token).ConfigureAwait(false))
                 return null;
 
             TreeNode objNode = new TreeNode
@@ -1026,7 +1026,7 @@ namespace Chummer
                 .RemoveImprovementsAsync(_objCharacter, Improvement.ImprovementSource.CritterPower, InternalId, token)
                 .ConfigureAwait(false);
 
-            return await _objCharacter.CritterPowers.RemoveAsync(this, token).ConfigureAwait(false);
+            return await (await _objCharacter.GetCritterPowersAsync(token).ConfigureAwait(false)).RemoveAsync(this, token).ConfigureAwait(false);
         }
 
         public void SetSourceDetail(Control sourceControl)

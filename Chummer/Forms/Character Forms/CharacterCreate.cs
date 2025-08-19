@@ -33,9 +33,11 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
 using Chummer.Backend.Attributes;
+using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using Chummer.Backend.Skills;
 using Chummer.Backend.Uniques;
+using Chummer.Backend.Enums;
 using NLog;
 
 namespace Chummer
@@ -634,7 +636,7 @@ namespace Chummer
 
                                         // If the character has a mugshot, decode it and put it in the PictureBox.
                                         int intMugshotCount =
-                                            await CharacterObject.Mugshots.GetCountAsync(GenericToken).ConfigureAwait(false);
+                                            await (await CharacterObject.GetMugshotsAsync(GenericToken).ConfigureAwait(false)).GetCountAsync(GenericToken).ConfigureAwait(false);
                                         if (intMugshotCount > 0)
                                         {
                                             int intMainMugshotIndex =
@@ -1546,10 +1548,10 @@ namespace Chummer
                                         using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                    out List<ListItem> lstFireModes))
                                         {
-                                            foreach (Weapon.FiringMode mode in
-                                                     Enum.GetValues(typeof(Weapon.FiringMode)))
+                                            foreach (FiringMode mode in
+                                                     Enum.GetValues(typeof(FiringMode)))
                                             {
-                                                if (mode == Weapon.FiringMode.NumFiringModes)
+                                                if (mode == FiringMode.NumFiringModes)
                                                     continue;
                                                 lstFireModes.Add(new ListItem(mode,
                                                     await LanguageManager
@@ -4877,7 +4879,7 @@ namespace Chummer
 
                                         case Weapon objWeaponParent:
                                             objWeapon = new Weapon(CharacterObject);
-                                            objWeapon.Load(objXmlNode, true);
+                                            await objWeapon.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                             await objWeaponParent.Children.AddAsync(objWeapon, GenericToken)
                                                 .ConfigureAwait(false);
                                             break;
@@ -4888,7 +4890,7 @@ namespace Chummer
 
                                         case WeaponMount objWeaponMount:
                                             objWeapon = new Weapon(CharacterObject);
-                                            objWeapon.Load(objXmlNode, true);
+                                            await objWeapon.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                             await objWeaponMount.Weapons.AddAsync(objWeapon, GenericToken)
                                                 .ConfigureAwait(false);
                                             break;
@@ -4899,13 +4901,13 @@ namespace Chummer
 
                                         case VehicleMod objMod:
                                             objWeapon = new Weapon(CharacterObject);
-                                            objWeapon.Load(objXmlNode, true);
+                                            await objWeapon.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                             await objMod.Weapons.AddAsync(objWeapon, GenericToken).ConfigureAwait(false);
                                             break;
 
                                         default:
                                             objWeapon = new Weapon(CharacterObject);
-                                            objWeapon.Load(objXmlNode, true);
+                                            await objWeapon.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                             await CharacterObject.Weapons.AddAsync(objWeapon, GenericToken)
                                                 .ConfigureAwait(false);
                                             break;
@@ -4951,7 +4953,7 @@ namespace Chummer
                         foreach (XmlNode objLoopNode in objXmlNodeList)
                         {
                             Weapon objWeapon = new Weapon(CharacterObject);
-                            objWeapon.Load(objLoopNode, true);
+                            await objWeapon.LoadAsync(objLoopNode, true, GenericToken).ConfigureAwait(false);
                             await CharacterObject.Weapons.AddAsync(objWeapon, GenericToken).ConfigureAwait(false);
                             objWeapon.ParentID = parentId;
                         }
@@ -5775,7 +5777,7 @@ namespace Chummer
                 if (!await AddMugshot(GenericToken).ConfigureAwait(false))
                     return;
                 int intMugshotCount =
-                    await CharacterObject.Mugshots.GetCountAsync(GenericToken).ConfigureAwait(false);
+                    await (await CharacterObject.GetMugshotsAsync(GenericToken).ConfigureAwait(false)).GetCountAsync(GenericToken).ConfigureAwait(false);
                 string strText = await LanguageManager.GetStringAsync("String_Of", token: GenericToken).ConfigureAwait(false)
                                  + intMugshotCount.ToString(GlobalSettings.CultureInfo);
                 await lblNumMugshots.DoThreadSafeAsync(x => x.Text = strText, GenericToken).ConfigureAwait(false);
@@ -5797,10 +5799,10 @@ namespace Chummer
             try
             {
                 int intMugshotCount =
-                    await CharacterObject.Mugshots.GetCountAsync(GenericToken).ConfigureAwait(false);
+                    await (await CharacterObject.GetMugshotsAsync(GenericToken).ConfigureAwait(false)).GetCountAsync(GenericToken).ConfigureAwait(false);
                 if (intMugshotCount == 0)
                     return;
-                await RemoveMugshot(await nudMugshotIndex.DoThreadSafeFuncAsync(x => x.ValueAsInt, GenericToken).ConfigureAwait(false) - 1).ConfigureAwait(false);
+                await RemoveMugshot(await nudMugshotIndex.DoThreadSafeFuncAsync(x => x.ValueAsInt, GenericToken).ConfigureAwait(false) - 1, GenericToken).ConfigureAwait(false);
                 --intMugshotCount;
                 string strText = await LanguageManager.GetStringAsync("String_Of", token: GenericToken).ConfigureAwait(false)
                                  + intMugshotCount.ToString(GlobalSettings.CultureInfo);
@@ -5827,7 +5829,7 @@ namespace Chummer
                             y.Checked = false;
                     }, GenericToken).ConfigureAwait(false);
 
-                    await UpdateMugshot(picMugshot, intMugshotIndex - 1).ConfigureAwait(false);
+                    await UpdateMugshot(picMugshot, intMugshotIndex - 1, GenericToken).ConfigureAwait(false);
                 }
                 await SetDirty(true).ConfigureAwait(false);
             }
@@ -5841,7 +5843,7 @@ namespace Chummer
         {
             try
             {
-                if (await CharacterObject.Mugshots.GetCountAsync(GenericToken).ConfigureAwait(false) == 0)
+                if (await (await CharacterObject.GetMugshotsAsync(GenericToken).ConfigureAwait(false)).GetCountAsync(GenericToken).ConfigureAwait(false) == 0)
                 {
                     await nudMugshotIndex.DoThreadSafeAsync(x =>
                     {
@@ -16030,7 +16032,7 @@ namespace Chummer
                                 await lblWeaponCost.DoThreadSafeAsync(x => x.Text = strCost, token).ConfigureAwait(false);
                                 await lblWeaponSlotsLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                          .ConfigureAwait(false);
-                                await lblWeaponSlots.DoThreadSafeAsync(x => x.Visible = true, token).ConfigureAwait(false);
+                                string strSlotsText;
                                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                               out StringBuilder sbdSlotsText))
                                 {
@@ -16087,9 +16089,13 @@ namespace Chummer
                                                                                 .ConfigureAwait(false)).Append(')');
                                     }
 
-                                    await lblWeaponSlots.DoThreadSafeAsync(x => x.Text = sbdSlotsText.ToString(), token)
-                                                    .ConfigureAwait(false);
+                                    strSlotsText = sbdSlotsText.ToString();
                                 }
+                                await lblWeaponSlots.DoThreadSafeAsync(x =>
+                                {
+                                    x.Text = strSlotsText;
+                                    x.Visible = true;
+                                }, token).ConfigureAwait(false);
 
                                 decimal decConceal = await objSelectedAccessory.GetTotalConcealabilityAsync(token).ConfigureAwait(false);
                                 await lblWeaponConcealLabel
@@ -17510,8 +17516,7 @@ namespace Chummer
                             {
                                 CharacterAttrib objNewAttribute = new CharacterAttrib(
                                     CharacterObject, objOldAttribute.Abbrev,
-                                    CharacterAttrib.AttributeCategory
-                                        .Shapeshifter);
+                                    AttributeCategory.Shapeshifter);
                                 await AttributeSection.CopyAttributeAsync(objOldAttribute, objNewAttribute,
                                     strMetavariantXPath,
                                     xmlDoc, token).ConfigureAwait(false);
@@ -19712,8 +19717,11 @@ namespace Chummer
                                                      "String_NuyenSymbol", token: token).ConfigureAwait(false);
                                 await lblVehicleCost.DoThreadSafeAsync(x => x.Text = strCost, token)
                                                     .ConfigureAwait(false);
+                                await lblVehicleSlotsLabel.DoThreadSafeAsync(x => x.Visible = true, token)
+                                                        .ConfigureAwait(false);
+                                string strMountText;
                                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
-                                                                              out StringBuilder sbdMount))
+                                                                            out StringBuilder sbdMount))
                                 {
                                     foreach (string strCurrentMount in objAccessory.Mount.SplitNoAlloc(
                                                  '/', StringSplitOptions.RemoveEmptyEntries))
@@ -19759,17 +19767,16 @@ namespace Chummer
                                                                                 .ConfigureAwait(false)).Append(')');
                                     }
 
-                                    await lblVehicleSlotsLabel.DoThreadSafeAsync(x => x.Visible = true, token)
-                                                            .ConfigureAwait(false);
-                                    await lblVehicleSlots.DoThreadSafeAsync(x =>
-                                    {
-                                        x.Visible = true;
-                                        x.Text = sbdMount.ToString();
-                                    }, token).ConfigureAwait(false);
+                                    strMountText = sbdMount.ToString();
                                 }
+                                await lblVehicleSlots.DoThreadSafeAsync(x =>
+                                {
+                                    x.Text = strMountText;
+                                    x.Visible = true;
+                                }, token).ConfigureAwait(false);
 
                                 await cmdVehicleCyberwareChangeMount.DoThreadSafeAsync(x => x.Visible = false, token)
-                                                                    .ConfigureAwait(false);
+                                                                .ConfigureAwait(false);
                                 await chkVehicleWeaponAccessoryInstalled.DoThreadSafeAsync(x =>
                                 {
                                     x.Visible = true;
@@ -20817,7 +20824,7 @@ namespace Chummer
                         int intCountAttributesAtMax
                             = await lstAttributes.CountAsync(
                                                      async x => x.MetatypeCategory
-                                                                == CharacterAttrib.AttributeCategory.Standard
+                                                                == AttributeCategory.Standard
                                                                 && await x.GetAtMetatypeMaximumAsync(token)
                                                                           .ConfigureAwait(false), token)
                                                  .ConfigureAwait(false);
@@ -22468,11 +22475,9 @@ namespace Chummer
                         {
                             foreach (XmlNode objXmlSpirit in xmlSpiritsList)
                             {
-                                Spirit objSpirit = new Spirit(CharacterObject)
-                                {
-                                    EntityType = SpiritType.Spirit,
-                                    Name = objXmlSpirit["name"].InnerText
-                                };
+                                Spirit objSpirit = new Spirit(CharacterObject);
+                                await objSpirit.SetEntityTypeAsync(SpiritType.Spirit, token).ConfigureAwait(false);
+                                await objSpirit.SetNameAsync(objXmlSpirit["name"].InnerText, token).ConfigureAwait(false);
                                 int.TryParse(objXmlSpirit["force"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intForce);
                                 await objSpirit.SetForceAsync(intForce, token).ConfigureAwait(false);
                                 int.TryParse(objXmlSpirit["services"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intServices);
@@ -25496,8 +25501,8 @@ namespace Chummer
                         objWeapon))
                     return;
                 objWeapon.FireMode = await cboVehicleWeaponFiringMode.DoThreadSafeFuncAsync(x => x.SelectedIndex >= 0
-                    ? (Weapon.FiringMode)x.SelectedValue
-                    : Weapon.FiringMode.DogBrain, GenericToken).ConfigureAwait(false);
+                    ? (FiringMode)x.SelectedValue
+                    : FiringMode.DogBrain, GenericToken).ConfigureAwait(false);
                 await RefreshSelectedVehicle(GenericToken).ConfigureAwait(false);
 
                 await SetDirty(true).ConfigureAwait(false);

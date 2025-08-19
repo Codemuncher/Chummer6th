@@ -690,7 +690,7 @@ namespace Chummer
         public async Task<TreeNode> CreateTreeNode(ContextMenuStrip cmsEnhancement, bool blnAddCategory = false, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            if (Grade < 0 && !string.IsNullOrEmpty(Source) && !await _objCharacter.Settings.BookEnabledAsync(Source, token).ConfigureAwait(false))
+            if (Grade < 0 && !string.IsNullOrEmpty(Source) && !await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookEnabledAsync(Source, token).ConfigureAwait(false))
                 return null;
 
             string strText = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
@@ -758,9 +758,8 @@ namespace Chummer
                     return false;
             }
 
-            _objCharacter.Metamagics.Remove(this);
             ImprovementManager.RemoveImprovements(_objCharacter, SourceType, InternalId);
-            return true;
+            return _objCharacter.Metamagics.Remove(this);
         }
 
         public async Task<bool> RemoveAsync(bool blnConfirmDelete = true, CancellationToken token = default)
@@ -783,10 +782,9 @@ namespace Chummer
                     return false;
             }
 
-            await _objCharacter.Metamagics.RemoveAsync(this, token).ConfigureAwait(false);
             await ImprovementManager.RemoveImprovementsAsync(_objCharacter, SourceType, InternalId, token)
                                     .ConfigureAwait(false);
-            return true;
+            return await (await _objCharacter.GetMetamagicsAsync(token).ConfigureAwait(false)).RemoveAsync(this, token).ConfigureAwait(false);
         }
 
         public void SetSourceDetail(Control sourceControl)

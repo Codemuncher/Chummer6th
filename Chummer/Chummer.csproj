@@ -76,6 +76,7 @@
       <_Parameter1>28a46ea3-4e45-4842-b8ae-313afde61173</_Parameter1>
     </AssemblyAttribute>
     <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.2" />
     <PackageReference Include="Codaxy.WkHtmlToPdf" Version="0.5.8" />
     <PackageReference Include="DevWinUI.ContextMenu" Version="8.4.0" />
     <PackageReference Include="HtmlRenderer.Core" Version="1.5.0.6" />

@@ -26,6 +26,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.XPath;
 using Microsoft.VisualStudio.Threading;
+using Chummer.Backend.Enums; 
 
 namespace Chummer
 {

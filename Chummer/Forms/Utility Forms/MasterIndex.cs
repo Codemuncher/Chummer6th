@@ -265,10 +265,8 @@ namespace Chummer
                                       ?? objNewSettings;
                     }
 
-                    if (objSettings != null)
-                    {
+                    if (objSettings?.IsDisposed == false)
                         objSettings.MultiplePropertiesChangedAsync += OnSelectedSettingChanged;
-                    }
                 }
                 finally
                 {
@@ -290,7 +288,7 @@ namespace Chummer
             if (_objGenericToken.IsCancellationRequested)
                 return;
             CharacterSettings objSettings = Interlocked.Exchange(ref _objSelectedSetting, null);
-            if (objSettings != null)
+            if (objSettings?.IsDisposed == false)
                 objSettings.MultiplePropertiesChangedAsync -= OnSelectedSettingChanged;
             CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateCharacterSettingsCancellationTokenSource, null);
             if (objOldCancellationTokenSource?.IsCancellationRequested == false)
@@ -412,17 +410,13 @@ namespace Chummer
                         }
 
                         CharacterSettings objPreviousSettings = Interlocked.Exchange(ref _objSelectedSetting, objSettings);
-                        if (objPreviousSettings != objSettings)
+                        if (!ReferenceEquals(objPreviousSettings, objSettings))
                         {
-                            if (objPreviousSettings != null)
-                            {
+                            if (objPreviousSettings?.IsDisposed == false)
                                 objPreviousSettings.MultiplePropertiesChangedAsync -= OnSelectedSettingChanged;
-                            }
 
-                            if (objSettings != null)
-                            {
+                            if (objSettings?.IsDisposed == false)
                                 objSettings.MultiplePropertiesChangedAsync += OnSelectedSettingChanged;
-                            }
 
                             await LoadContent(token).ConfigureAwait(false);
                         }
@@ -899,11 +893,11 @@ namespace Chummer
                                     return Task.Run(async () =>
                                     {
                                         string strReturn = await CommonFunctions.GetTextFromPdfAsync(
-                                            x.Source.ToString(),
+                                            await x.Source.ToStringAsync(token).ConfigureAwait(false),
                                             x.EnglishNameOnPage, _objSelectedSetting, token).ConfigureAwait(false);
                                         if (string.IsNullOrEmpty(strReturn))
                                             strReturn = await CommonFunctions.GetTextFromPdfAsync(
-                                                                                 x.DisplaySource.ToString(),
+                                                                                 await x.DisplaySource.ToStringAsync(token).ConfigureAwait(false),
                                                                                  x.TranslatedNameOnPage, _objSelectedSetting, token)
                                                                              .ConfigureAwait(false);
                                         return strReturn;

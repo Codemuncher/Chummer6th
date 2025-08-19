@@ -32,22 +32,13 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
 using Chummer.Annotations;
+using Chummer.Backend.Enums;
 using NLog;
 
 // ReSharper disable ConvertToAutoProperty
 
 namespace Chummer.Backend.Equipment
 {
-    /// <summary>
-    /// Type of Lifestyle.
-    /// </summary>
-    public enum LifestyleIncrement
-    {
-        Month = 0,
-        Week = 1,
-        Day = 2
-    }
-
     /// <summary>
     /// Lifestyle.
     /// </summary>
@@ -4060,7 +4051,7 @@ namespace Chummer.Backend.Equipment
             {
                 token.ThrowIfCancellationRequested();
                 return (await GetTotalMonthlyCostAsync(token).ConfigureAwait(false)).ToString(
-                           await _objCharacter.Settings.GetNuyenFormatAsync(token).ConfigureAwait(false),
+                           await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false),
                            GlobalSettings.CultureInfo)
                        + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
             }
@@ -4135,9 +4126,10 @@ namespace Chummer.Backend.Equipment
                     ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
                     objExpense.Create(decAmount * -1,
                         await LanguageManager.GetStringAsync("String_ExpenseLifestyle", token: token).ConfigureAwait(false) + ' ' +
-                        CurrentDisplayNameShort,
+                        await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false),
                         ExpenseType.Nuyen, DateTime.Now);
-                    _objCharacter.ExpenseEntries.AddWithSort(objExpense, token: token);
+                    await (await _objCharacter.GetExpenseEntriesAsync(token).ConfigureAwait(false))
+                        .AddWithSortAsync(objExpense, token: token).ConfigureAwait(false);
                     await _objCharacter.ModifyNuyenAsync(-decAmount, token).ConfigureAwait(false);
 
                     ExpenseUndo objUndo = new ExpenseUndo();

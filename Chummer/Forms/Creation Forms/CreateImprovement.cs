@@ -30,7 +30,6 @@ using System.Xml;
 using System.Xml.XPath;
 using Chummer.Backend.Skills;
 using Microsoft.IO;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -268,7 +267,7 @@ namespace Chummer
                             lstAbbrevs.Remove("MAG");
                             lstAbbrevs.Remove("MAGAdept");
                         }
-                        else if (!await _objCharacter.GetIsMysticAdeptAsync().ConfigureAwait(false) || !await _objCharacter.Settings.GetMysAdeptSecondMAGAttributeAsync().ConfigureAwait(false))
+                        else if (!await _objCharacter.GetIsMysticAdeptAsync().ConfigureAwait(false) || !await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).GetMysAdeptSecondMAGAttributeAsync().ConfigureAwait(false))
                             lstAbbrevs.Remove("MAGAdept");
                         if (!await _objCharacter.GetRESEnabledAsync().ConfigureAwait(false))
                             lstAbbrevs.Remove("RES");
@@ -982,10 +981,6 @@ namespace Chummer
 
         public Improvement NewImprovement { get; private set; }
 
-        /// <summary>
-        /// Set Improvement object to edit.
-        /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Set Improvement object to edit.
         /// </summary>
