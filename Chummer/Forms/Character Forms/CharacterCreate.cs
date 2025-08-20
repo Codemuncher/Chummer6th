@@ -37,7 +37,6 @@ using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using Chummer.Backend.Skills;
 using Chummer.Backend.Uniques;
-using Chummer.Backend.Enums;
 using NLog;
 
 namespace Chummer
@@ -4735,7 +4734,7 @@ namespace Chummer
                                 if (objXmlNode != null)
                                 {
                                     Armor objArmor = new Armor(CharacterObject);
-                                    objArmor.Load(objXmlNode, true);
+                                    await objArmor.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                     await CharacterObject.Armor.AddAsync(objArmor, GenericToken).ConfigureAwait(false);
 
                                     await AddChildVehicles(objArmor.InternalId).ConfigureAwait(false);
@@ -4754,7 +4753,7 @@ namespace Chummer
                                 if (objXmlNode != null)
                                 {
                                     ArmorMod objArmorMod = new ArmorMod(CharacterObject);
-                                    objArmorMod.Load(objXmlNode, true);
+                                    await objArmorMod.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                     await selectedArmor.ArmorMods.AddAsync(objArmorMod, GenericToken).ConfigureAwait(false);
 
                                     await AddChildVehicles(objArmorMod.InternalId).ConfigureAwait(false);
@@ -4816,7 +4815,7 @@ namespace Chummer
                                 if (objXmlNode == null)
                                     break;
                                 Gear objGear = new Gear(CharacterObject);
-                                objGear.Load(objXmlNode, true);
+                                await objGear.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                 if (objSelectedObject is ICanPaste selected &&
                                     await selected.AllowPasteXml(GenericToken).ConfigureAwait(false) &&
                                     objSelectedObject is IHasGear gear)
@@ -4849,10 +4848,10 @@ namespace Chummer
                                     break;
 
                                 Lifestyle objLifestyle = new Lifestyle(CharacterObject);
-                                objLifestyle.Load(objXmlNode, true);
+                                await objLifestyle.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                 // Reset the number of months back to 1 since 0 isn't valid in Create Mode.
                                 await objLifestyle.SetIncrementsAsync(1, GenericToken).ConfigureAwait(false);
-                                await CharacterObject.Lifestyles.AddAsync(objLifestyle, GenericToken).ConfigureAwait(false);
+                                await (await CharacterObject.GetLifestylesAsync(GenericToken).ConfigureAwait(false)).AddAsync(objLifestyle, GenericToken).ConfigureAwait(false);
                                 break;
                             }
                         case ClipboardContentType.Vehicle:
@@ -4860,8 +4859,8 @@ namespace Chummer
                                 // Paste Vehicle.
                                 XmlNode objXmlNode = (await GlobalSettings.GetClipboardAsync(GenericToken).ConfigureAwait(false)).SelectSingleNode("/character/vehicle");
                                 Vehicle objVehicle = new Vehicle(CharacterObject);
-                                objVehicle.Load(objXmlNode, true);
-                                await CharacterObject.Vehicles.AddAsync(objVehicle, GenericToken).ConfigureAwait(false);
+                                await objVehicle.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
+                                await (await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false)).AddAsync(objVehicle, GenericToken).ConfigureAwait(false);
                                 break;
                             }
                         case ClipboardContentType.Weapon:
@@ -4929,7 +4928,7 @@ namespace Chummer
                                 if (objXmlNode != null)
                                 {
                                     WeaponAccessory objMod = new WeaponAccessory(CharacterObject);
-                                    objMod.Load(objXmlNode, true);
+                                    await objMod.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
                                     await selectedWeapon.WeaponAccessories.AddAsync(objMod, GenericToken)
                                         .ConfigureAwait(false);
 
@@ -4970,8 +4969,8 @@ namespace Chummer
                         foreach (XmlNode objLoopNode in objXmlNodeList)
                         {
                             Vehicle objVehicle = new Vehicle(CharacterObject);
-                            objVehicle.Load(objLoopNode, true);
-                            await CharacterObject.Vehicles.AddAsync(objVehicle, GenericToken).ConfigureAwait(false);
+                            await objVehicle.LoadAsync(objLoopNode, true, GenericToken).ConfigureAwait(false);
+                            await (await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false)).AddAsync(objVehicle, GenericToken).ConfigureAwait(false);
                             objVehicle.ParentID = parentId;
                         }
                     }
@@ -7283,7 +7282,7 @@ namespace Chummer
                             WeaponAccessory objAccessory = new WeaponAccessory(CharacterObject);
                             await objAccessory.CreateAsync(objXmlWeapon, frmPickWeaponAccessory.MyForm.SelectedMount,
                                 frmPickWeaponAccessory.MyForm.SelectedRating, token: GenericToken).ConfigureAwait(false);
-                            objAccessory.Parent = objWeapon;
+                            await objAccessory.SetParentAsync(objWeapon, GenericToken).ConfigureAwait(false);
                             objAccessory.DiscountCost = frmPickWeaponAccessory.MyForm.BlackMarketDiscount;
 
                             if (frmPickWeaponAccessory.MyForm.FreeCost)
@@ -7762,7 +7761,7 @@ namespace Chummer
                             WeaponAccessory objAccessory = new WeaponAccessory(CharacterObject);
                             await objAccessory.CreateAsync(objXmlWeapon, frmPickWeaponAccessory.MyForm.SelectedMount,
                                 frmPickWeaponAccessory.MyForm.SelectedRating, token: GenericToken).ConfigureAwait(false);
-                            objAccessory.Parent = objWeapon;
+                            await objAccessory.SetParentAsync(objWeapon, GenericToken).ConfigureAwait(false);
                             objAccessory.DiscountCost = frmPickWeaponAccessory.MyForm.BlackMarketDiscount;
 
                             if (frmPickWeaponAccessory.MyForm.FreeCost)
@@ -10765,8 +10764,7 @@ namespace Chummer
                                         .ConfigureAwait(false) is Cyberware objCyberware))
                     return;
                 // Locate the selected piece of Cyberware.
-                Grade objNewGrade = CharacterObject.GetGrades(await objCyberware.GetSourceTypeAsync(GenericToken).ConfigureAwait(false), token: GenericToken)
-                                                   .FirstOrDefault(x => x.Name == strSelectedGrade);
+                Grade objNewGrade = await CharacterObject.GetGradeByNameAsync(await objCyberware.GetSourceTypeAsync(GenericToken).ConfigureAwait(false), strSelectedGrade, token: GenericToken).ConfigureAwait(false);
                 if (objNewGrade == null)
                     return;
                 // Updated the selected Cyberware Grade.
@@ -18290,18 +18288,17 @@ namespace Chummer
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    Gear objSelectedGear = null;
-                    ArmorMod objSelectedMod = null;
-                    Armor objSelectedArmor = await CharacterObject.Armor.FindByIdAsync(strSelectedId, token)
-                        .ConfigureAwait(false);
-                    if (objSelectedArmor == null)
+                    (Gear objSelectedGear, Armor objSelectedArmor, ArmorMod objSelectedMod)
+                        = await CharacterObject.Armor.FindArmorGearAsync(strSelectedId, token)
+                            .ConfigureAwait(false);
+                    if (objSelectedGear == null)
                     {
-                        (objSelectedGear, objSelectedArmor, objSelectedMod)
-                            = await CharacterObject.Armor.FindArmorGearAsync(strSelectedId, token)
-                                .ConfigureAwait(false);
-                        if (objSelectedGear == null)
-                            objSelectedMod = await CharacterObject.Armor.FindArmorModAsync(strSelectedId, token)
-                                .ConfigureAwait(false);
+                        objSelectedMod = await CharacterObject.Armor.FindArmorModAsync(strSelectedId, token)
+                            .ConfigureAwait(false);
+                        if (objSelectedMod == null)
+                            objSelectedArmor = await CharacterObject.Armor.FindByIdAsync(strSelectedId, token).ConfigureAwait(false);
+                        else
+                            objSelectedArmor = objSelectedMod.Parent;
                     }
 
                     // Open the Gear XML file and locate the selected Gear.
@@ -18395,13 +18392,17 @@ namespace Chummer
                             await CharacterObject.Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
                         }
 
-                        Gear objMatchingGear
-                            // If this is Ammunition, see if the character already has it on them.
-                            = objGear.Category == "Ammunition" || !string.IsNullOrEmpty(objGear.AmmoForWeaponType)
-                                ? await CharacterObject.Gear
-                                    .FirstOrDefaultAsync(x => objGear.IsIdenticalToOtherGear(x), token)
-                                    .ConfigureAwait(false)
-                                : null;
+                        Gear objMatchingGear = null;
+                        // If this is Ammunition, see if the character already has it on them.
+                        if (objGear.Category == "Ammunition" || !string.IsNullOrEmpty(objGear.AmmoForWeaponType))
+                        {
+                            TaggedObservableCollection<Gear> lstToSearch = !string.IsNullOrEmpty(objSelectedGear?.Name)
+                                ? objSelectedGear.Children
+                                : !string.IsNullOrEmpty(objSelectedMod?.Name)
+                                    ? objSelectedMod.GearChildren
+                                    : objSelectedArmor.GearChildren;
+                            objMatchingGear = lstToSearch.FirstOrDefault(x => objGear.IsIdenticalToOtherGear(x));
+                        }
 
                         if (objMatchingGear != null)
                         {
@@ -22644,7 +22645,7 @@ namespace Chummer
                                     await objMod.CreateAsync(objXmlAccessoryNode,
                                         new Tuple<string, string>(strMount, strExtraMount), 0,
                                         false, blnCreateChildren, token: token).ConfigureAwait(false);
-                                    objMod.Parent = objWeapon;
+                                    await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
                                     await objWeapon.WeaponAccessories.AddAsync(objMod, token).ConfigureAwait(false);
 
@@ -22697,7 +22698,7 @@ namespace Chummer
                                             await objMod.CreateAsync(objXmlAccessoryNode,
                                                 new Tuple<string, string>(strMount, strExtraMount), 0, false,
                                                 blnCreateChildren, token: token).ConfigureAwait(false);
-                                            objMod.Parent = objWeapon;
+                                            await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
                                             await objUnderbarrelWeapon.WeaponAccessories.AddAsync(objMod, token)
                                                 .ConfigureAwait(false);
@@ -22971,7 +22972,7 @@ namespace Chummer
                                         await objMod.CreateAsync(objXmlAccessoryNode,
                                             new Tuple<string, string>(strMount, strExtraMount),
                                             0, false, blnCreateChildren, token: token).ConfigureAwait(false);
-                                        objMod.Parent = objWeapon;
+                                        await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
                                         await objWeapon.WeaponAccessories.AddAsync(objMod, token).ConfigureAwait(false);
                                     }
@@ -23021,7 +23022,7 @@ namespace Chummer
                                                 await objMod.CreateAsync(objXmlAccessoryNode,
                                                     new Tuple<string, string>(strMount, strExtraMount), 0, false,
                                                     blnCreateChildren, token: token).ConfigureAwait(false);
-                                                objMod.Parent = objWeapon;
+                                                await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
                                                 await objUnderbarrelWeapon.WeaponAccessories.AddAsync(objMod, token)
                                                     .ConfigureAwait(false);

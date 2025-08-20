@@ -3414,8 +3414,7 @@ namespace Chummer
                 // Format in which weight values are displayed
                 if (objXmlNode.TryGetStringFieldQuickly("weightformat", ref _strWeightFormat))
                 {
-                    int intDecimalPlaces = _strWeightFormat.IndexOf('.');
-                    if (intDecimalPlaces == -1)
+                    if (!_strWeightFormat.Contains('.'))
                         _strWeightFormat += ".###";
                 }
 
@@ -4175,8 +4174,7 @@ namespace Chummer
                 // Format in which weight values are displayed
                 if (objXmlNode.TryGetStringFieldQuickly("weightformat", ref _strWeightFormat))
                 {
-                    int intDecimalPlaces = _strWeightFormat.IndexOf('.');
-                    if (intDecimalPlaces == -1)
+                    if (!_strWeightFormat.Contains('.'))
                         _strWeightFormat += ".###";
                 }
 

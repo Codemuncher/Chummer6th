@@ -17,9 +17,12 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Skills;
+using Microsoft.IO;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -28,8 +31,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Skills;
-using Microsoft.IO;
 
 namespace Chummer
 {
@@ -984,6 +985,7 @@ namespace Chummer
         /// <summary>
         /// Set Improvement object to edit.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Improvement EditImprovementObject { get; set; }
 
         #endregion Properties

@@ -19,6 +19,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -188,6 +189,7 @@ namespace Chummer
         /// <summary>
         /// Program that was selected in the dialogue.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string SelectedProgram
         {
             get => _strSelectedAIProgram;

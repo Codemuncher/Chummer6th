@@ -18,9 +18,9 @@
  */
 
 using System;
+using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Forms;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -60,16 +60,22 @@ namespace Chummer
 
         private async void cmdOK_Click(object sender, EventArgs e)
         {
-            if (KarmaNuyenExchange && _eMode == ExpenseType.Nuyen && await nudAmount.DoThreadSafeFuncAsync(x => x.Value).ConfigureAwait(false) % _objCharacterSettings.NuyenPerBPWftP != 0)
+            if (KarmaNuyenExchange && _eMode == ExpenseType.Nuyen)
             {
-                await Program.ShowScrollableMessageBoxAsync(
-                    this,
-                    string.Format(GlobalSettings.CultureInfo,
-                        await LanguageManager.GetStringAsync("Message_KarmaNuyenExchange").ConfigureAwait(false),
-                        _objCharacterSettings.NuyenPerBPWftP.ToString(
-                            _objCharacterSettings.NuyenFormat, GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol").ConfigureAwait(false)),
-                    await LanguageManager.GetStringAsync("MessageTitle_KarmaNuyenExchange").ConfigureAwait(false), MessageBoxButtons.OK,
-                    MessageBoxIcon.Information).ConfigureAwait(false);
+                decimal decNuyenPerBPWtfP = await _objCharacterSettings.GetNuyenPerBPWftPAsync().ConfigureAwait(false);
+                decimal decDividend = await nudAmount.DoThreadSafeFuncAsync(x => x.Value).ConfigureAwait(false) / decNuyenPerBPWtfP;
+                if (decimal.Floor(decDividend) != decimal.Ceiling(decDividend))
+                {
+                    await Program.ShowScrollableMessageBoxAsync(
+                        this,
+                        string.Format(GlobalSettings.CultureInfo,
+                            await LanguageManager.GetStringAsync("Message_KarmaNuyenExchange").ConfigureAwait(false),
+                            decNuyenPerBPWtfP.ToString(
+                                await _objCharacterSettings.GetNuyenFormatAsync().ConfigureAwait(false), GlobalSettings.CultureInfo)
+                            + await LanguageManager.GetStringAsync("String_NuyenSymbol").ConfigureAwait(false)),
+                        await LanguageManager.GetStringAsync("MessageTitle_KarmaNuyenExchange").ConfigureAwait(false), MessageBoxButtons.OK,
+                        MessageBoxIcon.Information).ConfigureAwait(false);
+                }
             }
             else
             {
@@ -184,7 +190,6 @@ namespace Chummer
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool KarmaNuyenExchange { get; set; }
-
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string KarmaNuyenExchangeString { get; set; }
 
