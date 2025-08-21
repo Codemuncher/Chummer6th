@@ -21,7 +21,6 @@ using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using System.ComponentModel;
 
 namespace Chummer.UI.Table
 {
@@ -238,7 +237,7 @@ namespace Chummer.UI.Table
         /// The extractor for the property displayed in the spinner.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public Func<T, decimal, Task> ValueUpdater { get; set; }
+        public Func<T, decimal, CancellationToken, Task> ValueUpdater { get; set; }
 
         private readonly DebuggableSemaphoreSlim _objUpdateSemaphore = new DebuggableSemaphoreSlim();
 
@@ -261,7 +260,7 @@ namespace Chummer.UI.Table
                     try
                     {
                         await ValueUpdater(Value as T,
-                                await _spinner.DoThreadSafeFuncAsync(x => x.Value, _objMyToken).ConfigureAwait(false))
+                                await _spinner.DoThreadSafeFuncAsync(x => x.Value, _objMyToken).ConfigureAwait(false), _objMyToken)
                             .ConfigureAwait(false);
                     }
                     finally

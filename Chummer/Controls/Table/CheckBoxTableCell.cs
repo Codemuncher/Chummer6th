@@ -18,9 +18,9 @@
  */
 
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
-using System.ComponentModel;
 
 namespace Chummer.UI.Table
 {
@@ -173,7 +173,7 @@ namespace Chummer.UI.Table
         /// of the checkbox.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public Func<T, bool, Task> ValueUpdater { get; set; }
+        public Func<T, bool, CancellationToken, Task> ValueUpdater { get; set; }
 
         private readonly DebuggableSemaphoreSlim _objUpdateSemaphore = new DebuggableSemaphoreSlim();
 
@@ -192,7 +192,7 @@ namespace Chummer.UI.Table
                     {
                         await ValueUpdater(Value as T,
                                 await _checkBox.DoThreadSafeFuncAsync(x => x.Checked, _objMyToken)
-                                    .ConfigureAwait(false))
+                                    .ConfigureAwait(false), _objMyToken)
                             .ConfigureAwait(false);
                     }
                     finally

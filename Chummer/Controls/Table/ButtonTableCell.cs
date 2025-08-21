@@ -18,10 +18,10 @@
  */
 
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.ComponentModel;
 
 namespace Chummer.UI.Table
 {
@@ -62,7 +62,7 @@ namespace Chummer.UI.Table
                     await _objUpdateSemaphore.WaitAsync(_objMyToken).ConfigureAwait(false);
                     try
                     {
-                        await ClickHandler.Invoke(Value as T).ConfigureAwait(false);
+                        await ClickHandler.Invoke(Value as T, _objMyToken).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -114,7 +114,7 @@ namespace Chummer.UI.Table
         }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public Func<T, Task> ClickHandler { get; set; }
+        public Func<T, CancellationToken, Task> ClickHandler { get; set; }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Func<T, CancellationToken, Task<bool>> EnabledExtractor { get; set; }

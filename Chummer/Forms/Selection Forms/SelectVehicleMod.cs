@@ -345,7 +345,7 @@ namespace Chummer
                     if (!await _objVehicle.CheckModRequirementsAsync(objXmlMod, token).ConfigureAwait(false))
                         continue;
 
-                    int intMinRating = int.MaxValue;
+                    int intMinRating = 0;
                     string strMinRating = objXmlMod.SelectSingleNodeAndCacheExpression("minrating", token: token)?.Value ?? string.Empty;
                     if (!string.IsNullOrEmpty(strMinRating))
                     {
