@@ -210,6 +210,9 @@
     <Compile Update="Controls\Shared\Components\NumericUpDownEx.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Update="Controls\Skills\CharacterSkillControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Forms\Utility Forms\DataExporter.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -833,6 +836,7 @@
     <Compile Update="Controls\Shared\Components\SplitButton.cs">
       <SubType>Component</SubType>
     </Compile>
+    <None Include="Backend\Skills\Skill.cs" />
     <None Include="Chummer_TemporaryKey.pfx" />
     <Content Update="data\armor.xsd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

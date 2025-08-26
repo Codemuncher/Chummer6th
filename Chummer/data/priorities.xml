@@ -1397,6 +1397,7 @@
           </metavariants>
         </metatype>-->
       </metatypes>
+      
     </priority>
     <priority>
       <id>f9aa712d-7140-4ddd-9e88-4a06e8bae222</id>
@@ -4863,7 +4864,7 @@
       <name>A - 32 Skills</name>
       <value>A</value>
       <category>Skills</category>
-      <skills>32</skills>
+      <skills>320</skills>
       <skillgroups>0</skillgroups>
     </priority>
     <priority>
@@ -4871,7 +4872,7 @@
       <name>B - 24 Skills</name>
       <value>B</value>
       <category>Skills</category>
-      <skills>24</skills>
+      <skills>240</skills>
       <skillgroups>0</skillgroups>
     </priority>
     <priority>
@@ -4879,7 +4880,7 @@
       <name>C - 20 Skills</name>
       <value>C</value>
       <category>Skills</category>
-      <skills>20</skills>
+      <skills>200</skills>
       <skillgroups>0</skillgroups>
     </priority>
     <priority>
@@ -4887,7 +4888,7 @@
       <name>D - 16 Skills</name>
       <value>D</value>
       <category>Skills</category>
-      <skills>16</skills>
+      <skills>160</skills>
       <skillgroups>0</skillgroups>
     </priority>
     <priority>
@@ -4895,7 +4896,7 @@
       <name>E - 10 Skills</name>
       <value>E</value>
       <category>Skills</category>
-      <skills>10</skills>
+      <skills>100</skills>
       <skillgroups>0</skillgroups>
     </priority>
     <!-- End Region -->

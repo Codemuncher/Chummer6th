@@ -2644,6 +2644,7 @@ namespace Chummer.Backend.Skills
         private bool _blnSkillsInitialized;
         private readonly AsyncFriendlyReaderWriterLock _objSkillsInitializerLock;
         private readonly ThreadSafeBindingList<Skill> _lstSkills;
+        private readonly ThreadSafeBindingList<Skill> _lstNewSkills;
         private readonly ConcurrentDictionary<string, Skill> _dicSkills = new ConcurrentDictionary<string, Skill>();
 
         /// <summary>
@@ -2666,9 +2667,7 @@ namespace Chummer.Backend.Skills
                     using (_objSkillsInitializerLock.EnterWriteLock())
                     {
                         _lstSkills.LockObject.SetParent();
-                        _lstSkillGroups.LockObject.SetParent();
                         _lstSkills.RaiseListChangedEvents = false;
-                        _lstSkillGroups.RaiseListChangedEvents = false;
                         try
                         {
                             XmlDocument xmlSkillsDocument = _objCharacter.LoadData("skills.xml");
@@ -2706,9 +2705,7 @@ namespace Chummer.Backend.Skills
                         }
                         finally
                         {
-                            _lstSkillGroups.RaiseListChangedEvents = true;
                             _lstSkills.RaiseListChangedEvents = true;
-                            _lstSkillGroups.LockObject.SetParent(LockObject);
                             _lstSkills.LockObject.SetParent(LockObject);
                         }
 
@@ -2838,6 +2835,20 @@ namespace Chummer.Backend.Skills
             }
         }
 
+        public async Task<ThreadSafeBindingList<Skill>> GetNewSkillsAsync(CancellationToken token = default)
+        {
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                return _lstNewSkills;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
         /// <summary>
         /// Checks if the character has an active skill with a given name.
         /// </summary>
@@ -2933,6 +2944,14 @@ namespace Chummer.Backend.Skills
             {
                 using (LockObject.EnterReadLock())
                     return _lstKnowledgeSkills;
+            }
+        }
+        public ThreadSafeBindingList<Skill> NewSkills
+        {
+            get
+            {
+                using (LockObject.EnterReadLock())
+                    return _lstNewSkills;
             }
         }
 
@@ -3604,6 +3623,7 @@ namespace Chummer.Backend.Skills
 
         private List<ListItem> _lstDefaultKnowledgeSkills;
         private readonly AsyncFriendlyReaderWriterLock _objDefaultKnowledgeSkillsLock;
+        private List<ListItem> _lstDefaultSkills;
 
         public IReadOnlyList<ListItem> MyDefaultKnowledgeSkills
         {
@@ -3657,6 +3677,78 @@ namespace Chummer.Backend.Skills
                         return _lstDefaultKnowledgeSkills;
                     }
                 }
+            }
+        }
+
+        public async Task<IReadOnlyList<ListItem>> GetMyDefaultSkillsAsync(CancellationToken token = default)
+        {
+            if (GlobalSettings.LiveCustomData)
+            {
+                List<ListItem> lstReturn = new List<ListItem>();
+                XPathNavigator xmlSkillsDocument =
+                    await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false);
+                foreach (XPathNavigator xmlSkill in xmlSkillsDocument.SelectAndCacheExpression(
+                             "/chummer/skills/skill", token))
+                {
+                    string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name", token)?.Value ?? string.Empty;
+                    lstReturn.Add(
+                        new ListItem(
+                            strName,
+                            xmlSkill.SelectSingleNodeAndCacheExpression("translate", token)?.Value ?? strName));
+                }
+
+                lstReturn.Sort(CompareListItems.CompareNames);
+                return lstReturn;
+            }
+
+            IAsyncDisposable objLocker = await _objDefaultKnowledgeSkillsLock.EnterReadLockAsync(token)
+                .ConfigureAwait(false);
+            try
+            {
+                if (_lstDefaultSkills != null)
+                    return _lstDefaultSkills;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+
+            objLocker = await _objDefaultKnowledgeSkillsLock.EnterUpgradeableReadLockAsync(token)
+                .ConfigureAwait(false);
+            try
+            {
+                if (_lstDefaultSkills != null)
+                    return _lstDefaultSkills;
+
+                IAsyncDisposable objLocker2 =
+                    await _objDefaultKnowledgeSkillsLock.EnterWriteLockAsync(token).ConfigureAwait(false);
+                try
+                {
+                    _lstDefaultSkills = new List<ListItem>();
+                    XPathNavigator xmlSkillsDocument =
+                        await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false);
+                    foreach (XPathNavigator xmlSkill in xmlSkillsDocument.SelectAndCacheExpression(
+                                 "/chummer/skills/skill", token))
+                    {
+                        string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name", token)?.Value ??
+                                         string.Empty;
+                        _lstDefaultSkills.Add(
+                            new ListItem(
+                                strName,
+                                xmlSkill.SelectSingleNodeAndCacheExpression("translate", token)?.Value ?? strName));
+                    }
+
+                    _lstDefaultSkills.Sort(CompareListItems.CompareNames);
+                    return _lstDefaultSkills;
+                }
+                finally
+                {
+                    await objLocker2.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
             }
         }
 

@@ -17,6 +17,9 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Annotations;
+using Chummer.Backend.Attributes;
+using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -31,9 +34,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Annotations;
-using Chummer.Backend.Attributes;
-using Chummer.Backend.Equipment;
+using Windows.System;
 
 namespace Chummer.Backend.Skills
 {
@@ -4036,7 +4037,7 @@ namespace Chummer.Backend.Skills
             }
         }
 
-        public virtual bool AllowDelete => false;
+        public virtual bool AllowDelete => true;
 
 #pragma warning disable CS1998
         public virtual Task<bool> GetAllowDeleteAsync(CancellationToken token = default)
@@ -4045,6 +4046,12 @@ namespace Chummer.Backend.Skills
             return token.IsCancellationRequested
                 ? Task.FromCanceled<bool>(token)
                 : Task.FromResult(false);
+        }
+
+        public virtual Task<bool> GetAllowNewSkillDeleteAsync(CancellationToken token = default)
+#pragma warning restore CS1998
+        {
+            return Task.FromResult(AllowDelete);
         }
 
         public bool Default
@@ -8980,5 +8987,98 @@ namespace Chummer.Backend.Skills
 
             GC.SuppressFinalize(this);
         }
+
+        private string _strType = string.Empty;
+        private int _intIsNativeLanguage;
+
+        public async Task<string> GetTypeAsync(CancellationToken token = default)
+        {
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                return _strType;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        public async Task SetTypeAsync(string value, CancellationToken token = default)
+        {
+            IAsyncDisposable objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (_strType == value)
+                    return;
+                IAsyncDisposable objLocker2 = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    // Interlocked guarantees thread safety here without write lock
+                    string strOldType = Interlocked.Exchange(ref _strType, value);
+                    if (strOldType == value)
+                        return;
+                    string strNewAttributeValue = string.Empty;
+                    SkillsSection objSkillsSection =
+                        CharacterObject != null
+                            ? await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false)
+                            : null;
+                    bool blnSetDefaultAttribute =
+                        objSkillsSection != null && (await objSkillsSection.GetKnowledgeSkillCategoriesMapAsync(token)
+                            .ConfigureAwait(false))
+                        .TryGetValue(value,
+                            out strNewAttributeValue);
+                    bool blnUnsetNativeLanguage = value != "Language" && strOldType == "Language";
+                    if (blnSetDefaultAttribute || blnUnsetNativeLanguage)
+                    {
+                        bool blnTemp1 = false;
+                        bool blnTemp2 = false;
+                        token.ThrowIfCancellationRequested();
+                        if (blnSetDefaultAttribute && InterlockExchangeDefaultAttribute(strNewAttributeValue) !=
+                            strNewAttributeValue)
+                        {
+                            if (IsLoading)
+                                await RecacheAttributeAsync(token).ConfigureAwait(false);
+                            else
+                                blnTemp1 = true;
+                        }
+
+                        if (blnUnsetNativeLanguage && Interlocked.Exchange(ref _intIsNativeLanguage, 0) == 0)
+                        {
+                            blnTemp2 = true;
+                        }
+
+                        if (blnTemp1)
+                        {
+                            if (blnTemp2)
+                                await this.OnMultiplePropertyChangedAsync(token, nameof(Type), nameof(DefaultAttribute),
+                                    nameof(IsNativeLanguage)).ConfigureAwait(false);
+                            else
+                                await this.OnMultiplePropertyChangedAsync(token, nameof(Type), nameof(DefaultAttribute))
+                                    .ConfigureAwait(false);
+                        }
+                        else if (blnTemp2)
+                            await this.OnMultiplePropertyChangedAsync(token, nameof(Type), nameof(IsNativeLanguage))
+                                .ConfigureAwait(false);
+                        else
+                            await OnPropertyChangedAsync(nameof(Type), token).ConfigureAwait(false);
+                    }
+                    else
+                        await OnPropertyChangedAsync(nameof(Type), token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await objLocker2.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
     }
 }

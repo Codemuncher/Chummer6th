@@ -1182,7 +1182,7 @@ namespace Chummer.UI.Skills
         {
             try
             {
-                if (!await _objSkill.GetAllowDeleteAsync(_objMyToken).ConfigureAwait(false))
+                if (!await _objSkill.GetAllowNewSkillDeleteAsync(_objMyToken).ConfigureAwait(false))
                     return;
                 if (!await CommonFunctions
                            .ConfirmDeleteAsync(
