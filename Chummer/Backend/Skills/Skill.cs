@@ -1038,6 +1038,7 @@ namespace Chummer.Backend.Skills
             await objReturn.SetIsLoadingAsync(true, token).ConfigureAwait(false);
             try
             {
+                //TODO: load from xml to CharacterSkills
                 string strGroup = xmlNode["skillgroup"]?.InnerText;
 
                 if (!string.IsNullOrEmpty(strGroup))

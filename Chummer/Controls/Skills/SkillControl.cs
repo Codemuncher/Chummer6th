@@ -1193,6 +1193,9 @@ namespace Chummer.UI.Skills
                     return;
                 await _objSkill.CharacterObject.SkillsSection.Skills.RemoveAsync(_objSkill, _objMyToken)
                                .ConfigureAwait(false);
+                await _objSkill.CharacterObject.SkillsSection.SkillList.RemoveAsync(_objSkill, _objMyToken)
+                              .ConfigureAwait(false);
+
             }
             catch (OperationCanceledException)
             {

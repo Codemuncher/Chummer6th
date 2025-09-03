@@ -32,6 +32,9 @@ namespace Chummer.UI.Skills
         {
             splitSkills = new SplitContainer();
             tlpTopPanel = new TableLayoutPanel();
+            tlpSkills = new TableLayoutPanel();
+            btnAddSkills = new Button();
+            cboSkillList = new ComboBox();
             tlpActiveSkills = new TableLayoutPanel();
             lblActiveSp = new Label();
             lblActiveSkills = new Label();
@@ -39,16 +42,10 @@ namespace Chummer.UI.Skills
             lblBuyWithKarma = new Label();
             btnResetCustomDisplayAttribute = new Button();
             tlpActiveSkillsButtons = new TableLayoutPanel();
-            cboDisplayFilter = new ElasticComboBox();
             btnExotic = new Button();
             cboSort = new ElasticComboBox();
-            tlpSkills = new TableLayoutPanel();
-            label2 = new Label();
-            label3 = new Label();
-            cboSkillList = new ComboBox();
-            btnAddSkills = new Button();
-            label1 = new Label();
-            label4 = new Label();
+            cboDisplayFilter = new ElasticComboBox();
+            panel1 = new Panel();
             tlpBottomPanel = new TableLayoutPanel();
             lblKnoSp = new Label();
             lblKnowledgeSkills = new Label();
@@ -63,18 +60,33 @@ namespace Chummer.UI.Skills
             lblKnowledgeSkillPointsTitle = new Label();
             tableLayoutPanel1 = new TableLayoutPanel();
             splitContainer1 = new SplitContainer();
+            splitContainer2 = new SplitContainer();
+            splitContainer3 = new SplitContainer();
+            splitContainer4 = new SplitContainer();
             ((System.ComponentModel.ISupportInitialize)splitSkills).BeginInit();
             splitSkills.Panel1.SuspendLayout();
             splitSkills.Panel2.SuspendLayout();
             splitSkills.SuspendLayout();
             tlpTopPanel.SuspendLayout();
-            tlpActiveSkills.SuspendLayout();
-            tlpActiveSkillsButtons.SuspendLayout();
             tlpSkills.SuspendLayout();
+            tlpActiveSkills.SuspendLayout();
+            panel1.SuspendLayout();
             tlpBottomPanel.SuspendLayout();
             tlpKnowledgeSkillsHeader.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).BeginInit();
             splitContainer1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer2).BeginInit();
+            splitContainer2.Panel1.SuspendLayout();
+            splitContainer2.Panel2.SuspendLayout();
+            splitContainer2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer3).BeginInit();
+            splitContainer3.Panel1.SuspendLayout();
+            splitContainer3.Panel2.SuspendLayout();
+            splitContainer3.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer4).BeginInit();
+            splitContainer4.Panel1.SuspendLayout();
+            splitContainer4.Panel2.SuspendLayout();
+            splitContainer4.SuspendLayout();
             SuspendLayout();
             // 
             // splitSkills
@@ -110,20 +122,71 @@ namespace Chummer.UI.Skills
             tlpTopPanel.ColumnCount = 1;
             tlpTopPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
             tlpTopPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 75F));
-            tlpTopPanel.Controls.Add(tlpActiveSkills, 1, 0);
-            tlpTopPanel.Controls.Add(tlpSkills, 1, 1);
+            tlpTopPanel.Controls.Add(tlpSkills, 0, 1);
+            tlpTopPanel.Controls.Add(tlpActiveSkills, 0, 2);
+            tlpTopPanel.Controls.Add(panel1, 0, 0);
             tlpTopPanel.Dock = DockStyle.Fill;
             tlpTopPanel.Location = new Point(0, 0);
             tlpTopPanel.Margin = new Padding(0);
             tlpTopPanel.Name = "tlpTopPanel";
-            tlpTopPanel.RowCount = 2;
-            tlpTopPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-            tlpTopPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+            tlpTopPanel.RowCount = 3;
+            tlpTopPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 10.1265821F));
+            tlpTopPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 89.87342F));
+            tlpTopPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 56F));
+            tlpTopPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             tlpTopPanel.Size = new Size(800, 452);
             tlpTopPanel.TabIndex = 58;
             // 
+            // tlpSkills
+            // 
+            tlpSkills.ColumnCount = 5;
+            tlpSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 192F));
+            tlpSkills.ColumnStyles.Add(new ColumnStyle());
+            tlpSkills.ColumnStyles.Add(new ColumnStyle());
+            tlpSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            tlpSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104F));
+            tlpSkills.Controls.Add(btnExotic, 4, 0);
+            tlpSkills.Controls.Add(lblActiveSkills, 0, 1);
+            tlpSkills.Controls.Add(lblActiveSp, 1, 1);
+            tlpSkills.Controls.Add(lblBuyWithKarma, 3, 1);
+            tlpSkills.Controls.Add(lblActiveKarma, 2, 1);
+            tlpSkills.Controls.Add(splitContainer2, 3, 0);
+            tlpSkills.Dock = DockStyle.Fill;
+            tlpSkills.Location = new Point(3, 43);
+            tlpSkills.Name = "tlpSkills";
+            tlpSkills.RowCount = 3;
+            tlpSkills.RowStyles.Add(new RowStyle(SizeType.Absolute, 35F));
+            tlpSkills.RowStyles.Add(new RowStyle(SizeType.Absolute, 25F));
+            tlpSkills.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            tlpSkills.Size = new Size(794, 349);
+            tlpSkills.TabIndex = 3;
+            // 
+            // btnAddSkills
+            // 
+            btnAddSkills.AutoSize = true;
+            btnAddSkills.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            btnAddSkills.Dock = DockStyle.Fill;
+            btnAddSkills.Location = new Point(0, 0);
+            btnAddSkills.MinimumSize = new Size(80, 0);
+            btnAddSkills.Name = "btnAddSkills";
+            btnAddSkills.Size = new Size(87, 29);
+            btnAddSkills.TabIndex = 1;
+            btnAddSkills.Tag = "Button_AddSkill";
+            btnAddSkills.Text = "&Add Skill";
+            btnAddSkills.UseVisualStyleBackColor = true;
+            btnAddSkills.Click += btnAddSkills_Click;
+            // 
+            // cboSkillList
+            // 
+            cboSkillList.FormattingEnabled = true;
+            cboSkillList.Location = new Point(3, 3);
+            cboSkillList.Name = "cboSkillList";
+            cboSkillList.Size = new Size(303, 23);
+            cboSkillList.TabIndex = 0;
+            // 
             // tlpActiveSkills
             // 
+            tlpActiveSkills.Anchor = AnchorStyles.None;
             tlpActiveSkills.ColumnCount = 5;
             tlpActiveSkills.ColumnStyles.Add(new ColumnStyle());
             tlpActiveSkills.ColumnStyles.Add(new ColumnStyle());
@@ -131,28 +194,22 @@ namespace Chummer.UI.Skills
             tlpActiveSkills.ColumnStyles.Add(new ColumnStyle());
             tlpActiveSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             tlpActiveSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 20F));
-            tlpActiveSkills.Controls.Add(lblActiveSp, 1, 1);
-            tlpActiveSkills.Controls.Add(lblActiveSkills, 0, 1);
-            tlpActiveSkills.Controls.Add(lblActiveKarma, 2, 1);
-            tlpActiveSkills.Controls.Add(lblBuyWithKarma, 4, 1);
-            tlpActiveSkills.Controls.Add(btnResetCustomDisplayAttribute, 3, 1);
             tlpActiveSkills.Controls.Add(tlpActiveSkillsButtons, 1, 0);
-            tlpActiveSkills.Dock = DockStyle.Fill;
-            tlpActiveSkills.Location = new Point(9, 0);
+            tlpActiveSkills.Location = new Point(9, 395);
             tlpActiveSkills.Margin = new Padding(9, 0, 0, 0);
             tlpActiveSkills.Name = "tlpActiveSkills";
             tlpActiveSkills.RowCount = 3;
             tlpActiveSkills.RowStyles.Add(new RowStyle());
             tlpActiveSkills.RowStyles.Add(new RowStyle());
             tlpActiveSkills.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpActiveSkills.Size = new Size(791, 226);
+            tlpActiveSkills.Size = new Size(791, 57);
             tlpActiveSkills.TabIndex = 57;
             // 
             // lblActiveSp
             // 
-            lblActiveSp.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             lblActiveSp.AutoSize = true;
-            lblActiveSp.Location = new Point(78, 41);
+            lblActiveSp.Dock = DockStyle.Bottom;
+            lblActiveSp.Location = new Point(195, 45);
             lblActiveSp.Name = "lblActiveSp";
             lblActiveSp.Size = new Size(40, 15);
             lblActiveSp.TabIndex = 46;
@@ -162,12 +219,12 @@ namespace Chummer.UI.Skills
             // 
             // lblActiveSkills
             // 
-            lblActiveSkills.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             lblActiveSkills.AutoSize = true;
-            lblActiveSkills.Location = new Point(3, 34);
+            lblActiveSkills.Dock = DockStyle.Bottom;
+            lblActiveSkills.Location = new Point(3, 38);
             lblActiveSkills.MinimumSize = new Size(0, 22);
             lblActiveSkills.Name = "lblActiveSkills";
-            lblActiveSkills.Size = new Size(69, 22);
+            lblActiveSkills.Size = new Size(186, 22);
             lblActiveSkills.TabIndex = 3;
             lblActiveSkills.Tag = "Label_ActiveSkills";
             lblActiveSkills.Text = "Active Skills";
@@ -175,9 +232,9 @@ namespace Chummer.UI.Skills
             // 
             // lblActiveKarma
             // 
-            lblActiveKarma.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             lblActiveKarma.AutoSize = true;
-            lblActiveKarma.Location = new Point(124, 41);
+            lblActiveKarma.Dock = DockStyle.Bottom;
+            lblActiveKarma.Location = new Point(241, 45);
             lblActiveKarma.Name = "lblActiveKarma";
             lblActiveKarma.Size = new Size(41, 15);
             lblActiveKarma.TabIndex = 47;
@@ -188,10 +245,10 @@ namespace Chummer.UI.Skills
             // lblBuyWithKarma
             // 
             lblBuyWithKarma.AutoSize = true;
-            lblBuyWithKarma.Dock = DockStyle.Right;
-            lblBuyWithKarma.Location = new Point(696, 31);
+            lblBuyWithKarma.Dock = DockStyle.Bottom;
+            lblBuyWithKarma.Location = new Point(288, 45);
             lblBuyWithKarma.Name = "lblBuyWithKarma";
-            lblBuyWithKarma.Size = new Size(92, 25);
+            lblBuyWithKarma.Size = new Size(399, 15);
             lblBuyWithKarma.TabIndex = 50;
             lblBuyWithKarma.Tag = "String_BuyWithKarma";
             lblBuyWithKarma.Text = "Buy With Karma";
@@ -202,7 +259,7 @@ namespace Chummer.UI.Skills
             btnResetCustomDisplayAttribute.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             btnResetCustomDisplayAttribute.AutoSize = true;
             btnResetCustomDisplayAttribute.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            btnResetCustomDisplayAttribute.Location = new Point(168, 31);
+            btnResetCustomDisplayAttribute.Location = new Point(2, 4);
             btnResetCustomDisplayAttribute.Margin = new Padding(0);
             btnResetCustomDisplayAttribute.MinimumSize = new Size(80, 0);
             btnResetCustomDisplayAttribute.Name = "btnResetCustomDisplayAttribute";
@@ -223,37 +280,21 @@ namespace Chummer.UI.Skills
             tlpActiveSkillsButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40.19608F));
             tlpActiveSkillsButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 59.80392F));
             tlpActiveSkillsButtons.ColumnStyles.Add(new ColumnStyle());
-            tlpActiveSkillsButtons.Controls.Add(cboDisplayFilter, 1, 0);
-            tlpActiveSkillsButtons.Controls.Add(btnExotic, 2, 0);
-            tlpActiveSkillsButtons.Controls.Add(cboSort, 0, 0);
             tlpActiveSkillsButtons.Dock = DockStyle.Fill;
-            tlpActiveSkillsButtons.Location = new Point(75, 0);
+            tlpActiveSkillsButtons.Location = new Point(0, 0);
             tlpActiveSkillsButtons.Margin = new Padding(0);
             tlpActiveSkillsButtons.Name = "tlpActiveSkillsButtons";
             tlpActiveSkillsButtons.RowCount = 1;
             tlpActiveSkillsButtons.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpActiveSkillsButtons.Size = new Size(716, 31);
+            tlpActiveSkillsButtons.Size = new Size(791, 1);
             tlpActiveSkillsButtons.TabIndex = 53;
-            // 
-            // cboDisplayFilter
-            // 
-            cboDisplayFilter.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboDisplayFilter.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboDisplayFilter.FormattingEnabled = true;
-            cboDisplayFilter.IntegralHeight = false;
-            cboDisplayFilter.Location = new Point(249, 4);
-            cboDisplayFilter.Name = "cboDisplayFilter";
-            cboDisplayFilter.Size = new Size(360, 23);
-            cboDisplayFilter.TabIndex = 1;
-            cboDisplayFilter.SelectedIndexChanged += cboDisplayFilter_SelectedIndexChanged;
-            cboDisplayFilter.TextUpdate += cboDisplayFilter_TextUpdate;
             // 
             // btnExotic
             // 
             btnExotic.Anchor = AnchorStyles.Right;
             btnExotic.AutoSize = true;
             btnExotic.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            btnExotic.Location = new Point(616, 3);
+            btnExotic.Location = new Point(694, 5);
             btnExotic.MinimumSize = new Size(80, 0);
             btnExotic.Name = "btnExotic";
             btnExotic.Size = new Size(97, 25);
@@ -265,106 +306,34 @@ namespace Chummer.UI.Skills
             // 
             // cboSort
             // 
-            cboSort.Anchor = AnchorStyles.Left | AnchorStyles.Right;
             cboSort.DropDownStyle = ComboBoxStyle.DropDownList;
             cboSort.FormattingEnabled = true;
             cboSort.IntegralHeight = false;
-            cboSort.Location = new Point(3, 4);
+            cboSort.Location = new Point(4, 3);
             cboSort.Name = "cboSort";
-            cboSort.Size = new Size(240, 23);
+            cboSort.Size = new Size(281, 23);
             cboSort.TabIndex = 4;
             cboSort.SelectedIndexChanged += cboSort_SelectedIndexChanged;
             // 
-            // tlpSkills
+            // cboDisplayFilter
             // 
-            tlpSkills.ColumnCount = 5;
-            tlpSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 192F));
-            tlpSkills.ColumnStyles.Add(new ColumnStyle());
-            tlpSkills.ColumnStyles.Add(new ColumnStyle());
-            tlpSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tlpSkills.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 83F));
-            tlpSkills.Controls.Add(label2, 1, 1);
-            tlpSkills.Controls.Add(label3, 2, 1);
-            tlpSkills.Controls.Add(cboSkillList, 3, 0);
-            tlpSkills.Controls.Add(btnAddSkills, 4, 0);
-            tlpSkills.Controls.Add(label1, 0, 1);
-            tlpSkills.Controls.Add(label4, 3, 1);
-            tlpSkills.Dock = DockStyle.Fill;
-            tlpSkills.Location = new Point(3, 229);
-            tlpSkills.Name = "tlpSkills";
-            tlpSkills.RowCount = 3;
-            tlpSkills.RowStyles.Add(new RowStyle(SizeType.Absolute, 30F));
-            tlpSkills.RowStyles.Add(new RowStyle(SizeType.Absolute, 40F));
-            tlpSkills.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpSkills.Size = new Size(794, 220);
-            tlpSkills.TabIndex = 3;
+            cboDisplayFilter.DropDownStyle = ComboBoxStyle.DropDownList;
+            cboDisplayFilter.FormattingEnabled = true;
+            cboDisplayFilter.IntegralHeight = false;
+            cboDisplayFilter.Location = new Point(3, 3);
+            cboDisplayFilter.Name = "cboDisplayFilter";
+            cboDisplayFilter.Size = new Size(399, 23);
+            cboDisplayFilter.TabIndex = 1;
+            cboDisplayFilter.SelectedIndexChanged += cboDisplayFilter_SelectedIndexChanged;
+            cboDisplayFilter.TextUpdate += cboDisplayFilter_TextUpdate;
             // 
-            // label2
+            // panel1
             // 
-            label2.Anchor = AnchorStyles.None;
-            label2.Location = new Point(195, 30);
-            label2.Name = "label2";
-            label2.Size = new Size(40, 40);
-            label2.TabIndex = 47;
-            label2.Tag = "String_Points";
-            label2.Text = "Points";
-            label2.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // label3
-            // 
-            label3.Anchor = AnchorStyles.None;
-            label3.Location = new Point(241, 30);
-            label3.Name = "label3";
-            label3.Size = new Size(41, 40);
-            label3.TabIndex = 48;
-            label3.Tag = "String_Karma";
-            label3.Text = "Karma";
-            label3.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // cboSkillList
-            // 
-            cboSkillList.FormattingEnabled = true;
-            cboSkillList.Location = new Point(288, 3);
-            cboSkillList.Name = "cboSkillList";
-            cboSkillList.Size = new Size(322, 23);
-            cboSkillList.TabIndex = 0;
-            // 
-            // btnAddSkills
-            // 
-            btnAddSkills.AutoSize = true;
-            btnAddSkills.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            btnAddSkills.Location = new Point(714, 3);
-            btnAddSkills.MinimumSize = new Size(80, 0);
-            btnAddSkills.Name = "btnAddSkills";
-            btnAddSkills.Size = new Size(80, 24);
-            btnAddSkills.TabIndex = 1;
-            btnAddSkills.Tag = "Button_AddSkill";
-            btnAddSkills.Text = "&Add Skill";
-            btnAddSkills.UseVisualStyleBackColor = true;
-            btnAddSkills.Click += btnAddSkills_Click;
-            // 
-            // label1
-            // 
-            label1.Anchor = AnchorStyles.Left;
-            label1.Location = new Point(3, 30);
-            label1.MinimumSize = new Size(0, 22);
-            label1.Name = "label1";
-            label1.Size = new Size(105, 40);
-            label1.TabIndex = 4;
-            label1.Tag = "Label_ActiveSkills";
-            label1.Text = "Active Skills";
-            label1.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // label4
-            // 
-            label4.Anchor = AnchorStyles.Right;
-            label4.Location = new Point(640, 30);
-            label4.Name = "label4";
-            label4.Size = new Size(68, 40);
-            label4.TabIndex = 51;
-            label4.Tag = "String_BuyWithKarma";
-            label4.Text = "Buy With \r\n   Karma";
-            label4.TextAlign = ContentAlignment.MiddleCenter;
+            panel1.Controls.Add(splitContainer3);
+            panel1.Location = new Point(3, 3);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(793, 34);
+            panel1.TabIndex = 58;
             // 
             // tlpBottomPanel
             // 
@@ -563,6 +532,56 @@ namespace Chummer.UI.Skills
             splitContainer1.SplitterDistance = 256;
             splitContainer1.TabIndex = 2;
             // 
+            // splitContainer2
+            // 
+            splitContainer2.Location = new Point(288, 3);
+            splitContainer2.Name = "splitContainer2";
+            // 
+            // splitContainer2.Panel1
+            // 
+            splitContainer2.Panel1.Controls.Add(cboSkillList);
+            // 
+            // splitContainer2.Panel2
+            // 
+            splitContainer2.Panel2.Controls.Add(btnAddSkills);
+            splitContainer2.Size = new Size(399, 29);
+            splitContainer2.SplitterDistance = 308;
+            splitContainer2.TabIndex = 51;
+            // 
+            // splitContainer3
+            // 
+            splitContainer3.Dock = DockStyle.Fill;
+            splitContainer3.Location = new Point(0, 0);
+            splitContainer3.Name = "splitContainer3";
+            // 
+            // splitContainer3.Panel1
+            // 
+            splitContainer3.Panel1.Controls.Add(cboSort);
+            // 
+            // splitContainer3.Panel2
+            // 
+            splitContainer3.Panel2.Controls.Add(splitContainer4);
+            splitContainer3.Size = new Size(793, 34);
+            splitContainer3.SplitterDistance = 287;
+            splitContainer3.TabIndex = 0;
+            // 
+            // splitContainer4
+            // 
+            splitContainer4.Dock = DockStyle.Fill;
+            splitContainer4.Location = new Point(0, 0);
+            splitContainer4.Name = "splitContainer4";
+            // 
+            // splitContainer4.Panel1
+            // 
+            splitContainer4.Panel1.Controls.Add(cboDisplayFilter);
+            // 
+            // splitContainer4.Panel2
+            // 
+            splitContainer4.Panel2.Controls.Add(btnResetCustomDisplayAttribute);
+            splitContainer4.Size = new Size(502, 34);
+            splitContainer4.SplitterDistance = 405;
+            splitContainer4.TabIndex = 0;
+            // 
             // SkillsTabUserControl
             // 
             Controls.Add(splitSkills);
@@ -576,18 +595,31 @@ namespace Chummer.UI.Skills
             ((System.ComponentModel.ISupportInitialize)splitSkills).EndInit();
             splitSkills.ResumeLayout(false);
             tlpTopPanel.ResumeLayout(false);
-            tlpActiveSkills.ResumeLayout(false);
-            tlpActiveSkills.PerformLayout();
-            tlpActiveSkillsButtons.ResumeLayout(false);
-            tlpActiveSkillsButtons.PerformLayout();
             tlpSkills.ResumeLayout(false);
             tlpSkills.PerformLayout();
+            tlpActiveSkills.ResumeLayout(false);
+            tlpActiveSkills.PerformLayout();
+            panel1.ResumeLayout(false);
             tlpBottomPanel.ResumeLayout(false);
             tlpBottomPanel.PerformLayout();
             tlpKnowledgeSkillsHeader.ResumeLayout(false);
             tlpKnowledgeSkillsHeader.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)splitContainer1).EndInit();
             splitContainer1.ResumeLayout(false);
+            splitContainer2.Panel1.ResumeLayout(false);
+            splitContainer2.Panel2.ResumeLayout(false);
+            splitContainer2.Panel2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer2).EndInit();
+            splitContainer2.ResumeLayout(false);
+            splitContainer3.Panel1.ResumeLayout(false);
+            splitContainer3.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)splitContainer3).EndInit();
+            splitContainer3.ResumeLayout(false);
+            splitContainer4.Panel1.ResumeLayout(false);
+            splitContainer4.Panel2.ResumeLayout(false);
+            splitContainer4.Panel2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)splitContainer4).EndInit();
+            splitContainer4.ResumeLayout(false);
             ResumeLayout(false);
 
         }
@@ -623,10 +655,10 @@ namespace Chummer.UI.Skills
         private ComboBox cboSkillList;
         private Table.TextTableCell textTableCell1;
         private TableLayoutPanel tlpSkills;
-        private Label label3;
-        private Label label1;
-        private Label label2;
-        private Label label4;
         private Button btnAddSkills;
+        private Panel panel1;
+        private SplitContainer splitContainer2;
+        private SplitContainer splitContainer3;
+        private SplitContainer splitContainer4;
     }
 }
