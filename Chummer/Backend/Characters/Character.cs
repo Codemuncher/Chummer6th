@@ -17,11 +17,8 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Annotations;
-using Chummer.Backend.Attributes;
-using Chummer.Backend.Equipment;
-using Chummer.Backend.Skills;
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -35,23 +32,26 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
+using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
-using System.Xml.XPath;
-using Chummer.Backend.Uniques;
 using System.Xml.Serialization;
-using System.Runtime.Serialization;
-using System.Threading;
+using System.Xml.XPath;
+using Chummer.Annotations;
+using Chummer.Backend.Attributes;
+using Chummer.Backend.Enums;
+using Chummer.Backend.Equipment;
+using Chummer.Backend.Skills;
+using Chummer.Backend.Uniques;
 using Chummer.Plugins;
 using Microsoft.ApplicationInsights;
 using Microsoft.IO;
 using Newtonsoft.Json;
 using NLog;
-using Application = System.Windows.Forms.Application;
-using System.Buffers;
-using Chummer.Backend.Enums;
 
 namespace Chummer
 {
@@ -2808,7 +2808,7 @@ namespace Chummer
                                     }
                                     catch
                                     {
-                                        objQuality.Dispose();
+                                        objQuality.DeleteQuality(token: CancellationToken.None);
                                         throw;
                                     }
                                 }
@@ -2864,25 +2864,31 @@ namespace Chummer
                 {
                     string strReach = objXmlNaturalWeapon["reach"]?.InnerText ?? "0";
                     string strForce = intForce.ToString(GlobalSettings.InvariantCultureInfo);
-                    Weapon objWeapon = new Weapon(this)
+                    Weapon objWeapon = new Weapon(this);
+                    try
                     {
-                        Name = objXmlNaturalWeapon["name"].InnerText,
-                        Category = LanguageManager.GetString("Tab_Critter", GlobalSettings.DefaultLanguage, token: token),
-                        RangeType = "Melee",
-                        Reach = strReach.Replace("F", strForce).Replace("1D6", strForce).Replace("2D6", strForce),
-                        Damage = objXmlNaturalWeapon["damage"]?.InnerText ?? "({STR})S",
-                        Accuracy = objXmlNaturalWeapon["accuracy"]?.InnerText ?? "Physical",
-                        AP = objXmlNaturalWeapon["ap"]?.InnerText ?? "0",
-                        Mode = "0",
-                        RC = "0",
-                        Concealability = "0",
-                        Avail = "0",
-                        Cost = "0",
-                        UseSkill = objXmlNaturalWeapon["useskill"]?.InnerText ?? string.Empty,
-                        Source = objXmlNaturalWeapon["source"]?.InnerText ?? "SR5",
-                        Page = objXmlNaturalWeapon["page"]?.InnerText ?? "0"
-                    };
-                    Weapons.Add(objWeapon);
+                        objWeapon.Name = objXmlNaturalWeapon["name"].InnerText;
+                        objWeapon.Category = LanguageManager.GetString("Tab_Critter", GlobalSettings.DefaultLanguage, token: token);
+                        objWeapon.RangeType = "Melee";
+                        objWeapon.Reach = strReach.Replace("F", strForce).Replace("1D6", strForce).Replace("2D6", strForce);
+                        objWeapon.Damage = objXmlNaturalWeapon["damage"]?.InnerText ?? "({STR})S";
+                        objWeapon.Accuracy = objXmlNaturalWeapon["accuracy"]?.InnerText ?? "Physical";
+                        objWeapon.AP = objXmlNaturalWeapon["ap"]?.InnerText ?? "0";
+                        objWeapon.Mode = "0";
+                        objWeapon.RC = "0";
+                        objWeapon.Concealability = "0";
+                        objWeapon.Avail = "0";
+                        objWeapon.Cost = "0";
+                        objWeapon.UseSkill = objXmlNaturalWeapon["useskill"]?.InnerText ?? string.Empty;
+                        objWeapon.Source = objXmlNaturalWeapon["source"]?.InnerText ?? "SR5";
+                        objWeapon.Page = objXmlNaturalWeapon["page"]?.InnerText ?? "0";
+                        Weapons.Add(objWeapon);
+                    }
+                    catch
+                    {
+                        objWeapon.DeleteWeapon();
+                        throw;
+                    }
                 }
 
                 // Add the Unarmed Attack Weapon to the character.
@@ -2893,12 +2899,20 @@ namespace Chummer
                     if (objXmlWeapon != null)
                     {
                         Weapon objWeapon = new Weapon(this);
-                        objWeapon.Create(objXmlWeapon, lstWeapons, token: token);
-                        objWeapon.ParentID =
-                            Guid.NewGuid()
-                                .ToString("D",
-                                    GlobalSettings.InvariantCultureInfo); // Unarmed Attack can never be removed
-                        Weapons.Add(objWeapon);
+                        try
+                        {
+                            objWeapon.Create(objXmlWeapon, lstWeapons, token: token);
+                            objWeapon.ParentID =
+                                Guid.NewGuid()
+                                    .ToString("D",
+                                        GlobalSettings.InvariantCultureInfo); // Unarmed Attack can never be removed
+                            Weapons.Add(objWeapon);
+                        }
+                        catch
+                        {
+                            objWeapon.DeleteWeapon();
+                            throw;
+                        }
                     }
                 }
 
@@ -3034,21 +3048,35 @@ namespace Chummer
                             if (objXmlSkillNode != null)
                             {
                                 Skill objUncastSkill = Skill.FromData(objXmlSkillNode, this, true);
-                                if (objUncastSkill is KnowledgeSkill objSkill)
-                                    SkillsSection.KnowledgeSkills.Add(objSkill);
-                                else
+                                try
                                 {
-                                    Utils.BreakIfDebug();
-                                    objUncastSkill.Remove();
+                                    if (objUncastSkill is KnowledgeSkill objSkill)
+                                        SkillsSection.KnowledgeSkills.Add(objSkill);
+                                    else
+                                    {
+                                        Utils.BreakIfDebug();
+                                        objUncastSkill?.Remove();
+                                    }
+                                }
+                                catch
+                                {
+                                    objUncastSkill?.Remove();
+                                    throw;
                                 }
                             }
                             else
                             {
-                                KnowledgeSkill objSkill = new KnowledgeSkill(this, strName, true)
+                                KnowledgeSkill objSkill = new KnowledgeSkill(this, strName, true);
+                                try
                                 {
-                                    Type = xmlSkill.Attributes?["category"]?.InnerText
-                                };
-                                SkillsSection.KnowledgeSkills.Add(objSkill);
+                                    objSkill.Type = xmlSkill.Attributes?["category"]?.InnerText;
+                                    SkillsSection.KnowledgeSkills.Add(objSkill);
+                                }
+                                catch
+                                {
+                                    objSkill.Remove();
+                                    throw;
+                                }
                             }
                         }
 
@@ -3080,15 +3108,23 @@ namespace Chummer
                         continue;
 
                     ComplexForm objComplexForm = new ComplexForm(this);
-                    objComplexForm.Create(xmlComplexFormData);
-                    if (objComplexForm.InternalId.IsEmptyGuid())
+                    try
                     {
-                        objComplexForm.Dispose();
-                        continue;
-                    }
-                    objComplexForm.Grade = -1;
+                        objComplexForm.Create(xmlComplexFormData);
+                        if (objComplexForm.InternalId.IsEmptyGuid())
+                        {
+                            objComplexForm.Remove(false);
+                            continue;
+                        }
+                        objComplexForm.Grade = -1;
 
-                    ComplexForms.Add(objComplexForm);
+                        ComplexForms.Add(objComplexForm);
+                    }
+                    catch
+                    {
+                        objComplexForm.Remove(false);
+                        throw;
+                    }
 
                     try
                     {
@@ -3114,31 +3150,38 @@ namespace Chummer
                     XmlNode objXmlCyberwareNode = xmlCyberwareDocument.TryGetNodeByNameOrId("chummer/cyberwares/cyberware", node.InnerText);
                     if (objXmlCyberwareNode == null)
                         continue;
-                    Cyberware objWare = new Cyberware(this);
                     string strForcedValue = node.Attributes["select"]?.InnerText ?? string.Empty;
                     int intRating =
                         CommonFunctions.ExpressionToInt(node.Attributes["rating"]?.InnerText, intForce, 0, 0, token);
-
-                    objWare.Create(objXmlCyberwareNode,
-                        GetGradeByName(Improvement.ImprovementSource.Cyberware, "None", true, token),
-                        Improvement.ImprovementSource.Metatype, intRating,
-                        Weapons, Vehicles, true, true, strForcedValue, token: token);
-                    Cyberware.Add(objWare);
+                    Cyberware objWare = new Cyberware(this);
                     try
                     {
-                        token.ThrowIfCancellationRequested();
-                        ImprovementManager.CreateImprovement(this, objWare.InternalId,
-                                                             Improvement.ImprovementSource.Metatype,
-                                                             string.Empty, Improvement.ImprovementType.FreeWare,
-                                                             string.Empty, token: token);
+                        objWare.Create(objXmlCyberwareNode,
+                            GetGradeByName(Improvement.ImprovementSource.Cyberware, "None", true, token),
+                            Improvement.ImprovementSource.Metatype, intRating,
+                            Weapons, Vehicles, true, true, strForcedValue, token: token);
+                        Cyberware.Add(objWare);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            ImprovementManager.CreateImprovement(this, objWare.InternalId,
+                                                                 Improvement.ImprovementSource.Metatype,
+                                                                 string.Empty, Improvement.ImprovementType.FreeWare,
+                                                                 string.Empty, token: token);
+                        }
+                        catch
+                        {
+                            ImprovementManager.Rollback(this, CancellationToken.None);
+                            throw;
+                        }
+
+                        ImprovementManager.Commit(this);
                     }
                     catch
                     {
-                        ImprovementManager.Rollback(this, CancellationToken.None);
+                        objWare.DeleteCyberware();
                         throw;
                     }
-
-                    ImprovementManager.Commit(this);
                 }
 
                 //Load any bioware the character has.
@@ -3148,31 +3191,38 @@ namespace Chummer
                     XmlNode objXmlCyberwareNode = xmlBiowareDocument.TryGetNodeByNameOrId("chummer/biowares/bioware", node.InnerText);
                     if (objXmlCyberwareNode == null)
                         continue;
-                    Cyberware objWare = new Cyberware(this);
                     string strForcedValue = node.Attributes["select"]?.InnerText ?? string.Empty;
                     int intRating =
                         CommonFunctions.ExpressionToInt(node.Attributes["rating"]?.InnerText, intForce, 0, 0, token);
-
-                    objWare.Create(objXmlCyberwareNode,
-                        GetGradeByName(Improvement.ImprovementSource.Bioware, "None", true, token),
-                        Improvement.ImprovementSource.Metatype, intRating,
-                        Weapons, Vehicles, true, true, strForcedValue, token: token);
-                    Cyberware.Add(objWare);
+                    Cyberware objWare = new Cyberware(this);
                     try
                     {
-                        token.ThrowIfCancellationRequested();
-                        ImprovementManager.CreateImprovement(this, objWare.InternalId,
-                                                             Improvement.ImprovementSource.Metatype,
-                                                             string.Empty, Improvement.ImprovementType.FreeWare,
-                                                             string.Empty, token: token);
+                        objWare.Create(objXmlCyberwareNode,
+                            GetGradeByName(Improvement.ImprovementSource.Bioware, "None", true, token),
+                            Improvement.ImprovementSource.Metatype, intRating,
+                            Weapons, Vehicles, true, true, strForcedValue, token: token);
+                        Cyberware.Add(objWare);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            ImprovementManager.CreateImprovement(this, objWare.InternalId,
+                                                                 Improvement.ImprovementSource.Metatype,
+                                                                 string.Empty, Improvement.ImprovementType.FreeWare,
+                                                                 string.Empty, token: token);
+                        }
+                        catch
+                        {
+                            ImprovementManager.Rollback(this, CancellationToken.None);
+                            throw;
+                        }
+
+                        ImprovementManager.Commit(this);
                     }
                     catch
                     {
-                        ImprovementManager.Rollback(this, CancellationToken.None);
+                        objWare.DeleteCyberware();
                         throw;
                     }
-
-                    ImprovementManager.Commit(this);
                 }
 
                 // Add any Advanced Programs the Critter comes with (typically A.I.s)
@@ -3244,39 +3294,50 @@ namespace Chummer
                     string strForceValue = xmlGear.Attributes?["select"]?.InnerText ?? string.Empty;
 
                     Gear objGear = new Gear(this);
-                    objGear.Create(xmlGearData, intRating, lstWeapons, strForceValue, token: token);
-
-                    if (objGear.InternalId.IsEmptyGuid())
-                        continue;
-
-                    objGear.Quantity = decQty;
-
-                    // If a Commlink has just been added, see if the character already has one. If not, make it the active Commlink.
-                    if (ActiveCommlink == null && objGear.IsCommlink)
-                    {
-                        objGear.SetActiveCommlink(this, true);
-                    }
-
-                    objGear.Cost = "0";
-                    objGear.ParentID = Guid.NewGuid().ToString();
-
-                    Gear.Add(objGear);
-
                     try
                     {
-                        token.ThrowIfCancellationRequested();
-                        ImprovementManager.CreateImprovement(this, objGear.InternalId,
-                                                             Improvement.ImprovementSource.Metatype,
-                                                             string.Empty, Improvement.ImprovementType.Gear,
-                                                             string.Empty, token: token);
+                        objGear.Create(xmlGearData, intRating, lstWeapons, strForceValue, token: token);
+
+                        if (objGear.InternalId.IsEmptyGuid())
+                        {
+                            objGear.DeleteGear();
+                            continue;
+                        }
+
+                        objGear.Quantity = decQty;
+
+                        // If a Commlink has just been added, see if the character already has one. If not, make it the active Commlink.
+                        if (ActiveCommlink == null && objGear.IsCommlink)
+                        {
+                            objGear.SetActiveCommlink(this, true);
+                        }
+
+                        objGear.Cost = "0";
+                        objGear.ParentID = Guid.NewGuid().ToString();
+
+                        Gear.Add(objGear);
+
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            ImprovementManager.CreateImprovement(this, objGear.InternalId,
+                                                                 Improvement.ImprovementSource.Metatype,
+                                                                 string.Empty, Improvement.ImprovementType.Gear,
+                                                                 string.Empty, token: token);
+                        }
+                        catch
+                        {
+                            ImprovementManager.Rollback(this, CancellationToken.None);
+                            throw;
+                        }
+
+                        ImprovementManager.Commit(this);
                     }
                     catch
                     {
-                        ImprovementManager.Rollback(this, CancellationToken.None);
+                        objGear.DeleteGear();
                         throw;
                     }
-
-                    ImprovementManager.Commit(this);
                 }
 
                 // Add any created Weapons to the character.
@@ -3508,7 +3569,7 @@ namespace Chummer
                                     }
                                     catch
                                     {
-                                        await objQuality.DisposeAsync().ConfigureAwait(false);
+                                        await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                         throw;
                                     }
                                 }
@@ -3568,26 +3629,32 @@ namespace Chummer
                 {
                     string strReach = objXmlNaturalWeapon["reach"]?.InnerText ?? "0";
                     string strForce = intForce.ToString(GlobalSettings.InvariantCultureInfo);
-                    Weapon objWeapon = new Weapon(this)
+                    Weapon objWeapon = new Weapon(this);
+                    try
                     {
-                        Name = objXmlNaturalWeapon["name"].InnerText,
-                        Category = await LanguageManager.GetStringAsync("Tab_Critter", GlobalSettings.DefaultLanguage,
-                            token: token).ConfigureAwait(false),
-                        RangeType = "Melee",
-                        Reach = strReach.Replace("F", strForce).Replace("1D6", strForce).Replace("2D6", strForce),
-                        Damage = objXmlNaturalWeapon["damage"]?.InnerText ?? "({STR})S",
-                        Accuracy = objXmlNaturalWeapon["accuracy"]?.InnerText ?? "Physical",
-                        AP = objXmlNaturalWeapon["ap"]?.InnerText ?? "0",
-                        Mode = "0",
-                        RC = "0",
-                        Concealability = "0",
-                        Avail = "0",
-                        Cost = "0",
-                        UseSkill = objXmlNaturalWeapon["useskill"]?.InnerText ?? string.Empty,
-                        Source = objXmlNaturalWeapon["source"]?.InnerText ?? "SR5",
-                        Page = objXmlNaturalWeapon["page"]?.InnerText ?? "0"
-                    };
-                    await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                        objWeapon.Name = objXmlNaturalWeapon["name"].InnerText;
+                        objWeapon.Category = await LanguageManager.GetStringAsync("Tab_Critter", GlobalSettings.DefaultLanguage,
+                            token: token).ConfigureAwait(false);
+                        objWeapon.RangeType = "Melee";
+                        objWeapon.Reach = strReach.Replace("F", strForce).Replace("1D6", strForce).Replace("2D6", strForce);
+                        objWeapon.Damage = objXmlNaturalWeapon["damage"]?.InnerText ?? "({STR})S";
+                        objWeapon.Accuracy = objXmlNaturalWeapon["accuracy"]?.InnerText ?? "Physical";
+                        objWeapon.AP = objXmlNaturalWeapon["ap"]?.InnerText ?? "0";
+                        objWeapon.Mode = "0";
+                        objWeapon.RC = "0";
+                        objWeapon.Concealability = "0";
+                        objWeapon.Avail = "0";
+                        objWeapon.Cost = "0";
+                        objWeapon.UseSkill = objXmlNaturalWeapon["useskill"]?.InnerText ?? string.Empty;
+                        objWeapon.Source = objXmlNaturalWeapon["source"]?.InnerText ?? "SR5";
+                        objWeapon.Page = objXmlNaturalWeapon["page"]?.InnerText ?? "0";
+                        await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                        throw;
+                    }
                 }
 
                 // Add the Unarmed Attack Weapon to the character.
@@ -3598,12 +3665,20 @@ namespace Chummer
                     if (objXmlWeapon != null)
                     {
                         Weapon objWeapon = new Weapon(this);
-                        await objWeapon.CreateAsync(objXmlWeapon, lstWeapons, token: token).ConfigureAwait(false);
-                        objWeapon.ParentID =
-                            Guid.NewGuid()
-                                .ToString("D",
-                                    GlobalSettings.InvariantCultureInfo); // Unarmed Attack can never be removed
-                        await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                        try
+                        {
+                            await objWeapon.CreateAsync(objXmlWeapon, lstWeapons, token: token).ConfigureAwait(false);
+                            objWeapon.ParentID =
+                                Guid.NewGuid()
+                                    .ToString("D",
+                                        GlobalSettings.InvariantCultureInfo); // Unarmed Attack can never be removed
+                            await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                            throw;
+                        }
                     }
                 }
 
@@ -3748,21 +3823,38 @@ namespace Chummer
                             if (objXmlSkillNode != null)
                             {
                                 Skill objUncastSkill = await Skill.FromDataAsync(objXmlSkillNode, this, true, token).ConfigureAwait(false);
-                                if (objUncastSkill is KnowledgeSkill objSkill)
-                                    await SkillsSection.KnowledgeSkills.AddAsync(objSkill, token).ConfigureAwait(false);
-                                else
+                                try
                                 {
-                                    Utils.BreakIfDebug();
-                                    await objUncastSkill.RemoveAsync(token).ConfigureAwait(false);
+                                    if (objUncastSkill is KnowledgeSkill objSkill)
+                                        await SkillsSection.KnowledgeSkills.AddAsync(objSkill, token).ConfigureAwait(false);
+                                    else
+                                    {
+                                        Utils.BreakIfDebug();
+                                        if (objUncastSkill != null)
+                                            await objUncastSkill.RemoveAsync(token).ConfigureAwait(false);
+                                    }
+                                }
+                                catch
+                                {
+                                    if (objUncastSkill != null)
+                                        await objUncastSkill.RemoveAsync(CancellationToken.None).ConfigureAwait(false);
+                                    throw;
                                 }
                             }
                             else
                             {
                                 KnowledgeSkill objSkill = await KnowledgeSkill.NewAsync(this, strName, true, token)
                                     .ConfigureAwait(false);
-                                await objSkill.SetTypeAsync(xmlSkill.Attributes?["category"]?.InnerText, token)
-                                    .ConfigureAwait(false);
-                                await SkillsSection.KnowledgeSkills.AddAsync(objSkill, token).ConfigureAwait(false);
+                                try
+                                {
+                                    await objSkill.SetTypeAsync(xmlSkill.Attributes?["category"]?.InnerText, token).ConfigureAwait(false);
+                                    await SkillsSection.KnowledgeSkills.AddAsync(objSkill, token).ConfigureAwait(false);
+                                }
+                                catch
+                                {
+                                    await objSkill.RemoveAsync(CancellationToken.None).ConfigureAwait(false);
+                                    throw;
+                                }
                             }
                         }
 
@@ -3798,15 +3890,23 @@ namespace Chummer
                         continue;
 
                     ComplexForm objComplexForm = new ComplexForm(this);
-                    await objComplexForm.CreateAsync(xmlComplexFormData, token: token).ConfigureAwait(false);
-                    if (objComplexForm.InternalId.IsEmptyGuid())
+                    try
                     {
-                        await objComplexForm.DisposeAsync().ConfigureAwait(false);
-                        continue;
-                    }
-                    objComplexForm.Grade = -1;
+                        await objComplexForm.CreateAsync(xmlComplexFormData, token: token).ConfigureAwait(false);
+                        if (objComplexForm.InternalId.IsEmptyGuid())
+                        {
+                            await objComplexForm.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                            continue;
+                        }
+                        objComplexForm.Grade = -1;
 
-                    await ComplexForms.AddAsync(objComplexForm, token).ConfigureAwait(false);
+                        await ComplexForms.AddAsync(objComplexForm, token).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await objComplexForm.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                        throw;
+                    }
 
                     try
                     {
@@ -3834,37 +3934,44 @@ namespace Chummer
                         xmlCyberwareDocument.TryGetNodeByNameOrId("chummer/cyberwares/cyberware", node.InnerText);
                     if (objXmlCyberwareNode == null)
                         continue;
-                    Cyberware objWare = new Cyberware(this);
                     string strForcedValue = node.Attributes["select"]?.InnerText ?? string.Empty;
                     int intRating =
                         await CommonFunctions
                             .ExpressionToIntAsync(node.Attributes["rating"]?.InnerText, intForce, 0, 0, token)
                             .ConfigureAwait(false);
-
-                    await objWare.CreateAsync(objXmlCyberwareNode,
-                            await GetGradeByNameAsync(Improvement.ImprovementSource.Cyberware, "None", true, token).ConfigureAwait(false),
-                            Improvement.ImprovementSource.Metatype,
-                            intRating,
-                            await GetWeaponsAsync(token).ConfigureAwait(false),
-                            await GetVehiclesAsync(token).ConfigureAwait(false), true, true, strForcedValue,
-                            token: token)
-                        .ConfigureAwait(false);
-                    await Cyberware.AddAsync(objWare, token).ConfigureAwait(false);
+                    Cyberware objWare = new Cyberware(this);
                     try
                     {
-                        token.ThrowIfCancellationRequested();
-                        await ImprovementManager.CreateImprovementAsync(this, objWare.InternalId,
-                            Improvement.ImprovementSource.Metatype,
-                            string.Empty, Improvement.ImprovementType.FreeWare,
-                            string.Empty, token: token).ConfigureAwait(false);
+                        await objWare.CreateAsync(objXmlCyberwareNode,
+                                await GetGradeByNameAsync(Improvement.ImprovementSource.Cyberware, "None", true, token).ConfigureAwait(false),
+                                Improvement.ImprovementSource.Metatype,
+                                intRating,
+                                await GetWeaponsAsync(token).ConfigureAwait(false),
+                                await GetVehiclesAsync(token).ConfigureAwait(false), true, true, strForcedValue,
+                                token: token)
+                            .ConfigureAwait(false);
+                        await Cyberware.AddAsync(objWare, token).ConfigureAwait(false);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            await ImprovementManager.CreateImprovementAsync(this, objWare.InternalId,
+                                Improvement.ImprovementSource.Metatype,
+                                string.Empty, Improvement.ImprovementType.FreeWare,
+                                string.Empty, token: token).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            await ImprovementManager.RollbackAsync(this, CancellationToken.None).ConfigureAwait(false);
+                            throw;
+                        }
+
+                        await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                     }
                     catch
                     {
-                        await ImprovementManager.RollbackAsync(this, CancellationToken.None).ConfigureAwait(false);
+                        await objWare.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
                         throw;
                     }
-
-                    await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                 }
 
                 //Load any bioware the character has.
@@ -3875,37 +3982,44 @@ namespace Chummer
                         xmlBiowareDocument.TryGetNodeByNameOrId("chummer/biowares/bioware", node.InnerText);
                     if (objXmlCyberwareNode == null)
                         continue;
-                    Cyberware objWare = new Cyberware(this);
                     string strForcedValue = node.Attributes["select"]?.InnerText ?? string.Empty;
                     int intRating =
                         await CommonFunctions
                             .ExpressionToIntAsync(node.Attributes["rating"]?.InnerText, intForce, 0, 0, token)
                             .ConfigureAwait(false);
-
-                    await objWare.CreateAsync(objXmlCyberwareNode,
-                            await GetGradeByNameAsync(Improvement.ImprovementSource.Bioware, "None", true, token).ConfigureAwait(false),
-                            Improvement.ImprovementSource.Metatype,
-                            intRating,
-                            await GetWeaponsAsync(token).ConfigureAwait(false),
-                            await GetVehiclesAsync(token).ConfigureAwait(false), true, true, strForcedValue,
-                            token: token)
-                        .ConfigureAwait(false);
-                    await Cyberware.AddAsync(objWare, token).ConfigureAwait(false);
+                    Cyberware objWare = new Cyberware(this);
                     try
                     {
-                        token.ThrowIfCancellationRequested();
-                        await ImprovementManager.CreateImprovementAsync(this, objWare.InternalId,
-                            Improvement.ImprovementSource.Metatype,
-                            string.Empty, Improvement.ImprovementType.FreeWare,
-                            string.Empty, token: token).ConfigureAwait(false);
+                        await objWare.CreateAsync(objXmlCyberwareNode,
+                                await GetGradeByNameAsync(Improvement.ImprovementSource.Bioware, "None", true, token).ConfigureAwait(false),
+                                Improvement.ImprovementSource.Metatype,
+                                intRating,
+                                await GetWeaponsAsync(token).ConfigureAwait(false),
+                                await GetVehiclesAsync(token).ConfigureAwait(false), true, true, strForcedValue,
+                                token: token)
+                            .ConfigureAwait(false);
+                        await Cyberware.AddAsync(objWare, token).ConfigureAwait(false);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            await ImprovementManager.CreateImprovementAsync(this, objWare.InternalId,
+                                Improvement.ImprovementSource.Metatype,
+                                string.Empty, Improvement.ImprovementType.FreeWare,
+                                string.Empty, token: token).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            await ImprovementManager.RollbackAsync(this, CancellationToken.None).ConfigureAwait(false);
+                            throw;
+                        }
+
+                        await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                     }
                     catch
                     {
-                        await ImprovementManager.RollbackAsync(this, CancellationToken.None).ConfigureAwait(false);
+                        await objWare.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
                         throw;
                     }
-
-                    await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                 }
 
                 // Add any Advanced Programs the Critter comes with (typically A.I.s)
@@ -3988,40 +4102,51 @@ namespace Chummer
                     string strForceValue = xmlGear.Attributes?["select"]?.InnerText ?? string.Empty;
 
                     Gear objGear = new Gear(this);
-                    await objGear.CreateAsync(xmlGearData, intRating, lstWeapons, strForceValue, token: token).ConfigureAwait(false);
-
-                    if (objGear.InternalId.IsEmptyGuid())
-                        continue;
-
-                    await objGear.SetQuantityAsync(decQty, token).ConfigureAwait(false);
-
-                    // If a Commlink has just been added, see if the character already has one. If not, make it the active Commlink.
-                    if (await GetActiveCommlinkAsync(token).ConfigureAwait(false) == null &&
-                        await objGear.GetIsCommlinkAsync(token).ConfigureAwait(false))
-                    {
-                        await objGear.SetActiveCommlinkAsync(this, true, token).ConfigureAwait(false);
-                    }
-
-                    objGear.Cost = "0";
-                    objGear.ParentID = Guid.NewGuid().ToString();
-
-                    await Gear.AddAsync(objGear, token).ConfigureAwait(false);
-
                     try
                     {
-                        token.ThrowIfCancellationRequested();
-                        await ImprovementManager.CreateImprovementAsync(this, objGear.InternalId,
-                            Improvement.ImprovementSource.Metatype,
-                            string.Empty, Improvement.ImprovementType.Gear,
-                            string.Empty, token: token).ConfigureAwait(false);
+                        await objGear.CreateAsync(xmlGearData, intRating, lstWeapons, strForceValue, token: token).ConfigureAwait(false);
+
+                        if (objGear.InternalId.IsEmptyGuid())
+                        {
+                            await objGear.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                            continue;
+                        }
+
+                        await objGear.SetQuantityAsync(decQty, token).ConfigureAwait(false);
+
+                        // If a Commlink has just been added, see if the character already has one. If not, make it the active Commlink.
+                        if (await GetActiveCommlinkAsync(token).ConfigureAwait(false) == null &&
+                            await objGear.GetIsCommlinkAsync(token).ConfigureAwait(false))
+                        {
+                            await objGear.SetActiveCommlinkAsync(this, true, token).ConfigureAwait(false);
+                        }
+
+                        objGear.Cost = "0";
+                        objGear.ParentID = Guid.NewGuid().ToString();
+
+                        await Gear.AddAsync(objGear, token).ConfigureAwait(false);
+
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            await ImprovementManager.CreateImprovementAsync(this, objGear.InternalId,
+                                Improvement.ImprovementSource.Metatype,
+                                string.Empty, Improvement.ImprovementType.Gear,
+                                string.Empty, token: token).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            await ImprovementManager.RollbackAsync(this, CancellationToken.None).ConfigureAwait(false);
+                            throw;
+                        }
+
+                        await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                     }
                     catch
                     {
-                        await ImprovementManager.RollbackAsync(this, CancellationToken.None).ConfigureAwait(false);
+                        await objGear.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
                         throw;
                     }
-
-                    await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                 }
 
                 // Add any created Weapons to the character.
@@ -7382,16 +7507,27 @@ namespace Chummer
                                     foreach (XmlNode objXmlMentor in objXmlNodeList)
                                     {
                                         MentorSpirit objMentor = new MentorSpirit(this, objXmlMentor);
-                                        if (blnSync)
+                                        try
                                         {
-                                            objMentor.Load(objXmlMentor);
-                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstMentorSpirits.Add(objMentor);
+                                            if (blnSync)
+                                            {
+                                                objMentor.Load(objXmlMentor);
+                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                _lstMentorSpirits.Add(objMentor);
+                                            }
+                                            else
+                                            {
+                                                await objMentor.LoadAsync(objXmlMentor, token).ConfigureAwait(false);
+                                                await _lstMentorSpirits.AddAsync(objMentor, token).ConfigureAwait(false);
+                                            }
                                         }
-                                        else
+                                        catch
                                         {
-                                            await objMentor.LoadAsync(objXmlMentor, token).ConfigureAwait(false);
-                                            await _lstMentorSpirits.AddAsync(objMentor, token).ConfigureAwait(false);
+                                            if (blnSync)
+                                                objMentor.Dispose();
+                                            else
+                                                await objMentor.DisposeAsync().ConfigureAwait(false);
+                                            throw;
                                         }
                                     }
                                 }
@@ -7642,15 +7778,47 @@ namespace Chummer
                                     Contact objContact = new Contact(this);
                                     if (blnSync)
                                     {
-                                        // ReSharper disable once MethodHasAsyncOverload
-                                        objContact.Load(xmlContact, token);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstContacts.Add(objContact);
+                                        try
+                                        {
+                                            // ReSharper disable once MethodHasAsyncOverload
+                                            objContact.Load(xmlContact, token);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstContacts.Add(objContact);
+                                        }
+                                        catch
+                                        {
+                                            try
+                                            {
+                                                _lstContacts.Remove(objContact);
+                                            }
+                                            catch
+                                            {
+                                                //swallow this
+                                            }
+                                            objContact.Dispose();
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objContact.LoadAsync(xmlContact, token).ConfigureAwait(false);
-                                        await _lstContacts.AddAsync(objContact, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objContact.LoadAsync(xmlContact, token).ConfigureAwait(false);
+                                            await _lstContacts.AddAsync(objContact, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            try
+                                            {
+                                                await _lstContacts.RemoveAsync(objContact, CancellationToken.None).ConfigureAwait(false);
+                                            }
+                                            catch
+                                            {
+                                                // swallow this
+                                            }
+                                            await objContact.DisposeAsync().ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -8160,9 +8328,9 @@ namespace Chummer
                                                 {
                                                     if (blnSync)
                                                         // ReSharper disable once MethodHasAsyncOverload
-                                                        objQuality.Dispose();
+                                                        objQuality.DeleteQuality(token: CancellationToken.None);
                                                     else
-                                                        await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                        await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                     throw;
                                                 }
                                             }
@@ -8685,14 +8853,30 @@ namespace Chummer
                                     Armor objArmor = new Armor(this);
                                     if (blnSync)
                                     {
-                                        objArmor.Load(objXmlArmor);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstArmor.Add(objArmor);
+                                        try
+                                        {
+                                            objArmor.Load(objXmlArmor);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstArmor.Add(objArmor);
+                                        }
+                                        catch
+                                        {
+                                            objArmor.DeleteArmor();
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objArmor.LoadAsync(objXmlArmor, token: token).ConfigureAwait(false);
-                                        await _lstArmor.AddAsync(objArmor, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objArmor.LoadAsync(objXmlArmor, token: token).ConfigureAwait(false);
+                                            await _lstArmor.AddAsync(objArmor, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            await objArmor.DeleteArmorAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -8722,14 +8906,30 @@ namespace Chummer
                                     Drug objDrug = new Drug(this);
                                     if (blnSync)
                                     {
-                                        objDrug.Load(objXmlDrug);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstDrugs.Add(objDrug);
+                                        try
+                                        {
+                                            objDrug.Load(objXmlDrug);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstDrugs.Add(objDrug);
+                                        }
+                                        catch
+                                        {
+                                            objDrug.Remove(false);
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objDrug.LoadAsync(objXmlDrug, token).ConfigureAwait(false);
-                                        await _lstDrugs.AddAsync(objDrug, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objDrug.LoadAsync(objXmlDrug, token).ConfigureAwait(false);
+                                            await _lstDrugs.AddAsync(objDrug, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            await objDrug.RemoveAsync(false, token).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -8763,15 +8963,32 @@ namespace Chummer
                                     Cyberware objCyberware = new Cyberware(this);
                                     if (blnSync)
                                     {
-                                        // ReSharper disable once MethodHasAsyncOverload
-                                        objCyberware.Load(objXmlCyberware, token: token);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstCyberware.Add(objCyberware);
+                                        try
+                                        {
+                                            // ReSharper disable once MethodHasAsyncOverload
+                                            objCyberware.Load(objXmlCyberware, token: token);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstCyberware.Add(objCyberware);
+                                        }
+                                        catch
+                                        {
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            objCyberware.DeleteCyberware();
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objCyberware.LoadAsync(objXmlCyberware, token: token).ConfigureAwait(false);
-                                        await _lstCyberware.AddAsync(objCyberware, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objCyberware.LoadAsync(objXmlCyberware, token: token).ConfigureAwait(false);
+                                            await _lstCyberware.AddAsync(objCyberware, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            await objCyberware.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
 
                                     // Legacy shim #1
@@ -9172,16 +9389,27 @@ namespace Chummer
                                 foreach (XmlNode objXmlSpell in objXmlNodeList)
                                 {
                                     Spell objSpell = new Spell(this);
-                                    if (blnSync)
+                                    try
                                     {
-                                        objSpell.Load(objXmlSpell);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstSpells.Add(objSpell);
+                                        if (blnSync)
+                                        {
+                                            objSpell.Load(objXmlSpell);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstSpells.Add(objSpell);
+                                        }
+                                        else
+                                        {
+                                            await objSpell.LoadAsync(objXmlSpell, token).ConfigureAwait(false);
+                                            await _lstSpells.AddAsync(objSpell, token).ConfigureAwait(false);
+                                        }
                                     }
-                                    else
+                                    catch
                                     {
-                                        await objSpell.LoadAsync(objXmlSpell, token).ConfigureAwait(false);
-                                        await _lstSpells.AddAsync(objSpell, token).ConfigureAwait(false);
+                                        if (blnSync)
+                                            objSpell.Remove(false);
+                                        else
+                                            await objSpell.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
                                 }
                                 //Timekeeper.Finish("load_char_spells");
@@ -9233,15 +9461,31 @@ namespace Chummer
                                                 Power objPower = new Power(this);
                                                 if (blnSync)
                                                 {
-                                                    // ReSharper disable once MethodHasAsyncOverload
-                                                    objPower.Load(xmlPower, token);
-                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                    _lstPowers.Add(objPower);
+                                                    try
+                                                    {
+                                                        // ReSharper disable once MethodHasAsyncOverload
+                                                        objPower.Load(xmlPower, token);
+                                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                        _lstPowers.Add(objPower);
+                                                    }
+                                                    catch
+                                                    {
+                                                        objPower.DeletePower();
+                                                        throw;
+                                                    }
                                                 }
                                                 else
                                                 {
-                                                    await objPower.LoadAsync(xmlPower, token).ConfigureAwait(false);
-                                                    await _lstPowers.AddAsync(objPower, token).ConfigureAwait(false);
+                                                    try
+                                                    {
+                                                        await objPower.LoadAsync(xmlPower, token).ConfigureAwait(false);
+                                                        await _lstPowers.AddAsync(objPower, token).ConfigureAwait(false);
+                                                    }
+                                                    catch
+                                                    {
+                                                        await objPower.DeletePowerAsync(CancellationToken.None).ConfigureAwait(false);
+                                                        throw;
+                                                    }
                                                 }
                                             }
                                         }
@@ -9259,15 +9503,31 @@ namespace Chummer
                                                 Power objPower = new Power(this);
                                                 if (blnSync)
                                                 {
-                                                    // ReSharper disable once MethodHasAsyncOverload
-                                                    objPower.Load(objNode, token);
-                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                    _lstPowers.Add(objPower);
+                                                    try
+                                                    {
+                                                        // ReSharper disable once MethodHasAsyncOverload
+                                                        objPower.Load(objNode, token);
+                                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                        _lstPowers.Add(objPower);
+                                                    }
+                                                    catch
+                                                    {
+                                                        objPower.DeletePower();
+                                                        throw;
+                                                    }
                                                 }
                                                 else
                                                 {
-                                                    await objPower.LoadAsync(objNode, token).ConfigureAwait(false);
-                                                    await _lstPowers.AddAsync(objPower, token).ConfigureAwait(false);
+                                                    try
+                                                    {
+                                                        await objPower.LoadAsync(objNode, token).ConfigureAwait(false);
+                                                        await _lstPowers.AddAsync(objPower, token).ConfigureAwait(false);
+                                                    }
+                                                    catch
+                                                    {
+                                                        await objPower.DeletePowerAsync(CancellationToken.None).ConfigureAwait(false);
+                                                        throw;
+                                                    }
                                                 }
                                             }
                                         }
@@ -9300,15 +9560,47 @@ namespace Chummer
                                     Spirit objSpirit = new Spirit(this);
                                     if (blnSync)
                                     {
-                                        // ReSharper disable once MethodHasAsyncOverload
-                                        objSpirit.Load(xmlSpirit, token);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstSpirits.Add(objSpirit);
+                                        try
+                                        {
+                                            // ReSharper disable once MethodHasAsyncOverload
+                                            objSpirit.Load(xmlSpirit, token);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstSpirits.Add(objSpirit);
+                                        }
+                                        catch
+                                        {
+                                            try
+                                            {
+                                                _lstSpirits.Remove(objSpirit);
+                                            }
+                                            catch
+                                            {
+                                                //swallow this
+                                            }
+                                            objSpirit.Dispose();
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objSpirit.LoadAsync(xmlSpirit, token).ConfigureAwait(false);
-                                        await _lstSpirits.AddAsync(objSpirit, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objSpirit.LoadAsync(xmlSpirit, token).ConfigureAwait(false);
+                                            await _lstSpirits.AddAsync(objSpirit, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            try
+                                            {
+                                                await _lstSpirits.RemoveAsync(objSpirit, token: token).ConfigureAwait(false);
+                                            }
+                                            catch
+                                            {
+                                                //swallow this
+                                            }
+                                            await objSpirit.DisposeAsync().ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -9366,16 +9658,27 @@ namespace Chummer
                                 foreach (XmlNode objXmlComplexForm in objXmlNodeList)
                                 {
                                     ComplexForm objComplexForm = new ComplexForm(this);
-                                    if (blnSync)
+                                    try
                                     {
-                                        objComplexForm.Load(objXmlComplexForm);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstComplexForms.Add(objComplexForm);
+                                        if (blnSync)
+                                        {
+                                            objComplexForm.Load(objXmlComplexForm);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstComplexForms.Add(objComplexForm);
+                                        }
+                                        else
+                                        {
+                                            await objComplexForm.LoadAsync(objXmlComplexForm, token).ConfigureAwait(false);
+                                            await _lstComplexForms.AddAsync(objComplexForm, token).ConfigureAwait(false);
+                                        }
                                     }
-                                    else
+                                    catch
                                     {
-                                        await objComplexForm.LoadAsync(objXmlComplexForm, token).ConfigureAwait(false);
-                                        await _lstComplexForms.AddAsync(objComplexForm, token).ConfigureAwait(false);
+                                        if (blnSync)
+                                            objComplexForm.Remove(false);
+                                        else
+                                            await objComplexForm.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
                                 }
 
@@ -9442,16 +9745,27 @@ namespace Chummer
                                 foreach (XmlNode objXmlArt in objXmlNodeList)
                                 {
                                     MartialArt objMartialArt = new MartialArt(this);
-                                    if (blnSync)
+                                    try
                                     {
-                                        objMartialArt.Load(objXmlArt);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstMartialArts.Add(objMartialArt);
+                                        if (blnSync)
+                                        {
+                                            objMartialArt.Load(objXmlArt);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstMartialArts.Add(objMartialArt);
+                                        }
+                                        else
+                                        {
+                                            await objMartialArt.LoadAsync(objXmlArt, token).ConfigureAwait(false);
+                                            await _lstMartialArts.AddAsync(objMartialArt, token).ConfigureAwait(false);
+                                        }
                                     }
-                                    else
+                                    catch
                                     {
-                                        await objMartialArt.LoadAsync(objXmlArt, token).ConfigureAwait(false);
-                                        await _lstMartialArts.AddAsync(objMartialArt, token).ConfigureAwait(false);
+                                        if (blnSync)
+                                            objMartialArt.DeleteMartialArt();
+                                        else
+                                            await objMartialArt.DeleteMartialArtAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
                                 }
 
@@ -9516,16 +9830,27 @@ namespace Chummer
                                 foreach (XmlNode objXmlLifestyle in objXmlNodeList)
                                 {
                                     Lifestyle objLifestyle = new Lifestyle(this);
-                                    if (blnSync)
+                                    try
                                     {
-                                        objLifestyle.Load(objXmlLifestyle);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstLifestyles.Add(objLifestyle);
+                                        if (blnSync)
+                                        {
+                                            objLifestyle.Load(objXmlLifestyle);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstLifestyles.Add(objLifestyle);
+                                        }
+                                        else
+                                        {
+                                            await objLifestyle.LoadAsync(objXmlLifestyle, token: token).ConfigureAwait(false);
+                                            await _lstLifestyles.AddAsync(objLifestyle, token).ConfigureAwait(false);
+                                        }
                                     }
-                                    else
+                                    catch
                                     {
-                                        await objLifestyle.LoadAsync(objXmlLifestyle, token: token).ConfigureAwait(false);
-                                        await _lstLifestyles.AddAsync(objLifestyle, token).ConfigureAwait(false);
+                                        if (blnSync)
+                                            objLifestyle.Remove(false);
+                                        else
+                                            await objLifestyle.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
                                 }
 
@@ -9555,14 +9880,30 @@ namespace Chummer
                                     Gear objGear = new Gear(this);
                                     if (blnSync)
                                     {
-                                        objGear.Load(objXmlGear);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstGear.Add(objGear);
+                                        try
+                                        {
+                                            objGear.Load(objXmlGear);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstGear.Add(objGear);
+                                        }
+                                        catch
+                                        {
+                                            objGear.DeleteGear();
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objGear.LoadAsync(objXmlGear, token: token).ConfigureAwait(false);
-                                        await _lstGear.AddAsync(objGear, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objGear.LoadAsync(objXmlGear, token: token).ConfigureAwait(false);
+                                            await _lstGear.AddAsync(objGear, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            await objGear.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -9741,14 +10082,30 @@ namespace Chummer
                                     Vehicle objVehicle = new Vehicle(this);
                                     if (blnSync)
                                     {
-                                        objVehicle.Load(objXmlVehicle);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstVehicles.Add(objVehicle);
+                                        try
+                                        {
+                                            objVehicle.Load(objXmlVehicle);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstVehicles.Add(objVehicle);
+                                        }
+                                        catch
+                                        {
+                                            objVehicle.DeleteVehicle();
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objVehicle.LoadAsync(objXmlVehicle, token: token).ConfigureAwait(false);
-                                        await _lstVehicles.AddAsync(objVehicle, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objVehicle.LoadAsync(objXmlVehicle, token: token).ConfigureAwait(false);
+                                            await _lstVehicles.AddAsync(objVehicle, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            await objVehicle.DeleteVehicleAsync(CancellationToken.None).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -9778,14 +10135,30 @@ namespace Chummer
                                     Weapon objWeapon = new Weapon(this);
                                     if (blnSync)
                                     {
-                                        objWeapon.Load(objXmlWeapon);
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstWeapons.Add(objWeapon);
+                                        try
+                                        {
+                                            objWeapon.Load(objXmlWeapon);
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstWeapons.Add(objWeapon);
+                                        }
+                                        catch
+                                        {
+                                            objWeapon.DeleteWeapon();
+                                            throw;
+                                        }
                                     }
                                     else
                                     {
-                                        await objWeapon.LoadAsync(objXmlWeapon, token: token).ConfigureAwait(false);
-                                        await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            await objWeapon.LoadAsync(objXmlWeapon, token: token).ConfigureAwait(false);
+                                            await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -10234,17 +10607,28 @@ namespace Chummer
                                     if (objXmlWeapon != null)
                                     {
                                         Weapon objWeapon = new Weapon(this);
-                                        if (blnSync)
-                                            // ReSharper disable once MethodHasAsyncOverload
-                                            objWeapon.Create(objXmlWeapon, _lstWeapons, token: token);
-                                        else
-                                            await objWeapon.CreateAsync(objXmlWeapon, _lstWeapons, token: token).ConfigureAwait(false);
-                                        objWeapon.IncludedInWeapon = true; // Unarmed attack can never be removed
-                                        if (blnSync)
-                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstWeapons.Add(objWeapon);
-                                        else
-                                            await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            if (blnSync)
+                                                // ReSharper disable once MethodHasAsyncOverload
+                                                objWeapon.Create(objXmlWeapon, _lstWeapons, token: token);
+                                            else
+                                                await objWeapon.CreateAsync(objXmlWeapon, _lstWeapons, token: token).ConfigureAwait(false);
+                                            objWeapon.IncludedInWeapon = true; // Unarmed attack can never be removed
+                                            if (blnSync)
+                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                _lstWeapons.Add(objWeapon);
+                                            else
+                                                await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            if (blnSync)
+                                                objWeapon.DeleteWeapon();
+                                            else
+                                                await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -10317,9 +10701,9 @@ namespace Chummer
                                             {
                                                 if (blnSync)
                                                     // ReSharper disable once MethodHasAsyncOverload
-                                                    objQuality.Dispose();
+                                                    objQuality.DeleteQuality(token: CancellationToken.None);
                                                 else
-                                                    await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                    await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                 throw;
                                             }
                                         }
@@ -10859,6 +11243,7 @@ namespace Chummer
                     }
                     catch (Exception e)
                     {
+                        e = e.Demystify();
                         loadActivity.SetSuccess(false);
                         Log.Error(e);
                         throw;
@@ -13079,6 +13464,1271 @@ namespace Chummer
 
         #region Helper Methods
 
+        public IEnumerable<IHasInternalId> GetItemsByInternalIds(IEnumerable<string> lstIds, bool blnOnlyValidImprovementSources = false, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool, out HashSet<string> setIds))
+            {
+                token.ThrowIfCancellationRequested();
+                foreach (string strId in lstIds)
+                {
+                    string strToAdd = strId?.TrimEndOnce("Pair").TrimEndOnce("Wireless");
+                    if (!string.IsNullOrEmpty(strId))
+                        setIds.Add(strToAdd);
+                }
+                if (setIds.Count == 0)
+                    yield break;
+                using (LockObject.EnterReadLock(token))
+                {
+                    foreach (Gear objGear in Gear.GetAllDescendants(x => x.Children, token))
+                    {
+                        if (setIds.Remove(objGear.InternalId))
+                        {
+                            yield return objGear;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+
+                    foreach (Armor objArmor in Armor)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objArmor.InternalId))
+                        {
+                            yield return objArmor;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                        foreach (ArmorMod objMod in objArmor.ArmorMods)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objMod.InternalId))
+                            {
+                                yield return objMod;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                            foreach (Gear objGear in objMod.GearChildren.GetAllDescendants(x => x.Children, token))
+                            {
+                                if (setIds.Remove(objGear.InternalId))
+                                {
+                                    yield return objGear;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                            }
+                        }
+                        foreach (Gear objGear in objArmor.GearChildren.GetAllDescendants(x => x.Children, token))
+                        {
+                            if (setIds.Remove(objGear.InternalId))
+                            {
+                                yield return objGear;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                    }
+
+                    foreach (Weapon objWeapon in Weapons.GetAllDescendants(x => x.UnderbarrelWeapons, token))
+                    {
+                        if (setIds.Remove(objWeapon.InternalId))
+                        {
+                            yield return objWeapon;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                        foreach (WeaponAccessory objMod in objWeapon.WeaponAccessories)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objMod.InternalId))
+                            {
+                                yield return objMod;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                            foreach (Gear objGear in objMod.GearChildren.GetAllDescendants(x => x.Children, token))
+                            {
+                                if (setIds.Remove(objGear.InternalId))
+                                {
+                                    yield return objGear;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                            }
+                        }
+                    }
+
+                    foreach (Cyberware objCyberware in Cyberware.GetAllDescendants(x => x.Children, token))
+                    {
+                        if (setIds.Remove(objCyberware.InternalId))
+                        {
+                            yield return objCyberware;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                        foreach (Gear objGear in objCyberware.GearChildren.GetAllDescendants(x => x.Children, token))
+                        {
+                            if (setIds.Remove(objGear.InternalId))
+                            {
+                                yield return objGear;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                    }
+
+                    foreach (Drug objDrug in Drugs)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objDrug.InternalId))
+                        {
+                            yield return objDrug;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                        foreach (DrugComponent objComponent in objDrug.Components)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objComponent.InternalId))
+                            {
+                                yield return objComponent;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                    }
+
+                    foreach (Lifestyle objLifestyle in Lifestyles)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objLifestyle.InternalId))
+                        {
+                            yield return objLifestyle;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                        foreach (LifestyleQuality objQuality in objLifestyle.LifestyleQualities)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objQuality.InternalId))
+                            {
+                                yield return objQuality;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                    }
+
+                    foreach (Improvement objImprovement in Improvements)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objImprovement.InternalId))
+                        {
+                            yield return objImprovement;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+
+                    foreach (Art objArt in Arts)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objArt.InternalId))
+                        {
+                            yield return objArt;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (CritterPower objCritterPower in CritterPowers)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objCritterPower.InternalId))
+                        {
+                            yield return objCritterPower;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (Enhancement objEnhancement in Enhancements)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objEnhancement.InternalId))
+                        {
+                            yield return objEnhancement;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (InitiationGrade objGrade in InitiationGrades)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objGrade.InternalId))
+                        {
+                            yield return objGrade;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (LimitModifier objModifier in LimitModifiers)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objModifier.InternalId))
+                        {
+                            yield return objModifier;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (MartialArt objArt in MartialArts)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objArt.InternalId))
+                        {
+                            yield return objArt;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                        foreach (MartialArtTechnique objTechnique in objArt.Techniques)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objTechnique.InternalId))
+                            {
+                                yield return objTechnique;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                    }
+                    foreach (MentorSpirit objMentor in MentorSpirits)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objMentor.InternalId))
+                        {
+                            yield return objMentor;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (Metamagic objMetamagic in Metamagics)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objMetamagic.InternalId))
+                        {
+                            yield return objMetamagic;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (Power objPower in Powers)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objPower.InternalId))
+                        {
+                            yield return objPower;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    foreach (Quality objQuality in Qualities)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objQuality.InternalId))
+                        {
+                            yield return objQuality;
+                            if (setIds.Count == 0)
+                                yield break;
+                        }
+                    }
+                    token.ThrowIfCancellationRequested();
+                    if (setIds.Remove(MagicTradition.InternalId))
+                    {
+                        yield return MagicTradition;
+                        if (setIds.Count == 0)
+                            yield break;
+                    }
+
+                    if (!blnOnlyValidImprovementSources)
+                    {
+                        foreach (Vehicle objVehicle in Vehicles)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objVehicle.InternalId))
+                            {
+                                yield return objVehicle;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                            foreach (Gear objGear in objVehicle.GearChildren.GetAllDescendants(x => x.Children, token))
+                            {
+                                if (setIds.Remove(objGear.InternalId))
+                                {
+                                    yield return objGear;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                            }
+                            foreach (Weapon objWeapon in objVehicle.Weapons.GetAllDescendants(x => x.UnderbarrelWeapons, token))
+                            {
+                                if (setIds.Remove(objWeapon.InternalId))
+                                {
+                                    yield return objWeapon;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                                foreach (WeaponAccessory objMod in objWeapon.WeaponAccessories)
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    if (setIds.Remove(objMod.InternalId))
+                                    {
+                                        yield return objMod;
+                                        if (setIds.Count == 0)
+                                            yield break;
+                                    }
+                                    foreach (Gear objGear in objMod.GearChildren.GetAllDescendants(x => x.Children, token))
+                                    {
+                                        if (setIds.Remove(objGear.InternalId))
+                                        {
+                                            yield return objGear;
+                                            if (setIds.Count == 0)
+                                                yield break;
+                                        }
+                                    }
+                                }
+                            }
+                            foreach (VehicleMod objMod in objVehicle.Mods)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (setIds.Remove(objMod.InternalId))
+                                {
+                                    yield return objMod;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                                foreach (Cyberware objCyberware in objMod.Cyberware.GetAllDescendants(x => x.Children, token))
+                                {
+                                    if (setIds.Remove(objCyberware.InternalId))
+                                    {
+                                        yield return objCyberware;
+                                        if (setIds.Count == 0)
+                                            yield break;
+                                    }
+                                    foreach (Gear objGear in objCyberware.GearChildren.GetAllDescendants(x => x.Children, token))
+                                    {
+                                        if (setIds.Remove(objGear.InternalId))
+                                        {
+                                            yield return objGear;
+                                            if (setIds.Count == 0)
+                                                yield break;
+                                        }
+                                    }
+                                }
+                            }
+                            foreach (WeaponMount objMount in objVehicle.WeaponMounts)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (setIds.Remove(objMount.InternalId))
+                                {
+                                    yield return objMount;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                                foreach (WeaponMountOption objOption in objMount.WeaponMountOptions)
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    if (setIds.Remove(objOption.InternalId))
+                                    {
+                                        yield return objOption;
+                                        if (setIds.Count == 0)
+                                            yield break;
+                                    }
+                                }
+                                foreach (Weapon objWeapon in objMount.Weapons.GetAllDescendants(x => x.UnderbarrelWeapons, token))
+                                {
+                                    if (setIds.Remove(objWeapon.InternalId))
+                                    {
+                                        yield return objWeapon;
+                                        if (setIds.Count == 0)
+                                            yield break;
+                                    }
+                                    foreach (WeaponAccessory objMod in objWeapon.WeaponAccessories)
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        if (setIds.Remove(objMod.InternalId))
+                                        {
+                                            yield return objMod;
+                                            if (setIds.Count == 0)
+                                                yield break;
+                                        }
+                                        foreach (Gear objGear in objMod.GearChildren.GetAllDescendants(x => x.Children, token))
+                                        {
+                                            if (setIds.Remove(objGear.InternalId))
+                                            {
+                                                yield return objGear;
+                                                if (setIds.Count == 0)
+                                                    yield break;
+                                            }
+                                        }
+                                    }
+                                }
+                                foreach (VehicleMod objMod in objMount.Mods)
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    if (setIds.Remove(objMod.InternalId))
+                                    {
+                                        yield return objMod;
+                                        if (setIds.Count == 0)
+                                            yield break;
+                                    }
+                                    foreach (Cyberware objCyberware in objMod.Cyberware.GetAllDescendants(x => x.Children, token))
+                                    {
+                                        if (setIds.Remove(objCyberware.InternalId))
+                                        {
+                                            yield return objCyberware;
+                                            if (setIds.Count == 0)
+                                                yield break;
+                                        }
+                                        foreach (Gear objGear in objCyberware.GearChildren.GetAllDescendants(x => x.Children, token))
+                                        {
+                                            if (setIds.Remove(objGear.InternalId))
+                                            {
+                                                yield return objGear;
+                                                if (setIds.Count == 0)
+                                                    yield break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        foreach (Skill objSkill in SkillsSection.Skills)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objSkill.InternalId))
+                            {
+                                yield return objSkill;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                            foreach (SkillSpecialization objSpec in objSkill.Specializations)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (setIds.Remove(objSpec.InternalId))
+                                {
+                                    yield return objSpec;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                            }
+                        }
+                        foreach (SkillGroup objGroup in SkillsSection.SkillGroups)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objGroup.InternalId))
+                            {
+                                yield return objGroup;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (KnowledgeSkill objSkill in SkillsSection.KnowledgeSkills)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objSkill.InternalId))
+                            {
+                                yield return objSkill;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                            foreach (SkillSpecialization objSpec in objSkill.Specializations)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (setIds.Remove(objSpec.InternalId))
+                                {
+                                    yield return objSpec;
+                                    if (setIds.Count == 0)
+                                        yield break;
+                                }
+                            }
+                        }
+
+                        foreach (Contact objContact in Contacts)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objContact.InternalId))
+                            {
+                                yield return objContact;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (Spirit objSpirit in Spirits)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objSpirit.InternalId))
+                            {
+                                yield return objSpirit;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+
+                        foreach (AIProgram objProgram in AIPrograms)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objProgram.InternalId))
+                            {
+                                yield return objProgram;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (CalendarWeek objWeek in Calendar)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objWeek.InternalId))
+                            {
+                                yield return objWeek;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (ComplexForm objComplexForm in ComplexForms)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objComplexForm.InternalId))
+                            {
+                                yield return objComplexForm;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (ExpenseLogEntry objEntry in ExpenseEntries)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objEntry.InternalId))
+                            {
+                                yield return objEntry;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (Focus objFocus in Foci)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objFocus.InternalId))
+                            {
+                                yield return objFocus;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (Spell objSpell in Spells)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objSpell.InternalId))
+                            {
+                                yield return objSpell;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                        foreach (SustainedObject objSustained in SustainedCollection)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objSustained.InternalId))
+                            {
+                                yield return objSustained;
+                                if (setIds.Count == 0)
+                                    yield break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task<List<IHasInternalId>> GetItemsByInternalIdsAsync(IEnumerable<string> lstIds, bool blnOnlyValidImprovementSources = false, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool, out HashSet<string> setIds))
+            {
+                token.ThrowIfCancellationRequested();
+                foreach (string strId in lstIds)
+                {
+                    string strToAdd = strId?.TrimEndOnce("Pair").TrimEndOnce("Wireless");
+                    if (!string.IsNullOrEmpty(strId))
+                        setIds.Add(strToAdd);
+                }
+                List<IHasInternalId> lstReturn = new List<IHasInternalId>(setIds.Count);
+                if (setIds.Count == 0)
+                    return lstReturn;
+                IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    await (await Gear.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Armor.ForEachWithBreakAsync(async objArmor =>
+                    {
+                        if (setIds.Remove(objArmor.InternalId))
+                        {
+                            lstReturn.Add(objArmor);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        await objArmor.ArmorMods.ForEachWithBreakAsync(async objMod =>
+                        {
+                            if (setIds.Remove(objMod.InternalId))
+                            {
+                                lstReturn.Add(objMod);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            await (await objMod.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                            {
+                                if (setIds.Remove(x.InternalId))
+                                {
+                                    lstReturn.Add(x);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                return true;
+                            }, token).ConfigureAwait(false);
+                            return setIds.Count > 0;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return false;
+                        await (await objArmor.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        return setIds.Count > 0;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await (await Weapons.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(async objWeapon =>
+                    {
+                        if (setIds.Remove(objWeapon.InternalId))
+                        {
+                            lstReturn.Add(objWeapon);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        await objWeapon.WeaponAccessories.ForEachWithBreakAsync(async objMod =>
+                        {
+                            if (setIds.Remove(objMod.InternalId))
+                            {
+                                lstReturn.Add(objMod);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            await (await objMod.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                            {
+                                if (setIds.Remove(x.InternalId))
+                                {
+                                    lstReturn.Add(x);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                return true;
+                            }, token).ConfigureAwait(false);
+                            return setIds.Count > 0;
+                        }, token).ConfigureAwait(false);
+                        return setIds.Count > 0;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await (await Cyberware.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(async objCyberware =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objCyberware.InternalId))
+                        {
+                            lstReturn.Add(objCyberware);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        await (await objCyberware.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        return setIds.Count > 0;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Drugs.ForEachWithBreakAsync(async objDrug =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objDrug.InternalId))
+                        {
+                            lstReturn.Add(objDrug);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        await objDrug.Components.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        return setIds.Count > 0;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Lifestyles.ForEachWithBreakAsync(async objLifestyle =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objLifestyle.InternalId))
+                        {
+                            lstReturn.Add(objLifestyle);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        await objLifestyle.LifestyleQualities.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        return setIds.Count > 0;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Improvements.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Arts.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await CritterPowers.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Enhancements.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await InitiationGrades.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await LimitModifiers.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await MartialArts.ForEachWithBreakAsync(async objArt =>
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (setIds.Remove(objArt.InternalId))
+                        {
+                            lstReturn.Add(objArt);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        await objArt.Techniques.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        return setIds.Count > 0;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await MentorSpirits.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Metamagics.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Powers.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    await Qualities.ForEachWithBreakAsync(x =>
+                    {
+                        if (setIds.Remove(x.InternalId))
+                        {
+                            lstReturn.Add(x);
+                            if (setIds.Count == 0)
+                                return false;
+                        }
+                        return true;
+                    }, token).ConfigureAwait(false);
+                    if (setIds.Count == 0)
+                        return lstReturn;
+                    token.ThrowIfCancellationRequested();
+                    if (setIds.Remove(MagicTradition.InternalId))
+                    {
+                        lstReturn.Add(MagicTradition);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                    }
+
+                    if (!blnOnlyValidImprovementSources)
+                    {
+                        await Vehicles.ForEachWithBreakAsync(async objVehicle =>
+                        {
+                            if (setIds.Remove(objVehicle.InternalId))
+                            {
+                                lstReturn.Add(objVehicle);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            await (await objVehicle.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                            {
+                                if (setIds.Remove(x.InternalId))
+                                {
+                                    lstReturn.Add(x);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                return true;
+                            }, token).ConfigureAwait(false);
+                            if (setIds.Count == 0)
+                                return false;
+                            await (await objVehicle.Weapons.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(async objWeapon =>
+                            {
+                                if (setIds.Remove(objWeapon.InternalId))
+                                {
+                                    lstReturn.Add(objWeapon);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                await objWeapon.WeaponAccessories.ForEachWithBreakAsync(async objMod =>
+                                {
+                                    if (setIds.Remove(objMod.InternalId))
+                                    {
+                                        lstReturn.Add(objMod);
+                                        if (setIds.Count == 0)
+                                            return false;
+                                    }
+                                    await (await objMod.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                                    {
+                                        if (setIds.Remove(x.InternalId))
+                                        {
+                                            lstReturn.Add(x);
+                                            if (setIds.Count == 0)
+                                                return false;
+                                        }
+                                        return true;
+                                    }, token).ConfigureAwait(false);
+                                    return setIds.Count > 0;
+                                }, token).ConfigureAwait(false);
+                                return setIds.Count > 0;
+                            }, token).ConfigureAwait(false);
+                            if (setIds.Count == 0)
+                                return false;
+                            await objVehicle.Mods.ForEachWithBreakAsync(async objMod =>
+                            {
+                                if (setIds.Remove(objMod.InternalId))
+                                {
+                                    lstReturn.Add(objMod);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                await (await objMod.Cyberware.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(async objCyberware =>
+                                {
+                                    if (setIds.Remove(objCyberware.InternalId))
+                                    {
+                                        lstReturn.Add(objCyberware);
+                                        if (setIds.Count == 0)
+                                            return false;
+                                    }
+                                    await (await objCyberware.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                                    {
+                                        if (setIds.Remove(x.InternalId))
+                                        {
+                                            lstReturn.Add(x);
+                                            if (setIds.Count == 0)
+                                                return false;
+                                        }
+                                        return true;
+                                    }, token).ConfigureAwait(false);
+                                    return setIds.Count > 0;
+                                }, token).ConfigureAwait(false);
+                                return setIds.Count > 0;
+                            }, token).ConfigureAwait(false);
+                            if (setIds.Count == 0)
+                                return false;
+                            await objVehicle.WeaponMounts.ForEachWithBreakAsync(async objMount =>
+                            {
+                                if (setIds.Remove(objMount.InternalId))
+                                {
+                                    lstReturn.Add(objMount);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                await objMount.WeaponMountOptions.ForEachWithBreakAsync(objOption =>
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    if (setIds.Remove(objOption.InternalId))
+                                    {
+                                        lstReturn.Add(objOption);
+                                        if (setIds.Count == 0)
+                                            return false;
+                                    }
+                                    return true;
+                                }, token).ConfigureAwait(false);
+                                if (setIds.Count == 0)
+                                    return false;
+                                await (await objMount.Weapons.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(async objWeapon =>
+                                {
+                                    if (setIds.Remove(objWeapon.InternalId))
+                                    {
+                                        lstReturn.Add(objWeapon);
+                                        if (setIds.Count == 0)
+                                            return false;
+                                    }
+                                    await objWeapon.WeaponAccessories.ForEachWithBreakAsync(async objMod =>
+                                    {
+                                        if (setIds.Remove(objMod.InternalId))
+                                        {
+                                            lstReturn.Add(objMod);
+                                            if (setIds.Count == 0)
+                                                return false;
+                                        }
+                                        await (await objMod.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                                        {
+                                            if (setIds.Remove(x.InternalId))
+                                            {
+                                                lstReturn.Add(x);
+                                                if (setIds.Count == 0)
+                                                    return false;
+                                            }
+                                            return true;
+                                        }, token).ConfigureAwait(false);
+                                        return setIds.Count > 0;
+                                    }, token).ConfigureAwait(false);
+                                    return setIds.Count > 0;
+                                }, token).ConfigureAwait(false);
+                                if (setIds.Count == 0)
+                                    return false;
+                                await objMount.Mods.ForEachWithBreakAsync(async objMod =>
+                                {
+                                    if (setIds.Remove(objMod.InternalId))
+                                    {
+                                        lstReturn.Add(objMod);
+                                        if (setIds.Count == 0)
+                                            return false;
+                                    }
+                                    await (await objMod.Cyberware.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(async objCyberware =>
+                                    {
+                                        if (setIds.Remove(objCyberware.InternalId))
+                                        {
+                                            lstReturn.Add(objCyberware);
+                                            if (setIds.Count == 0)
+                                                return false;
+                                        }
+                                        await (await objCyberware.GearChildren.GetAllDescendantsAsync(x => x.Children, token)).ForEachWithBreakAsync(x =>
+                                        {
+                                            if (setIds.Remove(x.InternalId))
+                                            {
+                                                lstReturn.Add(x);
+                                                if (setIds.Count == 0)
+                                                    return false;
+                                            }
+                                            return true;
+                                        }, token).ConfigureAwait(false);
+                                        return setIds.Count > 0;
+                                    }, token).ConfigureAwait(false);
+                                    return setIds.Count > 0;
+                                }, token).ConfigureAwait(false);
+                                return setIds.Count > 0;
+                            }, token).ConfigureAwait(false);
+                            return setIds.Count > 0;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+
+                        await SkillsSection.Skills.ForEachWithBreakAsync(async objSkill =>
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objSkill.InternalId))
+                            {
+                                lstReturn.Add(objSkill);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            await objSkill.Specializations.ForEachWithBreakAsync(x =>
+                            {
+                                if (setIds.Remove(x.InternalId))
+                                {
+                                    lstReturn.Add(x);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                return true;
+                            }, token).ConfigureAwait(false);
+                            return setIds.Count > 0;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await SkillsSection.SkillGroups.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await SkillsSection.KnowledgeSkills.ForEachWithBreakAsync(async objSkill =>
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (setIds.Remove(objSkill.InternalId))
+                            {
+                                lstReturn.Add(objSkill);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            await objSkill.Specializations.ForEachWithBreakAsync(x =>
+                            {
+                                if (setIds.Remove(x.InternalId))
+                                {
+                                    lstReturn.Add(x);
+                                    if (setIds.Count == 0)
+                                        return false;
+                                }
+                                return true;
+                            }, token).ConfigureAwait(false);
+                            return setIds.Count > 0;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await Contacts.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await Spirits.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+
+                        await AIPrograms.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await Calendar.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await ComplexForms.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await ExpenseEntries.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await Foci.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await Spells.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                        await SustainedCollection.ForEachWithBreakAsync(x =>
+                        {
+                            if (setIds.Remove(x.InternalId))
+                            {
+                                lstReturn.Add(x);
+                                if (setIds.Count == 0)
+                                    return false;
+                            }
+                            return true;
+                        }, token).ConfigureAwait(false);
+                        if (setIds.Count == 0)
+                            return lstReturn;
+                    }
+                    return lstReturn;
+                }
+                finally
+                {
+                    await objLocker.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+        }
+
         /// <summary>
         /// Retrieve the name of the Object that created an Improvement.
         /// </summary>
@@ -13087,6 +14737,7 @@ namespace Chummer
         /// <param name="token">Cancellation token to listen to.</param>
         public string GetObjectName(Improvement objImprovement, string strLanguage = "", CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             if (objImprovement == null)
                 return string.Empty;
             if (string.IsNullOrEmpty(strLanguage))
@@ -15118,6 +16769,9 @@ namespace Chummer
 
         public async Task<bool> SwitchBuildMethods(CharacterBuildMethod eOldBuildMethod, CharacterBuildMethod eNewBuildMethod, string strOldSettingsKey, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
+            if (await GetCreatedAsync(token).ConfigureAwait(false))
+                return true;
             DialogResult eResult;
             if (eNewBuildMethod.UsesPriorityTables())
             {
@@ -22422,63 +24076,13 @@ namespace Chummer
             using (LockObject.EnterReadLock())
             {
                 decimal decReturn = Settings.KarmaSpell;
-
-                // Unconditional modifiers first (which can be cached)
                 decReturn += ImprovementManager.ValueOf(this, Improvement.ImprovementType.NewSpellKarmaCost,
-                                                        strImprovedName: strCategory);
-
-                foreach (Improvement objLoopImprovement in Improvements)
-                {
-                    if (objLoopImprovement.ImproveType != Improvement.ImprovementType.NewSpellKarmaCost)
-                        continue;
-                    if (!objLoopImprovement.Enabled)
-                        continue;
-                    switch (objLoopImprovement.Condition)
-                    {
-                        case "career":
-                            if (Created)
-                                decReturn += objLoopImprovement.Value;
-                            break;
-
-                        case "create":
-                            if (!Created)
-                                decReturn += objLoopImprovement.Value;
-                            break;
-
-                        default:
-                            continue;
-                    }
-                }
-
-                // Unconditional modifiers first (which can be cached)
+                                                        strImprovedName: strCategory, blnIncludeNonImproved: true);
                 decimal decMultiplier = 1.0m;
                 foreach (Improvement objLoopImprovement in ImprovementManager.GetCachedImprovementListForValueOf(
-                             this, Improvement.ImprovementType.NewSpellKarmaCostMultiplier, strCategory))
+                             this, Improvement.ImprovementType.NewSpellKarmaCostMultiplier, strCategory, blnIncludeNonImproved: true))
                 {
                     decMultiplier *= objLoopImprovement.Value / 100.0m;
-                }
-
-                foreach (Improvement objLoopImprovement in Improvements)
-                {
-                    if (objLoopImprovement.ImproveType != Improvement.ImprovementType.NewSpellKarmaCostMultiplier)
-                        continue;
-                    if (!objLoopImprovement.Enabled)
-                        continue;
-                    switch (objLoopImprovement.Condition)
-                    {
-                        case "career":
-                            if (Created)
-                                decMultiplier *= objLoopImprovement.Value / 100.0m;
-                            break;
-
-                        case "create":
-                            if (!Created)
-                                decMultiplier *= objLoopImprovement.Value / 100.0m;
-                            break;
-
-                        default:
-                            continue;
-                    }
                 }
 
                 if (decMultiplier != 1.0m)
@@ -22495,58 +24099,14 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 decimal decReturn = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetKarmaSpellAsync(token).ConfigureAwait(false);
-
-                // Unconditional modifiers first (which can be cached)
                 decReturn += await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.NewSpellKarmaCost,
-                                                                   strImprovedName: strCategory, token: token).ConfigureAwait(false);
-
-                bool blnCreated = await GetCreatedAsync(token).ConfigureAwait(false);
-                decReturn += await (await GetImprovementsAsync(token).ConfigureAwait(false)).SumAsync(
-                    x => x.ImproveType == Improvement.ImprovementType.NewSpellKarmaCost && x.Enabled,
-                    objLoopImprovement =>
-                    {
-                        switch (objLoopImprovement.Condition)
-                        {
-                            case "career":
-                                if (blnCreated)
-                                    return objLoopImprovement.Value;
-                                break;
-
-                            case "create":
-                                if (!blnCreated)
-                                    return objLoopImprovement.Value;
-                                break;
-                        }
-
-                        return 0;
-                    }, token).ConfigureAwait(false);
-
-                // Unconditional modifiers first (which can be cached)
+                                                                   strImprovedName: strCategory, blnIncludeNonImproved: true, token: token).ConfigureAwait(false);
                 decimal decMultiplier = 1.0m;
                 foreach (Improvement objLoopImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
-                             this, Improvement.ImprovementType.NewSpellKarmaCostMultiplier, strCategory, token: token).ConfigureAwait(false))
+                             this, Improvement.ImprovementType.NewSpellKarmaCostMultiplier, strCategory, blnIncludeNonImproved: true, token: token).ConfigureAwait(false))
                 {
                     decMultiplier *= objLoopImprovement.Value / 100.0m;
                 }
-
-                await (await GetImprovementsAsync(token).ConfigureAwait(false)).ForEachAsync(objLoopImprovement =>
-                {
-                    if (objLoopImprovement.ImproveType != Improvement.ImprovementType.NewSpellKarmaCostMultiplier
-                        || !objLoopImprovement.Enabled)
-                        return;
-                    switch (objLoopImprovement.Condition)
-                    {
-                        case "career":
-                            if (blnCreated)
-                                decMultiplier *= objLoopImprovement.Value / 100.0m;
-                            break;
-
-                        case "create":
-                            if (!blnCreated)
-                                decMultiplier *= objLoopImprovement.Value / 100.0m;
-                            break;
-                    }
-                }, token).ConfigureAwait(false);
 
                 if (decMultiplier != 1.0m)
                     decReturn *= decMultiplier;
@@ -22566,25 +24126,12 @@ namespace Chummer
                 using (LockObject.EnterReadLock())
                 {
                     decimal decReturn = Settings.KarmaNewComplexForm;
-
+                    decReturn += ImprovementManager.ValueOf(this, Improvement.ImprovementType.NewComplexFormKarmaCost);
                     decimal decMultiplier = 1.0m;
-                    foreach (Improvement objLoopImprovement in Improvements)
+                    foreach (Improvement objLoopImprovement in ImprovementManager.GetCachedImprovementListForValueOf(
+                                 this, Improvement.ImprovementType.NewComplexFormKarmaCostMultiplier))
                     {
-                        if ((string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             || objLoopImprovement.Condition == "career" == Created
-                             || objLoopImprovement.Condition == "create" != Created) && objLoopImprovement.Enabled)
-                        {
-                            switch (objLoopImprovement.ImproveType)
-                            {
-                                case Improvement.ImprovementType.NewComplexFormKarmaCost:
-                                    decReturn += objLoopImprovement.Value;
-                                    break;
-
-                                case Improvement.ImprovementType.NewComplexFormKarmaCostMultiplier:
-                                    decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-                            }
-                        }
+                        decMultiplier *= objLoopImprovement.Value / 100.0m;
                     }
 
                     if (decMultiplier != 1.0m)
@@ -22602,28 +24149,13 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 decimal decReturn = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetKarmaNewComplexFormAsync(token).ConfigureAwait(false);
-                bool blnCreated = await GetCreatedAsync(token).ConfigureAwait(false);
+                decReturn += await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.NewComplexFormKarmaCost, token: token).ConfigureAwait(false);
                 decimal decMultiplier = 1.0m;
-                decReturn += await (await GetImprovementsAsync(token).ConfigureAwait(false)).SumAsync(
-                    objLoopImprovement =>
-                    {
-                        if ((!string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             && objLoopImprovement.Condition == "career" != blnCreated
-                             && objLoopImprovement.Condition == "create" == blnCreated)
-                            || !objLoopImprovement.Enabled)
-                            return 0;
-                        switch (objLoopImprovement.ImproveType)
-                        {
-                            case Improvement.ImprovementType.NewComplexFormKarmaCost:
-                                return objLoopImprovement.Value;
-
-                            case Improvement.ImprovementType.NewComplexFormKarmaCostMultiplier:
-                                decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                break;
-                        }
-
-                        return 0;
-                    }, token).ConfigureAwait(false);
+                foreach (Improvement objLoopImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
+                             this, Improvement.ImprovementType.NewComplexFormKarmaCostMultiplier, token: token).ConfigureAwait(false))
+                {
+                    decMultiplier *= objLoopImprovement.Value / 100.0m;
+                }
 
                 if (decMultiplier != 1.0m)
                     decReturn *= decMultiplier;
@@ -22643,25 +24175,12 @@ namespace Chummer
                 using (LockObject.EnterReadLock())
                 {
                     decimal decReturn = Settings.KarmaNewAIProgram;
-
+                    decReturn += ImprovementManager.ValueOf(this, Improvement.ImprovementType.NewAIProgramKarmaCost);
                     decimal decMultiplier = 1.0m;
-                    foreach (Improvement objLoopImprovement in Improvements)
+                    foreach (Improvement objLoopImprovement in ImprovementManager.GetCachedImprovementListForValueOf(
+                                 this, Improvement.ImprovementType.NewAIProgramKarmaCostMultiplier))
                     {
-                        if ((string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             || objLoopImprovement.Condition == "career" == Created
-                             || objLoopImprovement.Condition == "create" != Created) && objLoopImprovement.Enabled)
-                        {
-                            switch (objLoopImprovement.ImproveType)
-                            {
-                                case Improvement.ImprovementType.NewAIProgramKarmaCost:
-                                    decReturn += objLoopImprovement.Value;
-                                    break;
-
-                                case Improvement.ImprovementType.NewAIProgramKarmaCostMultiplier:
-                                    decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-                            }
-                        }
+                        decMultiplier *= objLoopImprovement.Value / 100.0m;
                     }
 
                     if (decMultiplier != 1.0m)
@@ -22679,28 +24198,13 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 decimal decReturn = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetKarmaNewAIProgramAsync(token).ConfigureAwait(false);
-                bool blnCreated = await GetCreatedAsync(token).ConfigureAwait(false);
+                decReturn += await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.NewAIProgramKarmaCost, token: token).ConfigureAwait(false);
                 decimal decMultiplier = 1.0m;
-                decReturn += await (await GetImprovementsAsync(token).ConfigureAwait(false)).SumAsync(
-                    objLoopImprovement =>
-                    {
-                        if ((!string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             && objLoopImprovement.Condition == "career" != blnCreated
-                             && objLoopImprovement.Condition == "create" == blnCreated)
-                            || !objLoopImprovement.Enabled)
-                            return 0;
-                        switch (objLoopImprovement.ImproveType)
-                        {
-                            case Improvement.ImprovementType.NewAIProgramKarmaCost:
-                                return objLoopImprovement.Value;
-
-                            case Improvement.ImprovementType.NewAIProgramKarmaCostMultiplier:
-                                decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                break;
-                        }
-
-                        return 0;
-                    }, token).ConfigureAwait(false);
+                foreach (Improvement objLoopImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
+                             this, Improvement.ImprovementType.NewAIProgramKarmaCostMultiplier, token: token).ConfigureAwait(false))
+                {
+                    decMultiplier *= objLoopImprovement.Value / 100.0m;
+                }
 
                 if (decMultiplier != 1.0m)
                     decReturn *= decMultiplier;
@@ -22720,25 +24224,12 @@ namespace Chummer
                 using (LockObject.EnterReadLock())
                 {
                     decimal decReturn = Settings.KarmaNewAIAdvancedProgram;
-
+                    decReturn += ImprovementManager.ValueOf(this, Improvement.ImprovementType.NewAIAdvancedProgramKarmaCost);
                     decimal decMultiplier = 1.0m;
-                    foreach (Improvement objLoopImprovement in Improvements)
+                    foreach (Improvement objLoopImprovement in ImprovementManager.GetCachedImprovementListForValueOf(
+                                 this, Improvement.ImprovementType.NewAIAdvancedProgramKarmaCostMultiplier))
                     {
-                        if ((string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             || objLoopImprovement.Condition == "career" == Created
-                             || objLoopImprovement.Condition == "create" != Created) && objLoopImprovement.Enabled)
-                        {
-                            switch (objLoopImprovement.ImproveType)
-                            {
-                                case Improvement.ImprovementType.NewAIAdvancedProgramKarmaCost:
-                                    decReturn += objLoopImprovement.Value;
-                                    break;
-
-                                case Improvement.ImprovementType.NewAIAdvancedProgramKarmaCostMultiplier:
-                                    decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-                            }
-                        }
+                        decMultiplier *= objLoopImprovement.Value / 100.0m;
                     }
 
                     if (decMultiplier != 1.0m)
@@ -22756,28 +24247,13 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 decimal decReturn = await (await GetSettingsAsync(token).ConfigureAwait(false)).GetKarmaNewAIAdvancedProgramAsync(token).ConfigureAwait(false);
-                bool blnCreated = await GetCreatedAsync(token).ConfigureAwait(false);
+                decReturn += await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.NewAIAdvancedProgramKarmaCost, token: token).ConfigureAwait(false);
                 decimal decMultiplier = 1.0m;
-                decReturn += await (await GetImprovementsAsync(token).ConfigureAwait(false)).SumAsync(
-                    objLoopImprovement =>
-                    {
-                        if ((!string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             && objLoopImprovement.Condition == "career" != blnCreated
-                             && objLoopImprovement.Condition == "create" == blnCreated)
-                            || !objLoopImprovement.Enabled)
-                            return 0;
-                        switch (objLoopImprovement.ImproveType)
-                        {
-                            case Improvement.ImprovementType.NewAIAdvancedProgramKarmaCost:
-                                return objLoopImprovement.Value;
-
-                            case Improvement.ImprovementType.NewAIAdvancedProgramKarmaCostMultiplier:
-                                decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                break;
-                        }
-
-                        return 0;
-                    }, token).ConfigureAwait(false);
+                foreach (Improvement objLoopImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
+                             this, Improvement.ImprovementType.NewAIAdvancedProgramKarmaCostMultiplier, token: token).ConfigureAwait(false))
+                {
+                    decMultiplier *= objLoopImprovement.Value / 100.0m;
+                }
 
                 if (decMultiplier != 1.0m)
                     decReturn *= decMultiplier;
@@ -26724,26 +28200,34 @@ namespace Chummer
                         XmlNode xmlEssHole = LoadData("cyberware.xml")
                             .TryGetNodeById("/chummer/cyberwares/cyberware",
                                             Backend.Equipment.Cyberware.EssenceHoleGUID);
-                        objHole = new Cyberware(this);
                         List<Weapon> lstWeapons = new List<Weapon>(1);
                         List<Vehicle> lstVehicles = new List<Vehicle>(1);
-                        objHole.Create(
-                            xmlEssHole,
-                            GetGradeByName(Improvement.ImprovementSource.Cyberware, "None", true),
-                            Improvement.ImprovementSource.Cyberware,
-                            intCentiessence, lstWeapons,
-                            lstVehicles);
-
-                        Cyberware.Add(objHole);
-
-                        foreach (Weapon objWeapon in lstWeapons)
+                        objHole = new Cyberware(this);
+                        try
                         {
-                            Weapons.Add(objWeapon);
+                            objHole.Create(
+                                xmlEssHole,
+                                GetGradeByName(Improvement.ImprovementSource.Cyberware, "None", true),
+                                Improvement.ImprovementSource.Cyberware,
+                                intCentiessence, lstWeapons,
+                                lstVehicles);
+
+                            Cyberware.Add(objHole);
+
+                            foreach (Weapon objWeapon in lstWeapons)
+                            {
+                                Weapons.Add(objWeapon);
+                            }
+
+                            foreach (Vehicle objVehicle in lstVehicles)
+                            {
+                                Vehicles.Add(objVehicle);
+                            }
                         }
-
-                        foreach (Vehicle objVehicle in lstVehicles)
+                        catch
                         {
-                            Vehicles.Add(objVehicle);
+                            objHole.DeleteCyberware();
+                            throw;
                         }
                     }
                     else
@@ -26813,26 +28297,34 @@ namespace Chummer
                         XmlNode xmlEssHole = (await LoadDataAsync("cyberware.xml", token: token).ConfigureAwait(false))
                             .TryGetNodeById("/chummer/cyberwares/cyberware",
                                 Backend.Equipment.Cyberware.EssenceHoleGUID);
-                        objHole = new Cyberware(this);
                         List<Weapon> lstWeapons = new List<Weapon>(1);
                         List<Vehicle> lstVehicles = new List<Vehicle>(1);
-                        await objHole.CreateAsync(
-                            xmlEssHole,
-                            await GetGradeByNameAsync(Improvement.ImprovementSource.Cyberware, "None", true, token).ConfigureAwait(false),
-                            Improvement.ImprovementSource.Cyberware,
-                            intCentiessence, lstWeapons,
-                            lstVehicles, token: token).ConfigureAwait(false);
-
-                        await Cyberware.AddAsync(objHole, token).ConfigureAwait(false);
-
-                        foreach (Weapon objWeapon in lstWeapons)
+                        objHole = new Cyberware(this);
+                        try
                         {
-                            await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                            await objHole.CreateAsync(
+                                xmlEssHole,
+                                await GetGradeByNameAsync(Improvement.ImprovementSource.Cyberware, "None", true, token).ConfigureAwait(false),
+                                Improvement.ImprovementSource.Cyberware,
+                                intCentiessence, lstWeapons,
+                                lstVehicles, token: token).ConfigureAwait(false);
+
+                            await Cyberware.AddAsync(objHole, token).ConfigureAwait(false);
+
+                            foreach (Weapon objWeapon in lstWeapons)
+                            {
+                                await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                            }
+
+                            foreach (Vehicle objVehicle in lstVehicles)
+                            {
+                                await Vehicles.AddAsync(objVehicle, token).ConfigureAwait(false);
+                            }
                         }
-
-                        foreach (Vehicle objVehicle in lstVehicles)
+                        catch
                         {
-                            await Vehicles.AddAsync(objVehicle, token).ConfigureAwait(false);
+                            await objHole.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
+                            throw;
                         }
                     }
                     else
@@ -26902,24 +28394,32 @@ namespace Chummer
                         XmlNode xmlEssAntiHole = LoadData("cyberware.xml")
                             .TryGetNodeById("/chummer/cyberwares/cyberware",
                                             Backend.Equipment.Cyberware.EssenceAntiHoleGUID);
-                        objAntiHole = new Cyberware(this);
                         List<Weapon> lstWeapons = new List<Weapon>(1);
                         List<Vehicle> lstVehicles = new List<Vehicle>(1);
-                        objAntiHole.Create(xmlEssAntiHole,
-                                           GetGradeByName(Improvement.ImprovementSource.Cyberware, "None", true),
-                                           Improvement.ImprovementSource.Cyberware, intCentiessence, lstWeapons,
-                                           lstVehicles);
-
-                        Cyberware.Add(objAntiHole);
-
-                        foreach (Weapon objWeapon in lstWeapons)
+                        objAntiHole = new Cyberware(this);
+                        try
                         {
-                            Weapons.Add(objWeapon);
+                            objAntiHole.Create(xmlEssAntiHole,
+                                               GetGradeByName(Improvement.ImprovementSource.Cyberware, "None", true),
+                                               Improvement.ImprovementSource.Cyberware, intCentiessence, lstWeapons,
+                                               lstVehicles);
+
+                            Cyberware.Add(objAntiHole);
+
+                            foreach (Weapon objWeapon in lstWeapons)
+                            {
+                                Weapons.Add(objWeapon);
+                            }
+
+                            foreach (Vehicle objVehicle in lstVehicles)
+                            {
+                                Vehicles.Add(objVehicle);
+                            }
                         }
-
-                        foreach (Vehicle objVehicle in lstVehicles)
+                        catch
                         {
-                            Vehicles.Add(objVehicle);
+                            objAntiHole.DeleteCyberware();
+                            throw;
                         }
                     }
                     else
@@ -26990,24 +28490,32 @@ namespace Chummer
                             (await LoadDataAsync("cyberware.xml", token: token).ConfigureAwait(false))
                             .TryGetNodeById("/chummer/cyberwares/cyberware",
                                 Backend.Equipment.Cyberware.EssenceAntiHoleGUID);
-                        objAntiHole = new Cyberware(this);
                         List<Weapon> lstWeapons = new List<Weapon>(1);
                         List<Vehicle> lstVehicles = new List<Vehicle>(1);
-                        await objAntiHole.CreateAsync(xmlEssAntiHole,
-                            await GetGradeByNameAsync(Improvement.ImprovementSource.Cyberware, "None", true, token).ConfigureAwait(false),
-                            Improvement.ImprovementSource.Cyberware, intCentiessence, lstWeapons,
-                            lstVehicles, token: token).ConfigureAwait(false);
-
-                        await Cyberware.AddAsync(objAntiHole, token).ConfigureAwait(false);
-
-                        foreach (Weapon objWeapon in lstWeapons)
+                        objAntiHole = new Cyberware(this);
+                        try
                         {
-                            await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                            await objAntiHole.CreateAsync(xmlEssAntiHole,
+                                await GetGradeByNameAsync(Improvement.ImprovementSource.Cyberware, "None", true, token).ConfigureAwait(false),
+                                Improvement.ImprovementSource.Cyberware, intCentiessence, lstWeapons,
+                                lstVehicles, token: token).ConfigureAwait(false);
+
+                            await Cyberware.AddAsync(objAntiHole, token).ConfigureAwait(false);
+
+                            foreach (Weapon objWeapon in lstWeapons)
+                            {
+                                await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                            }
+
+                            foreach (Vehicle objVehicle in lstVehicles)
+                            {
+                                await Vehicles.AddAsync(objVehicle, token).ConfigureAwait(false);
+                            }
                         }
-
-                        foreach (Vehicle objVehicle in lstVehicles)
+                        catch
                         {
-                            await Vehicles.AddAsync(objVehicle, token).ConfigureAwait(false);
+                            await objAntiHole.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
+                            throw;
                         }
                     }
                     else
@@ -30930,7 +32438,7 @@ namespace Chummer
                     {
                         foreach (Focus objFocus in lstPowerFoci)
                             setPowerFociIds.Add(objFocus.GearObject.InternalId);
-                        for (int i = lstRelevantImprovements.Count; i >= 0; --i)
+                        for (int i = lstRelevantImprovements.Count - 1; i >= 0; --i)
                         {
                             if (!setPowerFociIds.Contains(lstRelevantImprovements[i].SourceName))
                                 lstRelevantImprovements.RemoveAt(i);
@@ -31006,7 +32514,7 @@ namespace Chummer
                     {
                         foreach (Focus objFocus in lstPowerFoci)
                             setPowerFociIds.Add(objFocus.GearObject.InternalId);
-                        for (int i = lstRelevantImprovements.Count; i >= 0; --i)
+                        for (int i = lstRelevantImprovements.Count - 1; i >= 0; --i)
                         {
                             if (!setPowerFociIds.Contains(lstRelevantImprovements[i].SourceName))
                                 lstRelevantImprovements.RemoveAt(i);
@@ -42748,7 +44256,7 @@ namespace Chummer
                                     }
                                     catch
                                     {
-                                        objQuality.Dispose();
+                                        objQuality.DeleteQuality();
                                         throw;
                                     }
                                 }
@@ -42799,7 +44307,7 @@ namespace Chummer
                                             }
                                             catch
                                             {
-                                                objQuality.Dispose();
+                                                objQuality.DeleteQuality();
                                                 throw;
                                             }
                                         }
@@ -42845,7 +44353,7 @@ namespace Chummer
                                             }
                                             catch
                                             {
-                                                objQuality.Dispose();
+                                                objQuality.DeleteQuality();
                                                 throw;
                                             }
                                         }
@@ -42901,7 +44409,7 @@ namespace Chummer
                                                     }
                                                     catch
                                                     {
-                                                        objQuality.Dispose();
+                                                        objQuality.DeleteQuality();
                                                         throw;
                                                     }
                                                 }
@@ -42949,7 +44457,7 @@ namespace Chummer
                                                     }
                                                     catch
                                                     {
-                                                        objQuality.Dispose();
+                                                        objQuality.DeleteQuality();
                                                         throw;
                                                     }
                                                 }
@@ -43028,7 +44536,7 @@ namespace Chummer
                                     }
                                     catch
                                     {
-                                        await objQuality.DisposeAsync().ConfigureAwait(false);
+                                        await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                         throw;
                                     }
                                 }
@@ -43077,7 +44585,7 @@ namespace Chummer
                                             }
                                             catch
                                             {
-                                                await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                 throw;
                                             }
                                         }
@@ -43120,7 +44628,7 @@ namespace Chummer
                                             }
                                             catch
                                             {
-                                                await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                 throw;
                                             }
                                         }
@@ -43173,7 +44681,7 @@ namespace Chummer
                                                     }
                                                     catch
                                                     {
-                                                        await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                        await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                         throw;
                                                     }
                                                 }
@@ -43218,7 +44726,7 @@ namespace Chummer
                                                     }
                                                     catch
                                                     {
-                                                        await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                        await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                         throw;
                                                     }
                                                 }
@@ -43725,7 +45233,7 @@ namespace Chummer
                         }
                         catch
                         {
-                            objQuality.Dispose();
+                            objQuality.DeleteQuality();
                             throw;
                         }
                     }
@@ -43774,7 +45282,7 @@ namespace Chummer
                         }
                         catch
                         {
-                            await objQuality.DisposeAsync().ConfigureAwait(false);
+                            await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                             throw;
                         }
                     }
@@ -48740,6 +50248,7 @@ namespace Chummer
 
         private static readonly HashSet<string> s_SetPropertyNamesWithCachedValues = new HashSet<string>
         {
+            nameof(Created),
             nameof(CharacterGrammaticGender),
             nameof(TotalStartingNuyen),
             nameof(ContactPoints),
@@ -48799,6 +50308,8 @@ namespace Chummer
                     {
                         using (LockObject.EnterWriteLock())
                         {
+                            if (setNamesOfChangedProperties.Contains(nameof(Created)))
+                                ImprovementManager.ClearCachedValues(this);
                             if (setNamesOfChangedProperties.Contains(nameof(CharacterGrammaticGender)))
                                 _strCachedCharacterGrammaticGender = string.Empty;
                             if (setNamesOfChangedProperties.Contains(nameof(TotalStartingNuyen)))
@@ -49061,6 +50572,8 @@ namespace Chummer
                         try
                         {
                             token.ThrowIfCancellationRequested();
+                            if (setNamesOfChangedProperties.Contains(nameof(Created)))
+                                ImprovementManager.ClearCachedValues(this, token);
                             if (setNamesOfChangedProperties.Contains(nameof(CharacterGrammaticGender)))
                                 _strCachedCharacterGrammaticGender = string.Empty;
                             if (setNamesOfChangedProperties.Contains(nameof(TotalStartingNuyen)))
@@ -50357,9 +51870,9 @@ namespace Chummer
                                                 {
                                                     if (blnSync)
                                                         // ReSharper disable once MethodHasAsyncOverload
-                                                        objQuality.Dispose();
+                                                        objQuality.DeleteQuality(token: CancellationToken.None);
                                                     else
-                                                        await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                        await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                     throw;
                                                 }
                                             }
@@ -50499,9 +52012,9 @@ namespace Chummer
                                                 {
                                                     if (blnSync)
                                                         // ReSharper disable once MethodHasAsyncOverload
-                                                        objQuality.Dispose();
+                                                        objQuality.DeleteQuality(token: CancellationToken.None);
                                                     else
-                                                        await objQuality.DisposeAsync().ConfigureAwait(false);
+                                                        await objQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                     throw;
                                                 }
                                             }
@@ -50651,90 +52164,110 @@ namespace Chummer
                                 foreach (XPathNavigator xmlContactToImport in xmlStatBlockBaseNode.SelectAndCacheExpression(
                                              "contacts/contact[@useradded != \"no\"]", token))
                                 {
-                                    Contact objContact = new Contact(this)
+                                    Contact objContact = new Contact(this);
+                                    try
                                     {
-                                        EntityType = ContactType.Contact,
-                                        Name
+                                        objContact.EntityType = ContactType.Contact;
+                                        objContact.Name
                                             = xmlContactToImport.SelectSingleNodeAndCacheExpression("@name", token)
-                                                ?.Value ?? string.Empty,
-                                        Role
+                                                ?.Value ?? string.Empty;
+                                        objContact.Role
                                             = xmlContactToImport.SelectSingleNodeAndCacheExpression("@type", token)
-                                                ?.Value ?? string.Empty,
-                                        Connection =
+                                                ?.Value ?? string.Empty;
+                                        objContact.Connection =
                                             xmlContactToImport.SelectSingleNodeAndCacheExpression("@connection", token)
-                                                ?.ValueAsInt ?? 1,
-                                        Loyalty = xmlContactToImport
+                                                ?.ValueAsInt ?? 1;
+                                        objContact.Loyalty = xmlContactToImport
                                             .SelectSingleNodeAndCacheExpression("@loyalty", token)
-                                            ?.ValueAsInt ?? 1
-                                    };
+                                            ?.ValueAsInt ?? 1;
 
-                                    string strDescription =
-                                        xmlContactToImport.SelectSingleNodeAndCacheExpression(
-                                            "description", token)?.Value;
-                                    using (new FetchSafelyFromObjectPool<StringBuilder>(
-                                               Utils.StringBuilderPool, out StringBuilder sbdNotes))
-                                    {
-                                        foreach (string strLine in strDescription.SplitNoAlloc('\n',
-                                                     StringSplitOptions.RemoveEmptyEntries))
+                                        string strDescription =
+                                            xmlContactToImport.SelectSingleNodeAndCacheExpression(
+                                                "description", token)?.Value;
+                                        using (new FetchSafelyFromObjectPool<StringBuilder>(
+                                                   Utils.StringBuilderPool, out StringBuilder sbdNotes))
                                         {
-                                            string[] astrLineColonSplit =
-                                                strLine.SplitFixedSizePooledArray(':', 2, StringSplitOptions.RemoveEmptyEntries);
-                                            try
+                                            foreach (string strLine in strDescription.SplitNoAlloc('\n',
+                                                         StringSplitOptions.RemoveEmptyEntries))
                                             {
-                                                switch (astrLineColonSplit[0])
+                                                string[] astrLineColonSplit =
+                                                    strLine.SplitFixedSizePooledArray(':', 2, StringSplitOptions.RemoveEmptyEntries);
+                                                try
                                                 {
-                                                    case "Metatype":
-                                                        objContact.Metatype = astrLineColonSplit[1].Trim();
-                                                        break;
+                                                    switch (astrLineColonSplit[0])
+                                                    {
+                                                        case "Metatype":
+                                                            objContact.Metatype = astrLineColonSplit[1].Trim();
+                                                            break;
 
-                                                    case "Gender":
-                                                        objContact.Gender = astrLineColonSplit[1].Trim();
-                                                        break;
+                                                        case "Gender":
+                                                            objContact.Gender = astrLineColonSplit[1].Trim();
+                                                            break;
 
-                                                    case "Age":
-                                                        objContact.Age = astrLineColonSplit[1].Trim();
-                                                        break;
+                                                        case "Age":
+                                                            objContact.Age = astrLineColonSplit[1].Trim();
+                                                            break;
 
-                                                    case "Preferred Payment Method":
-                                                        objContact.PreferredPayment = astrLineColonSplit[1].Trim();
-                                                        break;
+                                                        case "Preferred Payment Method":
+                                                            objContact.PreferredPayment = astrLineColonSplit[1].Trim();
+                                                            break;
 
-                                                    case "Hobbies/Vice":
-                                                        objContact.HobbiesVice = astrLineColonSplit[1].Trim();
-                                                        break;
+                                                        case "Hobbies/Vice":
+                                                            objContact.HobbiesVice = astrLineColonSplit[1].Trim();
+                                                            break;
 
-                                                    case "Personal Life":
-                                                        objContact.PersonalLife = astrLineColonSplit[1].Trim();
-                                                        break;
+                                                        case "Personal Life":
+                                                            objContact.PersonalLife = astrLineColonSplit[1].Trim();
+                                                            break;
 
-                                                    case "Type":
-                                                        objContact.Type = astrLineColonSplit[1].Trim();
-                                                        break;
+                                                        case "Type":
+                                                            objContact.Type = astrLineColonSplit[1].Trim();
+                                                            break;
 
-                                                    default:
-                                                        sbdNotes.AppendLine(strLine);
-                                                        break;
+                                                        default:
+                                                            sbdNotes.AppendLine(strLine);
+                                                            break;
+                                                    }
+                                                }
+                                                finally
+                                                {
+                                                    ArrayPool<string>.Shared.Return(astrLineColonSplit);
                                                 }
                                             }
-                                            finally
-                                            {
-                                                ArrayPool<string>.Shared.Return(astrLineColonSplit);
-                                            }
+
+                                            if (sbdNotes.Length > 0)
+                                                sbdNotes.Length -= Environment.NewLine.Length;
+                                            if (blnSync)
+                                                objContact.Notes = sbdNotes.ToString();
+                                            else
+                                                await objContact.SetNotesAsync(sbdNotes.ToString(), token).ConfigureAwait(false);
                                         }
 
-                                        if (sbdNotes.Length > 0)
-                                            sbdNotes.Length -= Environment.NewLine.Length;
                                         if (blnSync)
-                                            objContact.Notes = sbdNotes.ToString();
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            _lstContacts.Add(objContact);
                                         else
-                                            await objContact.SetNotesAsync(sbdNotes.ToString(), token).ConfigureAwait(false);
+                                            await _lstContacts.AddAsync(objContact, token).ConfigureAwait(false);
                                     }
-
-                                    if (blnSync)
-                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        _lstContacts.Add(objContact);
-                                    else
-                                        await _lstContacts.AddAsync(objContact, token).ConfigureAwait(false);
+                                    catch
+                                    {
+                                        try
+                                        {
+                                            if (blnSync)
+                                                _lstContacts.Remove(objContact);
+                                            else
+                                                await _lstContacts.RemoveAsync(objContact, CancellationToken.None).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            //swallow this
+                                        }
+                                        if (blnSync)
+                                            objContact.Dispose();
+                                        else
+                                            await objContact.DisposeAsync().ConfigureAwait(false);
+                                        throw;
+                                    }
                                 }
 
                                 //Timekeeper.Finish("load_char_contacts");
@@ -50790,31 +52323,47 @@ namespace Chummer
                                             Armor objArmor = new Armor(this);
                                             if (blnSync)
                                             {
-                                                // ReSharper disable once MethodHasAsyncOverload
-                                                objArmor.Create(xmlArmorData,
-                                                    xmlArmorToImport.SelectSingleNodeAndCacheExpression(
-                                                            "@rating", token)
-                                                        ?.ValueAsInt
-                                                    ?? 0,
-                                                    lstWeapons, token: token);
-                                                objArmor.Notes = xmlArmorToImport.SelectSingleNodeAndCacheExpression(
-                                                        "description", token)
-                                                    ?.Value;
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                _lstArmor.Add(objArmor);
+                                                try
+                                                {
+                                                    // ReSharper disable once MethodHasAsyncOverload
+                                                    objArmor.Create(xmlArmorData,
+                                                        xmlArmorToImport.SelectSingleNodeAndCacheExpression(
+                                                                "@rating", token)
+                                                            ?.ValueAsInt
+                                                        ?? 0,
+                                                        lstWeapons, token: token);
+                                                    objArmor.Notes = xmlArmorToImport.SelectSingleNodeAndCacheExpression(
+                                                            "description", token)
+                                                        ?.Value;
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    _lstArmor.Add(objArmor);
+                                                }
+                                                catch
+                                                {
+                                                    objArmor.DeleteArmor();
+                                                    throw;
+                                                }
                                             }
                                             else
                                             {
-                                                await objArmor.CreateAsync(xmlArmorData,
-                                                    xmlArmorToImport.SelectSingleNodeAndCacheExpression(
-                                                            "@rating", token)
-                                                        ?.ValueAsInt
-                                                    ?? 0,
-                                                    lstWeapons, token: token).ConfigureAwait(false);
-                                                await objArmor.SetNotesAsync(xmlArmorToImport.SelectSingleNodeAndCacheExpression(
-                                                        "description", token)
-                                                    ?.Value, token).ConfigureAwait(false);
-                                                await _lstArmor.AddAsync(objArmor, token).ConfigureAwait(false);
+                                                try
+                                                {
+                                                    await objArmor.CreateAsync(xmlArmorData,
+                                                        xmlArmorToImport.SelectSingleNodeAndCacheExpression(
+                                                                "@rating", token)
+                                                            ?.ValueAsInt
+                                                        ?? 0,
+                                                        lstWeapons, token: token).ConfigureAwait(false);
+                                                    await objArmor.SetNotesAsync(xmlArmorToImport.SelectSingleNodeAndCacheExpression(
+                                                            "description", token)
+                                                        ?.Value, token).ConfigureAwait(false);
+                                                    await _lstArmor.AddAsync(objArmor, token).ConfigureAwait(false);
+                                                }
+                                                catch
+                                                {
+                                                    await objArmor.DeleteArmorAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                                    throw;
+                                                }
                                             }
                                             foreach (string strName in HeroLabPluginNodeNames)
                                             {
@@ -50835,34 +52384,50 @@ namespace Chummer
                                                             ArmorMod objArmorMod = new ArmorMod(this);
                                                             if (blnSync)
                                                             {
-                                                                // ReSharper disable once MethodHasAsyncOverload
-                                                                objArmorMod.Create(xmlArmorModData,
-                                                                    xmlArmorModToImport
+                                                                try
+                                                                {
+                                                                    // ReSharper disable once MethodHasAsyncOverload
+                                                                    objArmorMod.Create(xmlArmorModData,
+                                                                        xmlArmorModToImport
+                                                                            .SelectSingleNodeAndCacheExpression(
+                                                                                "@rating", token)
+                                                                                       ?.ValueAsInt ?? 0, lstWeapons, token: token);
+                                                                    objArmorMod.Notes = xmlArmorModToImport
                                                                         .SelectSingleNodeAndCacheExpression(
-                                                                            "@rating", token)
-                                                                                   ?.ValueAsInt ?? 0, lstWeapons, token: token);
-                                                                objArmorMod.Notes = xmlArmorModToImport
-                                                                    .SelectSingleNodeAndCacheExpression(
-                                                                        "description", token)
-                                                                    ?.Value;
-                                                                objArmorMod.Parent = objArmor;
-                                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                                objArmor.ArmorMods.Add(objArmorMod);
+                                                                            "description", token)
+                                                                        ?.Value;
+                                                                    objArmorMod.Parent = objArmor;
+                                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                                    objArmor.ArmorMods.Add(objArmorMod);
+                                                                }
+                                                                catch
+                                                                {
+                                                                    objArmorMod.DeleteArmorMod();
+                                                                    throw;
+                                                                }
                                                             }
                                                             else
                                                             {
-                                                                await objArmorMod.CreateAsync(xmlArmorModData,
-                                                                    xmlArmorModToImport
+                                                                try
+                                                                {
+                                                                    await objArmorMod.CreateAsync(xmlArmorModData,
+                                                                        xmlArmorModToImport
+                                                                            .SelectSingleNodeAndCacheExpression(
+                                                                                "@rating", token)
+                                                                            ?.ValueAsInt ?? 0, lstWeapons, token: token).ConfigureAwait(false);
+                                                                    await objArmorMod.SetNotesAsync(xmlArmorModToImport
                                                                         .SelectSingleNodeAndCacheExpression(
-                                                                            "@rating", token)
-                                                                        ?.ValueAsInt ?? 0, lstWeapons, token: token).ConfigureAwait(false);
-                                                                await objArmorMod.SetNotesAsync(xmlArmorModToImport
-                                                                    .SelectSingleNodeAndCacheExpression(
-                                                                        "description", token)
-                                                                    ?.Value, token).ConfigureAwait(false);
-                                                                objArmorMod.Parent = objArmor;
-                                                                await objArmor.ArmorMods.AddAsync(objArmorMod, token)
-                                                                              .ConfigureAwait(false);
+                                                                            "description", token)
+                                                                        ?.Value, token).ConfigureAwait(false);
+                                                                    objArmorMod.Parent = objArmor;
+                                                                    await objArmor.ArmorMods.AddAsync(objArmorMod, token)
+                                                                                  .ConfigureAwait(false);
+                                                                }
+                                                                catch
+                                                                {
+                                                                    await objArmorMod.DeleteArmorModAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                                                    throw;
+                                                                }
                                                             }
 
                                                             foreach (string strPluginNodeName in
@@ -50874,33 +52439,44 @@ namespace Chummer
                                                                                  "/item[@useradded != \"no\"]"))
                                                                 {
                                                                     Gear objPlugin = new Gear(this);
-                                                                    if (blnSync)
+                                                                    try
                                                                     {
-                                                                        // ReSharper disable once MethodHasAsyncOverload
-                                                                        if (objPlugin.ImportHeroLabGear(xmlPluginToAdd,
-                                                                                xmlArmorModData,
-                                                                                lstWeapons, token))
+                                                                        if (blnSync)
                                                                         {
-                                                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                                            objArmorMod.GearChildren.Add(objPlugin);
+                                                                            // ReSharper disable once MethodHasAsyncOverload
+                                                                            if (objPlugin.ImportHeroLabGear(xmlPluginToAdd,
+                                                                                    xmlArmorModData,
+                                                                                    lstWeapons, token))
+                                                                            {
+                                                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                                                objArmorMod.GearChildren.Add(objPlugin);
+                                                                            }
+                                                                            else
+                                                                                // ReSharper disable once MethodHasAsyncOverload
+                                                                                objPlugin.DeleteGear();
                                                                         }
                                                                         else
-                                                                            // ReSharper disable once MethodHasAsyncOverload
-                                                                            objPlugin.Dispose();
+                                                                        {
+                                                                            if (await objPlugin.ImportHeroLabGearAsync(
+                                                                                        xmlPluginToAdd,
+                                                                                        xmlArmorModData,
+                                                                                        lstWeapons, token)
+                                                                                    .ConfigureAwait(false))
+                                                                                await objArmorMod.GearChildren
+                                                                                    .AddAsync(objPlugin, token)
+                                                                                    .ConfigureAwait(false);
+                                                                            else
+                                                                                await objPlugin.DeleteGearAsync(token: token)
+                                                                                    .ConfigureAwait(false);
+                                                                        }
                                                                     }
-                                                                    else
+                                                                    catch
                                                                     {
-                                                                        if (await objPlugin.ImportHeroLabGearAsync(
-                                                                                    xmlPluginToAdd,
-                                                                                    xmlArmorModData,
-                                                                                    lstWeapons, token)
-                                                                                .ConfigureAwait(false))
-                                                                            await objArmorMod.GearChildren
-                                                                                .AddAsync(objPlugin, token)
-                                                                                .ConfigureAwait(false);
+                                                                        if (blnSync)
+                                                                            objPlugin.DeleteGear();
                                                                         else
-                                                                            await objPlugin.DisposeAsync()
-                                                                                .ConfigureAwait(false);
+                                                                            await objPlugin.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                                                        throw;
                                                                     }
                                                                 }
 
@@ -50977,30 +52553,41 @@ namespace Chummer
                                                         else
                                                         {
                                                             Gear objPlugin = new Gear(this);
-                                                            if (blnSync)
+                                                            try
                                                             {
-                                                                // ReSharper disable once MethodHasAsyncOverload
-                                                                if (objPlugin.ImportHeroLabGear(xmlArmorModToImport,
-                                                                        xmlArmorData,
-                                                                        lstWeapons, token))
+                                                                if (blnSync)
                                                                 {
-                                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                                    objArmor.GearChildren.Add(objPlugin);
+                                                                    // ReSharper disable once MethodHasAsyncOverload
+                                                                    if (objPlugin.ImportHeroLabGear(xmlArmorModToImport,
+                                                                            xmlArmorData,
+                                                                            lstWeapons, token))
+                                                                    {
+                                                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                                        objArmor.GearChildren.Add(objPlugin);
+                                                                    }
+                                                                    else
+                                                                        // ReSharper disable once MethodHasAsyncOverload
+                                                                        objPlugin.DeleteGear();
+                                                                }
+                                                                else if (await objPlugin.ImportHeroLabGearAsync(xmlArmorModToImport,
+                                                                             xmlArmorData,
+                                                                             lstWeapons, token).ConfigureAwait(false))
+                                                                {
+                                                                    await objArmor.GearChildren
+                                                                            .AddAsync(objPlugin, token)
+                                                                            .ConfigureAwait(false);
                                                                 }
                                                                 else
-                                                                    // ReSharper disable once MethodHasAsyncOverload
-                                                                    objPlugin.Dispose();
+                                                                    await objPlugin.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
                                                             }
-                                                            else if (await objPlugin.ImportHeroLabGearAsync(xmlArmorModToImport,
-                                                                         xmlArmorData,
-                                                                         lstWeapons, token).ConfigureAwait(false))
+                                                            catch
                                                             {
-                                                                await objArmor.GearChildren
-                                                                        .AddAsync(objPlugin, token)
-                                                                        .ConfigureAwait(false);
+                                                                if (blnSync)
+                                                                    objPlugin.DeleteGear();
+                                                                else
+                                                                    await objPlugin.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                                                throw;
                                                             }
-                                                            else
-                                                                await objPlugin.DisposeAsync().ConfigureAwait(false);
                                                         }
                                                     }
                                                 }
@@ -51052,32 +52639,43 @@ namespace Chummer
                                                                                     "/item[@useradded != \"no\"]"))
                                                                 {
                                                                     Gear objPlugin = new Gear(this);
-                                                                    if (blnSync)
+                                                                    try
                                                                     {
-                                                                        // ReSharper disable once MethodHasAsyncOverload
-                                                                        if (objPlugin.ImportHeroLabGear(xmlPluginToAdd,
-                                                                                // ReSharper disable once MethodHasAsyncOverload
-                                                                                objArmorMod.GetNode(token),
-                                                                                lstWeapons, token))
+                                                                        if (blnSync)
                                                                         {
-                                                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                                            objArmorMod.GearChildren.Add(objPlugin);
+                                                                            // ReSharper disable once MethodHasAsyncOverload
+                                                                            if (objPlugin.ImportHeroLabGear(xmlPluginToAdd,
+                                                                                    // ReSharper disable once MethodHasAsyncOverload
+                                                                                    objArmorMod.GetNode(token),
+                                                                                    lstWeapons, token))
+                                                                            {
+                                                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                                                objArmorMod.GearChildren.Add(objPlugin);
+                                                                            }
+                                                                            else
+                                                                                // ReSharper disable once MethodHasAsyncOverload
+                                                                                objPlugin.DeleteGear();
+                                                                        }
+                                                                        else if (await objPlugin.ImportHeroLabGearAsync(xmlPluginToAdd,
+                                                                                        await objArmorMod.GetNodeAsync(token)
+                                                                                            .ConfigureAwait(false),
+                                                                                        lstWeapons, token).ConfigureAwait(false))
+                                                                        {
+                                                                            await objArmorMod.GearChildren
+                                                                                .AddAsync(objPlugin, token)
+                                                                                .ConfigureAwait(false);
                                                                         }
                                                                         else
-                                                                            // ReSharper disable once MethodHasAsyncOverload
-                                                                            objPlugin.Dispose();
+                                                                            await objPlugin.DeleteGearAsync(token: token).ConfigureAwait(false);
                                                                     }
-                                                                    else if (await objPlugin.ImportHeroLabGearAsync(xmlPluginToAdd,
-                                                                                    await objArmorMod.GetNodeAsync(token)
-                                                                                        .ConfigureAwait(false),
-                                                                                    lstWeapons, token).ConfigureAwait(false))
+                                                                    catch
                                                                     {
-                                                                        await objArmorMod.GearChildren
-                                                                            .AddAsync(objPlugin, token)
-                                                                            .ConfigureAwait(false);
+                                                                        if (blnSync)
+                                                                            objPlugin.DeleteGear();
+                                                                        else
+                                                                            await objPlugin.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                                                        throw;
                                                                     }
-                                                                    else
-                                                                        await objPlugin.DisposeAsync().ConfigureAwait(false);
                                                                 }
 
                                                                 foreach (XPathNavigator xmlPluginToAdd in
@@ -51209,19 +52807,30 @@ namespace Chummer
                                              "gear/weapons/item[@useradded != \"no\"]"))
                                 {
                                     Weapon objWeapon = new Weapon(this);
-                                    if (objWeapon.ImportHeroLabWeapon(xmlWeaponToImport, lstWeapons))
+                                    try
+                                    {
+                                        if (objWeapon.ImportHeroLabWeapon(xmlWeaponToImport, lstWeapons))
+                                        {
+                                            if (blnSync)
+                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                _lstWeapons.Add(objWeapon);
+                                            else
+                                                await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                        }
+                                        else if (blnSync)
+                                            // ReSharper disable once MethodHasAsyncOverload
+                                            objWeapon.DeleteWeapon();
+                                        else
+                                            await objWeapon.DeleteWeaponAsync(token: token).ConfigureAwait(false);
+                                    }
+                                    catch
                                     {
                                         if (blnSync)
-                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstWeapons.Add(objWeapon);
+                                            objWeapon.DeleteWeapon();
                                         else
-                                            await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                            await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
-                                    else if (blnSync)
-                                        // ReSharper disable once MethodHasAsyncOverload
-                                        objWeapon.Dispose();
-                                    else
-                                        await objWeapon.DisposeAsync().ConfigureAwait(false);
                                 }
 
                                 foreach (XPathNavigator xmlPluginToAdd in xmlStatBlockBaseNode.Select(
@@ -51257,20 +52866,32 @@ namespace Chummer
                                              "gear/augmentations/cyberware/item[@useradded != \"no\"]"))
                                 {
                                     Cyberware objCyberware = new Cyberware(this);
-                                    if (objCyberware.ImportHeroLabCyberware(xmlCyberwareToImport, null, lstWeapons,
-                                                                            lstVehicles))
+                                    try
+                                    {
+                                        if (objCyberware.ImportHeroLabCyberware(xmlCyberwareToImport, null, lstWeapons,
+                                                                                lstVehicles))
+                                        {
+                                            if (blnSync)
+                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                _lstCyberware.Add(objCyberware);
+                                            else
+                                                await _lstCyberware.AddAsync(objCyberware, token).ConfigureAwait(false);
+                                        }
+                                        else if (blnSync)
+                                            // ReSharper disable once MethodHasAsyncOverload
+                                            objCyberware.DeleteCyberware();
+                                        else
+                                            await objCyberware.DeleteCyberwareAsync(token: token).ConfigureAwait(false);
+                                    }
+                                    catch
                                     {
                                         if (blnSync)
                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstCyberware.Add(objCyberware);
+                                            objCyberware.DeleteCyberware();
                                         else
-                                            await _lstCyberware.AddAsync(objCyberware, token).ConfigureAwait(false);
+                                            await objCyberware.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
-                                    else if (blnSync)
-                                        // ReSharper disable once MethodHasAsyncOverload
-                                        objCyberware.Dispose();
-                                    else
-                                        await objCyberware.DisposeAsync().ConfigureAwait(false);
                                 }
 
                                 foreach (XPathNavigator xmlPluginToAdd in xmlStatBlockBaseNode.Select(
@@ -51299,20 +52920,32 @@ namespace Chummer
                                              "gear/augmentations/bioware/item[@useradded != \"no\"]"))
                                 {
                                     Cyberware objCyberware = new Cyberware(this);
-                                    if (objCyberware.ImportHeroLabCyberware(xmlCyberwareToImport, null, lstWeapons,
-                                                                            lstVehicles))
+                                    try
+                                    {
+                                        if (objCyberware.ImportHeroLabCyberware(xmlCyberwareToImport, null, lstWeapons,
+                                                                                lstVehicles))
+                                        {
+                                            if (blnSync)
+                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                _lstCyberware.Add(objCyberware);
+                                            else
+                                                await _lstCyberware.AddAsync(objCyberware, token).ConfigureAwait(false);
+                                        }
+                                        else if (blnSync)
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                            objCyberware.DeleteCyberware();
+                                        else
+                                            await objCyberware.DeleteCyberwareAsync(token: token).ConfigureAwait(false);
+                                    }
+                                    catch
                                     {
                                         if (blnSync)
                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstCyberware.Add(objCyberware);
+                                            objCyberware.DeleteCyberware();
                                         else
-                                            await _lstCyberware.AddAsync(objCyberware, token).ConfigureAwait(false);
+                                            await objCyberware.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
-                                    else if (blnSync)
-                                        // ReSharper disable once MethodHasAsyncOverload
-                                        objCyberware.Dispose();
-                                    else
-                                        await objCyberware.DisposeAsync().ConfigureAwait(false);
                                 }
 
                                 foreach (XPathNavigator xmlPluginToAdd in xmlStatBlockBaseNode.Select(
@@ -51628,21 +53261,32 @@ namespace Chummer
                                         if (xmlSpellData != null)
                                         {
                                             Spell objSpell = new Spell(this);
-                                            if (blnSync)
+                                            try
                                             {
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                objSpell.Create(xmlSpellData, strForcedValue, blnIsLimited);
-                                                objSpell.Notes = xmlHeroLabSpell.SelectSingleNodeAndCacheExpression(
-                                                    "description", token)?.Value;
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                _lstSpells.Add(objSpell);
+                                                if (blnSync)
+                                                {
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    objSpell.Create(xmlSpellData, strForcedValue, blnIsLimited);
+                                                    objSpell.Notes = xmlHeroLabSpell.SelectSingleNodeAndCacheExpression(
+                                                        "description", token)?.Value;
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    _lstSpells.Add(objSpell);
+                                                }
+                                                else
+                                                {
+                                                    await objSpell.CreateAsync(xmlSpellData, strForcedValue, blnIsLimited, token: token).ConfigureAwait(false);
+                                                    await objSpell.SetNotesAsync(xmlHeroLabSpell.SelectSingleNodeAndCacheExpression(
+                                                        "description", token)?.Value, token).ConfigureAwait(false);
+                                                    await _lstSpells.AddAsync(objSpell, token).ConfigureAwait(false);
+                                                }
                                             }
-                                            else
+                                            catch
                                             {
-                                                await objSpell.CreateAsync(xmlSpellData, strForcedValue, blnIsLimited, token: token).ConfigureAwait(false);
-                                                await objSpell.SetNotesAsync(xmlHeroLabSpell.SelectSingleNodeAndCacheExpression(
-                                                    "description", token)?.Value, token).ConfigureAwait(false);
-                                                await _lstSpells.AddAsync(objSpell, token).ConfigureAwait(false);
+                                                if (blnSync)
+                                                    objSpell.Remove(false);
+                                                else
+                                                    await objSpell.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                                                throw;
                                             }
                                         }
                                     }
@@ -51754,21 +53398,37 @@ namespace Chummer
                                             Power objPower = new Power(this);
                                             if (blnSync)
                                             {
-                                                objPower.Extra = strForcedValue;
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                objPower.Create(xmlPowerData, intRating);
-                                                objPower.Notes = xmlHeroLabPower.SelectSingleNodeAndCacheExpression(
-                                                    "description", token)?.Value;
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                _lstPowers.Add(objPower);
+                                                try
+                                                {
+                                                    objPower.Extra = strForcedValue;
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    objPower.Create(xmlPowerData, intRating);
+                                                    objPower.Notes = xmlHeroLabPower.SelectSingleNodeAndCacheExpression(
+                                                        "description", token)?.Value;
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    _lstPowers.Add(objPower);
+                                                }
+                                                catch
+                                                {
+                                                    objPower.DeletePower();
+                                                    throw;
+                                                }
                                             }
                                             else
                                             {
-                                                await objPower.SetExtraAsync(strForcedValue, token).ConfigureAwait(false);
-                                                await objPower.CreateAsync(xmlPowerData, intRating, token: token).ConfigureAwait(false);
-                                                await objPower.SetNotesAsync(xmlHeroLabPower.SelectSingleNodeAndCacheExpression(
-                                                    "description", token)?.Value, token).ConfigureAwait(false);
-                                                await _lstPowers.AddAsync(objPower, token).ConfigureAwait(false);
+                                                try
+                                                {
+                                                    await objPower.SetExtraAsync(strForcedValue, token).ConfigureAwait(false);
+                                                    await objPower.CreateAsync(xmlPowerData, intRating, token: token).ConfigureAwait(false);
+                                                    await objPower.SetNotesAsync(xmlHeroLabPower.SelectSingleNodeAndCacheExpression(
+                                                        "description", token)?.Value, token).ConfigureAwait(false);
+                                                    await _lstPowers.AddAsync(objPower, token).ConfigureAwait(false);
+                                                }
+                                                catch
+                                                {
+                                                    await objPower.DeletePowerAsync(CancellationToken.None).ConfigureAwait(false);
+                                                    throw;
+                                                }
                                             }
                                         }
                                     }
@@ -51882,17 +53542,28 @@ namespace Chummer
                                         if (xmlComplexFormData != null)
                                         {
                                             ComplexForm objComplexForm = new ComplexForm(this);
-                                            if (blnSync)
+                                            try
                                             {
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                objComplexForm.Create(xmlComplexFormData, strForcedValue);
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                _lstComplexForms.Add(objComplexForm);
+                                                if (blnSync)
+                                                {
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    objComplexForm.Create(xmlComplexFormData, strForcedValue);
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    _lstComplexForms.Add(objComplexForm);
+                                                }
+                                                else
+                                                {
+                                                    await objComplexForm.CreateAsync(xmlComplexFormData, strForcedValue, token).ConfigureAwait(false);
+                                                    await _lstComplexForms.AddAsync(objComplexForm, token).ConfigureAwait(false);
+                                                }
                                             }
-                                            else
+                                            catch
                                             {
-                                                await objComplexForm.CreateAsync(xmlComplexFormData, strForcedValue, token).ConfigureAwait(false);
-                                                await _lstComplexForms.AddAsync(objComplexForm, token).ConfigureAwait(false);
+                                                if (blnSync)
+                                                    objComplexForm.Remove(false);
+                                                else
+                                                    await objComplexForm.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                                                throw;
                                             }
                                         }
                                     }
@@ -51952,73 +53623,100 @@ namespace Chummer
                                     if (xmlHeroLabFakeSINNode != null)
                                     {
                                         Gear objFakeSIN = new Gear(this);
-                                        if (blnSync)
+                                        try
                                         {
-                                            // ReSharper disable once MethodHasAsyncOverload
-                                            objFakeSIN.Create(xmlFakeSINDataNode,
-                                                xmlHeroLabFakeSINNode
-                                                    .SelectSingleNodeAndCacheExpression(
-                                                        "@rating", token)
-                                                    ?.ValueAsInt
-                                                ?? 1,
-                                                lstWeapons,
-                                                strIdentityName, token: token);
-                                            foreach (XPathNavigator xmlHeroLabFakeLicenseNode in xmlHeroLabIdentity
-                                                         .Select(
-                                                             "license[@name = \"Fake License\"]"))
+                                            if (blnSync)
                                             {
-                                                Gear objFakeLicense = new Gear(this);
                                                 // ReSharper disable once MethodHasAsyncOverload
-                                                objFakeLicense.Create(xmlFakeLicenseDataNode,
-                                                    xmlHeroLabFakeLicenseNode
+                                                objFakeSIN.Create(xmlFakeSINDataNode,
+                                                    xmlHeroLabFakeSINNode
                                                         .SelectSingleNodeAndCacheExpression(
                                                             "@rating", token)
-                                                        ?.ValueAsInt ??
-                                                    1,
+                                                        ?.ValueAsInt
+                                                    ?? 1,
                                                     lstWeapons,
-                                                    xmlHeroLabFakeLicenseNode
-                                                        .SelectSingleNodeAndCacheExpression(
-                                                            "@for", token)
-                                                        ?.Value ?? string.Empty, token: token);
-                                                objFakeLicense.Parent = objFakeSIN;
+                                                    strIdentityName, token: token);
+                                                foreach (XPathNavigator xmlHeroLabFakeLicenseNode in xmlHeroLabIdentity
+                                                             .Select(
+                                                                 "license[@name = \"Fake License\"]"))
+                                                {
+                                                    Gear objFakeLicense = new Gear(this);
+                                                    try
+                                                    {
+                                                        // ReSharper disable once MethodHasAsyncOverload
+                                                        objFakeLicense.Create(xmlFakeLicenseDataNode,
+                                                            xmlHeroLabFakeLicenseNode
+                                                                .SelectSingleNodeAndCacheExpression(
+                                                                    "@rating", token)
+                                                                ?.ValueAsInt ??
+                                                            1,
+                                                            lstWeapons,
+                                                            xmlHeroLabFakeLicenseNode
+                                                                .SelectSingleNodeAndCacheExpression(
+                                                                    "@for", token)
+                                                                ?.Value ?? string.Empty, token: token);
+                                                        objFakeLicense.Parent = objFakeSIN;
+                                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                        objFakeSIN.Children.Add(objFakeLicense);
+                                                    }
+                                                    catch
+                                                    {
+                                                        objFakeLicense.DeleteGear();
+                                                        throw;
+                                                    }
+                                                }
                                                 // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                objFakeSIN.Children.Add(objFakeLicense);
+                                                _lstGear.Add(objFakeSIN);
                                             }
-                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstGear.Add(objFakeSIN);
-                                        }
-                                        else
-                                        {
-                                            await objFakeSIN.CreateAsync(xmlFakeSINDataNode,
-                                                xmlHeroLabFakeSINNode
-                                                    .SelectSingleNodeAndCacheExpression(
-                                                        "@rating", token)
-                                                    ?.ValueAsInt
-                                                ?? 1,
-                                                lstWeapons,
-                                                strIdentityName, token: token).ConfigureAwait(false);
-                                            foreach (XPathNavigator xmlHeroLabFakeLicenseNode in xmlHeroLabIdentity
-                                                         .Select(
-                                                             "license[@name = \"Fake License\"]"))
+                                            else
                                             {
-                                                Gear objFakeLicense = new Gear(this);
-                                                await objFakeLicense.CreateAsync(xmlFakeLicenseDataNode,
-                                                    xmlHeroLabFakeLicenseNode
+                                                await objFakeSIN.CreateAsync(xmlFakeSINDataNode,
+                                                    xmlHeroLabFakeSINNode
                                                         .SelectSingleNodeAndCacheExpression(
                                                             "@rating", token)
-                                                        ?.ValueAsInt ??
-                                                    1,
+                                                        ?.ValueAsInt
+                                                    ?? 1,
                                                     lstWeapons,
-                                                    xmlHeroLabFakeLicenseNode
-                                                        .SelectSingleNodeAndCacheExpression(
-                                                            "@for", token)
-                                                        ?.Value ?? string.Empty, token: token).ConfigureAwait(false);
-                                                await objFakeLicense.SetParentAsync(objFakeSIN, token)
-                                                    .ConfigureAwait(false);
-                                                await objFakeSIN.Children.AddAsync(objFakeLicense, token)
-                                                    .ConfigureAwait(false);
+                                                    strIdentityName, token: token).ConfigureAwait(false);
+                                                foreach (XPathNavigator xmlHeroLabFakeLicenseNode in xmlHeroLabIdentity
+                                                             .Select(
+                                                                 "license[@name = \"Fake License\"]"))
+                                                {
+                                                    Gear objFakeLicense = new Gear(this);
+                                                    try
+                                                    {
+                                                        await objFakeLicense.CreateAsync(xmlFakeLicenseDataNode,
+                                                            xmlHeroLabFakeLicenseNode
+                                                                .SelectSingleNodeAndCacheExpression(
+                                                                    "@rating", token)
+                                                                ?.ValueAsInt ??
+                                                            1,
+                                                            lstWeapons,
+                                                            xmlHeroLabFakeLicenseNode
+                                                                .SelectSingleNodeAndCacheExpression(
+                                                                    "@for", token)
+                                                                ?.Value ?? string.Empty, token: token).ConfigureAwait(false);
+                                                        await objFakeLicense.SetParentAsync(objFakeSIN, token)
+                                                            .ConfigureAwait(false);
+                                                        await objFakeSIN.Children.AddAsync(objFakeLicense, token)
+                                                            .ConfigureAwait(false);
+                                                    }
+                                                    catch
+                                                    {
+                                                        await objFakeLicense.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                                        throw;
+                                                    }
+                                                }
+                                                await _lstGear.AddAsync(objFakeSIN, token).ConfigureAwait(false);
                                             }
-                                            await _lstGear.AddAsync(objFakeSIN, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            if (blnSync)
+                                                objFakeSIN.DeleteGear();
+                                            else
+                                                await objFakeSIN.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                            throw;
                                         }
                                     }
 
@@ -52041,29 +53739,40 @@ namespace Chummer
                                         if (xmlLifestyleDataNode != null)
                                         {
                                             Lifestyle objLifestyle = new Lifestyle(this);
-                                            if (blnSync)
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                objLifestyle.Create(xmlLifestyleDataNode);
-                                            else
-                                                await objLifestyle.CreateAsync(xmlLifestyleDataNode, token).ConfigureAwait(false);
-                                            if (int.TryParse(
-                                                    xmlHeroLabLifestyleNode.SelectSingleNodeAndCacheExpression(
-                                                            "@months", token)
-                                                    ?.Value,
-                                                    out int intMonths))
+                                            try
                                             {
                                                 if (blnSync)
-                                                    objLifestyle.Increments = intMonths;
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    objLifestyle.Create(xmlLifestyleDataNode);
                                                 else
-                                                    await objLifestyle.SetIncrementsAsync(intMonths, token).ConfigureAwait(false);
-                                            }
+                                                    await objLifestyle.CreateAsync(xmlLifestyleDataNode, token).ConfigureAwait(false);
+                                                if (int.TryParse(
+                                                        xmlHeroLabLifestyleNode.SelectSingleNodeAndCacheExpression(
+                                                                "@months", token)
+                                                        ?.Value,
+                                                        out int intMonths))
+                                                {
+                                                    if (blnSync)
+                                                        objLifestyle.Increments = intMonths;
+                                                    else
+                                                        await objLifestyle.SetIncrementsAsync(intMonths, token).ConfigureAwait(false);
+                                                }
 
-                                            if (blnSync)
-                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                _lstLifestyles.Add(objLifestyle);
-                                            else
-                                                await _lstLifestyles.AddAsync(objLifestyle, token)
-                                                                    .ConfigureAwait(false);
+                                                if (blnSync)
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                    _lstLifestyles.Add(objLifestyle);
+                                                else
+                                                    await _lstLifestyles.AddAsync(objLifestyle, token)
+                                                                        .ConfigureAwait(false);
+                                            }
+                                            catch
+                                            {
+                                                if (blnSync)
+                                                    objLifestyle.Remove(false);
+                                                else
+                                                    await objLifestyle.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                                                throw;
+                                            }
                                         }
                                     }
                                 }
@@ -52078,16 +53787,31 @@ namespace Chummer
                                              "gear/equipment/item[@useradded != \"no\"]"))
                                 {
                                     Gear objGear = new Gear(this);
-                                    if (blnSync)
+                                    try
                                     {
-                                        // ReSharper disable once MethodHasAsyncOverload
-                                        if (objGear.ImportHeroLabGear(xmlGearToImport, null, lstWeapons, token))
-                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstGear.Add(objGear);
+                                        if (blnSync)
+                                        {
+                                            // ReSharper disable once MethodHasAsyncOverload
+                                            if (objGear.ImportHeroLabGear(xmlGearToImport, null, lstWeapons, token))
+                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                _lstGear.Add(objGear);
+                                            else
+                                                objGear.DeleteGear();
+                                        }
+                                        else if (await objGear.ImportHeroLabGearAsync(xmlGearToImport, null, lstWeapons, token).ConfigureAwait(false))
+                                        {
+                                            await _lstGear.AddAsync(objGear, token).ConfigureAwait(false);
+                                        }
+                                        else
+                                            await objGear.DeleteGearAsync(token: token).ConfigureAwait(false);
                                     }
-                                    else if (await objGear.ImportHeroLabGearAsync(xmlGearToImport, null, lstWeapons, token).ConfigureAwait(false))
+                                    catch
                                     {
-                                        await _lstGear.AddAsync(objGear, token).ConfigureAwait(false);
+                                        if (blnSync)
+                                            objGear.DeleteGear();
+                                        else
+                                            await objGear.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                        throw;
                                     }
                                 }
 
@@ -52302,17 +54026,28 @@ namespace Chummer
                                     if (objXmlWeapon != null)
                                     {
                                         Weapon objWeapon = new Weapon(this);
-                                        if (blnSync)
-                                            // ReSharper disable once MethodHasAsyncOverload
-                                            objWeapon.Create(objXmlWeapon, _lstWeapons, token: token);
-                                        else
-                                            await objWeapon.CreateAsync(objXmlWeapon, _lstWeapons, token: token).ConfigureAwait(false);
-                                        objWeapon.IncludedInWeapon = true; // Unarmed attack can never be removed
-                                        if (blnSync)
-                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                            _lstWeapons.Add(objWeapon);
-                                        else
-                                            await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                        try
+                                        {
+                                            if (blnSync)
+                                                // ReSharper disable once MethodHasAsyncOverload
+                                                objWeapon.Create(objXmlWeapon, _lstWeapons, token: token);
+                                            else
+                                                await objWeapon.CreateAsync(objXmlWeapon, _lstWeapons, token: token).ConfigureAwait(false);
+                                            objWeapon.IncludedInWeapon = true; // Unarmed attack can never be removed
+                                            if (blnSync)
+                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                                _lstWeapons.Add(objWeapon);
+                                            else
+                                                await _lstWeapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                        }
+                                        catch
+                                        {
+                                            if (blnSync)
+                                                objWeapon.DeleteWeapon();
+                                            else
+                                                await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                            throw;
+                                        }
                                     }
                                 }
 
@@ -53658,8 +55393,16 @@ namespace Chummer
                     if (objXmlLifestyle != null)
                     {
                         Lifestyle objLifestyle = new Lifestyle(this);
-                        await objLifestyle.CreateAsync(objXmlLifestyle, token).ConfigureAwait(false);
-                        await Lifestyles.AddAsync(objLifestyle, token).ConfigureAwait(false);
+                        try
+                        {
+                            await objLifestyle.CreateAsync(objXmlLifestyle, token).ConfigureAwait(false);
+                            await Lifestyles.AddAsync(objLifestyle, token).ConfigureAwait(false);
+                        }
+                        catch
+                        {
+                            await objLifestyle.RemoveAsync(false, CancellationToken.None).ConfigureAwait(false);
+                            throw;
+                        }
                     }
                 }
 

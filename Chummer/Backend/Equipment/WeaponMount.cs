@@ -18,7 +18,6 @@
  */
 
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
@@ -45,7 +44,6 @@ namespace Chummer.Backend.Equipment
         private static Logger Log => s_ObjLogger.Value;
         private Guid _guiID;
         private Guid _guiSourceID;
-        private decimal _decMarkup;
         private string _strAvail = string.Empty;
         private string _strSource = string.Empty;
         private string _strPage = string.Empty;
@@ -202,25 +200,23 @@ namespace Chummer.Backend.Equipment
         /// Create a Vehicle Modification from an XmlNode and return the TreeNodes for it.
         /// </summary>
         /// <param name="objXmlMod">XmlNode to create the object from.</param>
-        /// <param name="decMarkup">Discount or markup that applies to the base cost of the mod.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public void Create(XmlNode objXmlMod, decimal decMarkup = 0, CancellationToken token = default)
+        public void Create(XmlNode objXmlMod, CancellationToken token = default)
         {
-            Utils.SafelyRunSynchronously(() => CreateCoreAsync(true, objXmlMod, decMarkup, token), token);
+            Utils.SafelyRunSynchronously(() => CreateCoreAsync(true, objXmlMod, token), token);
         }
 
         /// <summary>
         /// Create a Vehicle Modification from an XmlNode and return the TreeNodes for it.
         /// </summary>
         /// <param name="objXmlMod">XmlNode to create the object from.</param>
-        /// <param name="decMarkup">Discount or markup that applies to the base cost of the mod.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public Task CreateAsync(XmlNode objXmlMod, decimal decMarkup = 0, CancellationToken token = default)
+        public Task CreateAsync(XmlNode objXmlMod, CancellationToken token = default)
         {
-            return CreateCoreAsync(false, objXmlMod, decMarkup, token);
+            return CreateCoreAsync(false, objXmlMod, token);
         }
 
-        private async Task CreateCoreAsync(bool blnSync, XmlNode objXmlMod, decimal decMarkup = 0, CancellationToken token = default)
+        private async Task CreateCoreAsync(bool blnSync, XmlNode objXmlMod, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             if (objXmlMod == null) Utils.BreakIfDebug();
@@ -255,24 +251,24 @@ namespace Chummer.Backend.Equipment
             objXmlMod.TryGetStringFieldQuickly("cost", ref _strCost);
             if (!string.IsNullOrEmpty(_strCost) && _strCost.StartsWith("Variable(", StringComparison.Ordinal))
             {
+                string strFirstHalf = _strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
+                string strSecondHalf = string.Empty;
+                int intHyphenIndex = strFirstHalf.IndexOf('-');
+                if (intHyphenIndex != -1)
+                {
+                    if (intHyphenIndex + 1 < strFirstHalf.Length)
+                        strSecondHalf = strFirstHalf.Substring(intHyphenIndex + 1);
+                    strFirstHalf = strFirstHalf.Substring(0, intHyphenIndex);
+                }
                 decimal decMin;
                 decimal decMax = decimal.MaxValue;
-                string strCost = _strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
-                if (strCost.Contains('-'))
+                if (intHyphenIndex != -1)
                 {
-                    string[] strValues = strCost.SplitFixedSizePooledArray('-', 2);
-                    try
-                    {
-                        decMin = Convert.ToDecimal(strValues[0], GlobalSettings.InvariantCultureInfo);
-                        decMax = Convert.ToDecimal(strValues[1], GlobalSettings.InvariantCultureInfo);
-                    }
-                    finally
-                    {
-                        ArrayPool<string>.Shared.Return(strValues);
-                    }
+                    decimal.TryParse(strFirstHalf, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMin);
+                    decimal.TryParse(strSecondHalf, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMax);
                 }
                 else
-                    decMin = Convert.ToDecimal(strCost.FastEscape('+'), GlobalSettings.InvariantCultureInfo);
+                    decimal.TryParse(strFirstHalf.FastEscape('+'), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMin);
 
                 if (decMin != 0 || decMax != decimal.MaxValue)
                 {
@@ -328,7 +324,6 @@ namespace Chummer.Backend.Equipment
                     }
                 }
             }
-            _decMarkup = decMarkup;
 
             objXmlMod.TryGetStringFieldQuickly("source", ref _strSource);
             objXmlMod.TryGetStringFieldQuickly("page", ref _strPage);
@@ -416,7 +411,6 @@ namespace Chummer.Backend.Equipment
             objWriter.WriteElementString("avail", _strAvail);
             objWriter.WriteElementString("cost", _strCost);
             objWriter.WriteElementString("freecost", _blnFreeCost.ToString(GlobalSettings.InvariantCultureInfo));
-            objWriter.WriteElementString("markup", _decMarkup.ToString(GlobalSettings.InvariantCultureInfo));
             objWriter.WriteElementString("extra", _strExtra);
             objWriter.WriteElementString("source", _strSource);
             objWriter.WriteElementString("page", _strPage);
@@ -501,7 +495,6 @@ namespace Chummer.Backend.Equipment
             objNode.TryGetStringFieldQuickly("avail", ref _strAvail);
             objNode.TryGetStringFieldQuickly("cost", ref _strCost);
             objNode.TryGetBoolFieldQuickly("freecost", ref _blnFreeCost);
-            objNode.TryGetDecFieldQuickly("markup", ref _decMarkup);
             objNode.TryGetStringFieldQuickly("source", ref _strSource);
             objNode.TryGetStringFieldQuickly("location", ref _strLocation);
             objNode.TryGetBoolFieldQuickly("included", ref _blnIncludeInVehicle);
@@ -548,8 +541,16 @@ namespace Chummer.Backend.Equipment
                         foreach (XmlNode xmlModNode in xmlModList)
                         {
                             VehicleMod objMod = new VehicleMod(_objCharacter);
-                            objMod.Load(xmlModNode, blnCopy);
-                            Mods.Add(objMod);
+                            try
+                            {
+                                objMod.Load(xmlModNode, blnCopy);
+                                Mods.Add(objMod);
+                            }
+                            catch
+                            {
+                                objMod.DeleteVehicleMod();
+                                throw;
+                            }
                         }
                     }
                     else
@@ -557,8 +558,16 @@ namespace Chummer.Backend.Equipment
                         foreach (XmlNode xmlModNode in xmlModList)
                         {
                             VehicleMod objMod = new VehicleMod(_objCharacter);
-                            await objMod.LoadAsync(xmlModNode, blnCopy, token).ConfigureAwait(false);
-                            await Mods.AddAsync(objMod, token).ConfigureAwait(false);
+                            try
+                            {
+                                await objMod.LoadAsync(xmlModNode, blnCopy, token).ConfigureAwait(false);
+                                await Mods.AddAsync(objMod, token).ConfigureAwait(false);
+                            }
+                            catch
+                            {
+                                await objMod.DeleteVehicleModAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                throw;
+                            }
                         }
                     }
                 }
@@ -574,17 +583,25 @@ namespace Chummer.Backend.Equipment
                         foreach (XmlNode xmlWeaponNode in xmlWeaponList)
                         {
                             Weapon objWeapon = new Weapon(_objCharacter);
-                            if (Weapons.Count >= WeaponCapacity)
+                            try
                             {
-                                // Stop loading more weapons than we can actually mount and dump the rest into the character's basic inventory
-                                objWeapon.Load(xmlWeaponNode, blnCopy);
-                                _objCharacter.Weapons.Add(objWeapon);
+                                if (Weapons.Count >= WeaponCapacity)
+                                {
+                                    // Stop loading more weapons than we can actually mount and dump the rest into the character's basic inventory
+                                    objWeapon.Load(xmlWeaponNode, blnCopy);
+                                    _objCharacter.Weapons.Add(objWeapon);
+                                }
+                                else
+                                {
+                                    objWeapon.ParentMount = this;
+                                    objWeapon.Load(xmlWeaponNode, blnCopy);
+                                    Weapons.Add(objWeapon);
+                                }
                             }
-                            else
+                            catch
                             {
-                                objWeapon.ParentMount = this;
-                                objWeapon.Load(xmlWeaponNode, blnCopy);
-                                Weapons.Add(objWeapon);
+                                objWeapon.DeleteWeapon();
+                                throw;
                             }
                         }
                     }
@@ -593,17 +610,25 @@ namespace Chummer.Backend.Equipment
                         foreach (XmlNode xmlWeaponNode in xmlWeaponList)
                         {
                             Weapon objWeapon = new Weapon(_objCharacter);
-                            if (await Weapons.GetCountAsync(token).ConfigureAwait(false) >= WeaponCapacity)
+                            try
                             {
-                                // Stop loading more weapons than we can actually mount and dump the rest into the character's basic inventory
-                                await objWeapon.LoadAsync(xmlWeaponNode, blnCopy, token).ConfigureAwait(false);
-                                await (await _objCharacter.GetWeaponsAsync(token).ConfigureAwait(false)).AddAsync(objWeapon, token).ConfigureAwait(false);
+                                if (await Weapons.GetCountAsync(token).ConfigureAwait(false) >= WeaponCapacity)
+                                {
+                                    // Stop loading more weapons than we can actually mount and dump the rest into the character's basic inventory
+                                    await objWeapon.LoadAsync(xmlWeaponNode, blnCopy, token).ConfigureAwait(false);
+                                    await (await _objCharacter.GetWeaponsAsync(token).ConfigureAwait(false)).AddAsync(objWeapon, token).ConfigureAwait(false);
+                                }
+                                else
+                                {
+                                    await objWeapon.SetParentMountAsync(this, token).ConfigureAwait(false);
+                                    await objWeapon.LoadAsync(xmlWeaponNode, blnCopy, token).ConfigureAwait(false);
+                                    await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                }
                             }
-                            else
+                            catch
                             {
-                                await objWeapon.SetParentMountAsync(this, token).ConfigureAwait(false);
-                                await objWeapon.LoadAsync(xmlWeaponNode, blnCopy, token).ConfigureAwait(false);
-                                await Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                                await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                throw;
                             }
                         }
                     }
@@ -678,6 +703,8 @@ namespace Chummer.Backend.Equipment
             await objWriter.WriteElementStringAsync("name_english", Name, token: token).ConfigureAwait(false);
             await objWriter.WriteElementStringAsync("fullname",
                 await DisplayNameAsync(strLanguageToPrint, token).ConfigureAwait(false), token: token).ConfigureAwait(false);
+            await objWriter.WriteElementStringAsync("fullname_english",
+                await DisplayNameAsync(GlobalSettings.DefaultLanguage, token).ConfigureAwait(false), token: token).ConfigureAwait(false);
             await objWriter.WriteElementStringAsync("category", await DisplayCategoryAsync(strLanguageToPrint, token).ConfigureAwait(false), token: token).ConfigureAwait(false);
             await objWriter.WriteElementStringAsync("category_english", Category, token: token).ConfigureAwait(false);
             await objWriter.WriteElementStringAsync("limit", Limit, token: token).ConfigureAwait(false);
@@ -716,8 +743,7 @@ namespace Chummer.Backend.Equipment
         /// Create a weapon mount using names instead of IDs, because user readability is important and untrustworthy.
         /// </summary>
         /// <param name="xmlNode">XmlNode to create the object from.</param>
-        /// <param name="decMarkup">Discount or markup that applies to the base cost of the mod.</param>
-        public void CreateByName(XmlNode xmlNode, decimal decMarkup = 0)
+        public void CreateByName(XmlNode xmlNode)
         {
             if (xmlNode == null)
                 throw new ArgumentNullException(nameof(xmlNode));
@@ -728,7 +754,7 @@ namespace Chummer.Backend.Equipment
             XmlNode xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strSize, "category = \"Size\"");
             if (xmlDataNode != null)
             {
-                Create(xmlDataNode, decMarkup);
+                Create(xmlDataNode);
 
                 string strFlexibility = xmlNode["flexibility"]?.InnerText;
                 if (!string.IsNullOrEmpty(strFlexibility))
@@ -780,13 +806,19 @@ namespace Chummer.Backend.Equipment
                     {
                         foreach (XmlNode xmlModNode in xmlModList)
                         {
-                            VehicleMod objMod = new VehicleMod(_objCharacter)
+                            VehicleMod objMod = new VehicleMod(_objCharacter);
+                            try
                             {
-                                IncludedInVehicle = true
-                            };
-                            xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerText);
-                            objMod.Load(xmlDataNode);
-                            Mods.Add(objMod);
+                                objMod.IncludedInVehicle = true;
+                                xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerText);
+                                objMod.Load(xmlDataNode);
+                                Mods.Add(objMod);
+                            }
+                            catch
+                            {
+                                objMod.DeleteVehicleMod();
+                                throw;
+                            }
                         }
                     }
                 }
@@ -797,9 +829,8 @@ namespace Chummer.Backend.Equipment
         /// Create a weapon mount using names instead of IDs, because user readability is important and untrustworthy.
         /// </summary>
         /// <param name="xmlNode">XmlNode to create the object from.</param>
-        /// <param name="decMarkup">Discount or markup that applies to the base cost of the mod.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public async Task CreateByNameAsync(XmlNode xmlNode, decimal decMarkup = 0, CancellationToken token = default)
+        public async Task CreateByNameAsync(XmlNode xmlNode, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             if (xmlNode == null)
@@ -811,7 +842,7 @@ namespace Chummer.Backend.Equipment
             XmlNode xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strSize, "category = \"Size\"");
             if (xmlDataNode != null)
             {
-                await CreateAsync(xmlDataNode, decMarkup, token).ConfigureAwait(false);
+                await CreateAsync(xmlDataNode, token).ConfigureAwait(false);
 
                 string strFlexibility = xmlNode["flexibility"]?.InnerText;
                 if (!string.IsNullOrEmpty(strFlexibility))
@@ -864,10 +895,18 @@ namespace Chummer.Backend.Equipment
                         foreach (XmlNode xmlModNode in xmlModList)
                         {
                             VehicleMod objMod = new VehicleMod(_objCharacter);
-                            await objMod.SetIncludedInVehicleAsync(true, token).ConfigureAwait(false);
-                            xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerText);
-                            await objMod.LoadAsync(xmlDataNode, token: token).ConfigureAwait(false);
-                            await Mods.AddAsync(objMod, token).ConfigureAwait(false);
+                            try
+                            {
+                                await objMod.SetIncludedInVehicleAsync(true, token).ConfigureAwait(false);
+                                xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerText);
+                                await objMod.LoadAsync(xmlDataNode, token: token).ConfigureAwait(false);
+                                await Mods.AddAsync(objMod, token).ConfigureAwait(false);
+                            }
+                            catch
+                            {
+                                await objMod.DeleteVehicleModAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                throw;
+                            }
                         }
                     }
                 }
@@ -1040,15 +1079,6 @@ namespace Chummer.Backend.Equipment
         {
             get => _blnFreeCost;
             set => _blnFreeCost = value;
-        }
-
-        /// <summary>
-        /// Markup.
-        /// </summary>
-        public decimal Markup
-        {
-            get => _decMarkup;
-            set => _decMarkup = value;
         }
 
         /// <summary>
@@ -1367,6 +1397,11 @@ namespace Chummer.Backend.Equipment
                 }
             }
 
+            intAvail += ImprovementManager.ValueOf(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true).StandardRound();
+
+            if (intAvail < 0)
+                intAvail = 0;
+
             return new AvailabilityValue(intAvail, chrLastAvailChar, blnModifyParentAvail, IncludedInVehicle);
         }
 
@@ -1442,6 +1477,11 @@ namespace Chummer.Backend.Equipment
                 }, token).ConfigureAwait(false);
             }
 
+            intAvail += (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound();
+
+            if (intAvail < 0)
+                intAvail = 0;
+
             return new AvailabilityValue(intAvail, chrLastAvailChar, blnModifyParentAvail, IncludedInVehicle);
         }
 
@@ -1459,12 +1499,6 @@ namespace Chummer.Backend.Equipment
                 if (DiscountCost)
                     decOptionCost *= 0.9m;
 
-                // Apply a markup if applicable.
-                if (_decMarkup != 0)
-                {
-                    decOptionCost *= 1 + _decMarkup / 100.0m;
-                }
-
                 return OwnCost + decOptionCost + Weapons.Sum(w => w.TotalCost) + Mods.Sum(m => m.TotalCost);
             }
         }
@@ -1481,12 +1515,6 @@ namespace Chummer.Backend.Equipment
             decimal decOptionCost = await WeaponMountOptions.SumAsync(x => x.GetTotalCostAsync(token), token).ConfigureAwait(false);
             if (DiscountCost)
                 decOptionCost *= 0.9m;
-
-            // Apply a markup if applicable.
-            if (_decMarkup != 0)
-            {
-                decOptionCost *= 1 + _decMarkup / 100.0m;
-            }
 
             return await GetOwnCostAsync(token).ConfigureAwait(false)
                    + decOptionCost
@@ -1512,12 +1540,6 @@ namespace Chummer.Backend.Equipment
                     decOptionCost = WeaponMountOptions.Sum(w => w.TotalCost);
                     if (DiscountCost)
                         decOptionCost *= 0.9m;
-
-                    // Apply a markup if applicable.
-                    if (_decMarkup != 0)
-                    {
-                        decOptionCost *= 1 + _decMarkup / 100.0m;
-                    }
                 }
                 d += decOptionCost;
             }
@@ -1541,12 +1563,6 @@ namespace Chummer.Backend.Equipment
             decimal decOptionCost = await WeaponMountOptions.SumAsync(x => x.GetTotalCostAsync(token), token).ConfigureAwait(false);
             if (DiscountCost)
                 decOptionCost *= 0.9m;
-
-            // Apply a markup if applicable.
-            if (_decMarkup != 0)
-            {
-                decOptionCost *= 1 + _decMarkup / 100.0m;
-            }
 
             return await GetOwnCostAsync(token).ConfigureAwait(false) + decOptionCost
                                                                       + await Weapons.SumAsync(
@@ -1588,12 +1604,6 @@ namespace Chummer.Backend.Equipment
                 if (DiscountCost)
                     decReturn *= 0.9m;
 
-                // Apply a markup if applicable.
-                if (_decMarkup != 0)
-                {
-                    decReturn *= 1 + _decMarkup / 100.0m;
-                }
-
                 return decReturn;
             }
         }
@@ -1628,12 +1638,6 @@ namespace Chummer.Backend.Equipment
 
             if (DiscountCost)
                 decReturn *= 0.9m;
-
-            // Apply a markup if applicable.
-            if (_decMarkup != 0)
-            {
-                decReturn *= 1 + _decMarkup / 100.0m;
-            }
 
             return decReturn;
         }
@@ -2200,7 +2204,7 @@ namespace Chummer.Backend.Equipment
     }
 
     [DebuggerDisplay("{DisplayName(\"en-us\")}")]
-    public class WeaponMountOption : IHasName, IHasXmlDataNode, IHasCost, IHasCharacterObject
+    public class WeaponMountOption : IHasName, IHasXmlDataNode, IHasCost, IHasCharacterObject, IHasInternalId
     {
         private readonly Character _objCharacter;
         private string _strAvail;
@@ -2265,24 +2269,24 @@ namespace Chummer.Backend.Equipment
             _strCost = objXmlMod["cost"]?.InnerText ?? "0";
             if (_strCost.StartsWith("Variable(", StringComparison.Ordinal))
             {
+                string strFirstHalf = _strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
+                string strSecondHalf = string.Empty;
+                int intHyphenIndex = strFirstHalf.IndexOf('-');
+                if (intHyphenIndex != -1)
+                {
+                    if (intHyphenIndex + 1 < strFirstHalf.Length)
+                        strSecondHalf = strFirstHalf.Substring(intHyphenIndex + 1);
+                    strFirstHalf = strFirstHalf.Substring(0, intHyphenIndex);
+                }
                 decimal decMin;
                 decimal decMax = decimal.MaxValue;
-                string strCost = _strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
-                if (strCost.Contains('-'))
+                if (intHyphenIndex != -1)
                 {
-                    string[] strValues = strCost.SplitFixedSizePooledArray('-', 2);
-                    try
-                    {
-                        decMin = Convert.ToDecimal(strValues[0], GlobalSettings.InvariantCultureInfo);
-                        decMax = Convert.ToDecimal(strValues[1], GlobalSettings.InvariantCultureInfo);
-                    }
-                    finally
-                    {
-                        ArrayPool<string>.Shared.Return(strValues);
-                    }
+                    decimal.TryParse(strFirstHalf, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMin);
+                    decimal.TryParse(strSecondHalf, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMax);
                 }
                 else
-                    decMin = Convert.ToDecimal(strCost.FastEscape('+'), GlobalSettings.InvariantCultureInfo);
+                    decimal.TryParse(strFirstHalf.FastEscape('+'), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMin);
 
                 if (decMin != 0 || decMax != decimal.MaxValue)
                 {
@@ -2386,7 +2390,7 @@ namespace Chummer.Backend.Equipment
                 return;
             objWriter.WriteStartElement("weaponmountoption");
             objWriter.WriteElementString("sourceid", SourceIDString);
-            objWriter.WriteElementString("guid", InternalID);
+            objWriter.WriteElementString("guid", InternalId);
             objWriter.WriteElementString("name", _strName);
             objWriter.WriteElementString("category", _strCategory);
             objWriter.WriteElementString("slots", _intSlots.ToString(GlobalSettings.InvariantCultureInfo));
@@ -2463,7 +2467,7 @@ namespace Chummer.Backend.Equipment
 
         public Character CharacterObject => _objCharacter;
 
-        public string InternalID => _guiID.ToString("D", GlobalSettings.InvariantCultureInfo);
+        public string InternalId => _guiID.ToString("D", GlobalSettings.InvariantCultureInfo);
 
         /// <summary>
         /// Identifier of the object within data files.
@@ -2766,6 +2770,11 @@ namespace Chummer.Backend.Equipment
                         intAvail += decValue.StandardRound();
                 }
 
+                intAvail += ImprovementManager.ValueOf(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true).StandardRound();
+
+                if (intAvail < 0)
+                    intAvail = 0;
+
                 return new AvailabilityValue(intAvail, chrLastAvailChar, blnModifyParentAvail);
             }
         }
@@ -2835,6 +2844,11 @@ namespace Chummer.Backend.Equipment
                 else
                     intAvail += decValue.StandardRound();
             }
+
+            intAvail += (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound();
+
+            if (intAvail < 0)
+                intAvail = 0;
 
             return new AvailabilityValue(intAvail, chrLastAvailChar, blnModifyParentAvail);
         }

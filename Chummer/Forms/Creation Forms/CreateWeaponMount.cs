@@ -17,10 +17,8 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -28,6 +26,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+using Chummer.Backend.Equipment;
 
 namespace Chummer
 {
@@ -44,6 +43,7 @@ namespace Chummer
         private HashSet<string> _setBlackMarketMaps;
         private decimal _decOldBaseCost;
         private decimal _decCurrentBaseCost;
+        private decimal _decMarkup;
 
         private CancellationTokenSource _objUpdateInfoCancellationTokenSource;
         private CancellationTokenSource _objRefreshComboBoxesCancellationTokenSource;
@@ -190,13 +190,24 @@ namespace Chummer
                 else
                     await RefreshComboBoxes(_objGenericToken).ConfigureAwait(false);
 
-                await nudMarkup.DoThreadSafeAsync(x =>
+                if (await _objCharacter.GetCreatedAsync(_objGenericToken).ConfigureAwait(false))
                 {
-                    x.Visible = AllowDiscounts || _objMount?.Markup != 0;
-                    x.Enabled = AllowDiscounts;
-                    lblMarkupLabel.Visible = x.Visible;
-                    lblMarkupPercentLabel.Visible = x.Visible;
-                }, _objGenericToken).ConfigureAwait(false);
+                    await nudMarkup.DoThreadSafeAsync(x =>
+                    {
+                        x.Visible = true;
+                        lblMarkupLabel.Visible = true;
+                        lblMarkupPercentLabel.Visible = true;
+                    }, _objGenericToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await nudMarkup.DoThreadSafeAsync(x =>
+                    {
+                        x.Visible = false;
+                        lblMarkupLabel.Visible = false;
+                        lblMarkupPercentLabel.Visible = false;
+                    }, _objGenericToken).ConfigureAwait(false);
+                }
 
                 if (_objMount != null)
                 {
@@ -409,157 +420,181 @@ namespace Chummer
                         return;
                 }
 
-                if (_blnAllowEditOptions)
+                bool blnNewWeaponMount = false;
+                try
                 {
-                    if (_objMount == null)
+                    if (_blnAllowEditOptions)
                     {
-                        _objMount = new WeaponMount(_objCharacter, _objVehicle);
-                        await _objMount.CreateAsync(xmlSelectedMount, await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, _objGenericToken).ConfigureAwait(false), _objGenericToken).ConfigureAwait(false);
-                    }
-                    else if (_objMount.SourceIDString != strSelectedMount)
-                    {
-                        await _objMount.CreateAsync(xmlSelectedMount, await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, _objGenericToken).ConfigureAwait(false), _objGenericToken).ConfigureAwait(false);
-                    }
-
-                    _objMount.DiscountCost = await chkBlackMarketDiscount.DoThreadSafeFuncAsync(x => x.Checked, _objGenericToken).ConfigureAwait(false);
-
-                    WeaponMountOption objControlOption = new WeaponMountOption(_objCharacter);
-                    if (await objControlOption.CreateAsync(xmlSelectedControl, _objGenericToken).ConfigureAwait(false))
-                    {
-                        await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Control", _objGenericToken).ConfigureAwait(false);
-                        await _objMount.WeaponMountOptions.AddAsync(objControlOption, _objGenericToken).ConfigureAwait(false);
-                    }
-
-                    WeaponMountOption objFlexibilityOption = new WeaponMountOption(_objCharacter);
-                    if (await objFlexibilityOption.CreateAsync(xmlSelectedFlexibility, _objGenericToken).ConfigureAwait(false))
-                    {
-                        await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Flexibility", _objGenericToken).ConfigureAwait(false);
-                        await _objMount.WeaponMountOptions.AddAsync(objFlexibilityOption, _objGenericToken).ConfigureAwait(false);
-                    }
-
-                    WeaponMountOption objVisibilityOption = new WeaponMountOption(_objCharacter);
-                    if (await objVisibilityOption.CreateAsync(xmlSelectedVisibility, _objGenericToken).ConfigureAwait(false))
-                    {
-                        await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Visibility", _objGenericToken).ConfigureAwait(false);
-                        await _objMount.WeaponMountOptions.AddAsync(objVisibilityOption, _objGenericToken).ConfigureAwait(false);
-                    }
-                }
-
-                List<VehicleMod> lstOldRemovedVehicleMods
-                    = await _objMount.Mods
-                        .ToListAsync(
-                            async x => !x.IncludedInVehicle &&
-                                       !await _lstMods.ContainsAsync(x, _objGenericToken).ConfigureAwait(false),
-                            _objGenericToken).ConfigureAwait(false);
-                await _objMount.Mods.RemoveAllAsync(x => lstOldRemovedVehicleMods.Contains(x), _objGenericToken).ConfigureAwait(false);
-                List<VehicleMod> lstNewVehicleMods = new List<VehicleMod>(await _lstMods.GetCountAsync(_objGenericToken).ConfigureAwait(false));
-                foreach (VehicleMod objMod in _lstMods)
-                {
-                    if (await _objMount.Mods.ContainsAsync(objMod, _objGenericToken).ConfigureAwait(false))
-                        continue;
-                    lstNewVehicleMods.Add(objMod);
-                    await _objMount.Mods.AddAsync(objMod, _objGenericToken).ConfigureAwait(false);
-                }
-
-                if (await _objCharacter.GetCreatedAsync(_objGenericToken).ConfigureAwait(false))
-                {
-                    CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(_objGenericToken).ConfigureAwait(false);
-                    bool blnRemoveMountAfterCheck = false;
-                    // Check the item's Cost and make sure the character can afford it.
-                    if (!await chkFreeItem.DoThreadSafeFuncAsync(x => x.Checked, _objGenericToken).ConfigureAwait(false))
-                    {
-                        // New mount, so temporarily add it to parent vehicle to make sure we can capture everything
-                        if (_objMount.Parent == null)
+                        if (_objMount == null)
                         {
-                            blnRemoveMountAfterCheck = true;
-                            await _objVehicle.WeaponMounts.AddAsync(_objMount, _objGenericToken).ConfigureAwait(false);
+                            _objMount = new WeaponMount(_objCharacter, _objVehicle);
+                            blnNewWeaponMount = true;
+                            await _objMount.CreateAsync(xmlSelectedMount, _objGenericToken).ConfigureAwait(false);
+                        }
+                        else if (_objMount.SourceIDString != strSelectedMount)
+                        {
+                            await _objMount.CreateAsync(xmlSelectedMount, _objGenericToken).ConfigureAwait(false);
                         }
 
-                        decimal decCost = await _objVehicle.GetTotalCostAsync(_objGenericToken).ConfigureAwait(false) - _decOldBaseCost;
+                        _objMount.DiscountCost = await chkBlackMarketDiscount.DoThreadSafeFuncAsync(x => x.Checked, _objGenericToken).ConfigureAwait(false);
 
-                        // Multiply the cost if applicable.
-                        switch ((await _objMount.TotalAvailTupleAsync(token: _objGenericToken).ConfigureAwait(false)).Suffix)
+                        WeaponMountOption objControlOption = new WeaponMountOption(_objCharacter);
+                        if (await objControlOption.CreateAsync(xmlSelectedControl, _objGenericToken).ConfigureAwait(false))
                         {
-                            case 'R' when objSettings.MultiplyRestrictedCost:
-                                decCost *= objSettings.RestrictedCostMultiplier;
-                                break;
-
-                            case 'F' when objSettings.MultiplyForbiddenCost:
-                                decCost *= objSettings.ForbiddenCostMultiplier;
-                                break;
+                            await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Control", _objGenericToken).ConfigureAwait(false);
+                            await _objMount.WeaponMountOptions.AddAsync(objControlOption, _objGenericToken).ConfigureAwait(false);
                         }
 
-                        if (decCost > await _objCharacter.GetNuyenAsync(_objGenericToken).ConfigureAwait(false))
+                        WeaponMountOption objFlexibilityOption = new WeaponMountOption(_objCharacter);
+                        if (await objFlexibilityOption.CreateAsync(xmlSelectedFlexibility, _objGenericToken).ConfigureAwait(false))
                         {
-                            await Program.ShowScrollableMessageBoxAsync(this, await LanguageManager.GetStringAsync("Message_NotEnoughNuyen", token: _objGenericToken).ConfigureAwait(false),
-                                await LanguageManager.GetStringAsync("MessageTitle_NotEnoughNuyen", token: _objGenericToken).ConfigureAwait(false),
-                                MessageBoxButtons.OK, MessageBoxIcon.Information, token: _objGenericToken).ConfigureAwait(false);
+                            await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Flexibility", _objGenericToken).ConfigureAwait(false);
+                            await _objMount.WeaponMountOptions.AddAsync(objFlexibilityOption, _objGenericToken).ConfigureAwait(false);
+                        }
+
+                        WeaponMountOption objVisibilityOption = new WeaponMountOption(_objCharacter);
+                        if (await objVisibilityOption.CreateAsync(xmlSelectedVisibility, _objGenericToken).ConfigureAwait(false))
+                        {
+                            await _objMount.WeaponMountOptions.RemoveAllAsync(x => x.Category == "Visibility", _objGenericToken).ConfigureAwait(false);
+                            await _objMount.WeaponMountOptions.AddAsync(objVisibilityOption, _objGenericToken).ConfigureAwait(false);
+                        }
+                    }
+
+                    List<VehicleMod> lstOldRemovedVehicleMods
+                        = await _objMount.Mods
+                            .ToListAsync(
+                                async x => !x.IncludedInVehicle &&
+                                           !await _lstMods.ContainsAsync(x, _objGenericToken).ConfigureAwait(false),
+                                _objGenericToken).ConfigureAwait(false);
+                    await _objMount.Mods.RemoveAllAsync(x => lstOldRemovedVehicleMods.Contains(x), _objGenericToken).ConfigureAwait(false);
+                    List<VehicleMod> lstNewVehicleMods = new List<VehicleMod>(await _lstMods.GetCountAsync(_objGenericToken).ConfigureAwait(false));
+                    foreach (VehicleMod objMod in _lstMods)
+                    {
+                        if (await _objMount.Mods.ContainsAsync(objMod, _objGenericToken).ConfigureAwait(false))
+                            continue;
+                        lstNewVehicleMods.Add(objMod);
+                        await _objMount.Mods.AddAsync(objMod, _objGenericToken).ConfigureAwait(false);
+                    }
+
+                    bool blnFreeCost = await chkFreeItem.DoThreadSafeFuncAsync(x => x.Checked, _objGenericToken).ConfigureAwait(false);
+                    if (await _objCharacter.GetCreatedAsync(_objGenericToken).ConfigureAwait(false))
+                    {
+                        CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(_objGenericToken).ConfigureAwait(false);
+                        bool blnRemoveMountAfterCheck = false;
+                        try
+                        {
+                            // Do not allow the user to add a new Vehicle Mod if the Vehicle's Capacity has been reached.
+                            if (await objSettings.GetEnforceCapacityAsync(_objGenericToken).ConfigureAwait(false))
+                            {
+                                // New mount, so temporarily add it to parent vehicle to make sure we can capture everything
+                                if (_objMount.Parent == null)
+                                {
+                                    blnRemoveMountAfterCheck = true;
+                                    await _objVehicle.WeaponMounts.AddAsync(_objMount, _objGenericToken).ConfigureAwait(false);
+                                }
+                                bool blnOverCapacity;
+                                if (await objSettings.BookEnabledAsync("R5", _objGenericToken).ConfigureAwait(false))
+                                {
+                                    if (_objVehicle.IsDrone && await objSettings.GetDroneModsAsync(_objGenericToken).ConfigureAwait(false))
+                                        blnOverCapacity
+                                            = await _objVehicle.GetDroneModSlotsUsedAsync(_objGenericToken)
+                                                               .ConfigureAwait(false) > await _objVehicle
+                                                .GetDroneModSlotsAsync(_objGenericToken).ConfigureAwait(false);
+                                    else
+                                        blnOverCapacity = await _objVehicle.OverR5CapacityAsync("Weapons", _objGenericToken)
+                                                                           .ConfigureAwait(false);
+                                }
+                                else
+                                    blnOverCapacity = await _objVehicle.GetSlotsAsync(_objGenericToken).ConfigureAwait(false)
+                                                      < await _objVehicle.GetSlotsUsedAsync(_objGenericToken)
+                                                                         .ConfigureAwait(false);
+
+                                if (blnOverCapacity)
+                                {
+                                    await Program.ShowScrollableMessageBoxAsync(this, await LanguageManager.GetStringAsync("Message_CapacityReached", token: _objGenericToken).ConfigureAwait(false),
+                                        await LanguageManager.GetStringAsync("MessageTitle_CapacityReached", token: _objGenericToken).ConfigureAwait(false),
+                                        MessageBoxButtons.OK, MessageBoxIcon.Information, token: _objGenericToken).ConfigureAwait(false);
+                                    if (blnRemoveMountAfterCheck)
+                                    {
+                                        _objMount = null;
+                                    }
+                                    else
+                                    {
+                                        await _objMount.Mods.RemoveAllAsync(x => lstNewVehicleMods.Contains(x), _objGenericToken).ConfigureAwait(false);
+                                        await _objMount.Mods.AddRangeAsync(lstOldRemovedVehicleMods, _objGenericToken).ConfigureAwait(false);
+                                    }
+                                    return;
+                                }
+                            }
+
+                            // Check the item's Cost and make sure the character can afford it.
+                            if (!blnFreeCost)
+                            {
+                                // New mount, so temporarily add it to parent vehicle to make sure we can capture everything
+                                if (_objMount.Parent == null)
+                                {
+                                    blnRemoveMountAfterCheck = true;
+                                    await _objVehicle.WeaponMounts.AddAsync(_objMount, _objGenericToken).ConfigureAwait(false);
+                                }
+
+                                decimal decCost = await _objVehicle.GetTotalCostAsync(_objGenericToken).ConfigureAwait(false) - _decOldBaseCost;
+
+                                // Apply a markup if applicable.
+                                decimal decMarkup = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, _objGenericToken).ConfigureAwait(false);
+                                if (decMarkup != 0)
+                                {
+                                    decCost *= 1 + decMarkup / 100.0m;
+                                }
+
+                                // Multiply the cost if applicable.
+                                switch ((await _objMount.TotalAvailTupleAsync(token: _objGenericToken).ConfigureAwait(false)).Suffix)
+                                {
+                                    case 'R' when objSettings.MultiplyRestrictedCost:
+                                        decCost *= objSettings.RestrictedCostMultiplier;
+                                        break;
+
+                                    case 'F' when objSettings.MultiplyForbiddenCost:
+                                        decCost *= objSettings.ForbiddenCostMultiplier;
+                                        break;
+                                }
+
+                                if (decCost > await _objCharacter.GetNuyenAsync(_objGenericToken).ConfigureAwait(false))
+                                {
+                                    await Program.ShowScrollableMessageBoxAsync(this, await LanguageManager.GetStringAsync("Message_NotEnoughNuyen", token: _objGenericToken).ConfigureAwait(false),
+                                        await LanguageManager.GetStringAsync("MessageTitle_NotEnoughNuyen", token: _objGenericToken).ConfigureAwait(false),
+                                        MessageBoxButtons.OK, MessageBoxIcon.Information, token: _objGenericToken).ConfigureAwait(false);
+                                    if (blnRemoveMountAfterCheck)
+                                    {
+                                        _objMount = null;
+                                    }
+                                    else
+                                    {
+                                        await _objMount.Mods.RemoveAllAsync(x => lstNewVehicleMods.Contains(x), _objGenericToken).ConfigureAwait(false);
+                                        await _objMount.Mods.AddRangeAsync(lstOldRemovedVehicleMods, _objGenericToken).ConfigureAwait(false);
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                        finally
+                        {
                             if (blnRemoveMountAfterCheck)
                             {
                                 await _objVehicle.WeaponMounts.RemoveAsync(_objMount, _objGenericToken).ConfigureAwait(false);
-                                _objMount = null;
                             }
-                            else
-                            {
-                                await _objMount.Mods.RemoveAllAsync(x => lstNewVehicleMods.Contains(x), _objGenericToken).ConfigureAwait(false);
-                                await _objMount.Mods.AddRangeAsync(lstOldRemovedVehicleMods, _objGenericToken).ConfigureAwait(false);
-                            }
-                            return;
                         }
                     }
 
-                    // Do not allow the user to add a new Vehicle Mod if the Vehicle's Capacity has been reached.
-                    if (await objSettings.GetEnforceCapacityAsync(_objGenericToken).ConfigureAwait(false))
-                    {
-                        // New mount, so temporarily add it to parent vehicle to make sure we can capture everything
-                        if (_objMount.Parent == null)
-                        {
-                            blnRemoveMountAfterCheck = true;
-                            await _objVehicle.WeaponMounts.AddAsync(_objMount, _objGenericToken).ConfigureAwait(false);
-                        }
-                        bool blnOverCapacity;
-                        if (await objSettings.BookEnabledAsync("R5", _objGenericToken).ConfigureAwait(false))
-                        {
-                            if (_objVehicle.IsDrone && await objSettings.GetDroneModsAsync(_objGenericToken).ConfigureAwait(false))
-                                blnOverCapacity
-                                    = await _objVehicle.GetDroneModSlotsUsedAsync(_objGenericToken)
-                                                       .ConfigureAwait(false) > await _objVehicle
-                                        .GetDroneModSlotsAsync(_objGenericToken).ConfigureAwait(false);
-                            else
-                                blnOverCapacity = await _objVehicle.OverR5CapacityAsync("Weapons", _objGenericToken)
-                                                                   .ConfigureAwait(false);
-                        }
-                        else
-                            blnOverCapacity = await _objVehicle.GetSlotsAsync(_objGenericToken).ConfigureAwait(false)
-                                              < await _objVehicle.GetSlotsUsedAsync(_objGenericToken)
-                                                                 .ConfigureAwait(false);
-
-                        if (blnOverCapacity)
-                        {
-                            await Program.ShowScrollableMessageBoxAsync(this, await LanguageManager.GetStringAsync("Message_CapacityReached", token: _objGenericToken).ConfigureAwait(false),
-                                await LanguageManager.GetStringAsync("MessageTitle_CapacityReached", token: _objGenericToken).ConfigureAwait(false),
-                                MessageBoxButtons.OK, MessageBoxIcon.Information, token: _objGenericToken).ConfigureAwait(false);
-                            if (blnRemoveMountAfterCheck)
-                            {
-                                await _objVehicle.WeaponMounts.RemoveAsync(_objMount, _objGenericToken).ConfigureAwait(false);
-                                _objMount = null;
-                            }
-                            else
-                            {
-                                await _objMount.Mods.RemoveAllAsync(x => lstNewVehicleMods.Contains(x), _objGenericToken).ConfigureAwait(false);
-                                await _objMount.Mods.AddRangeAsync(lstOldRemovedVehicleMods, _objGenericToken).ConfigureAwait(false);
-                            }
-                            return;
-                        }
-                    }
-
-                    if (blnRemoveMountAfterCheck)
-                    {
-                        await _objVehicle.WeaponMounts.RemoveAsync(_objMount, _objGenericToken).ConfigureAwait(false);
-                    }
+                    _objMount.FreeCost = blnFreeCost;
+                }
+                catch
+                {
+                    if (blnNewWeaponMount && _objMount != null)
+                        await _objMount.DeleteWeaponMountAsync(token: CancellationToken.None).ConfigureAwait(false);
+                    throw;
                 }
 
-                _objMount.FreeCost = await chkFreeItem.DoThreadSafeFuncAsync(x => x.Checked, _objGenericToken).ConfigureAwait(false);
+                _decMarkup = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, _objGenericToken).ConfigureAwait(false);
 
                 await this.DoThreadSafeAsync(x =>
                 {
@@ -617,9 +652,6 @@ namespace Chummer
                 //swallow this
             }
         }
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public bool AllowDiscounts { get; set; }
 
         private async Task UpdateInfo(CancellationToken token = default)
         {
@@ -960,20 +992,25 @@ namespace Chummer
                             blnAddAgain = frmPickVehicleMod.MyForm.AddAgain;
                             XmlDocument objXmlDocument = await _objCharacter.LoadDataAsync("vehicles.xml", token: token).ConfigureAwait(false);
                             XmlNode objXmlMod = objXmlDocument.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", frmPickVehicleMod.MyForm.SelectedMod);
-
-                            VehicleMod objMod = new VehicleMod(_objCharacter)
+                            TreeNode objNewNode;
+                            VehicleMod objMod = new VehicleMod(_objCharacter);
+                            try
                             {
-                                DiscountCost = frmPickVehicleMod.MyForm.BlackMarketDiscount
-                            };
-                            await objMod.CreateAsync(objXmlMod, frmPickVehicleMod.MyForm.SelectedRating, _objVehicle, frmPickVehicleMod.MyForm.Markup, token: token).ConfigureAwait(false);
-                            if (frmPickVehicleMod.MyForm.FreeCost)
-                                objMod.Cost = "0";
-                            if (_objMount != null)
-                                await _objMount.Mods.AddAsync(objMod, token).ConfigureAwait(false);
-                            await _lstMods.AddAsync(objMod, token).ConfigureAwait(false);
-                            intSlots += await objMod.GetCalculatedSlotsAsync(token).ConfigureAwait(false);
-
-                            TreeNode objNewNode = await objMod.CreateTreeNode(null, null, null, null, null, null, token).ConfigureAwait(false);
+                                objMod.DiscountCost = frmPickVehicleMod.MyForm.BlackMarketDiscount;
+                                await objMod.CreateAsync(objXmlMod, frmPickVehicleMod.MyForm.SelectedRating, _objVehicle, token: token).ConfigureAwait(false);
+                                if (frmPickVehicleMod.MyForm.FreeCost)
+                                    objMod.Cost = "0";
+                                if (_objMount != null)
+                                    await _objMount.Mods.AddAsync(objMod, token).ConfigureAwait(false);
+                                await _lstMods.AddAsync(objMod, token).ConfigureAwait(false);
+                                intSlots += await objMod.GetCalculatedSlotsAsync(token).ConfigureAwait(false);
+                                objNewNode = await objMod.CreateTreeNode(null, null, null, null, null, null, token).ConfigureAwait(false);
+                            }
+                            catch
+                            {
+                                await objMod.DeleteVehicleModAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                throw;
+                            }
 
                             if (objModsParentNode == null)
                             {
@@ -1296,5 +1333,10 @@ namespace Chummer
                 //swallow this
             }
         }
+
+        /// <summary>
+        /// Markup percentage.
+        /// </summary>
+        public decimal Markup => _decMarkup;
     }
 }

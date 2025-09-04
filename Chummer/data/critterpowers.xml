@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <!--This file is part of Chummer5a.
 
@@ -3472,10 +3472,10 @@
       <range />
       <duration />
       <bonus>
-        <specificattribute>
+        <specificskill>
           <name>Swimming</name>
-          <val>2</val>
-        </specificattribute>
+          <bonus>2</bonus>
+        </specificskill>
       </bonus>
       <source>HS</source>
       <page>170</page>

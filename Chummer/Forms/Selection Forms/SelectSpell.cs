@@ -35,6 +35,10 @@ namespace Chummer
 
         private bool _blnLoading = true;
         private bool _blnAddAgain;
+        private bool _blnLimited;
+        private bool _blnExtended;
+        private bool _blnAlchemical;
+        private bool _blnFreeBonus;
         private bool _blnIgnoreRequirements;
         private string _strLimitCategory = string.Empty;
         private string _strForceSpell = string.Empty;
@@ -214,17 +218,17 @@ namespace Chummer
         /// <summary>
         /// Whether a Limited version of the Spell was selected.
         /// </summary>
-        public bool Limited => chkLimited.DoThreadSafeFunc(x => x.Checked);
+        public bool Limited => _blnLimited;
 
         /// <summary>
         /// Whether an Extended version of the Spell was selected.
         /// </summary>
-        public bool Extended => chkExtended.DoThreadSafeFunc(x => x.Checked);
+        public bool Extended => _blnExtended;
 
         /// <summary>
         /// Whether a Alchemical version of the Spell was selected.
         /// </summary>
-        public bool Alchemical => chkAlchemical.DoThreadSafeFunc(x => x.Checked);
+        public bool Alchemical => _blnAlchemical;
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool FreeOnly { get; set; }
@@ -259,8 +263,7 @@ namespace Chummer
             set => _blnIgnoreRequirements = value;
         }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public bool FreeBonus { get; set; }
+        public bool FreeBonus => _blnFreeBonus;
 
         #endregion Properties
 
@@ -531,7 +534,11 @@ namespace Chummer
                     : string.Empty;
             }
 
-            FreeBonus = await chkFreeBonus.DoThreadSafeFuncAsync(x => x.Checked, token: token)
+            _blnLimited = await chkLimited.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false);
+            _blnExtended = await chkExtended.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false);
+            _blnAlchemical = await chkAlchemical.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false);
+
+            _blnFreeBonus = await chkFreeBonus.DoThreadSafeFuncAsync(x => x.Checked, token: token)
                                           .ConfigureAwait(false);
 
             await this.DoThreadSafeAsync(x =>

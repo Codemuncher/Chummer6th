@@ -369,6 +369,10 @@ namespace SevenZip.Compression.LZMA
             private int _tableSize;
             private readonly int[] _counters = new int[Base.kNumPosStatesEncodingMax];
 
+            public LenPriceTableEncoder() : base()
+            {
+            }
+
             public void SetTableSize(int tableSize)
             { _tableSize = tableSize; }
 
@@ -498,17 +502,17 @@ namespace SevenZip.Compression.LZMA
         {
             if (_matchFinder == null)
             {
-                BinTree bt = new BinTree();
+                BinTree bt;
                 switch (_matchFinderType)
                 {
                     case EMatchFinderType.BT2:
-                        bt.SetType(2);
+                        bt = new BinTree(2);
                         break;
                     case EMatchFinderType.BT4:
-                        bt.SetType(4);
+                        bt = new BinTree(4);
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentException("No appropriate matchfinder type found.");
                 }
 
                 Interlocked.CompareExchange(ref _matchFinder, bt, null);
@@ -2082,7 +2086,7 @@ namespace SevenZip.Compression.LZMA
                     if (_matchFinder.GetNumAvailableBytes() == 0)
                     {
                         await FlushAsync((int)_nowPos64, token).ConfigureAwait(false);
-                        return new Tuple<long, long, bool> (inSize, outSize, true);
+                        return new Tuple<long, long, bool>(inSize, outSize, true);
                     }
 
                     await ReadMatchDistancesAsync(token).ConfigureAwait(false);
@@ -2458,9 +2462,9 @@ namespace SevenZip.Compression.LZMA
                     case CoderPropID.NumFastBytes:
                         {
                             if (!(prop is int numFastBytes))
-                                throw new InvalidParamException();
+                                throw new ArgumentException("Mismatch between properties content and match ID content type.", nameof(properties));
                             if (numFastBytes < 5 || numFastBytes > Base.kMatchMaxLen)
-                                throw new InvalidParamException();
+                                throw new ArgumentOutOfRangeException(nameof(properties));
                             _numFastBytes = numFastBytes;
                             break;
                         }
@@ -2481,9 +2485,9 @@ namespace SevenZip.Compression.LZMA
                             if (!(prop is EMatchFinderType id))
                             {
                                 if (!(prop is string needle))
-                                    throw new InvalidParamException();
+                                    throw new ArgumentException("Mismatch between properties content and match ID content type.", nameof(properties));
                                 if (!Enum.TryParse(needle, true, out id))
-                                    throw new InvalidParamException();
+                                    throw new ArgumentOutOfRangeException(nameof(properties));
                             }
                             _matchFinderType = id;
                             if (_matchFinder != null && matchFinderIndexPrev != _matchFinderType)
@@ -2497,12 +2501,12 @@ namespace SevenZip.Compression.LZMA
                         {
                             const int kDicLogSizeMaxCompress = 27; // Tuned to new value for BinTree.kMaxValForNormalize based on maximum allowed array sizes in .NET
                             if (!(prop is int dictionarySize))
-                                throw new InvalidParamException();
+                                throw new ArgumentException("Mismatch between properties content and match ID content type.", nameof(properties));
                             unchecked
                             {
                                 if (dictionarySize < 1 << Base.kDicLogSizeMin ||
                                     dictionarySize > 1 << kDicLogSizeMaxCompress)
-                                    throw new InvalidParamException();
+                                    throw new ArgumentOutOfRangeException(nameof(properties));
                                 _dictionarySize = dictionarySize;
                                 int dicLogSize;
                                 for (dicLogSize = 0; dicLogSize < (uint)kDicLogSizeMaxCompress; dicLogSize++)
@@ -2516,9 +2520,9 @@ namespace SevenZip.Compression.LZMA
                     case CoderPropID.PosStateBits:
                         {
                             if (!(prop is int bits))
-                                throw new InvalidParamException();
+                                throw new ArgumentException("Mismatch between properties content and match ID content type.", nameof(properties));
                             if (bits < 0 || bits > Base.kNumPosStatesBitsEncodingMax)
-                                throw new InvalidParamException();
+                                throw new ArgumentOutOfRangeException(nameof(properties));
                             _posStateBits = bits;
                             unchecked
                             {
@@ -2530,30 +2534,30 @@ namespace SevenZip.Compression.LZMA
                     case CoderPropID.LitPosBits:
                         {
                             if (!(prop is int bits))
-                                throw new InvalidParamException();
+                                throw new ArgumentException("Mismatch between properties content and match ID content type.", nameof(properties));
                             if (bits < 0 || bits > Base.kNumLitPosStatesBitsEncodingMax)
-                                throw new InvalidParamException();
+                                throw new ArgumentOutOfRangeException(nameof(properties));
                             _numLiteralPosStateBits = bits;
                             break;
                         }
                     case CoderPropID.LitContextBits:
                         {
                             if (!(prop is int bits))
-                                throw new InvalidParamException();
+                                throw new ArgumentException("Mismatch between properties content and match ID content type.", nameof(properties));
                             if (bits < 0 || bits > Base.kNumLitContextBitsMax)
-                                throw new InvalidParamException();
+                                throw new ArgumentOutOfRangeException(nameof(properties));
                             _numLiteralContextBits = bits;
                             break;
                         }
                     case CoderPropID.EndMarker:
                         {
                             if (!(prop is bool isMark))
-                                throw new InvalidParamException();
+                                throw new ArgumentException("Mismatch between properties content and match ID content type.", nameof(properties));
                             SetWriteEndMarkerMode(isMark);
                             break;
                         }
                     default:
-                        throw new InvalidParamException();
+                        throw new ArgumentOutOfRangeException(nameof(propIDs));
                 }
             }
         }

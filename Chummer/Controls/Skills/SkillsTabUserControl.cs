@@ -43,7 +43,7 @@ namespace Chummer.UI.Skills
         private BindingListDisplay<SkillGroup> _lstSkillGroups;
         private BindingListDisplay<KnowledgeSkill> _lstKnowledgeSkills;
         private BindingListDisplay<Skill> _lstNewSkills;
-        private ThreadSafeBindingList<Skill> lstNewSkills;
+        private ThreadSafeBindingList<Skill> lstNewSkills = [];
 
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -194,8 +194,7 @@ namespace Chummer.UI.Skills
 
                 SkillsSection objSkillSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
                 ThreadSafeBindingList<Skill> lstSkills = await objSkillSection.GetSkillsAsync(token).ConfigureAwait(false);
-                ThreadSafeBindingList<SkillGroup> lstSkillGroups = await objSkillSection.GetSkillGroupsAsync(token).ConfigureAwait(false);
-                lstNewSkills = await objSkillSection.GetNewSkillsAsync(token).ConfigureAwait(false);
+                ThreadSafeBindingList<Skill> lstNewSkills = [];
                 ThreadSafeBindingList<KnowledgeSkill> lstKnoSkills = await objSkillSection.GetKnowledgeSkillsAsync(token).ConfigureAwait(false);
 
                 await this.DoThreadSafeAsync(() =>
@@ -263,10 +262,10 @@ namespace Chummer.UI.Skills
 
                             parts.TaskEnd("_lstKnowledgeSkills add");
 
-                            tlpActiveSkills.Margin = new Padding(0);
+                                tlpActiveSkills.Margin = new Padding(0);
                             tlpSkills.Margin = new Padding(0); 
-                            tlpTopPanel.ColumnStyles[0] = new ColumnStyle(SizeType.AutoSize);
-                            tlpTopPanel.ColumnStyles[1] = new ColumnStyle(SizeType.Percent, 100F);
+                                tlpTopPanel.ColumnStyles[0] = new ColumnStyle(SizeType.AutoSize);
+                                tlpTopPanel.ColumnStyles[1] = new ColumnStyle(SizeType.Percent, 100F);
 
                             parts.TaskEnd("MakeSkillDisplay()");
 
@@ -348,10 +347,10 @@ namespace Chummer.UI.Skills
                             }
 
                             parts.TaskEnd("_sort databind");
-                         
+
                           
                            // _lstActiveSkills.ChildPropertyChangedAsync += ChildPropertyChanged;
-                            _lstKnowledgeSkills.ChildPropertyChangedAsync += ChildPropertyChanged;                      
+                            _lstKnowledgeSkills.ChildPropertyChangedAsync += ChildPropertyChanged;
 
                             if (_objCharacter.Created)
                             {
@@ -383,17 +382,17 @@ namespace Chummer.UI.Skills
                //     .Select(x => x.DoLoad(token))).ConfigureAwait(false);
                 await Task.WhenAll(_lstKnowledgeSkills.ContentControls.OfType<KnowledgeSkillControl>()
                     .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-               
+
 
                 if (!await _objCharacter.GetCreatedAsync(token).ConfigureAwait(false))
                 {
                     await lblActiveSp.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
-                             nameof(Character
-                                 .EffectiveBuildMethodUsesPriorityTables),
-                             x => x
-                                 .GetEffectiveBuildMethodUsesPriorityTablesAsync(
-                                     objMyToken), token)
-                         .ConfigureAwait(false);
+                            nameof(Character
+                                .EffectiveBuildMethodUsesPriorityTables),
+                            x => x
+                                .GetEffectiveBuildMethodUsesPriorityTablesAsync(
+                                    objMyToken), token)
+                        .ConfigureAwait(false);
                     await lblBuyWithKarma.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y,
                             _objCharacter,
                             nameof(Character
@@ -502,7 +501,6 @@ namespace Chummer.UI.Skills
 
             if (objSkillSection.CharacterSkills == null || objSkillSection.CharacterSkills.Count == 0)
             {
-                lstNewSkills = [];
                 await objSkillSection.AddNewSkillAsync(skill, token);          
             
                 await lstNewSkills.AddAsync(skill, token);
@@ -552,7 +550,7 @@ namespace Chummer.UI.Skills
             {
                 if (!lstNewSkills.Contains(skill))
                 {
-                    //await lstNewSkills.AddAsync(skill, token);
+                    await lstNewSkills.AddAsync(skill, token);
                     await objSkillSection.AddNewSkillAsync(skill, token);
 
                     SkillControl objSkillControl = new SkillControl(skill, token);
@@ -593,6 +591,7 @@ namespace Chummer.UI.Skills
 
                     try
                     {
+                         await lstNewSkills.AddAsync(skill, token);
                         _lstNewSkills = new BindingListDisplay<Skill>(lstNewSkills, MakeSkill)
                         {
                             Dock = DockStyle.Fill
@@ -716,8 +715,8 @@ namespace Chummer.UI.Skills
                             .GetSkillsAsync(token).ConfigureAwait(false)).GetValueAtAsync(e.NewIndex, token)
                         .ConfigureAwait(false);
                
-            }          
-        }
+                }
+            }
 
         private void KnowledgeSkillsOnListChanged(object sender, ListChangedEventArgs e)
         {
@@ -1067,7 +1066,7 @@ namespace Chummer.UI.Skills
                 new Tuple<string, Predicate<Skill>, Func<Skill, CancellationToken, Task<bool>>>(await LanguageManager.GetStringAsync("String_SkillFilterRatingZero", token: token).ConfigureAwait(false),
                     skill => skill.Rating == 0,
                     async (skill, t) => await skill.GetRatingAsync(t).ConfigureAwait(false) == 0),
-                };
+            };
             //TODO: TRANSLATIONS
 
             string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
@@ -1369,12 +1368,19 @@ namespace Chummer.UI.Skills
                     //{
                     //    await _lstActiveSkills.DoThreadSafeAsync(x => x.ResumeLayout(), token: MyToken)
                     //        .ConfigureAwait(false);
-                    //}
+
+
+
                 }
             }
             catch (OperationCanceledException)
             {
                 // swallow this
+            }
+            finally
+            {
+                //  await _lstActiveSkills.DoThreadSafeAsync(x => x.ResumeLayout(), token: MyToken)
+                //  .ConfigureAwait(false);
             }
         }
 
@@ -1410,27 +1416,27 @@ namespace Chummer.UI.Skills
         {
             if (_lstActiveSkills != null)
             {
+            try
+            {
+                if (!(await cboSort.DoThreadSafeFuncAsync(x => x.SelectedItem, token: MyToken).ConfigureAwait(false) is
+                        Tuple<string, IComparer<Skill>, IAsyncComparer<Skill>> selectedItem))
+                    return;
+                await _lstActiveSkills.DoThreadSafeAsync(x => x.SuspendLayout(), token: MyToken).ConfigureAwait(false);
                 try
                 {
-                    if (!(await cboSort.DoThreadSafeFuncAsync(x => x.SelectedItem, token: MyToken).ConfigureAwait(false) is
-                            Tuple<string, IComparer<Skill>, IAsyncComparer<Skill>> selectedItem))
-                        return;
-                    await _lstActiveSkills.DoThreadSafeAsync(x => x.SuspendLayout(), token: MyToken).ConfigureAwait(false);
-                    try
-                    {
-                        await _lstActiveSkills.SortAsync(selectedItem.Item2, selectedItem.Item3, token: MyToken).ConfigureAwait(false);
-                    }
-                    finally
-                    {
-                        await _lstActiveSkills.DoThreadSafeAsync(x => x.ResumeLayout(), token: MyToken)
-                            .ConfigureAwait(false);
-                    }
+                    await _lstActiveSkills.SortAsync(selectedItem.Item2, selectedItem.Item3, token: MyToken).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException)
+                finally
                 {
-                    //swallow this
+                    await _lstActiveSkills.DoThreadSafeAsync(x => x.ResumeLayout(), token: MyToken)
+                        .ConfigureAwait(false);
                 }
             }
+            catch (OperationCanceledException)
+            {
+                //swallow this
+            }
+        }
         }
 
         private async void btnExotic_Click(object sender, EventArgs e)
@@ -1485,7 +1491,7 @@ namespace Chummer.UI.Skills
         private async void btnAddSkills_Click(object sender, EventArgs e)
         {
             try
-            {
+        {
                 if (await _objCharacter.GetCreatedAsync(MyToken).ConfigureAwait(false))
                 {
                     string strSelectedSkill;
@@ -1584,60 +1590,76 @@ namespace Chummer.UI.Skills
                     }
 
                     KnowledgeSkill skill = new KnowledgeSkill(_objCharacter, false);
-                    await skill.SetDefaultAttributeAsync("LOG", MyToken).ConfigureAwait(false);
-                    await skill.SetWritableNameAsync(strSelectedSkill, MyToken).ConfigureAwait(false);
-
-                    if (await _objCharacter.SkillsSection.GetHasAvailableNativeLanguageSlotsAsync(MyToken)
-                                           .ConfigureAwait(false)
-                        && (await skill.GetIsLanguageAsync(MyToken).ConfigureAwait(false)
-                            || string.IsNullOrEmpty(await skill.GetTypeAsync(MyToken).ConfigureAwait(false))))
+                    try
                     {
-                        DialogResult eDialogResult = await Program.ShowScrollableMessageBoxAsync(this,
-                            string.Format(GlobalSettings.CultureInfo,
+                        await skill.SetDefaultAttributeAsync("LOG", MyToken).ConfigureAwait(false);
+                        await skill.SetWritableNameAsync(strSelectedSkill, MyToken).ConfigureAwait(false);
+
+                        if (await _objCharacter.SkillsSection.GetHasAvailableNativeLanguageSlotsAsync(MyToken)
+                                               .ConfigureAwait(false)
+                            && (await skill.GetIsLanguageAsync(MyToken).ConfigureAwait(false)
+                                || string.IsNullOrEmpty(await skill.GetTypeAsync(MyToken).ConfigureAwait(false))))
+                        {
+                            DialogResult eDialogResult = await Program.ShowScrollableMessageBoxAsync(this,
+                                string.Format(GlobalSettings.CultureInfo,
+                                    await LanguageManager
+                                        .GetStringAsync(
+                                            "Message_NewNativeLanguageSkill",
+                                            token: MyToken)
+                                        .ConfigureAwait(false),
+                                    1 + await ImprovementManager
+                                        .ValueOfAsync(
+                                            _objCharacter,
+                                            Improvement.ImprovementType
+                                                .NativeLanguageLimit,
+                                            token: MyToken)
+                                        .ConfigureAwait(false),
+                                    await skill
+                                        .GetWritableNameAsync(MyToken)
+                                        .ConfigureAwait(false)),
                                 await LanguageManager
                                     .GetStringAsync(
-                                        "Message_NewNativeLanguageSkill",
+                                        "Tip_Skill_NativeLanguage",
                                         token: MyToken)
                                     .ConfigureAwait(false),
-                                1 + await ImprovementManager
-                                    .ValueOfAsync(
-                                        _objCharacter,
-                                        Improvement.ImprovementType
-                                            .NativeLanguageLimit,
-                                        token: MyToken)
-                                    .ConfigureAwait(false),
-                                await skill
-                                    .GetWritableNameAsync(MyToken)
-                                    .ConfigureAwait(false)),
-                            await LanguageManager
-                                .GetStringAsync(
-                                    "Tip_Skill_NativeLanguage",
-                                    token: MyToken)
-                                .ConfigureAwait(false),
-                            MessageBoxButtons.YesNoCancel, token: MyToken).ConfigureAwait(false);
-                        switch (eDialogResult)
-                        {
-                            case DialogResult.Cancel:
-                                return;
+                                MessageBoxButtons.YesNoCancel, token: MyToken).ConfigureAwait(false);
+                            switch (eDialogResult)
+                            {
+                                case DialogResult.Cancel:
+                                    return;
 
-                            case DialogResult.Yes:
-                                {
-                                    if (!await skill.GetIsLanguageAsync(MyToken).ConfigureAwait(false))
-                                        await skill.SetTypeAsync("Language", MyToken).ConfigureAwait(false);
-                                    await skill.SetIsNativeLanguageAsync(true, MyToken).ConfigureAwait(false);
-                                    break;
-                                }
+                                case DialogResult.Yes:
+                                    {
+                                        if (!await skill.GetIsLanguageAsync(MyToken).ConfigureAwait(false))
+                                            await skill.SetTypeAsync("Language", MyToken).ConfigureAwait(false);
+                                        await skill.SetIsNativeLanguageAsync(true, MyToken).ConfigureAwait(false);
+                                        break;
+                                    }
+                            }
                         }
-                    }
 
-                    await _objCharacter.SkillsSection.KnowledgeSkills.AddAsync(skill, MyToken)
-                                       .ConfigureAwait(false);
+                        await _objCharacter.SkillsSection.KnowledgeSkills.AddAsync(skill, MyToken)
+                                           .ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await skill.RemoveAsync(CancellationToken.None).ConfigureAwait(false);
+                        throw;
+                    }
                 }
                 else
                 {
                     KnowledgeSkill skill = new KnowledgeSkill(_objCharacter, false);
-                    await skill.SetDefaultAttributeAsync("LOG", MyToken).ConfigureAwait(false);
-                    await _objCharacter.SkillsSection.KnowledgeSkills.AddAsync(skill, MyToken).ConfigureAwait(false);
+                    try
+                    {
+                        await skill.SetDefaultAttributeAsync("LOG", MyToken).ConfigureAwait(false);
+                        await _objCharacter.SkillsSection.KnowledgeSkills.AddAsync(skill, MyToken).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await skill.RemoveAsync(CancellationToken.None).ConfigureAwait(false);
+                        throw;
+                    }
                 }
             }
             catch (OperationCanceledException)

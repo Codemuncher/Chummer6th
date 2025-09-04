@@ -17,17 +17,17 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Equipment;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using Chummer.Backend.Equipment;
 
 namespace Chummer
 {
@@ -39,6 +39,8 @@ namespace Chummer
 
         private decimal _decCostMultiplier = 1.0m;
         private int _intAvailModifier;
+        private decimal _decMarkup;
+        private bool _blnFreeCost;
 
         private Grade _objForcedGrade;
         private bool _blnLockGrade;
@@ -261,7 +263,8 @@ namespace Chummer
 
                         if (await chkHideOverAvailLimit.DoThreadSafeFuncAsync(x => x.Checked).ConfigureAwait(false))
                         {
-                            int intAvailModifier = strForceGrade == "None" ? 0 : _intAvailModifier;
+                            int intAvailModifier = (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: xmlDrug.SelectSingleNodeAndCacheExpression("id")?.Value, blnIncludeNonImproved: true).ConfigureAwait(false)).StandardRound()
+                                + strForceGrade == "None" ? 0 : _intAvailModifier;
                             while (intMaxRating > intMinRating
                                    && !await xmlDrug.CheckAvailRestrictionAsync(
                                        _objCharacter, intMaxRating, intAvailModifier).ConfigureAwait(false))
@@ -537,7 +540,7 @@ namespace Chummer
         /// <summary>
         /// Whether the item has no cost.
         /// </summary>
-        public bool FreeCost => chkFree.Checked;
+        public bool FreeCost => _blnFreeCost;
 
         /// <summary>
         /// Manually set the Grade of the piece of Drug.
@@ -579,19 +582,16 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Vehicle ParentVehicle { get; set; }
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public decimal Markup { get; set; }
-
         /// <summary>
         /// Parent Drug that the current selection will be added to.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Drug DrugParent { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Default text string to filter by.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string DefaultSearchText { get; set; }
 
         #endregion Properties
@@ -707,24 +707,24 @@ namespace Chummer
                     // Check for a Variable Cost.
                     if (strCost.StartsWith("Variable(", StringComparison.Ordinal))
                     {
+                        string strFirstHalf = strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
+                        string strSecondHalf = string.Empty;
+                        int intHyphenIndex = strFirstHalf.IndexOf('-');
+                        if (intHyphenIndex != -1)
+                        {
+                            if (intHyphenIndex + 1 < strFirstHalf.Length)
+                                strSecondHalf = strFirstHalf.Substring(intHyphenIndex + 1);
+                            strFirstHalf = strFirstHalf.Substring(0, intHyphenIndex);
+                        }
                         decimal decMin;
                         decimal decMax = decimal.MaxValue;
-                        strCost = strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
-                        if (strCost.Contains('-'))
+                        if (intHyphenIndex != -1)
                         {
-                            string[] strValues = strCost.SplitFixedSizePooledArray('-', 2);
-                            try
-                            {
-                                decMin = Convert.ToDecimal(strValues[0], GlobalSettings.InvariantCultureInfo);
-                                decMax = Convert.ToDecimal(strValues[1], GlobalSettings.InvariantCultureInfo);
-                            }
-                            finally
-                            {
-                                ArrayPool<string>.Shared.Return(strValues);
-                            }
+                            decimal.TryParse(strFirstHalf, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMin);
+                            decimal.TryParse(strSecondHalf, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMax);
                         }
                         else
-                            decMin = Convert.ToDecimal(strCost.FastEscape('+'), GlobalSettings.InvariantCultureInfo);
+                            decimal.TryParse(strFirstHalf.FastEscape('+'), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMin);
 
                         string strNuyenFormat = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false);
                         await lblCost.DoThreadSafeAsync(x => x.Text = decMax == decimal.MaxValue
@@ -898,7 +898,7 @@ namespace Chummer
 
                     if (blnHideOverAvailLimit
                         && !await xmlDrug.CheckAvailRestrictionAsync(_objCharacter, intMinRating,
-                                                                     blnIsForceGrade ? 0 : _intAvailModifier, token)
+                                                                     (blnIsForceGrade ? 0 : _intAvailModifier) + (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: xmlDrug.SelectSingleNodeAndCacheExpression("id", token)?.Value, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token)
                                          .ConfigureAwait(false))
                     {
                         ++intOverLimit;
@@ -1019,7 +1019,8 @@ namespace Chummer
             SelectedDrug = strSelectedId;
             SelectedRating = await nudRating.DoThreadSafeFuncAsync(x => x.ValueAsInt, token: token).ConfigureAwait(false);
             BlackMarketDiscount = await chkBlackMarketDiscount.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false);
-            Markup = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token: token).ConfigureAwait(false);
+            _decMarkup = await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token: token).ConfigureAwait(false);
+            _blnFreeCost = await chkFree.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false);
 
             await this.DoThreadSafeAsync(x =>
             {
