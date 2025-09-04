@@ -28,6 +28,11 @@ namespace Chummer
     {
         private ExpenseType _eMode = ExpenseType.Karma;
         private readonly CharacterSettings _objCharacterSettings;
+        private bool _blnForceCareerVisible;
+        private bool _blnRefund;
+        private string _strReason;
+        private decimal _decAmount;
+        private DateTime _datSelectedDate;
 
         #region Control Events
 
@@ -79,6 +84,13 @@ namespace Chummer
             }
             else
             {
+                _decAmount = await nudAmount.DoThreadSafeFuncAsync(x => x.Value).ConfigureAwait(false);
+                if (_eMode == ExpenseType.Nuyen)
+                    _decAmount *= nudPercent.Value / 100.0m;
+                _datSelectedDate = await datDate.DoThreadSafeFuncAsync(x => x.Value).ConfigureAwait(false);
+                _strReason = await txtDescription.DoThreadSafeFuncAsync(x => x.Text).ConfigureAwait(false);
+                _blnRefund = await chkRefund.DoThreadSafeFuncAsync(x => x.Checked).ConfigureAwait(false);
+                _blnForceCareerVisible = await chkForceCareerVisible.DoThreadSafeFuncAsync(x => x.Checked).ConfigureAwait(false);
                 await this.DoThreadSafeAsync(x =>
                 {
                     x.DialogResult = DialogResult.OK;
@@ -103,13 +115,7 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public decimal Amount
         {
-            get
-            {
-                decimal decReturn = nudAmount.Value;
-                if (_eMode == ExpenseType.Nuyen)
-                    decReturn *= nudPercent.Value / 100.0m;
-                return decReturn;
-            }
+            get => _decAmount;
             set
             {
                 if (value < 0)
@@ -126,7 +132,7 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Reason
         {
-            get => txtDescription.Text;
+            get => _strReason;
             set => txtDescription.Text = value;
         }
 
@@ -136,7 +142,7 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Refund
         {
-            get => chkRefund.Checked;
+            get => _blnRefund;
             set => chkRefund.Checked = value;
         }
 
@@ -146,7 +152,7 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool ForceCareerVisible
         {
-            get => chkForceCareerVisible.Checked;
+            get => _blnForceCareerVisible;
             set => chkForceCareerVisible.Checked = value;
         }
 
@@ -156,7 +162,7 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public DateTime SelectedDate
         {
-            get => datDate.Value;
+            get => _datSelectedDate;
             set => datDate.Value = value;
         }
 

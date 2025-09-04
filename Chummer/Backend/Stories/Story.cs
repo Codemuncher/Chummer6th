@@ -57,85 +57,85 @@ namespace Chummer
             switch (e.Action)
             {
                 case NotifyCollectionChangedAction.Add:
-                {
-                    IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
-                    try
                     {
-                        token.ThrowIfCancellationRequested();
-                        _blnNeedToRegeneratePersistents = true;
-                        foreach (StoryModule objModule in e.NewItems)
-                            objModule.ParentStory = this;
-                    }
-                    finally
-                    {
-                        await objLocker.DisposeAsync().ConfigureAwait(false);
-                    }
+                        IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            _blnNeedToRegeneratePersistents = true;
+                            foreach (StoryModule objModule in e.NewItems)
+                                objModule.ParentStory = this;
+                        }
+                        finally
+                        {
+                            await objLocker.DisposeAsync().ConfigureAwait(false);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 case NotifyCollectionChangedAction.Remove:
-                {
-                    IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
-                    try
                     {
-                        token.ThrowIfCancellationRequested();
-                        _blnNeedToRegeneratePersistents = true;
-                        foreach (StoryModule objModule in e.OldItems)
+                        IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                        try
                         {
-                            if (objModule.ParentStory == this)
+                            token.ThrowIfCancellationRequested();
+                            _blnNeedToRegeneratePersistents = true;
+                            foreach (StoryModule objModule in e.OldItems)
                             {
-                                objModule.ParentStory = null;
-                                await objModule.DisposeAsync().ConfigureAwait(false);
+                                if (objModule.ParentStory == this)
+                                {
+                                    objModule.ParentStory = null;
+                                    await objModule.DisposeAsync().ConfigureAwait(false);
+                                }
                             }
                         }
-                    }
-                    finally
-                    {
-                        await objLocker.DisposeAsync().ConfigureAwait(false);
-                    }
+                        finally
+                        {
+                            await objLocker.DisposeAsync().ConfigureAwait(false);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
                 case NotifyCollectionChangedAction.Replace:
-                {
-                    IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
-                    try
                     {
-                        token.ThrowIfCancellationRequested();
-                        _blnNeedToRegeneratePersistents = true;
-                        foreach (StoryModule objModule in e.OldItems)
+                        IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                        try
                         {
-                            if (objModule.ParentStory == this && !e.NewItems.Contains(objModule))
+                            token.ThrowIfCancellationRequested();
+                            _blnNeedToRegeneratePersistents = true;
+                            foreach (StoryModule objModule in e.OldItems)
                             {
-                                objModule.ParentStory = null;
-                                await objModule.DisposeAsync().ConfigureAwait(false);
+                                if (objModule.ParentStory == this && !e.NewItems.Contains(objModule))
+                                {
+                                    objModule.ParentStory = null;
+                                    await objModule.DisposeAsync().ConfigureAwait(false);
+                                }
                             }
+
+                            foreach (StoryModule objModule in e.NewItems)
+                                objModule.ParentStory = this;
+                        }
+                        finally
+                        {
+                            await objLocker.DisposeAsync().ConfigureAwait(false);
                         }
 
-                        foreach (StoryModule objModule in e.NewItems)
-                            objModule.ParentStory = this;
+                        break;
                     }
-                    finally
-                    {
-                        await objLocker.DisposeAsync().ConfigureAwait(false);
-                    }
-
-                    break;
-                }
                 case NotifyCollectionChangedAction.Reset:
-                {
-                    IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
-                    try
                     {
-                        _blnNeedToRegeneratePersistents = true;
-                    }
-                    finally
-                    {
-                        await objLocker.DisposeAsync().ConfigureAwait(false);
-                    }
+                        IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                        try
+                        {
+                            _blnNeedToRegeneratePersistents = true;
+                        }
+                        finally
+                        {
+                            await objLocker.DisposeAsync().ConfigureAwait(false);
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 
@@ -197,13 +197,11 @@ namespace Chummer
                     XPathNavigator xmlNewPersistentNode = _xmlStoryDocumentBaseNode.TryGetNodeByNameOrId("stories/story", strSelectedId);
                     if (xmlNewPersistentNode != null)
                     {
-                        StoryModule objPersistentStoryModule = new StoryModule(_objCharacter)
-                        {
-                            ParentStory = this,
-                            IsRandomlyGenerated = true
-                        };
+                        StoryModule objPersistentStoryModule = new StoryModule(_objCharacter);
                         try
                         {
+                            objPersistentStoryModule.ParentStory = this;
+                            objPersistentStoryModule.IsRandomlyGenerated = true;
                             await objPersistentStoryModule.CreateAsync(xmlNewPersistentNode, token).ConfigureAwait(false);
                             token.ThrowIfCancellationRequested();
                             _dicPersistentModules.TryAdd(strFunction, objPersistentStoryModule);

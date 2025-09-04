@@ -31,13 +31,13 @@ using System.Threading.Tasks;
 using Chummer;
 using Microsoft.Win32.SafeHandles;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace CrashHandler
 {
     public sealed class CrashDumper : IDisposable
     {
-        public Dictionary<string, string> PretendFiles => _lstPretendFilePaths;
-        public Dictionary<string, string> Attributes => _attributes;
+        public Dictionary<string, string> Attributes => _dicAttributes;
         public CrashDumperProgress Progress => _eProgress;
 
         public event Action<object, CrashDumperProgressChangedEventArgs> CrashDumperProgressChanged;
@@ -46,8 +46,8 @@ namespace CrashHandler
         public Process Process { get; private set; }
 
         private readonly Dictionary<string, string> _dicFilePaths;
-        private readonly Dictionary<string, string> _lstPretendFilePaths;
-        private readonly Dictionary<string, string> _attributes;
+        private readonly Dictionary<string, string> _dicPretendFilePaths;
+        private readonly Dictionary<string, string> _dicAttributes;
         private readonly int _procId;
         private readonly IntPtr _exceptionPrt;
         private readonly uint _threadId;
@@ -56,6 +56,7 @@ namespace CrashHandler
 
         private readonly StreamWriter CrashLogWriter;
         private bool _blnDumpCreationSuccessful;
+        public bool DumpCreationSuccessful => _blnDumpCreationSuccessful;
 
         /// <summary>
         /// Start up the crash dump collector from a Base64-encoded string containing the serialized info for the crash.
@@ -67,7 +68,7 @@ namespace CrashHandler
             CrashDumpName = "chummer_crash_" + strDateString;
             CrashDumpLogName = Path.Combine(Utils.GetStartupPath, CrashDumpName + ".log");
 
-            if (!Deserialize(strJsonPath, out _procId, out _dicFilePaths, out _lstPretendFilePaths, out _attributes,
+            if (!Deserialize(strJsonPath, out _procId, out _dicFilePaths, out _dicPretendFilePaths, out _dicAttributes,
                              out _threadId, out _exceptionPrt))
             {
                 throw new ArgumentException("Could not deserialize");
@@ -78,13 +79,16 @@ namespace CrashHandler
             CrashLogWriter.WriteLine("This file contains information on a crash report for Chummer5A.");
             CrashLogWriter.WriteLine("You can safely delete this file, but a developer might want to look at it.");
 
-            if (_lstPretendFilePaths.TryGetValue("exception.txt", out string exception))
+            if (_dicPretendFilePaths.TryGetValue("exception.txt", out string exception))
             {
                 CrashLogWriter.WriteLine(exception);
                 CrashLogWriter.Flush();
             }
 
-            CrashLogWriter.WriteLine("Crash id is " + _attributes["visible-crash-id"]);
+            if (_dicAttributes.TryGetValue("visible-crash-id", out string strId))
+                CrashLogWriter.WriteLine("Crash id is " + strId);
+            else
+                CrashLogWriter.WriteLine("Crash id could not be deserialized.");
             CrashLogWriter.Flush();
 
             WorkingDirectory = Path.Combine(Utils.GetTempPath(), CrashDumpName);
@@ -133,27 +137,30 @@ namespace CrashHandler
 
         private async void CollectCrashDump(object sender, DoWorkEventArgs e)
         {
+            _blnDumpCreationSuccessful = false;
             SetProgress(CrashDumperProgress.Started);
             await CrashLogWriter.WriteLineAsync("Starting dump collection").ConfigureAwait(false);
             await CrashLogWriter.FlushAsync().ConfigureAwait(false);
             try
             {
                 Process = Process.GetProcessById(_procId);
-
+#if DEBUG
                 SetProgress(CrashDumperProgress.Debugger);
                 await CrashLogWriter.WriteLineAsync("Attempting to attach debugger").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
                 AttemptDebug(Process);
                 await CrashLogWriter.WriteLineAsync("Debugger handled").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+#endif
                 SetProgress(CrashDumperProgress.CreateDmp);
                 await CrashLogWriter.WriteLineAsync("Creating minidump").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
-                if (!await CreateDump(Process, _exceptionPrt, _threadId, Attributes.ContainsKey("debugger-attached-success")).ConfigureAwait(false))
+                if (!await CreateDump(Process, _exceptionPrt, _threadId, Attributes.TryGetValue("debugger-attached-success", out string strTemp) && strTemp == bool.TrueString).ConfigureAwait(false))
                 {
+                    Utils.BreakIfDebug();
                     await CrashLogWriter.WriteLineAsync("Failed to create minidump, aborting").ConfigureAwait(false);
                     await CrashLogWriter.FlushAsync().ConfigureAwait(false);
-                    SetProgress(CrashDumperProgress.Error);
+                    e.Result = false;
                     return;
                 }
 
@@ -185,6 +192,7 @@ namespace CrashHandler
             }
             catch (Exception ex)
             {
+                Utils.BreakIfDebug();
                 e.Result = false;
                 await CrashLogWriter.WriteLineAsync(
                     "Encountered the following exception while collecting crash information, aborting").ConfigureAwait(false);
@@ -193,13 +201,16 @@ namespace CrashHandler
             }
             finally
             {
-                SetProgress(CrashDumperProgress.Cleanup);
+                if (_blnDumpCreationSuccessful)
+                    SetProgress(CrashDumperProgress.Cleanup);
                 try
                 {
                     await CrashLogWriter.WriteLineAsync("Cleaning up working directory").ConfigureAwait(false);
                     await CrashLogWriter.FlushAsync().ConfigureAwait(false);
-                    Clean();
-                    await CrashLogWriter.WriteLineAsync("Cleanup done").ConfigureAwait(false);
+                    if (await Utils.SafeDeleteDirectoryAsync(WorkingDirectory).ConfigureAwait(false))
+                        await CrashLogWriter.WriteLineAsync("Cleanup done").ConfigureAwait(false);
+                    else
+                        await CrashLogWriter.WriteLineAsync("Encountered an erro while cleaning up working directory, skipping cleanup").ConfigureAwait(false);
                     await CrashLogWriter.FlushAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
@@ -209,6 +220,8 @@ namespace CrashHandler
                     await CrashLogWriter.WriteLineAsync(ex.ToString()).ConfigureAwait(false);
                     await CrashLogWriter.FlushAsync().ConfigureAwait(false);
                 }
+                if (_blnDumpCreationSuccessful)
+                    SetProgress(CrashDumperProgress.Finished);
             }
         }
 
@@ -252,6 +265,11 @@ namespace CrashHandler
                     {
                         blnSuccess = NativeMethods.MiniDumpWriteDump(process.Handle, (uint)_procId, objHandle, dtype,
                                                                      ref info, IntPtr.Zero, IntPtr.Zero);
+                        if (blnSuccess)
+                        {
+                            Attributes["debug-debug-exception-info"] = info.ExceptionPointers.ToString();
+                            Attributes["debug-debug-thread-id"] = info.ThreadId.ToString();
+                        }
                     }
                     else if (NativeMethods.MiniDumpWriteDump(process.Handle, (uint)_procId, objHandle, dtype, IntPtr.Zero,
                                                              IntPtr.Zero, IntPtr.Zero))
@@ -262,9 +280,9 @@ namespace CrashHandler
                         Attributes["debug-debug-exception-info"] = exceptionInfo.ToString();
                         Attributes["debug-debug-thread-id"] = threadId.ToString();
                     }
-                }
 
-                await file.FlushAsync(token).ConfigureAwait(false);
+                    await file.FlushAsync(token).ConfigureAwait(false);
+                }
             }
 
             return blnSuccess;
@@ -272,18 +290,21 @@ namespace CrashHandler
 
         private void GetValue()
         {
-            StringBuilder sb = new StringBuilder(byte.MaxValue);
-            foreach (KeyValuePair<string, string> keyValuePair in Attributes)
-            {
-                sb.Append('\"').Append(keyValuePair.Key).Append("\"-\"").Append(keyValuePair.Value).Append('\"').AppendLine();
-            }
-
-            _lstPretendFilePaths.Add("attributes.txt", sb.ToString());
-
-            foreach (KeyValuePair<string, string> pair in _lstPretendFilePaths)
+            foreach (KeyValuePair<string, string> pair in _dicPretendFilePaths)
             {
                 File.WriteAllText(Path.Combine(WorkingDirectory, pair.Key), pair.Value);
             }
+            string strAttributes;
+            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdAttributes))
+            {
+                foreach (KeyValuePair<string, string> keyValuePair in Attributes)
+                {
+                    sbdAttributes.Append('\"').Append(keyValuePair.Key).Append("\"-\"").Append(keyValuePair.Value).Append('\"').AppendLine();
+                }
+
+                strAttributes = sbdAttributes.ToString();
+            }
+            File.WriteAllText(Path.Combine(WorkingDirectory, "attributes.txt"), strAttributes);
         }
 
         private void CopyFiles()
@@ -306,24 +327,6 @@ namespace CrashHandler
             }
         }
 
-        private void Clean()
-        {
-            if (!Directory.Exists(WorkingDirectory))
-                return;
-            try
-            {
-                Directory.Delete(WorkingDirectory, true);
-            }
-            catch (IOException)
-            {
-                // swallow this
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // swallow this
-            }
-        }
-
         private static bool Deserialize(string strJsonPath,
             out int intProcessId,
             out Dictionary<string, string> dicFiles,
@@ -332,45 +335,74 @@ namespace CrashHandler
             out uint uintThreadId,
             out IntPtr ptrException)
         {
-            Dictionary<string, object> parts;
+            intProcessId = 0;
+            dicFiles = new Dictionary<string, string>();
+            dicPretendFiles = new Dictionary<string, string>();
+            dicAttributes = new Dictionary<string, string>();
+            ptrException = IntPtr.Zero;
+            uintThreadId = 0;
+
+            JsonSerializerSettings objSerializerSettings = new JsonSerializerSettings
+            {
+                Converters = new JsonConverter[] { new JsonDictionaryConverter() }
+            };
+            JsonSerializer objSerializer = JsonSerializer.Create(objSerializerSettings);
+            IDictionary<string, object> parts;
 
             using (FileStream objFileStream = new FileStream(strJsonPath, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (StreamReader objStreamReader = new StreamReader(objFileStream))
             using (JsonReader objJsonReader = new JsonTextReader(objStreamReader))
             {
-                parts = JsonSerializer.CreateDefault().Deserialize<Dictionary<string, object>>(objJsonReader);
+                parts = objSerializer.Deserialize<IDictionary<string, object>>(objJsonReader);
             }
 
-            if (parts?.TryGetValue("_intProcessId", out object objPid) == true && objPid is int pid)
+            if (parts != null)
             {
-                dicFiles = parts["_dicCapturedFiles"] as Dictionary<string, string>;
-                dicAttributes =
-                    ((Dictionary<string, object>) parts["_dicAttributes"]).ToDictionary(x => x.Key,
-                        y => y.Value.ToString());
-                dicPretendFiles =
-                    ((Dictionary<string, object>) parts["_dicPretendFiles"]).ToDictionary(x => x.Key,
-                        y => y.Value.ToString());
-
-                intProcessId = pid;
-                string s = "0";
-                if (parts.TryGetValue("_ptrExceptionInfo", out object objPart))
+                string strTemp;
+                if (parts["_intProcessId"] is Dictionary<string, object> dicTemp0)
+                    strTemp = dicTemp0.FirstOrDefault().Value?.ToString() ?? "0";
+                else
+                    strTemp = parts["_intProcessId"]?.ToString() ?? "0";
+                if (!int.TryParse(strTemp, out intProcessId))
+                    Utils.BreakIfDebug();
+                if (parts["_dicCapturedFiles"] is Dictionary<string, object> dicTemp1)
                 {
-                    s = objPart?.ToString() ?? "0";
+                    foreach (KeyValuePair<string, object> kvpLoop in dicTemp1)
+                        dicFiles.Add(kvpLoop.Key, kvpLoop.Value?.ToString() ?? string.Empty);
                 }
-
-                ptrException = new IntPtr(int.Parse(s));
-
-                uintThreadId = uint.Parse(parts["_uintThreadId"]?.ToString() ?? "0");
-
+                else
+                    Utils.BreakIfDebug();
+                if (parts["_dicAttributes"] is Dictionary<string, object> dicTemp2)
+                {
+                    foreach (KeyValuePair<string, object> kvpLoop in dicTemp2)
+                        dicAttributes.Add(kvpLoop.Key, kvpLoop.Value?.ToString() ?? string.Empty);
+                }
+                else
+                    Utils.BreakIfDebug();
+                if (parts["_dicPretendFiles"] is Dictionary<string, object> dicTemp3)
+                {
+                    foreach (KeyValuePair<string, object> kvpLoop in dicTemp3)
+                        dicPretendFiles.Add(kvpLoop.Key, kvpLoop.Value?.ToString() ?? string.Empty);
+                }
+                else
+                    Utils.BreakIfDebug();
+                if (parts["_ptrExceptionInfo"] is Dictionary<string, object> dicTemp4)
+                    strTemp = dicTemp4.FirstOrDefault().Value?.ToString() ?? "0";
+                else
+                    strTemp = parts["_ptrExceptionInfo"]?.ToString() ?? "0";
+                if (long.TryParse(strTemp, out long lngExceptionInfo))
+                    ptrException = new IntPtr(lngExceptionInfo);
+                else
+                    Utils.BreakIfDebug();
+                if (parts["_uintThreadId"] is Dictionary<string, object> dicTemp5)
+                    strTemp = dicTemp5.FirstOrDefault().Value?.ToString() ?? "0";
+                else
+                    strTemp = parts["_uintThreadId"]?.ToString() ?? "0";
+                if (!uint.TryParse(strTemp, out uintThreadId))
+                    Utils.BreakIfDebug();
                 return true;
             }
 
-            intProcessId = 0;
-            dicFiles = null;
-            dicPretendFiles = null;
-            dicAttributes = null;
-            ptrException = IntPtr.Zero;
-            uintThreadId = 0;
             return false;
         }
 
@@ -418,6 +450,37 @@ namespace CrashHandler
         }
 
         #endregion IDisposable Support
+    }
+
+    // Taken from https://stackoverflow.com/a/6417753 with some modifications
+    sealed class JsonDictionaryConverter : CustomCreationConverter<IDictionary<string, object>>
+    {
+        public override IDictionary<string, object> Create(Type objectType)
+        {
+            return new Dictionary<string, object>();
+        }
+
+        public override bool CanConvert(Type objectType)
+        {
+            // in addition to handling IDictionary<string, object>
+            // we want to handle the deserialization of dict value
+            // which is of type object
+            return objectType == typeof(object) || base.CanConvert(objectType);
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            switch (reader.TokenType)
+            {
+                case JsonToken.StartObject:
+                case JsonToken.Null:
+                    return base.ReadJson(reader, objectType, existingValue, serializer);
+                case JsonToken.StartArray:
+                    return serializer.Deserialize<List<Dictionary<string, object>>>(reader);
+                default:
+                    return serializer.Deserialize(reader);
+            }
+        }
     }
 
     public class CrashDumperProgressChangedEventArgs : EventArgs

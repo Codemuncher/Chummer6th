@@ -1384,12 +1384,12 @@ namespace Chummer.Controls.Shared
                 return 0;
             }
 
-            public IndexComparer(IReadOnlyList<TType> list)
+            public IndexComparer(ThreadSafeObservableCollection<TType> list)
             {
                 Reset(list);
             }
 
-            public void Reset(IReadOnlyList<TType> source)
+            public void Reset(ThreadSafeObservableCollection<TType> source)
             {
                 _dicIndeces.Clear();
                 for (int i = 0; i < source.Count; i++)
@@ -1398,7 +1398,7 @@ namespace Chummer.Controls.Shared
                 }
             }
 
-            public async Task ResetAsync(IAsyncReadOnlyList<TType> source, CancellationToken token = default)
+            public async Task ResetAsync(ThreadSafeObservableCollection<TType> source, CancellationToken token = default)
             {
                 token.ThrowIfCancellationRequested();
                 _dicIndeces.Clear();

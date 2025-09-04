@@ -169,7 +169,7 @@ namespace Chummer.Backend.Skills
             }
             catch
             {
-                await objReturn.DisposeAsync().ConfigureAwait(false);
+                await objReturn.RemoveAsync(CancellationToken.None).ConfigureAwait(false);
                 throw;
             }
 
@@ -874,74 +874,73 @@ namespace Chummer.Backend.Skills
                     decCost -= intLower * (intLower + 1);
 
                     decCost /= 2;
-                    decCost *= CharacterObject.Settings.KarmaImproveKnowledgeSkill;
+                    int intKarmaCostImproveSkill = CharacterObject.Settings.KarmaImproveKnowledgeSkill;
+                    decCost *= intKarmaCostImproveSkill;
                     // We have bought the first level with karma, too
                     if (intLower == 0 && decCost > 0)
                         decCost += CharacterObject.Settings.KarmaNewKnowledgeSkill -
-                                   CharacterObject.Settings.KarmaImproveKnowledgeSkill;
+                                   intKarmaCostImproveSkill;
 
-                    decimal decMultiplier = 1.0m;
+                    string strDictionaryKey = DictionaryKey;
+                    int intMinOverride = int.MaxValue;
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, strDictionaryKey, true))
+                    {
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating)
+                            intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, SkillCategory))
+                    {
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating)
+                            intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                    }
                     decimal decExtra = 0;
+                    decimal decMultiplier = 1.0m;
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCost, strDictionaryKey, true))
+                    {
+                        if (objImprovement.Minimum <= intTotalBaseRating)
+                            decExtra += objImprovement.Value *
+                                                    (Math.Min(intTotalBaseRating,
+                                                              objImprovement.Maximum == 0
+                                                                  ? int.MaxValue
+                                                                  : objImprovement.Maximum) - Math.Max(intLower,
+                                                        objImprovement.Minimum - 1));
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier, strDictionaryKey, true))
+                    {
+                        if (objImprovement.Minimum <= intTotalBaseRating)
+                            decMultiplier *= objImprovement.Value / 100.0m;
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCost, SkillCategory, true))
+                    {
+                        if (objImprovement.Minimum <= intTotalBaseRating)
+                            decExtra += objImprovement.Value *
+                                                    (Math.Min(intTotalBaseRating,
+                                                              objImprovement.Maximum == 0
+                                                                  ? int.MaxValue
+                                                                  : objImprovement.Maximum) - Math.Max(intLower,
+                                                        objImprovement.Minimum - 1));
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier, SkillCategory, true))
+                    {
+                        if (objImprovement.Minimum <= intTotalBaseRating)
+                            decMultiplier *= objImprovement.Value / 100.0m;
+                    }
                     int intSpecCount = BuyWithKarma ? Specializations.Count(x => !x.Free) : 0;
-
                     decimal decSpecCost = CharacterObject.Settings.KarmaKnowledgeSpecialization * intSpecCount;
                     decimal decExtraSpecCost = 0;
                     decimal decSpecCostMultiplier = 1.0m;
-                    CharacterObject.Improvements.ForEach(objLoopImprovement =>
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategorySpecializationKarmaCost, SkillCategory, true))
                     {
-                        if (objLoopImprovement.Minimum <= intTotalBaseRating &&
-                            (string.IsNullOrEmpty(objLoopImprovement.Condition) ||
-                             (objLoopImprovement.Condition == "career") == CharacterObject.Created ||
-                             (objLoopImprovement.Condition == "create") != CharacterObject.Created) &&
-                            objLoopImprovement.Enabled)
-                        {
-                            if (objLoopImprovement.ImprovedName == DictionaryKey ||
-                                string.IsNullOrEmpty(objLoopImprovement.ImprovedName))
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.KnowledgeSkillKarmaCost:
-                                        decExtra += objLoopImprovement.Value *
-                                                    (Math.Min(intTotalBaseRating,
-                                                              objLoopImprovement.Maximum == 0
-                                                                  ? int.MaxValue
-                                                                  : objLoopImprovement.Maximum) - Math.Max(intLower,
-                                                        objLoopImprovement.Minimum - 1));
-                                        break;
-
-                                    case Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-                            else if (objLoopImprovement.ImprovedName == SkillCategory)
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.SkillCategoryKarmaCost:
-                                        decExtra += objLoopImprovement.Value *
-                                                    (Math.Min(intTotalBaseRating,
-                                                              objLoopImprovement.Maximum == 0
-                                                                  ? int.MaxValue
-                                                                  : objLoopImprovement.Maximum) - Math.Max(intLower,
-                                                        objLoopImprovement.Minimum - 1));
-                                        break;
-
-                                    case Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-
-                                    case Improvement.ImprovementType.SkillCategorySpecializationKarmaCost:
-                                        decExtraSpecCost += objLoopImprovement.Value * intSpecCount;
-                                        break;
-
-                                    case Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier:
-                                        decSpecCostMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-                        }
-                    });
+                        if (objImprovement.Minimum <= intTotalBaseRating)
+                            decExtraSpecCost += objImprovement.Value * intSpecCount;
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier, SkillCategory, true))
+                    {
+                        if (objImprovement.Minimum <= intTotalBaseRating)
+                            decSpecCostMultiplier *= objImprovement.Value / 100.0m;
+                    }
 
                     if (decMultiplier != 1.0m)
                         decCost *= decMultiplier;
@@ -949,6 +948,19 @@ namespace Chummer.Backend.Skills
                     if (decSpecCostMultiplier != 1.0m)
                         decSpecCost *= decSpecCostMultiplier;
                     decCost += decExtra;
+                    if (intMinOverride != int.MaxValue)
+                    {
+                        for (int i = 0; i < intLower; ++i)
+                        {
+                            decimal decLoopCost = i == 0
+                                ? CharacterObject.Settings.KarmaNewKnowledgeSkill
+                                : i * intKarmaCostImproveSkill;
+                            decLoopCost = (decLoopCost + decExtra) * decMultiplier;
+                            int intLoopCostDiff = intMinOverride - decLoopCost.StandardRound();
+                            if (intLoopCostDiff > 0)
+                                decCost += intLoopCostDiff;
+                        }
+                    }
                     decCost += decSpecCost + decExtraSpecCost; //Spec
 
                     return Math.Max(decCost.StandardRound(), 0);
@@ -974,14 +986,59 @@ namespace Chummer.Backend.Skills
 
                 decCost /= 2;
                 CharacterSettings objSettings = await CharacterObject.GetSettingsAsync(token).ConfigureAwait(false);
-                decCost *= await objSettings.GetKarmaImproveKnowledgeSkillAsync(token).ConfigureAwait(false);
+                int intKarmaCostImproveSkill = await objSettings.GetKarmaImproveKnowledgeSkillAsync(token).ConfigureAwait(false);
+                decCost *= intKarmaCostImproveSkill;
                 // We have bought the first level with karma, too
                 if (intLower == 0 && decCost > 0)
                     decCost += await objSettings.GetKarmaNewKnowledgeSkillAsync(token).ConfigureAwait(false) -
-                               await objSettings.GetKarmaImproveKnowledgeSkillAsync(token).ConfigureAwait(false);
+                               intKarmaCostImproveSkill;
 
-                decimal decMultiplier = 1.0m;
+                string strDictionaryKey = await GetDictionaryKeyAsync(token).ConfigureAwait(false);
+                int intMinOverride = int.MaxValue;
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating)
+                        intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, SkillCategory, token: token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating)
+                        intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                }
                 decimal decExtra = 0;
+                decimal decMultiplier = 1.0m;
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCost, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intTotalBaseRating)
+                        decExtra += objImprovement.Value *
+                                                (Math.Min(intTotalBaseRating,
+                                                          objImprovement.Maximum == 0
+                                                              ? int.MaxValue
+                                                              : objImprovement.Maximum) - Math.Max(intLower,
+                                                    objImprovement.Minimum - 1));
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intTotalBaseRating)
+                        decMultiplier *= objImprovement.Value / 100.0m;
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCost, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intTotalBaseRating)
+                        decExtra += objImprovement.Value *
+                                                (Math.Min(intTotalBaseRating,
+                                                          objImprovement.Maximum == 0
+                                                              ? int.MaxValue
+                                                              : objImprovement.Maximum) - Math.Max(intLower,
+                                                    objImprovement.Minimum - 1));
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intTotalBaseRating)
+                        decMultiplier *= objImprovement.Value / 100.0m;
+                }
                 int intSpecCount = await GetBuyWithKarmaAsync(token).ConfigureAwait(false)
                     ? await Specializations.CountAsync(async objSpec => !await objSpec.GetFreeAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false)
                     : 0;
@@ -990,62 +1047,16 @@ namespace Chummer.Backend.Skills
                                           .GetKarmaKnowledgeSpecializationAsync(token).ConfigureAwait(false);
                 decimal decExtraSpecCost = 0;
                 decimal decSpecCostMultiplier = 1.0m;
-                bool blnCreated = await CharacterObject.GetCreatedAsync(token).ConfigureAwait(false);
-                await (await CharacterObject.GetImprovementsAsync(token).ConfigureAwait(false)).ForEachAsync(
-                    async objLoopImprovement =>
-                    {
-                        if (objLoopImprovement.Minimum > intTotalBaseRating ||
-                            (!string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             && (objLoopImprovement.Condition == "career") != blnCreated
-                             && (objLoopImprovement.Condition == "create") == blnCreated)
-                            || !objLoopImprovement.Enabled)
-                            return;
-                        if (objLoopImprovement.ImprovedName == await GetDictionaryKeyAsync(token).ConfigureAwait(false)
-                            || string.IsNullOrEmpty(objLoopImprovement.ImprovedName))
-                        {
-                            switch (objLoopImprovement.ImproveType)
-                            {
-                                case Improvement.ImprovementType.KnowledgeSkillKarmaCost:
-                                    decExtra += objLoopImprovement.Value
-                                                * (Math.Min(intTotalBaseRating,
-                                                       objLoopImprovement.Maximum == 0
-                                                           ? int.MaxValue
-                                                           : objLoopImprovement.Maximum)
-                                                   - Math.Max(intLower, objLoopImprovement.Minimum - 1));
-                                    break;
-
-                                case Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier:
-                                    decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-                            }
-                        }
-                        else if (objLoopImprovement.ImprovedName == SkillCategory)
-                        {
-                            switch (objLoopImprovement.ImproveType)
-                            {
-                                case Improvement.ImprovementType.SkillCategoryKarmaCost:
-                                    decExtra += objLoopImprovement.Value
-                                                * (Math.Min(intTotalBaseRating,
-                                                       objLoopImprovement.Maximum == 0
-                                                           ? int.MaxValue
-                                                           : objLoopImprovement.Maximum)
-                                                   - Math.Max(intLower, objLoopImprovement.Minimum - 1));
-                                    break;
-
-                                case Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier:
-                                    decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-
-                                case Improvement.ImprovementType.SkillCategorySpecializationKarmaCost:
-                                    decExtraSpecCost += objLoopImprovement.Value * intSpecCount;
-                                    break;
-
-                                case Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier:
-                                    decSpecCostMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-                            }
-                        }
-                    }, token: token).ConfigureAwait(false);
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategorySpecializationKarmaCost, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intTotalBaseRating)
+                        decExtraSpecCost += objImprovement.Value * intSpecCount;
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategorySpecializationKarmaCostMultiplier, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intTotalBaseRating)
+                        decSpecCostMultiplier *= objImprovement.Value / 100.0m;
+                }
 
                 if (decMultiplier != 1.0m)
                     decCost *= decMultiplier;
@@ -1053,6 +1064,19 @@ namespace Chummer.Backend.Skills
                 if (decSpecCostMultiplier != 1.0m)
                     decSpecCost *= decSpecCostMultiplier;
                 decCost += decExtra;
+                if (intMinOverride != int.MaxValue)
+                {
+                    for (int i = 0; i < intLower; ++i)
+                    {
+                        decimal decLoopCost = i == 0
+                            ? await objSettings.GetKarmaNewKnowledgeSkillAsync(token).ConfigureAwait(false)
+                            : i * intKarmaCostImproveSkill;
+                        decLoopCost = (decLoopCost + decExtra) * decMultiplier;
+                        int intLoopCostDiff = intMinOverride - decLoopCost.StandardRound();
+                        if (intLoopCostDiff > 0)
+                            decCost += intLoopCostDiff;
+                    }
+                }
                 decCost += decSpecCost + decExtraSpecCost; //Spec
 
                 return Math.Max(decCost.StandardRound(), 0);
@@ -1092,55 +1116,46 @@ namespace Chummer.Backend.Skills
                         intValue = (intTotalBaseRating + 1) * intOptionsCost;
                     }
 
-                    decimal decMultiplier = 1.0m;
-                    decimal decExtra = 0;
+                    string strDictionaryKey = DictionaryKey;
                     int intMinOverride = int.MaxValue;
-                    CharacterObject.Improvements.ForEach(objLoopImprovement =>
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, strDictionaryKey, true))
                     {
-                        if ((objLoopImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objLoopImprovement.Maximum) &&
-                            objLoopImprovement.Minimum <= intTotalBaseRating + 1 &&
-                            (string.IsNullOrEmpty(objLoopImprovement.Condition) ||
-                             (objLoopImprovement.Condition == "career") == CharacterObject.Created ||
-                             (objLoopImprovement.Condition == "create") != CharacterObject.Created) &&
-                            objLoopImprovement.Enabled)
-                        {
-                            if (objLoopImprovement.ImprovedName == DictionaryKey ||
-                                string.IsNullOrWhiteSpace(objLoopImprovement.ImprovedName))
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.KnowledgeSkillKarmaCost:
-                                        decExtra += objLoopImprovement.Value;
-                                        break;
-
-                                    case Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-                            else if (objLoopImprovement.ImprovedName == SkillCategory)
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.SkillCategoryKarmaCost:
-                                        decExtra += objLoopImprovement.Value;
-                                        break;
-
-                                    case Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-
-                            if ((objLoopImprovement.ImprovedName == DictionaryKey ||
-                                 string.IsNullOrWhiteSpace(objLoopImprovement.ImprovedName) ||
-                                 objLoopImprovement.ImprovedName == SkillCategory) && objLoopImprovement.ImproveType ==
-                                Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum)
-                            {
-                                intMinOverride = Math.Min(intMinOverride, objLoopImprovement.Value.StandardRound());
-                            }
-                        }
-                    });
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating + 1)
+                            intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, SkillCategory))
+                    {
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating + 1)
+                            intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                    }
+                    decimal decExtra = 0;
+                    decimal decMultiplier = 1.0m;
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCost, strDictionaryKey, true))
+                    {
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating + 1)
+                            decExtra += objImprovement.Value;
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier, strDictionaryKey, true))
+                    {
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating + 1)
+                            decMultiplier *= objImprovement.Value / 100.0m;
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCost, SkillCategory, true))
+                    {
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating + 1)
+                            decExtra += objImprovement.Value;
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier, SkillCategory, true))
+                    {
+                        if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                                objImprovement.Minimum <= intTotalBaseRating + 1)
+                            decMultiplier *= objImprovement.Value / 100.0m;
+                    }
 
                     if (decMultiplier != 1.0m)
                         intValue = (intValue * decMultiplier + decExtra).StandardRound();
@@ -1182,58 +1197,46 @@ namespace Chummer.Backend.Skills
                     intValue = (intTotalBaseRating + 1) * intOptionsCost;
                 }
 
-                decimal decMultiplier = 1.0m;
-                decimal decExtra = 0;
-                int intMinOverride = int.MaxValue;
-                bool blnCreated = await CharacterObject.GetCreatedAsync(token).ConfigureAwait(false);
                 string strDictionaryKey = await GetDictionaryKeyAsync(token).ConfigureAwait(false);
-                await (await CharacterObject.GetImprovementsAsync(token).ConfigureAwait(false)).ForEachAsync(
-                    objLoopImprovement =>
-                    {
-                        if ((objLoopImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objLoopImprovement.Maximum) &&
-                            objLoopImprovement.Minimum <= intTotalBaseRating + 1 &&
-                            (string.IsNullOrEmpty(objLoopImprovement.Condition) ||
-                             (objLoopImprovement.Condition == "career") == blnCreated ||
-                             (objLoopImprovement.Condition == "create") != blnCreated) &&
-                            objLoopImprovement.Enabled)
-                        {
-                            if (objLoopImprovement.ImprovedName == strDictionaryKey ||
-                                string.IsNullOrWhiteSpace(objLoopImprovement.ImprovedName))
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.KnowledgeSkillKarmaCost:
-                                        decExtra += objLoopImprovement.Value;
-                                        break;
-
-                                    case Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-                            else if (objLoopImprovement.ImprovedName == SkillCategory)
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.SkillCategoryKarmaCost:
-                                        decExtra += objLoopImprovement.Value;
-                                        break;
-
-                                    case Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-
-                            if ((objLoopImprovement.ImprovedName == strDictionaryKey ||
-                                 string.IsNullOrWhiteSpace(objLoopImprovement.ImprovedName) ||
-                                 objLoopImprovement.ImprovedName == SkillCategory) && objLoopImprovement.ImproveType ==
-                                Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum)
-                            {
-                                intMinOverride = Math.Min(intMinOverride, objLoopImprovement.Value.StandardRound());
-                            }
-                        }
-                    }, token: token).ConfigureAwait(false);
+                int intMinOverride = int.MaxValue;
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating + 1)
+                        intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMinimum, SkillCategory, false, token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating + 1)
+                        intMinOverride = Math.Min(intMinOverride, objImprovement.Value.StandardRound());
+                }
+                decimal decExtra = 0;
+                decimal decMultiplier = 1.0m;
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCost, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating + 1)
+                        decExtra += objImprovement.Value;
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillKarmaCostMultiplier, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating + 1)
+                        decMultiplier *= objImprovement.Value / 100.0m;
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCost, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating + 1)
+                        decExtra += objImprovement.Value;
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategoryKarmaCostMultiplier, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if ((objImprovement.Maximum == 0 || intTotalBaseRating + 1 <= objImprovement.Maximum) &&
+                            objImprovement.Minimum <= intTotalBaseRating + 1)
+                        decMultiplier *= objImprovement.Value / 100.0m;
+                }
 
                 if (decMultiplier != 1.0m)
                     intValue = (intValue * decMultiplier + decExtra).StandardRound();
@@ -1257,59 +1260,44 @@ namespace Chummer.Backend.Skills
             {
                 using (LockObject.EnterReadLock())
                 {
-                    int intPointCost = BasePoints;
+                    int intBasePoints = BasePoints;
+                    int intPointCost = intBasePoints;
                     if (!IsExoticSkill && !BuyWithKarma)
                         intPointCost += Specializations.Count(x => !x.Free);
 
+                    string strDictionaryKey = DictionaryKey;
                     decimal decExtra = 0;
                     decimal decMultiplier = 1.0m;
-                    CharacterObject.Improvements.ForEach(objLoopImprovement =>
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillPointCost, strDictionaryKey, true))
                     {
-                        if (objLoopImprovement.Minimum <= BasePoints &&
-                            (string.IsNullOrEmpty(objLoopImprovement.Condition) ||
-                             (objLoopImprovement.Condition == "career") == CharacterObject.Created ||
-                             (objLoopImprovement.Condition == "create") != CharacterObject.Created) &&
-                            objLoopImprovement.Enabled)
-                        {
-                            if (objLoopImprovement.ImprovedName == DictionaryKey ||
-                                string.IsNullOrEmpty(objLoopImprovement.ImprovedName))
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.KnowledgeSkillPointCost:
-                                        decExtra += objLoopImprovement.Value *
-                                                    (Math.Min(BasePoints,
-                                                              objLoopImprovement.Maximum == 0
-                                                                  ? int.MaxValue
-                                                                  : objLoopImprovement.Maximum)
-                                                     - objLoopImprovement.Minimum);
-                                        break;
-
-                                    case Improvement.ImprovementType.KnowledgeSkillPointCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-                            else if (objLoopImprovement.ImprovedName == SkillCategory)
-                            {
-                                switch (objLoopImprovement.ImproveType)
-                                {
-                                    case Improvement.ImprovementType.SkillCategoryPointCost:
-                                        decExtra += objLoopImprovement.Value *
-                                                    (Math.Min(BasePoints,
-                                                              objLoopImprovement.Maximum == 0
-                                                                  ? int.MaxValue
-                                                                  : objLoopImprovement.Maximum)
-                                                     - objLoopImprovement.Minimum);
-                                        break;
-
-                                    case Improvement.ImprovementType.SkillCategoryPointCostMultiplier:
-                                        decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                        break;
-                                }
-                            }
-                        }
-                    });
+                        if (objImprovement.Minimum <= intBasePoints)
+                            decExtra += objImprovement.Value
+                                                    * (Math.Min(
+                                                        intBasePoints,
+                                                        objImprovement.Maximum == 0
+                                                            ? int.MaxValue
+                                                            : objImprovement.Maximum) - objImprovement.Minimum);
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.KnowledgeSkillPointCostMultiplier, strDictionaryKey, true))
+                    {
+                        if (objImprovement.Minimum <= intBasePoints)
+                            decMultiplier *= objImprovement.Value / 100.0m;
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategoryPointCost, SkillCategory, true))
+                    {
+                        if (objImprovement.Minimum <= intBasePoints)
+                            decExtra += objImprovement.Value
+                                                    * (Math.Min(
+                                                        intBasePoints,
+                                                        objImprovement.Maximum == 0
+                                                            ? int.MaxValue
+                                                            : objImprovement.Maximum) - objImprovement.Minimum);
+                    }
+                    foreach (Improvement objImprovement in ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject, Improvement.ImprovementType.SkillCategoryPointCostMultiplier, SkillCategory, true))
+                    {
+                        if (objImprovement.Minimum <= intBasePoints)
+                            decMultiplier *= objImprovement.Value / 100.0m;
+                    }
 
                     if (decMultiplier != 1.0m)
                         intPointCost = (intPointCost * decMultiplier + decExtra).StandardRound();
@@ -1335,56 +1323,39 @@ namespace Chummer.Backend.Skills
                 if (!IsExoticSkill && !await GetBuyWithKarmaAsync(token).ConfigureAwait(false))
                     cost += await Specializations.CountAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
 
+                string strDictionaryKey = await GetDictionaryKeyAsync(token).ConfigureAwait(false);
                 decimal decExtra = 0;
                 decimal decMultiplier = 1.0m;
-                bool blnCreated = await CharacterObject.GetCreatedAsync(token).ConfigureAwait(false);
-                await (await CharacterObject.GetImprovementsAsync(token).ConfigureAwait(false)).ForEachAsync(
-                    async objLoopImprovement =>
-                    {
-                        if (objLoopImprovement.Minimum > intBasePoints ||
-                            (!string.IsNullOrEmpty(objLoopImprovement.Condition)
-                             && (objLoopImprovement.Condition == "career") != blnCreated
-                             && (objLoopImprovement.Condition == "create") == blnCreated)
-                            || !objLoopImprovement.Enabled)
-                            return;
-                        if (objLoopImprovement.ImprovedName == await GetDictionaryKeyAsync(token).ConfigureAwait(false)
-                            || string.IsNullOrEmpty(objLoopImprovement.ImprovedName))
-                        {
-                            switch (objLoopImprovement.ImproveType)
-                            {
-                                case Improvement.ImprovementType.KnowledgeSkillPointCost:
-                                    decExtra += objLoopImprovement.Value
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillPointCost, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intBasePoints)
+                        decExtra += objImprovement.Value
                                                 * (Math.Min(
                                                     intBasePoints,
-                                                    objLoopImprovement.Maximum == 0
+                                                    objImprovement.Maximum == 0
                                                         ? int.MaxValue
-                                                        : objLoopImprovement.Maximum) - objLoopImprovement.Minimum);
-                                    break;
-
-                                case Improvement.ImprovementType.KnowledgeSkillPointCostMultiplier:
-                                    decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-                            }
-                        }
-                        else if (objLoopImprovement.ImprovedName == SkillCategory)
-                        {
-                            switch (objLoopImprovement.ImproveType)
-                            {
-                                case Improvement.ImprovementType.SkillCategoryPointCost:
-                                    decExtra += objLoopImprovement.Value
+                                                        : objImprovement.Maximum) - objImprovement.Minimum);
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.KnowledgeSkillPointCostMultiplier, strDictionaryKey, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intBasePoints)
+                        decMultiplier *= objImprovement.Value / 100.0m;
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategoryPointCost, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intBasePoints)
+                        decExtra += objImprovement.Value
                                                 * (Math.Min(
                                                     intBasePoints,
-                                                    objLoopImprovement.Maximum == 0
+                                                    objImprovement.Maximum == 0
                                                         ? int.MaxValue
-                                                        : objLoopImprovement.Maximum) - objLoopImprovement.Minimum);
-                                    break;
-
-                                case Improvement.ImprovementType.SkillCategoryPointCostMultiplier:
-                                    decMultiplier *= objLoopImprovement.Value / 100.0m;
-                                    break;
-                            }
-                        }
-                    }, token: token).ConfigureAwait(false);
+                                                        : objImprovement.Maximum) - objImprovement.Minimum);
+                }
+                foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(CharacterObject, Improvement.ImprovementType.SkillCategoryPointCostMultiplier, SkillCategory, true, token).ConfigureAwait(false))
+                {
+                    if (objImprovement.Minimum <= intBasePoints)
+                        decMultiplier *= objImprovement.Value / 100.0m;
+                }
 
                 if (decMultiplier != 1.0m)
                     cost = (cost * decMultiplier + decExtra).StandardRound();

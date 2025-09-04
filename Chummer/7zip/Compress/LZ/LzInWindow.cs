@@ -133,13 +133,15 @@ namespace SevenZip.Compression.LZ
         [CLSCompliant(false)]
         public void Create(int keepSizeBefore, int keepSizeAfter, int keepSizeReserve)
         {
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(keepSizeBefore, 2147483591);
+            if (keepSizeBefore > 2147483591) // System.Array.MaxByteArrayLength
+                throw new ArgumentOutOfRangeException(nameof(keepSizeBefore));
             _keepSizeBefore = keepSizeBefore;
             if (keepSizeBefore + keepSizeAfter > 2147483591) // System.Array.MaxByteArrayLength
                 throw new ArgumentOutOfRangeException(nameof(keepSizeAfter));
             _keepSizeAfter = keepSizeAfter;
             int blockSize = keepSizeBefore + keepSizeAfter + keepSizeReserve;
-            ArgumentOutOfRangeException.ThrowIfGreaterThan(blockSize, 2147483591); // System.Array.MaxByteArrayLength            
+            if (blockSize > 2147483591) // System.Array.MaxByteArrayLength
+                throw new ArgumentOutOfRangeException(nameof(keepSizeReserve));
             if (_bufferBase == null || _blockSize != blockSize)
             {
                 Free();
@@ -179,8 +181,7 @@ namespace SevenZip.Compression.LZ
         {
             unchecked
             {
-                _pos++;
-                if (_pos > _posLimit)
+                if (++_pos > _posLimit)
                 {
                     int pointerToPosition = _bufferOffset + _pos;
                     if (pointerToPosition > _pointerToLastSafePosition)
@@ -197,8 +198,7 @@ namespace SevenZip.Compression.LZ
 
             unchecked
             {
-                _pos++;
-                if (_pos > _posLimit)
+                if (++_pos > _posLimit)
                 {
                     int pointerToPosition = _bufferOffset + _pos;
                     if (pointerToPosition > _pointerToLastSafePosition)

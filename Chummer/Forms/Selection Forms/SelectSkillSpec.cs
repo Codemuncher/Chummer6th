@@ -17,13 +17,13 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Skills;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using Chummer.Backend.Skills;
 
 namespace Chummer
 {
@@ -48,16 +48,6 @@ namespace Chummer
 
         private async void SelectSpec_Load(object sender, EventArgs e)
         {
-            if (await _objCharacter.GetCreatedAsync().ConfigureAwait(false)
-                || !await _objCharacter.GetEffectiveBuildMethodUsesPriorityTablesAsync().ConfigureAwait(false))
-            {
-                await chkKarma.DoThreadSafeAsync(x =>
-                {
-                    x.Checked = true;
-                    x.Visible = false;
-                }).ConfigureAwait(false);
-            }
-
             string strSkillName = await _objSkill.GetNameAsync().ConfigureAwait(false);
             XPathNavigator xmlParentSkill;
             if (Mode == "Knowledge")
@@ -206,16 +196,7 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Mode { get; set; }
 
-        /// <summary>
-        /// Whether to force the .
-        /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public bool BuyWithKarma
-        {
-            get => chkKarma.Checked;
-            set => chkKarma.Checked = value;
-        }
-
+        
         #endregion Properties
 
         #region Methods

@@ -1009,6 +1009,7 @@ namespace Chummer
                         }
                         catch (Exception ex)
                         {
+                            ex = ex.Demystify();
                             if (opFrmChummerMain != null)
                             {
                                 opFrmChummerMain.SetSuccess(false);
@@ -1934,8 +1935,7 @@ namespace Chummer
                         // Show the Metatype selection window.
                         using (ThreadSafeForm<SelectMetatypeKarma> frmSelectMetatype =
                                await ThreadSafeForm<SelectMetatypeKarma>.GetAsync(() =>
-                                   new SelectMetatypeKarma(
-                                       objCharacter, "critters.xml"), _objGenericToken).ConfigureAwait(false))
+                                   new SelectMetatypeKarma(objCharacter), _objGenericToken).ConfigureAwait(false))
                         {
                             if (await frmSelectMetatype.ShowDialogSafeAsync(this, _objGenericToken).ConfigureAwait(false) == DialogResult.Cancel)
                                 return;
@@ -2697,7 +2697,7 @@ namespace Chummer
         {
             string strTranslator = Path.Combine(Utils.GetStartupPath, "Translator.exe");
             if (File.Exists(strTranslator))
-                Process.Start(new ProcessStartInfo(strTranslator) { UseShellExecute = true });
+                Process.Start(strTranslator);
         }
 
         private async void ChummerMainForm_Closing(object sender, FormClosingEventArgs e)

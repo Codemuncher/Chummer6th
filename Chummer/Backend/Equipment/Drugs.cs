@@ -33,7 +33,7 @@ using NLog;
 
 namespace Chummer.Backend.Equipment
 {
-    public sealed class Drug : IHasName, IHasSourceId, IHasXmlDataNode, ICanSort, IHasStolenProperty, ICanRemove, IDisposable, IAsyncDisposable, IHasCharacterObject, IHasNotes
+    public sealed class Drug : IHasName, IHasSourceId, IHasXmlDataNode, ICanSort, IHasStolenProperty, ICanRemove, IDisposable, IAsyncDisposable, IHasCharacterObject, IHasNotes, IHasInternalId
     {
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
         private static Logger Log => s_ObjLogger.Value;
@@ -455,7 +455,7 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         public async Task<string> GetEffectDescriptionAsync(CancellationToken token = default)
         {
-            if (string.IsNullOrEmpty(_strDescription))
+            if (string.IsNullOrEmpty(_strEffectDescription))
                 _strEffectDescription = await GenerateDescriptionAsync(0, true, token: token).ConfigureAwait(false);
             return _strEffectDescription;
         }
@@ -472,6 +472,11 @@ namespace Chummer.Backend.Equipment
         {
             get => _strName;
             set => _strName = _objCharacter.ReverseTranslateExtra(value);
+        }
+
+        public async Task SetNameAsync(string value, CancellationToken token = default)
+        {
+            _strName = await _objCharacter.ReverseTranslateExtraAsync(value, token: token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -643,6 +648,8 @@ namespace Chummer.Backend.Equipment
                 }
             }
 
+            intAvail += ImprovementManager.ValueOf(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true).StandardRound();
+
             if (intAvail < 0)
                 intAvail = 0;
 
@@ -695,6 +702,8 @@ namespace Chummer.Backend.Equipment
                 }, token).ConfigureAwait(false);
             }
 
+            intAvail += (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound();
+
             if (intAvail < 0)
                 intAvail = 0;
 
@@ -722,7 +731,7 @@ namespace Chummer.Backend.Equipment
         public async Task<int> GetAddictionThresholdAsync(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            return _intCachedAddictionRating != int.MinValue
+            return _intCachedAddictionThreshold != int.MinValue
                     ? _intCachedAddictionThreshold
                     : _intCachedAddictionThreshold = await Components.SumAsync(d => d.ActiveDrugEffect != null, d => d.AddictionThreshold, token).ConfigureAwait(false);
         }
@@ -1092,7 +1101,7 @@ namespace Chummer.Backend.Equipment
             return _strCachedDisplayDuration = await CommonFunctions.GetTimescaleStringAsync(DurationTimescale, false, token: token).ConfigureAwait(false);
         }
 
-        public int DurationDice { get; set; }
+        public int DurationDice { get => _intDurationDice; set => _intDurationDice = value; }
 
         private int _intCachedCrashDamage = int.MinValue;
 
@@ -1109,9 +1118,9 @@ namespace Chummer.Backend.Equipment
         public async Task<int> GetCrashDamageAsync(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            return _intCachedSpeed != int.MinValue
-                    ? _intCachedSpeed
-                    : _intCachedSpeed = await Components.SumAsync(d => d.ActiveDrugEffect != null, d => d.ActiveDrugEffect.CrashDamage, token).ConfigureAwait(false);
+            return _intCachedCrashDamage != int.MinValue
+                    ? _intCachedCrashDamage
+                    : _intCachedCrashDamage = await Components.SumAsync(d => d.ActiveDrugEffect != null, d => d.ActiveDrugEffect.CrashDamage, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1730,7 +1739,7 @@ namespace Chummer.Backend.Equipment
                     ImproveSource = Improvement.ImprovementSource.Drug,
                     SourceName = InternalId,
                     ImproveType = Improvement.ImprovementType.Initiative,
-                    CustomName = strNamePrefix + await LanguageManager.GetStringAsync("String_Initiative", token: token)
+                    CustomName = strNamePrefix + await LanguageManager.GetStringAsync("String_AttributeINILong", token: token)
                                                    .ConfigureAwait(false)
                                                + strSpace + intInitiative.ToString("+#,0;-#,0;0",
                                                    GlobalSettings.CultureInfo)
@@ -1813,7 +1822,7 @@ namespace Chummer.Backend.Equipment
                                     ImproveType = Improvement.ImprovementType.SpecificQuality,
                                     CustomName =
                                         strNamePrefix + await LanguageManager
-                                                          .GetStringAsync("String_InitiativeDice", token: token)
+                                                          .GetStringAsync("String_Quality", token: token)
                                                           .ConfigureAwait(false)
                                                       + strSpace + await objAddQuality.GetNameAsync(token)
                                                           .ConfigureAwait(false)
@@ -1822,7 +1831,7 @@ namespace Chummer.Backend.Equipment
                             }
                             catch
                             {
-                                await objAddQuality.DisposeAsync().ConfigureAwait(false);
+                                await objAddQuality.DeleteQualityAsync(token: CancellationToken.None).ConfigureAwait(false);
                                 throw;
                             }
                         }
@@ -2418,6 +2427,8 @@ namespace Chummer.Backend.Equipment
                         intAvail += decValue.StandardRound();
                 }
 
+                intAvail += ImprovementManager.ValueOf(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true).StandardRound();
+
                 if (intAvail < 0)
                     intAvail = 0;
 
@@ -2456,6 +2467,8 @@ namespace Chummer.Backend.Equipment
                 else
                     intAvail += decValue.StandardRound();
             }
+
+            intAvail += (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: SourceIDString, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound();
 
             if (intAvail < 0)
                 intAvail = 0;
