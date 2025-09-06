@@ -30,6 +30,7 @@ using Chummer.Backend.Attributes;
 using Chummer.Backend.Skills;
 using Chummer.Properties;
 using Timer = System.Windows.Forms.Timer;
+using System.ComponentModel;
 
 namespace Chummer.UI.Skills
 {
@@ -113,7 +114,7 @@ namespace Chummer.UI.Skills
                     {
                         AutoSize = true,
                         AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                        Dock = DockStyle.Fill,
+                        Dock = DockStyle.None,
                         Margin = new Padding(3, 0, 3, 0),
                         Name = "cmdDelete",
                         Tag = "String_Delete",
@@ -1178,6 +1179,13 @@ namespace Chummer.UI.Skills
             }, token: token).ConfigureAwait(false);
         }
 
+        private async void refreshAfterDelete_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        public event EventHandler SkillDeleted;
+
         private async void cmdDelete_Click(object sender, EventArgs e)
         {
             try
@@ -1191,13 +1199,20 @@ namespace Chummer.UI.Skills
                                          _objSkill.IsExoticSkill ? "Message_DeleteExoticSkill" : "Message_DeleteSkill",
                                          token: _objMyToken).ConfigureAwait(false), _objMyToken).ConfigureAwait(false))
                     return;
-                await _objSkill.CharacterObject.SkillsSection.Skills.RemoveAsync(_objSkill, _objMyToken)
+                await _objSkill.CharacterObject.SkillsSection.CharacterSkills.RemoveAsync(_objSkill, _objMyToken)
                                .ConfigureAwait(false);
+                //TODO: Remove from Dictionary to keep things in sync
+                // Raise the event to notify parent control
+                SkillDeleted?.Invoke(this, EventArgs.Empty);
 
             }
             catch (OperationCanceledException)
             {
                 //swallow this
+            }
+            finally
+            {
+                //refresh8
             }
         }
 
@@ -1322,6 +1337,12 @@ namespace Chummer.UI.Skills
                 }
             }
         }
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Skill SkillUsed
+        {
+            get { return _objSkill; }
+            internal set {;} }
 
         private ButtonWithToolTip FindToolTipControl(Point pt)
         {

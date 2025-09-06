@@ -1048,6 +1048,33 @@ namespace Chummer.Backend.Skills
             }
         }
 
+        internal async Task RemoveNewSkillsAsync(Skill skillToRemove, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            IAsyncDisposable objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                token.ThrowIfCancellationRequested();
+                ThreadSafeBindingList<Skill> lstSkills = await GetSkillsAsync(token).ConfigureAwait(false);
+                for (int i = await _lstNewSkills.GetCountAsync(token).ConfigureAwait(false) - 1; i >= 0; --i)
+                {
+                    if (await _lstNewSkills.GetValueAtAsync(i, token).ConfigureAwait(false) != skillToRemove)
+                        continue;
+                    await _lstNewSkills.RemoveAtAsync(i, token).ConfigureAwait(false);
+                    bool isRemoved = _dicSkills.TryRemove(await skillToRemove.GetDictionaryKeyAsync(token).ConfigureAwait(false), out _);
+                }
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
         internal async Task RemoveSkillsAsync(FilterOption eSkillsToRemove, string strName = "", bool blnCreateKnowledge = true, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();

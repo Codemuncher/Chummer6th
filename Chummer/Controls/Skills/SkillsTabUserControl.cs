@@ -517,6 +517,7 @@ namespace Chummer.UI.Skills
                     {
                         SkillControl objSkillControl = new SkillControl(arg, token);
                         objSkillControl.CustomAttributeChanged += Control_CustomAttributeChanged;
+                        objSkillControl.SkillDeleted += SkillControl_SkillDeleted;
                         return objSkillControl;
                     }
 
@@ -565,6 +566,7 @@ namespace Chummer.UI.Skills
                     {
                         SkillControl objSkillControl = new SkillControl(arg, token);
                         objSkillControl.CustomAttributeChanged += Control_CustomAttributeChanged;
+                        objSkillControl.SkillDeleted += SkillControl_SkillDeleted;
                         return objSkillControl;
                     }
 
@@ -603,6 +605,7 @@ namespace Chummer.UI.Skills
                         {
                             SkillControl objSkillControl = new SkillControl(arg, token);
                             objSkillControl.CustomAttributeChanged += Control_CustomAttributeChanged;
+                            objSkillControl.SkillDeleted += SkillControl_SkillDeleted;
                             return objSkillControl;
                         }
 
@@ -717,6 +720,39 @@ namespace Chummer.UI.Skills
                
                 }
             }
+
+        private async void SkillControl_SkillDeleted(object sender, EventArgs e)
+        {
+            CancellationToken token = default;
+            if (sender is SkillControl objSkillControl && objSkillControl!= null)
+            {
+                SkillsSection objSkillsSection = _objCharacter?.SkillsSection;
+                if (objSkillsSection != null)
+                {
+                    LockObject = new AsyncFriendlyReaderWriterLock();
+                    IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync().ConfigureAwait(false);
+                    try
+                    {
+                        await objSkillsSection.RemoveNewSkillsAsync(objSkillControl.SkillUsed,token).ConfigureAwait(false); 
+                        await lstNewSkills.RemoveAsync(objSkillControl.SkillUsed).ConfigureAwait(false);
+                        _lstNewSkills.Controls.Remove(objSkillControl);
+                        //objCharacter.SkillsSection.RemoveSkills(
+                        //                (SkillsSection.FilterOption)Enum.Parse(typeof(SkillsSection.FilterOption),
+                        //                    strImprovedName), objImprovement.Target,
+                        //                !blnReapplyImprovements && objCharacter.Created, token: token);
+                    }
+                    catch (Exception ex)
+                    {
+                        var message = ex.Message;
+                    }
+                    finally
+                    {
+                        await objLocker.DisposeAsync().ConfigureAwait(false);
+                        RefreshNewSkillLabels(token);
+                    }
+                }
+            }
+        }
 
         private void KnowledgeSkillsOnListChanged(object sender, ListChangedEventArgs e)
         {
@@ -1803,6 +1839,6 @@ namespace Chummer.UI.Skills
             }
         }
 
-
+        public AsyncFriendlyReaderWriterLock LockObject { get; internal set; }
     }
 }
