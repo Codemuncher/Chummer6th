@@ -527,7 +527,7 @@ namespace Chummer.UI.Skills
                     cboDisplayFilter.SelectedIndexChanged += cboDisplayFilter_SelectedIndexChanged;
                     cboDisplayFilter.TextUpdate += cboDisplayFilter_TextUpdate;
                     cboSort.SelectedIndexChanged += cboSort_SelectedIndexChanged;
-                    RefreshSkillLabels(token);
+                   
 
                     _lstNewSkills.ChildPropertyChangedAsync += ChildPropertyChanged;
 
@@ -544,7 +544,7 @@ namespace Chummer.UI.Skills
                 }
                 finally
                 {
-
+                    RefreshSkillLabels(token);
                 }
             }
             else
@@ -572,9 +572,10 @@ namespace Chummer.UI.Skills
 
                     tlpSkills.Controls.Add(_lstNewSkills, 0, 2);
                     tlpSkills.SetColumnSpan(_lstNewSkills, 4);
-                    RefreshNewSkillLabels(token);
+                    
 
                     _lstNewSkills.Refresh();
+                    RefreshNewSkillLabels(token);
 
                 }
             }
@@ -654,7 +655,7 @@ namespace Chummer.UI.Skills
                 intRatingLabelWidth = Math.Max(intRatingLabelWidth, objSkillControl.NudSkillWidth);
             }
             token.ThrowIfCancellationRequested();
-           // lblActiveSkills.MinimumSize = new Size(intNameLabelWidth, label1.MinimumSize.Height);
+            lblActiveSkills.MinimumSize = new Size(intNameLabelWidth, lblActiveSkills.MinimumSize.Height);
             token.ThrowIfCancellationRequested();
             lblActiveKarma.Margin = new Padding(
                 Math.Max(0, lblActiveSp.Margin.Left + intRatingLabelWidth - lblActiveSp.Width),
