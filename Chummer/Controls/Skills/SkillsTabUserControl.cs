@@ -1840,6 +1840,7 @@ namespace Chummer.UI.Skills
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public AsyncFriendlyReaderWriterLock LockObject { get; internal set; }
     }
 }

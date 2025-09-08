@@ -18,6 +18,7 @@
  */
 
 using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -395,31 +396,38 @@ namespace Chummer
                         return string.Empty;
 
                     case 1:
-                    {
-                        (string strContent, bool blnContainsMacros) = lstSubstrings[0];
-                        if (!blnContainsMacros)
-                            return strContent;
-                        break;
-                    }
+                        {
+                            (string strContent, bool blnContainsMacros) = lstSubstrings[0];
+                            if (!blnContainsMacros)
+                                return strContent;
+                            break;
+                        }
                 }
 
-                string[] lstOutputStrings = new string[lstSubstrings.Count];
-                for (int i = 0; i < lstSubstrings.Count; ++i)
+                string[] astrOutputStrings = ArrayPool<string>.Shared.Rent(lstSubstrings.Count);
+                try
                 {
-                    (string strContent, bool blnContainsMacros) = lstSubstrings[i];
-                    if (blnContainsMacros)
+                    for (int i = 0; i < lstSubstrings.Count; ++i)
                     {
-                        lstOutputStrings[i] = await ProcessSingleMacro(strContent, objCulture, strLanguage,
-                                                                       blnGeneratePersistents, token)
-                            .ConfigureAwait(false);
+                        (string strContent, bool blnContainsMacros) = lstSubstrings[i];
+                        if (blnContainsMacros)
+                        {
+                            astrOutputStrings[i] = await ProcessSingleMacro(strContent, objCulture, strLanguage,
+                                                                           blnGeneratePersistents, token)
+                                .ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            astrOutputStrings[i] = strContent;
+                        }
                     }
-                    else
-                    {
-                        lstOutputStrings[i] = strContent;
-                    }
-                }
 
-                return string.Concat(lstOutputStrings);
+                    return string.Concat(astrOutputStrings);
+                }
+                finally
+                {
+                    ArrayPool<string>.Shared.Return(astrOutputStrings);
+                }
             }
             finally
             {
@@ -446,264 +454,293 @@ namespace Chummer
                 switch (strFunction)
                 {
                     case "$ReverseTranslateExtra":
-                    {
-                        return await _objCharacter.ReverseTranslateExtraAsync(strArguments, token: token)
-                                                  .ConfigureAwait(false);
-                    }
-                    case "$XmlNameFriendly":
-                    {
-                        return strArguments
-                               .FastEscape(' ', '$', '/', '?', ',', '\'', '\"', ';', ':', '(', ')', '[', ']', '|', '\\',
-                                           '+', '=', '`', '~', '!', '@', '#', '%', '^', '&', '*')
-                               .FastEscape((await LanguageManager
-                                                  .GetStringAsync("String_NuyenSymbol", strLanguage, token: token)
-                                                  .ConfigureAwait(false))
-                                           .ToCharArray()).ToLower(objCulture);
-                    }
-                    case "$CharacterName":
-                    {
-                        return await _objCharacter.GetCharacterNameAsync(token).ConfigureAwait(false);
-                    }
-                    case "$CharacterGrammaticalGender":
-                    {
-                        return _objCharacter.CharacterGrammaticGender;
-                    }
-                    case "$Metatype":
-                    {
-                        return await _objCharacter.GetMetatypeAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Metavariant":
-                    {
-                        return await _objCharacter.GetMetavariantAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Eyes":
-                    {
-                        return await _objCharacter.GetEyesAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Hair":
-                    {
-                        return await _objCharacter.GetHairAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Skin":
-                    {
-                        return await _objCharacter.GetSkinAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Height":
-                    {
-                        return await _objCharacter.GetHeightAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Weight":
-                    {
-                        return await _objCharacter.GetWeightAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Gender":
-                    {
-                        return await _objCharacter.GetGenderAsync(token).ConfigureAwait(false);
-                    }
-                    case "$Alias":
-                    {
-                        string strAlias = await _objCharacter.GetAliasAsync(token).ConfigureAwait(false);
-                        return !string.IsNullOrEmpty(strAlias)
-                            ? strAlias
-                            : await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
-                                                   .ConfigureAwait(false);
-                    }
-                    case "$Name":
-                    {
-                        string strName = await _objCharacter.GetNameAsync(token).ConfigureAwait(false);
-                        if (!string.IsNullOrWhiteSpace(strName))
                         {
-                            if (!string.IsNullOrEmpty(strArguments) && int.TryParse(strArguments, out int intNameIndex))
-                            {
-                                string[] lstNames
-                                    = strName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                                return lstNames[Math.Max(Math.Min(intNameIndex, lstNames.Length - 1), 0)];
-                            }
-
-                            return strName;
-                        }
-
-                        return await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
-                                                    .ConfigureAwait(false);
-                    }
-                    case "$Year":
-                    {
-                        string strAge = await _objCharacter.GetAgeAsync(token).ConfigureAwait(false);
-                        if (int.TryParse(strAge, out int intCurrentAge))
-                        {
-                            int intBirthYear = DateTime.UtcNow.Year + 62 - intCurrentAge;
-                            if (!string.IsNullOrEmpty(strArguments)
-                                && int.TryParse(strArguments, out int intYearAtTime))
-                            {
-                                return (intBirthYear + intYearAtTime).ToString(objCulture);
-                            }
-
-                            return intBirthYear.ToString(objCulture);
-                        }
-
-                        return await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
-                                                    .ConfigureAwait(false);
-                    }
-                    case "$GetString":
-                    {
-                        return await LanguageManager.GetStringAsync(strArguments, strLanguage, token: token)
-                                                    .ConfigureAwait(false);
-                    }
-                    case "$XPath":
-                    {
-                        (bool blnSuccess, object objProcess) = await CommonFunctions
-                                                                     .EvaluateInvariantXPathAsync(strArguments, token)
-                                                                     .ConfigureAwait(false);
-                        return blnSuccess
-                            ? objProcess.ToString()
-                            : await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
-                                                   .ConfigureAwait(false);
-                    }
-                    case "$Index":
-                    {
-                        string[] strArgumentsSplit = strArguments.Split('|', StringSplitOptions.RemoveEmptyEntries);
-                        int intArgumentsCount = strArgumentsSplit.Length;
-                        if (intArgumentsCount > 2 && int.TryParse(strArgumentsSplit[0], out int intIndex))
-                        {
-                            return strArgumentsSplit[Math.Max(0, Math.Min(intArgumentsCount - 1, intIndex + 1))];
-                        }
-
-                        return await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
-                                                    .ConfigureAwait(false);
-                    }
-                    case "$LookupExtra":
-                    {
-                        string strExtra = string.Empty;
-                        AIProgram objProgram = await _objCharacter.AIPrograms
-                            .FirstOrDefaultAsync(
-                                x => x.Name == strArguments
-                                     && !string.IsNullOrEmpty(x.Extra), token: token).ConfigureAwait(false);
-                        if (objProgram != null)
-                        {
-                            strExtra = objProgram.Extra;
-                        }
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            Armor objArmor = await _objCharacter.Armor
-                                .FirstOrDefaultAsync(
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objArmor != null)
-                            {
-                                strExtra = objArmor.Extra;
-                            }
-                        }
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            ComplexForm objComplexForm = await _objCharacter.ComplexForms
-                                .FirstOrDefaultAsync(
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objComplexForm != null)
-                            {
-                                strExtra = objComplexForm.Extra;
-                            }
-                        }
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            CritterPower objCritterPower = await _objCharacter.CritterPowers
-                                .FirstOrDefaultAsync(
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objCritterPower != null)
-                            {
-                                strExtra = objCritterPower.Extra;
-                            }
-                        }
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            Cyberware objCyberware = await (await _objCharacter.GetCyberwareAsync(token).ConfigureAwait(false))
-                                .DeepFirstOrDefaultAsync(
-                                    x => x.GetChildrenAsync(token),
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objCyberware != null)
-                            {
-                                strExtra = objCyberware.Extra;
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            Gear objGear = await _objCharacter.Gear
-                                .DeepFirstOrDefaultAsync(
-                                    x => x.Children,
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objGear != null)
-                            {
-                                strExtra = objGear.Extra;
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            Power objPower = await _objCharacter.Powers
-                                .FirstOrDefaultAsync(
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objPower != null)
-                            {
-                                strExtra = objPower.Extra;
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            Quality objQuality = await _objCharacter.Qualities
-                                .FirstOrDefaultAsync(
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objQuality != null)
-                            {
-                                strExtra = objQuality.Extra;
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(strExtra))
-                        {
-                            Spell objSpell = await _objCharacter.Spells
-                                .FirstOrDefaultAsync(
-                                    x => x.Name == strArguments
-                                         && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
-                            if (objSpell != null)
-                            {
-                                strExtra = objSpell.Extra;
-                            }
-                        }
-
-                        if (!string.IsNullOrEmpty(strExtra))
-                        {
-                            return await _objCharacter.TranslateExtraAsync(strExtra, strLanguage, token: token)
+                            return await _objCharacter.ReverseTranslateExtraAsync(strArguments, token: token)
                                                       .ConfigureAwait(false);
                         }
-
-                        return string.Empty;
-                    }
-                    case "$Fallback":
-                    {
-                        int intArgumentPipeIndex = strArguments.IndexOf('|');
-                        if (intArgumentPipeIndex != -1)
+                    case "$XmlNameFriendly":
                         {
-                            string strMainOutput = strArguments.Substring(0, intArgumentPipeIndex);
-                            if (!string.IsNullOrEmpty(strMainOutput)
-                                && strMainOutput != await LanguageManager
-                                                          .GetStringAsync("String_Error", strLanguage, token: token)
-                                                          .ConfigureAwait(false) && strMainOutput
-                                != await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
-                                                        .ConfigureAwait(false))
-                                return strMainOutput;
-                            if (intArgumentPipeIndex + 1 < strArguments.Length)
-                                return strArguments.Substring(intArgumentPipeIndex + 1);
+                            return strArguments
+                                   .FastEscape(' ', '$', '/', '?', ',', '\'', '\"', ';', ':', '(', ')', '[', ']', '|', '\\',
+                                               '+', '=', '`', '~', '!', '@', '#', '%', '^', '&', '*')
+                                   .FastEscape((await LanguageManager
+                                                      .GetStringAsync("String_NuyenSymbol", strLanguage, token: token)
+                                                      .ConfigureAwait(false))
+                                               .ToCharArray()).ToLower(objCulture);
                         }
+                    case "$CharacterName":
+                        {
+                            return await _objCharacter.GetCharacterNameAsync(token).ConfigureAwait(false);
+                        }
+                    case "$CharacterGrammaticalGender":
+                        {
+                            return await _objCharacter.GetCharacterGrammaticGenderAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Metatype":
+                        {
+                            return await _objCharacter.GetMetatypeAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Metavariant":
+                        {
+                            return await _objCharacter.GetMetavariantAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Eyes":
+                        {
+                            return await _objCharacter.GetEyesAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Hair":
+                        {
+                            return await _objCharacter.GetHairAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Skin":
+                        {
+                            return await _objCharacter.GetSkinAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Height":
+                        {
+                            return await _objCharacter.GetHeightAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Weight":
+                        {
+                            return await _objCharacter.GetWeightAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Gender":
+                        {
+                            return await _objCharacter.GetGenderAsync(token).ConfigureAwait(false);
+                        }
+                    case "$Alias":
+                        {
+                            string strAlias = await _objCharacter.GetAliasAsync(token).ConfigureAwait(false);
+                            return !string.IsNullOrEmpty(strAlias)
+                                ? strAlias
+                                : await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
+                                                       .ConfigureAwait(false);
+                        }
+                    case "$Name":
+                        {
+                            string strName = await _objCharacter.GetNameAsync(token).ConfigureAwait(false);
+                            if (!string.IsNullOrWhiteSpace(strName))
+                            {
+                                if (!string.IsNullOrEmpty(strArguments))
+                                {
+                                    int intIndex = 0;
+                                    int intNameIndex = 0;
+                                    string strReturn = strName;
+                                    foreach (string strArgument in strArguments.ProcessArgsString())
+                                    {
+                                        if (intIndex == 0)
+                                        {
+                                            if (!int.TryParse(strArguments, out intNameIndex))
+                                                break;
+                                        }
+                                        else
+                                        {
+                                            strReturn = strArgument;
+                                            if (intIndex == intNameIndex)
+                                                break;
+                                        }
+                                        ++intIndex;
+                                    }
+                                    return strReturn;
+                                }
 
-                        return string.Empty;
-                    }
+                                return strName;
+                            }
+
+                            return await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
+                                                        .ConfigureAwait(false);
+                        }
+                    case "$Year":
+                        {
+                            string strAge = await _objCharacter.GetAgeAsync(token).ConfigureAwait(false);
+                            if (int.TryParse(strAge, out int intCurrentAge))
+                            {
+                                int intBirthYear = DateTime.UtcNow.Year + 62 - intCurrentAge;
+                                if (!string.IsNullOrEmpty(strArguments)
+                                    && int.TryParse(strArguments, out int intYearAtTime))
+                                {
+                                    return (intBirthYear + intYearAtTime).ToString(objCulture);
+                                }
+
+                                return intBirthYear.ToString(objCulture);
+                            }
+
+                            return await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
+                                                        .ConfigureAwait(false);
+                        }
+                    case "$GetString":
+                        {
+                            return await LanguageManager.GetStringAsync(strArguments, strLanguage, token: token)
+                                                        .ConfigureAwait(false);
+                        }
+                    case "$XPath":
+                        {
+                            (bool blnSuccess, object objProcess) = await CommonFunctions
+                                                                         .EvaluateInvariantXPathAsync(strArguments, token)
+                                                                         .ConfigureAwait(false);
+                            return blnSuccess
+                                ? objProcess.ToString()
+                                : await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
+                                                       .ConfigureAwait(false);
+                        }
+                    case "$Index":
+                        {
+                            string strReturn = string.Empty;
+                            int intIndex = 0;
+                            int i = 0;
+                            foreach (string strArgument in strArguments.SplitNoAlloc('|', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                if (i == 0)
+                                {
+                                    if (!int.TryParse(strArgument, out intIndex))
+                                        break;
+                                }
+                                else
+                                {
+                                    strReturn = strArgument;
+                                    if (i == intIndex)
+                                        break;
+                                }
+                                ++i;
+                            }
+                            if (!string.IsNullOrEmpty(strReturn))
+                                return strReturn;
+                            return await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
+                                                        .ConfigureAwait(false);
+                        }
+                    case "$LookupExtra":
+                        {
+                            string strExtra = string.Empty;
+                            AIProgram objProgram = await _objCharacter.AIPrograms
+                                .FirstOrDefaultAsync(
+                                    x => x.Name == strArguments
+                                         && !string.IsNullOrEmpty(x.Extra), token: token).ConfigureAwait(false);
+                            if (objProgram != null)
+                            {
+                                strExtra = objProgram.Extra;
+                            }
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                Armor objArmor = await _objCharacter.Armor
+                                    .FirstOrDefaultAsync(
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objArmor != null)
+                                {
+                                    strExtra = objArmor.Extra;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                ComplexForm objComplexForm = await _objCharacter.ComplexForms
+                                    .FirstOrDefaultAsync(
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objComplexForm != null)
+                                {
+                                    strExtra = objComplexForm.Extra;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                CritterPower objCritterPower = await _objCharacter.CritterPowers
+                                    .FirstOrDefaultAsync(
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objCritterPower != null)
+                                {
+                                    strExtra = objCritterPower.Extra;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                Cyberware objCyberware = await (await _objCharacter.GetCyberwareAsync(token).ConfigureAwait(false))
+                                    .DeepFirstOrDefaultAsync(
+                                        x => x.GetChildrenAsync(token),
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objCyberware != null)
+                                {
+                                    strExtra = objCyberware.Extra;
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                Gear objGear = await _objCharacter.Gear
+                                    .DeepFirstOrDefaultAsync(
+                                        x => x.Children,
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objGear != null)
+                                {
+                                    strExtra = objGear.Extra;
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                Power objPower = await _objCharacter.Powers
+                                    .FirstOrDefaultAsync(
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objPower != null)
+                                {
+                                    strExtra = objPower.Extra;
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                Quality objQuality = await _objCharacter.Qualities
+                                    .FirstOrDefaultAsync(
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objQuality != null)
+                                {
+                                    strExtra = objQuality.Extra;
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(strExtra))
+                            {
+                                Spell objSpell = await _objCharacter.Spells
+                                    .FirstOrDefaultAsync(
+                                        x => x.Name == strArguments
+                                             && !string.IsNullOrEmpty(x.Extra), token).ConfigureAwait(false);
+                                if (objSpell != null)
+                                {
+                                    strExtra = objSpell.Extra;
+                                }
+                            }
+
+                            if (!string.IsNullOrEmpty(strExtra))
+                            {
+                                return await _objCharacter.TranslateExtraAsync(strExtra, strLanguage, token: token)
+                                                          .ConfigureAwait(false);
+                            }
+
+                            return string.Empty;
+                        }
+                    case "$Fallback":
+                        {
+                            int intArgumentPipeIndex = strArguments.IndexOf('|');
+                            if (intArgumentPipeIndex != -1)
+                            {
+                                string strMainOutput = strArguments.Substring(0, intArgumentPipeIndex);
+                                if (!string.IsNullOrEmpty(strMainOutput)
+                                    && strMainOutput != await LanguageManager
+                                                              .GetStringAsync("String_Error", strLanguage, token: token)
+                                                              .ConfigureAwait(false) && strMainOutput
+                                    != await LanguageManager.GetStringAsync("String_Unknown", strLanguage, token: token)
+                                                            .ConfigureAwait(false))
+                                    return strMainOutput;
+                                if (intArgumentPipeIndex + 1 < strArguments.Length)
+                                    return strArguments.Substring(intArgumentPipeIndex + 1);
+                            }
+
+                            return string.Empty;
+                        }
                 }
 
                 if (blnGeneratePersistents)

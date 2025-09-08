@@ -21,6 +21,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Chummer
 {
@@ -31,12 +33,27 @@ namespace Chummer
     public readonly struct KeyArray<T> : IReadOnlyList<T>, IEquatable<KeyArray<T>>
     {
         private readonly T[] _aobjItems;
+        private readonly int _intLength;
         private readonly int _intHashCode;
 
         public KeyArray(IEnumerable<T> lstItems)
         {
             _aobjItems = lstItems.ToArray();
+            _intLength = _aobjItems.Length;
             _intHashCode = _aobjItems.GetEnsembleHashCode();
+        }
+
+        private KeyArray(T[] aobjItems)
+        {
+            _aobjItems = aobjItems;
+            _intLength = _aobjItems.Length;
+            _intHashCode = _aobjItems.GetEnsembleHashCode();
+        }
+
+        public async Task<KeyArray<T>> NewAsync(IAsyncEnumerable<T> lstItems, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            return new KeyArray<T>((await lstItems.ToListAsync(token).ConfigureAwait(false)).ToArray());
         }
 
         /// <inheritdoc />
@@ -73,16 +90,13 @@ namespace Chummer
         int IReadOnlyCollection<T>.Count => Length;
 
         /// <inheritdoc cref="Array.Length" />
-        public int Length => _aobjItems.Length;
+        public int Length => _intLength;
 
         /// <inheritdoc />
         public T this[int index] => _aobjItems[index];
 
         /// <inheritdoc />
-        public override int GetHashCode()
-        {
-            return _intHashCode;
-        }
+        public override int GetHashCode() => _intHashCode;
 
         public static bool operator ==(KeyArray<T> lhs, KeyArray<T> rhs) => lhs.Equals(rhs);
 

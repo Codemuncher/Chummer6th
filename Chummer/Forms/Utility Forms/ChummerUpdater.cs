@@ -427,9 +427,9 @@ namespace Chummer
                                 using (StreamReader objReader = new StreamReader(dataStream, Encoding.UTF8, true))
                                 {
                                     token.ThrowIfCancellationRequested();
-                                    for (string strLine = await objReader.ReadLineAsync(token).ConfigureAwait(false);
+                                    for (string strLine = await objReader.ReadLineAsync().ConfigureAwait(false);
                                          strLine != null;
-                                         strLine = await objReader.ReadLineAsync(token).ConfigureAwait(false))
+                                         strLine = await objReader.ReadLineAsync().ConfigureAwait(false))
                                     {
                                         token.ThrowIfCancellationRequested();
                                         if (!string.IsNullOrEmpty(strLine))
@@ -450,7 +450,7 @@ namespace Chummer
 
                                 if (!blnFoundTag && strLine.Contains("tag_name"))
                                 {
-                                    LatestVersion = (_strLatestVersion = strLine.SplitNoAlloc(':').ElementAtOrDefault(1))
+                                    LatestVersion = (_strLatestVersion = strLine.SplitNoAlloc(':').ElementAtOrDefaultBetter(1))
                                         .SplitNoAlloc('}').FirstOrDefault().FastEscape('\"').Trim();
                                     blnFoundTag = true;
                                     if (blnFoundArchive)
@@ -460,7 +460,7 @@ namespace Chummer
                                 if (!blnFoundArchive && strLine.Contains("browser_download_url"))
                                 {
                                     _strDownloadFile = "https://" +
-                                                       (strLine.SplitNoAlloc(':').ElementAtOrDefault(2) ?? string.Empty)
+                                                       (strLine.SplitNoAlloc(':').ElementAtOrDefaultBetter(2) ?? string.Empty)
                                                        .Substring(2).SplitNoAlloc('}').FirstOrDefault()
                                                        .FastEscape('\"');
                                     blnFoundArchive = true;

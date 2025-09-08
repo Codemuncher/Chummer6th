@@ -190,7 +190,7 @@ namespace Codaxy.WkHtmlToPdf
                     $"File '{environment.WkHtmlToPdfPath}' not found. Check if wkhtmltopdf application is installed.");
 
             string strParams;
-            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                           out StringBuilder sbdParams))
             {
                 sbdParams.Append("--page-size A4 ");
@@ -278,9 +278,9 @@ namespace Codaxy.WkHtmlToPdf
 
                     using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
                     using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder output))
-                    using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder error))
                     {
                         void OutputHandler(object sender, DataReceivedEventArgs e)
@@ -421,8 +421,7 @@ namespace Codaxy.WkHtmlToPdf
                     using (FileStream fs
                            = new FileStream(outputPdfFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
-                        byte[] buffer = ArrayPool<byte>.Shared.Rent(32 * 1024);
-                        try
+                        using (new FetchSafelyFromArrayPool<byte>(ArrayPool<byte>.Shared, 32 * 1024, out byte[] buffer))
                         {
                             int read;
 
@@ -440,10 +439,6 @@ namespace Codaxy.WkHtmlToPdf
                                     await woutput.OutputStream.WriteAsync(buffer, 0, read, token).ConfigureAwait(false);
                             }
                         }
-                        finally
-                        {
-                            ArrayPool<byte>.Shared.Return(buffer);
-                        }
                     }
                 }
 
@@ -451,21 +446,35 @@ namespace Codaxy.WkHtmlToPdf
                 {
                     if (woutput.OutputCallback != null || woutput.OutputCallbackAsync != null)
                     {
-                        byte[] pdfFileBytes = File.ReadAllBytes(outputPdfFilePath);
-                        woutput.OutputCallback?.Invoke(document, pdfFileBytes);
-                        if (woutput.OutputCallbackAsync != null)
+                        byte[] pdfFileBytes = FileExtensions.ReadAllBytesToPooledArray(outputPdfFilePath);
+                        try
                         {
-                            Utils.SafelyRunSynchronously(() => woutput.OutputCallbackAsync(document, pdfFileBytes, token), token);
+                            woutput.OutputCallback?.Invoke(document, pdfFileBytes);
+                            if (woutput.OutputCallbackAsync != null)
+                            {
+                                Utils.SafelyRunSynchronously(() => woutput.OutputCallbackAsync(document, pdfFileBytes, token), token);
+                            }
+                        }
+                        finally
+                        {
+                            ArrayPool<byte>.Shared.Return(pdfFileBytes);
                         }
                     }
                 }
                 else if (woutput.OutputCallback != null || woutput.OutputCallbackAsync != null)
                 {
-                    byte[] pdfFileBytes = await FileExtensions.ReadAllBytesAsync(outputPdfFilePath, token).ConfigureAwait(false);
-                    woutput.OutputCallback?.Invoke(document, pdfFileBytes);
-                    if (woutput.OutputCallbackAsync != null)
+                    byte[] pdfFileBytes = await FileExtensions.ReadAllBytesToPooledArrayAsync(outputPdfFilePath, token).ConfigureAwait(false);
+                    try
                     {
-                        await woutput.OutputCallbackAsync(document, pdfFileBytes, token).ConfigureAwait(false);
+                        woutput.OutputCallback?.Invoke(document, pdfFileBytes);
+                        if (woutput.OutputCallbackAsync != null)
+                        {
+                            await woutput.OutputCallbackAsync(document, pdfFileBytes, token).ConfigureAwait(false);
+                        }
+                    }
+                    finally
+                    {
+                        ArrayPool<byte>.Shared.Return(pdfFileBytes);
                     }
                 }
             }
