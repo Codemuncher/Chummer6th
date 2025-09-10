@@ -376,13 +376,9 @@ namespace Chummer.UI.Skills
                     }
                 }, token: token).ConfigureAwait(false);
 
-               // await Task.WhenAll(_lstActiveSkills.ContentControls.OfType<SkillControl>()
-              //      .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-               // await Task.WhenAll(_lstSkills.ContentControls.OfType<SkillControl>()
-               //     .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-                await Task.WhenAll(_lstKnowledgeSkills.ContentControls.OfType<KnowledgeSkillControl>()
-                    .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-
+                //await ParallelExtensions.ForEachAsync(_lstActiveSkills.ContentControls.OfType<SkillControl>(), x => x.DoLoad(token), token).ConfigureAwait(false);
+                await ParallelExtensions.ForEachAsync(_lstKnowledgeSkills.ContentControls.OfType<KnowledgeSkillControl>(), x => x.DoLoad(token), token).ConfigureAwait(false);
+               
 
                 if (!await _objCharacter.GetCreatedAsync(token).ConfigureAwait(false))
                 {
@@ -723,7 +719,7 @@ namespace Chummer.UI.Skills
             }
 
         private async void SkillControl_SkillDeleted(object sender, EventArgs e)
-        {
+                {
             CancellationToken token = default;
             if (sender is SkillControl objSkillControl && objSkillControl!= null)
             {
@@ -741,17 +737,17 @@ namespace Chummer.UI.Skills
                         //                (SkillsSection.FilterOption)Enum.Parse(typeof(SkillsSection.FilterOption),
                         //                    strImprovedName), objImprovement.Target,
                         //                !blnReapplyImprovements && objCharacter.Created, token: token);
-                    }
+                }
                     catch (Exception ex)
                     {
                         var message = ex.Message;
-                    }
+            }
                     finally
-                    {
+            {
                         await objLocker.DisposeAsync().ConfigureAwait(false);
                         RefreshNewSkillLabels(token);
-                    }
-                }
+            }
+        }
             }
         }
 

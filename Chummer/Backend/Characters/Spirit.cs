@@ -2405,19 +2405,7 @@ namespace Chummer
                     {
                         MultiplePropertiesChangedEventArgs objArgs =
                             new MultiplePropertiesChangedEventArgs(setNamesOfChangedProperties.ToArray());
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (MultiplePropertiesChangedAsyncEventHandler objEvent in _setMultiplePropertiesChangedAsync)
-                        {
-                            lstTasks.Add(objEvent.Invoke(this, objArgs, token));
-                            if (++i < Utils.MaxParallelBatchSize)
-                                continue;
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                            lstTasks.Clear();
-                            i = 0;
-                        }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(_setMultiplePropertiesChangedAsync, objEvent => objEvent.Invoke(this, objArgs, token), token).ConfigureAwait(false);
                         if (MultiplePropertiesChanged != null)
                         {
                             await Utils.RunOnMainThreadAsync(() =>
@@ -2442,22 +2430,16 @@ namespace Chummer
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
+                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstTasks.Add(objEvent.Invoke(this, objArg, token));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
+                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
 
                         if (PropertyChanged != null)
                         {
@@ -3230,7 +3212,7 @@ namespace Chummer
                         foreach (Image imgMugshot in Mugshots)
                         {
                             objWriter.WriteElementString(
-                                "mugshot", GlobalSettings.ImageToBase64StringForStorage(imgMugshot));
+                                "mugshot", GlobalSettings.ImageToBase64StringForStorage(imgMugshot, token));
                         }
 
                         // </mugshot>
@@ -3286,6 +3268,7 @@ namespace Chummer
                     string[] astrMugshotsBase64 = ArrayPool<string>.Shared.Rent(xmlMugshotsList.Count);
                     try
                     {
+                        token.ThrowIfCancellationRequested();
                         int j = 0;
                         foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
                         {
@@ -3301,12 +3284,13 @@ namespace Chummer
                             Image[] objMugshotImages = ArrayPool<Image>.Shared.Rent(xmlMugshotsList.Count);
                             try
                             {
+                                token.ThrowIfCancellationRequested();
                                 Parallel.For(0, xmlMugshotsList.Count,
                                              i =>
                                              {
                                                  string strLoop = astrMugshotsBase64[i];
                                                  if (!string.IsNullOrEmpty(strLoop))
-                                                     objMugshotImages[i] = strLoop.ToImage(PixelFormat.Format32bppPArgb);
+                                                     objMugshotImages[i] = strLoop.ToImage(PixelFormat.Format32bppPArgb, token);
                                                  else
                                                      objMugshotImages[i] = null;
                                              });
@@ -3326,7 +3310,7 @@ namespace Chummer
                         {
                             string strLoop = astrMugshotsBase64[0];
                             if (!string.IsNullOrEmpty(strLoop))
-                                _lstMugshots.Add(strLoop.ToImage(PixelFormat.Format32bppPArgb));
+                                _lstMugshots.Add(strLoop.ToImage(PixelFormat.Format32bppPArgb, token));
                         }
                     }
                     finally
@@ -3351,6 +3335,7 @@ namespace Chummer
                     string[] astrMugshotsBase64 = ArrayPool<string>.Shared.Rent(xmlMugshotsList.Count);
                     try
                     {
+                        token.ThrowIfCancellationRequested();
                         int j = 0;
                         foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
                         {
@@ -3363,23 +3348,24 @@ namespace Chummer
 
                         if (xmlMugshotsList.Count > 1)
                         {
-                            Task<Bitmap>[] atskMugshotImages = new Task<Bitmap>[xmlMugshotsList.Count];
-                            for (int i = 0; i < xmlMugshotsList.Count; ++i)
+                            Bitmap[] aobjMugshots = await ParallelExtensions.ForAsync(0, xmlMugshotsList.Count, async i =>
                             {
-                                int iLocal = i;
-                                atskMugshotImages[i]
-                                    = Task.Run(async () =>
-                                    {
-                                        string strLoop = astrMugshotsBase64[iLocal];
-                                        if (!string.IsNullOrEmpty(strLoop))
-                                            return await strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false);
-                                        return null;
-                                    }, token);
+                                string strLoop = astrMugshotsBase64[i];
+                                if (!string.IsNullOrEmpty(strLoop))
+                                    return await strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false);
+                                return null;
+                            }, true, token).ConfigureAwait(false);
+                            try
+                            {
+                                foreach (Bitmap objImage in aobjMugshots)
+                                {
+                                    if (objImage != null)
+                                        await _lstMugshots.AddAsync(objImage, token).ConfigureAwait(false);
+                                }
                             }
-                            foreach (Bitmap objImage in await Task.WhenAll(atskMugshotImages).ConfigureAwait(false))
+                            finally
                             {
-                                if (objImage != null)
-                                    await _lstMugshots.AddAsync(objImage, token).ConfigureAwait(false);
+                                ArrayPool<Bitmap>.Shared.Return(aobjMugshots);
                             }
                         }
                         else

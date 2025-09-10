@@ -466,6 +466,8 @@ namespace Chummer
                     blnUpdateSubmersion = true;
                     break;
             }
+            if (!blnUpdateSubmersion && !blnUpdateInitiation)
+                return;
             // Need a complete recalculation because of potential issues where grades can change in between the grade getter and setter calls.
             IAsyncDisposable objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
             try
@@ -474,12 +476,15 @@ namespace Chummer
                 ThreadSafeObservableCollection<InitiationGrade> lstInitiationGrades = await GetInitiationGradesAsync(token).ConfigureAwait(false);
                 // Don't do checks for update submersion/initiation in the accumulator because it's faster to just index counts than to do those checks every iteration.
                 int intSubmersion = await lstInitiationGrades.CountAsync(objItem => objItem.Technomancer, token: token).ConfigureAwait(false);
-                int intInitiation = await lstInitiationGrades.GetCountAsync(token).ConfigureAwait(false) - intSubmersion;
-
-                if (blnUpdateSubmersion)
-                    await SetSubmersionGradeAsync(intSubmersion, token).ConfigureAwait(false);
                 if (blnUpdateInitiation)
+                {
+                    int intInitiation = await lstInitiationGrades.GetCountAsync(token).ConfigureAwait(false) - intSubmersion;
+                    if (blnUpdateSubmersion)
+                        await SetSubmersionGradeAsync(intSubmersion, token).ConfigureAwait(false);
                     await SetInitiateGradeAsync(intInitiation, token).ConfigureAwait(false);
+                }
+                else if (blnUpdateSubmersion)
+                    await SetSubmersionGradeAsync(intSubmersion, token).ConfigureAwait(false);
             }
             finally
             {
@@ -1179,19 +1184,7 @@ namespace Chummer
                     if (_lstSettingsMultiplePropertiesChangedAsync.Count > 0)
                     {
                         MultiplePropertiesChangedEventArgs objArgs = new MultiplePropertiesChangedEventArgs(lstProperties);
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (MultiplePropertiesChangedAsyncEventHandler objEvent in _lstSettingsMultiplePropertiesChangedAsync)
-                        {
-                            lstTasks.Add(objEvent.Invoke(this, objArgs, token));
-                            if (++i < Utils.MaxParallelBatchSize)
-                                continue;
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                            lstTasks.Clear();
-                            i = 0;
-                        }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(_setMultiplePropertiesChangedAsync, objEvent => objEvent.Invoke(this, objArgs, token), token).ConfigureAwait(false);
 
                         if (SettingsPropertyChanged != null)
                         {
@@ -1219,22 +1212,16 @@ namespace Chummer
                     {
                         List<PropertyChangedEventArgs> lstArgsList = lstProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (PropertyChangedAsyncEventHandler objEvent in _lstSettingsPropertyChangedAsync)
+                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstTasks.Add(objEvent.Invoke(this, objArg, token));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
+                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
 
                         if (SettingsPropertyChanged != null)
                         {
@@ -1464,7 +1451,7 @@ namespace Chummer
                     foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToProcess in
                              dicChangedProperties)
                     {
-                        await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token).ConfigureAwait(false);
+                        await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token).ConfigureAwait(false);
                     }
                 }
                 finally
@@ -1552,7 +1539,7 @@ namespace Chummer
                     foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                              dicChangedProperties)
                     {
-                        await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token).ConfigureAwait(false);
+                        await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token).ConfigureAwait(false);
                     }
                 }
                 finally
@@ -1641,7 +1628,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                                  dicChangedProperties)
                         {
-                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token)
+                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -1731,7 +1718,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                                  dicChangedProperties)
                         {
-                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token)
+                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -1821,7 +1808,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                                  dicChangedProperties)
                         {
-                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token)
+                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -1908,7 +1895,7 @@ namespace Chummer
                 }
 
                 if (setPropertiesToRefresh.Count > 0)
-                    await OnMultiplePropertiesChangedAsync(setPropertiesToRefresh.ToList(), token).ConfigureAwait(false);
+                    await OnMultiplePropertiesChangedAsync(setPropertiesToRefresh, token).ConfigureAwait(false);
             }
         }
 
@@ -2047,7 +2034,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToProcess in
                                  dicChangedProperties)
                         {
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2211,7 +2198,7 @@ namespace Chummer
                                  dicChangedProperties)
                         {
                             token.ThrowIfCancellationRequested();
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2401,7 +2388,7 @@ namespace Chummer
                                  dicChangedProperties)
                         {
                             token.ThrowIfCancellationRequested();
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2627,7 +2614,7 @@ namespace Chummer
                                  dicChangedProperties)
                         {
                             token.ThrowIfCancellationRequested();
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2854,7 +2841,7 @@ namespace Chummer
                                 throw;
                             }
 
-                            ImprovementManager.Commit(this);
+                            ImprovementManager.Commit(this, token);
                         }
                     }
                 }
@@ -2939,7 +2926,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                         bImprovementAdded = true;
                     }
 
@@ -2990,7 +2977,7 @@ namespace Chummer
                                     throw;
                                 }
 
-                                ImprovementManager.Commit(this);
+                                ImprovementManager.Commit(this, token);
                             }
                             catch
                             {
@@ -3023,7 +3010,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                 }
 
@@ -3095,7 +3082,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                 }
 
@@ -3140,7 +3127,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                 }
 
                 //Load any cyberware the character has.
@@ -3175,7 +3162,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                     catch
                     {
@@ -3216,7 +3203,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                     catch
                     {
@@ -3272,7 +3259,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                 }
 
                 // Add any Gear the Critter comes with (typically Programs for A.I.s)
@@ -3331,7 +3318,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                     catch
                     {
@@ -3395,6 +3382,49 @@ namespace Chummer
                                 if (objXmlCritterPower != null)
                                 {
                                     CritterPower objPower = new CritterPower(this);
+                                    try
+                                    {
+                                        objPower.Create(objXmlCritterPower, 0, string.Empty);
+                                        objPower.CountTowardsLimit = false;
+                                        CritterPowers.Add(objPower);
+
+                                        try
+                                        {
+                                            token.ThrowIfCancellationRequested();
+                                            ImprovementManager.CreateImprovement(this, objPower.InternalId,
+                                                                                 Improvement.ImprovementSource.Metatype,
+                                                                                 string.Empty,
+                                                                                 Improvement.ImprovementType.CritterPower,
+                                                                                 string.Empty, token: token);
+                                        }
+                                        catch
+                                        {
+                                            ImprovementManager.Rollback(this, CancellationToken.None);
+                                            throw;
+                                        }
+
+                                        ImprovementManager.Commit(this, token);
+                                    }
+                                    catch
+                                    {
+                                        objPower.Remove(false);
+                                        throw;
+                                    }
+                                }
+                            }
+                        }
+                        else if (CritterPowers.All(x =>
+                                     x.Name != "Materialization" && !x.Name.Contains("Possession") &&
+                                     !x.Name.Contains("Inhabitation"), token))
+                        {
+                            // Add the Materialization Power.
+                            XmlNode objXmlCritterPower =
+                                xmlCritterPowerDocumentPowersNode.SelectSingleNode("power[name = \"Materialization\"]");
+                            if (objXmlCritterPower != null)
+                            {
+                                CritterPower objPower = new CritterPower(this);
+                                try
+                                {
                                     objPower.Create(objXmlCritterPower, 0, string.Empty);
                                     objPower.CountTowardsLimit = false;
                                     CritterPowers.Add(objPower);
@@ -3414,40 +3444,13 @@ namespace Chummer
                                         throw;
                                     }
 
-                                    ImprovementManager.Commit(this);
-                                }
-                            }
-                        }
-                        else if (CritterPowers.All(x =>
-                                     x.Name != "Materialization" && !x.Name.Contains("Possession") &&
-                                     !x.Name.Contains("Inhabitation"), token))
-                        {
-                            // Add the Materialization Power.
-                            XmlNode objXmlCritterPower =
-                                xmlCritterPowerDocumentPowersNode.SelectSingleNode("power[name = \"Materialization\"]");
-                            if (objXmlCritterPower != null)
-                            {
-                                CritterPower objPower = new CritterPower(this);
-                                objPower.Create(objXmlCritterPower, 0, string.Empty);
-                                objPower.CountTowardsLimit = false;
-                                CritterPowers.Add(objPower);
-
-                                try
-                                {
-                                    token.ThrowIfCancellationRequested();
-                                    ImprovementManager.CreateImprovement(this, objPower.InternalId,
-                                                                         Improvement.ImprovementSource.Metatype,
-                                                                         string.Empty,
-                                                                         Improvement.ImprovementType.CritterPower,
-                                                                         string.Empty, token: token);
+                                    ImprovementManager.Commit(this, token);
                                 }
                                 catch
                                 {
-                                    ImprovementManager.Rollback(this, CancellationToken.None);
+                                    objPower.Remove(false);
                                     throw;
                                 }
-
-                                ImprovementManager.Commit(this);
                             }
                         }
                     }
@@ -7859,7 +7862,7 @@ namespace Chummer
                                         {
                                             if (!(blnSync
                                                     // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                    ? CorrectedUnleveledQuality(objXmlQuality, xmlRootQualitiesNode)
+                                                    ? CorrectedUnleveledQuality(objXmlQuality, xmlRootQualitiesNode, token)
                                                     : await CorrectedUnleveledQualityAsync(objXmlQuality, xmlRootQualitiesNode, token).ConfigureAwait(false)))
                                             {
                                                 Quality objQuality = new Quality(this);
@@ -8241,7 +8244,7 @@ namespace Chummer
 
                                                         if (blnSync)
                                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                            ImprovementManager.Commit(this);
+                                                            ImprovementManager.Commit(this, token);
                                                         else
                                                             await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                                                     }
@@ -8319,7 +8322,7 @@ namespace Chummer
 
                                                         if (blnSync)
                                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                            ImprovementManager.Commit(this);
+                                                            ImprovementManager.Commit(this, token);
                                                         else
                                                             await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                                                     }
@@ -11129,10 +11132,10 @@ namespace Chummer
                                              dicChangedProperties)
                                     {
                                         if (blnSync)
-                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value.ToList());
+                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value);
                                         else
                                             await kvpToProcess.Key
-                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                                 .ConfigureAwait(false);
                                     }
                                 }
@@ -13474,9 +13477,8 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 foreach (string strId in lstIds)
                 {
-                    string strToAdd = strId?.TrimEndOnce("Pair").TrimEndOnce("Wireless");
                     if (!string.IsNullOrEmpty(strId))
-                        setIds.Add(strToAdd);
+                        setIds.Add(strId.TrimEndOnce("Pair").TrimEndOnce("Wireless"));
                 }
                 if (setIds.Count == 0)
                     yield break;
@@ -14059,9 +14061,8 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 foreach (string strId in lstIds)
                 {
-                    string strToAdd = strId?.TrimEndOnce("Pair").TrimEndOnce("Wireless");
                     if (!string.IsNullOrEmpty(strId))
-                        setIds.Add(strToAdd);
+                        setIds.Add(strId.TrimEndOnce("Pair").TrimEndOnce("Wireless"));
                 }
                 List<IHasInternalId> lstReturn = new List<IHasInternalId>(setIds.Count);
                 if (setIds.Count == 0)
@@ -14865,7 +14866,7 @@ namespace Chummer
                             }
 
                             objReturnGear
-                                = Armor.FindArmorGear(strImprovedSourceName, out Armor objArmor, out ArmorMod objArmorMod);
+                                = Armor.FindArmorGear(strImprovedSourceName, out Armor objArmor, out ArmorMod objArmorMod, token);
                             if (objReturnGear != null)
                             {
                                 string strGearReturn = objReturnGear.DisplayNameShort(strLanguage);
@@ -14889,7 +14890,7 @@ namespace Chummer
                             }
 
                             objReturnGear
-                                = Cyberware.FindCyberwareGear(strImprovedSourceName, out Cyberware objGearCyberware);
+                                = Cyberware.FindCyberwareGear(strImprovedSourceName, out Cyberware objGearCyberware, token);
 
                             if (objReturnGear != null)
                             {
@@ -18223,7 +18224,7 @@ namespace Chummer
                 //TODO: Better interface for determining what the parent of a bit of gear is.
                 Gear objGear = Vehicles.FindVehicleGear(nodeId.InternalId, out Vehicle objOldVehicle,
                                                         out WeaponAccessory objOldWeaponAccessory,
-                                                        out Cyberware objOldCyberware);
+                                                        out Cyberware objOldCyberware, token);
 
                 if (objGear == null)
                     return;
@@ -19944,7 +19945,7 @@ namespace Chummer
                             // ReSharper disable once MethodHasAsyncOverload
                             objWriter.WriteElementString(
                                 // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                "mugshot", GlobalSettings.ImageToBase64StringForStorage(imgMugshot));
+                                "mugshot", GlobalSettings.ImageToBase64StringForStorage(imgMugshot, token));
                         }
                     }
                     // </mugshot>
@@ -19994,6 +19995,7 @@ namespace Chummer
                     string[] astrMugshotsBase64 = ArrayPool<string>.Shared.Rent(xmlMugshotsList.Count);
                     try
                     {
+                        token.ThrowIfCancellationRequested();
                         int j = 0;
                         foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
                         {
@@ -20009,12 +20011,13 @@ namespace Chummer
                             Image[] objMugshotImages = ArrayPool<Image>.Shared.Rent(xmlMugshotsList.Count);
                             try
                             {
+                                token.ThrowIfCancellationRequested();
                                 Parallel.For(0, xmlMugshotsList.Count,
                                              i =>
                                              {
                                                  string strLoop = astrMugshotsBase64[i];
                                                  if (!string.IsNullOrEmpty(strLoop))
-                                                     objMugshotImages[i] = strLoop.ToImage(PixelFormat.Format32bppPArgb);
+                                                     objMugshotImages[i] = strLoop.ToImage(PixelFormat.Format32bppPArgb, token);
                                                  else
                                                      objMugshotImages[i] = null;
                                              });
@@ -20034,7 +20037,7 @@ namespace Chummer
                         {
                             string strLoop = astrMugshotsBase64[0];
                             if (!string.IsNullOrEmpty(strLoop))
-                                _lstMugshots.Add(strLoop.ToImage(PixelFormat.Format32bppPArgb));
+                                _lstMugshots.Add(strLoop.ToImage(PixelFormat.Format32bppPArgb, token));
                         }
                     }
                     finally
@@ -20050,7 +20053,7 @@ namespace Chummer
                     string strMugshot = objOldMugshotNode?.Value;
                     if (!string.IsNullOrWhiteSpace(strMugshot))
                     {
-                        _lstMugshots.Add(strMugshot.ToImage(PixelFormat.Format32bppPArgb));
+                        _lstMugshots.Add(strMugshot.ToImage(PixelFormat.Format32bppPArgb, token));
                         _intMainMugshotIndex = 0;
                     }
                 }
@@ -20071,6 +20074,7 @@ namespace Chummer
                     string[] astrMugshotsBase64 = ArrayPool<string>.Shared.Rent(xmlMugshotsList.Count);
                     try
                     {
+                        token.ThrowIfCancellationRequested();
                         int j = 0;
                         foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
                         {
@@ -20083,23 +20087,24 @@ namespace Chummer
 
                         if (xmlMugshotsList.Count > 1)
                         {
-                            Task<Bitmap>[] atskMugshotImages = new Task<Bitmap>[xmlMugshotsList.Count];
-                            for (int i = 0; i < xmlMugshotsList.Count; ++i)
+                            Bitmap[] aobjMugshots = await ParallelExtensions.ForAsync(0, xmlMugshotsList.Count, async i =>
                             {
-                                int iLocal = i;
-                                atskMugshotImages[i]
-                                    = Task.Run(async () =>
-                                    {
-                                        string strLoop = astrMugshotsBase64[iLocal];
-                                        if (!string.IsNullOrEmpty(strLoop))
-                                            return await strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false);
-                                        return null;
-                                    }, token);
+                                string strLoop = astrMugshotsBase64[i];
+                                if (!string.IsNullOrEmpty(strLoop))
+                                    return await strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false);
+                                return null;
+                            }, true, token).ConfigureAwait(false);
+                            try
+                            {
+                                foreach (Bitmap objImage in aobjMugshots)
+                                {
+                                    if (objImage != null)
+                                        await _lstMugshots.AddAsync(objImage, token).ConfigureAwait(false);
+                                }
                             }
-                            foreach (Bitmap objImage in await Task.WhenAll(atskMugshotImages).ConfigureAwait(false))
+                            finally
                             {
-                                if (objImage != null)
-                                    await _lstMugshots.AddAsync(objImage, token).ConfigureAwait(false);
+                                ArrayPool<Bitmap>.Shared.Return(aobjMugshots);
                             }
                         }
                         else
@@ -22067,7 +22072,7 @@ namespace Chummer
                     throw;
                 }
 
-                ImprovementManager.Commit(this);
+                ImprovementManager.Commit(this, token);
                 return true;
             }
         }
@@ -45298,29 +45303,32 @@ namespace Chummer
         /// Check for older instances of certain qualities that were manually numbered to be replaced with multiple instances of the first level quality (so that it works with the level system)
         /// Returns true if it's a corrected quality, false otherwise
         /// </summary>
-        private bool CorrectedUnleveledQuality(XmlNode xmlOldQuality, XmlNode xmlRootQualitiesNode)
+        private bool CorrectedUnleveledQuality(XmlNode xmlOldQuality, XmlNode xmlRootQualitiesNode, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             (XmlNode xmlNewQuality, int intRanks) = CorrectedUnleveledQualityCommon(xmlOldQuality["name"]?.InnerText, xmlRootQualitiesNode);
+            token.ThrowIfCancellationRequested();
             if (intRanks > 0)
             {
-                using (LockObject.EnterWriteLock())
+                using (LockObject.EnterWriteLock(token))
                 {
                     for (int i = 0; i < intRanks; ++i)
                     {
+                        token.ThrowIfCancellationRequested();
                         Quality objQuality = new Quality(this);
                         try
                         {
                             if (i == 0 && xmlOldQuality.TryGetField("guid", Guid.TryParse, out Guid guidOld))
                             {
                                 ImprovementManager.RemoveImprovements(this, Improvement.ImprovementSource.Quality,
-                                                                      guidOld.ToString());
+                                                                      guidOld.ToString(), token);
                                 objQuality.SetGUID(guidOld);
                             }
 
                             QualitySource objQualitySource =
                                 Quality.ConvertToQualitySource(xmlOldQuality["qualitysource"]?.InnerText);
                             objQuality.Create(xmlNewQuality, objQualitySource, _lstWeapons,
-                                              xmlOldQuality["extra"]?.InnerText);
+                                              xmlOldQuality["extra"]?.InnerText, token: token);
                             if (xmlOldQuality["bp"] != null
                                 && int.TryParse(xmlOldQuality["bp"].InnerText, out int intOldBP))
                                 objQuality.BP = intOldBP / intRanks;
@@ -45329,7 +45337,7 @@ namespace Chummer
                         }
                         catch
                         {
-                            objQuality.DeleteQuality();
+                            objQuality.DeleteQuality(token: CancellationToken.None);
                             throw;
                         }
                     }
@@ -45349,13 +45357,16 @@ namespace Chummer
         {
             token.ThrowIfCancellationRequested();
             (XmlNode xmlNewQuality, int intRanks) = CorrectedUnleveledQualityCommon(xmlOldQuality["name"]?.InnerText, xmlRootQualitiesNode);
+            token.ThrowIfCancellationRequested();
             if (intRanks > 0)
             {
                 IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
                 try
                 {
+                    token.ThrowIfCancellationRequested();
                     for (int i = 0; i < intRanks; ++i)
                     {
+                        token.ThrowIfCancellationRequested();
                         Quality objQuality = new Quality(this);
                         try
                         {
@@ -45833,7 +45844,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                     return true;
                 }
             }
@@ -46144,7 +46155,7 @@ namespace Chummer
                             }
 
                             if (intMagMaxReduction != 0 || intResMaxReduction != 0 || intDepMaxReduction != 0)
-                                ImprovementManager.Commit(this);
+                                ImprovementManager.Commit(this, token);
                         }
                     }
                     // RAW Career mode: complicated. Similar to RAW Create mode, but with the extra possibility of burning current karma levels and/or PPs instead of pure minima reduction,
@@ -46316,7 +46327,7 @@ namespace Chummer
                                                 throw;
                                             }
 
-                                            ImprovementManager.Commit(this);
+                                            ImprovementManager.Commit(this, token);
                                         }
                                     }
                                 }
@@ -46387,7 +46398,7 @@ namespace Chummer
 
                                 if (intMAGMinimumReduction != 0 || intMAGMaximumReduction != 0 ||
                                     intMAGAdeptMinimumReduction != 0 || intMAGAdeptMaximumReduction != 0)
-                                    ImprovementManager.Commit(this);
+                                    ImprovementManager.Commit(this, token);
                             }
 
                             // Create the Essence Loss (or gain, in case of essence restoration and increasing maxima) Improvements.
@@ -46450,7 +46461,7 @@ namespace Chummer
                                         ImprovementManager.Rollback(this, CancellationToken.None);
                                         throw;
                                     }
-                                    ImprovementManager.Commit(this);
+                                    ImprovementManager.Commit(this, token);
                                 }
                             }
 
@@ -46514,7 +46525,7 @@ namespace Chummer
                                         throw;
                                     }
 
-                                    ImprovementManager.Commit(this);
+                                    ImprovementManager.Commit(this, token);
                                 }
                             }
                         }
@@ -46606,7 +46617,7 @@ namespace Chummer
                                 throw;
                             }
 
-                            ImprovementManager.Commit(this);
+                            ImprovementManager.Commit(this, token);
                         }
 
                         // If the character is in Career mode, it is possible for them to be forced to burn out.
@@ -46780,7 +46791,7 @@ namespace Chummer
                                 throw;
                             }
 
-                            ImprovementManager.Commit(this);
+                            ImprovementManager.Commit(this, token);
                         }
                     }
                 }
@@ -48598,7 +48609,7 @@ namespace Chummer
                     throw;
                 }
 
-                ImprovementManager.Commit(this);
+                ImprovementManager.Commit(this, token);
             }
         }
 
@@ -48773,7 +48784,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                 }
             }
         }
@@ -50741,19 +50752,8 @@ namespace Chummer
                     {
                         MultiplePropertiesChangedEventArgs objArgs =
                             new MultiplePropertiesChangedEventArgs(setNamesOfChangedProperties.ToArray());
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (MultiplePropertiesChangedAsyncEventHandler objEvent in _setMultiplePropertiesChangedAsync)
-                        {
-                            lstTasks.Add(objEvent.Invoke(this, objArgs, token));
-                            if (++i < Utils.MaxParallelBatchSize)
-                                continue;
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                            lstTasks.Clear();
-                            i = 0;
-                        }
+                        await ParallelExtensions.ForEachAsync(_setMultiplePropertiesChangedAsync, objEvent => objEvent.Invoke(this, objArgs, token), token).ConfigureAwait(false);
 
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
                         if (MultiplePropertiesChanged != null)
                         {
                             await Utils.RunOnMainThreadAsync(() =>
@@ -50778,22 +50778,16 @@ namespace Chummer
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
+                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstTasks.Add(objEvent.Invoke(this, objArg, token));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
+                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
 
                         if (PropertyChanged != null)
                         {
@@ -54193,10 +54187,10 @@ namespace Chummer
                                              dicChangedProperties)
                                     {
                                         if (blnSync)
-                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value.ToList());
+                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value);
                                         else
                                             await kvpToProcess.Key
-                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                                 .ConfigureAwait(false);
                                     }
                                 }

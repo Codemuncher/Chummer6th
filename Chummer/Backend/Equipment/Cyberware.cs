@@ -658,7 +658,7 @@ namespace Chummer.Backend.Equipment
                                      dicChangedProperties)
                             {
                                 await kvpToProcess.Key
-                                    .OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                                    .OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                     .ConfigureAwait(false);
                             }
                         }
@@ -5686,7 +5686,7 @@ namespace Chummer.Backend.Equipment
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToProcess in
                                  dicChangedProperties)
                         {
-                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value.ToList());
+                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value);
                         }
                     }
                     finally
@@ -5902,7 +5902,7 @@ namespace Chummer.Backend.Equipment
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToProcess in
                                  dicChangedProperties)
                         {
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -11783,11 +11783,11 @@ namespace Chummer.Backend.Equipment
                 token.ThrowIfCancellationRequested();
 
                 bool blnSwallowGear = false;
-                int intGearAvailToCheck = 0;
                 Gear objSwallowedGear = null;
 
                 if (string.IsNullOrEmpty(ParentID))
                 {
+                    int intGearAvailToCheck = 0;
                     AvailabilityValue objTotalAvail = await TotalAvailTupleAsync(token: token).ConfigureAwait(false);
 
                     // If parent ends with 'or Gear', swallow highest gear child

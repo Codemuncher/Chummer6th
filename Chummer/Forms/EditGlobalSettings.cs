@@ -228,7 +228,9 @@ namespace Chummer
             }
             catch (ArgumentOutOfRangeException ex)
             {
+                ex = ex.Demystify();
                 Log.Error(ex, "How the hell? Give me the callstack! " + ex);
+                Utils.BreakIfDebug();
             }
         }
 
@@ -2513,22 +2515,15 @@ namespace Chummer
             // ConcurrentDictionary makes sure we don't pick out multiple files for the same sourcebook
             ConcurrentDictionary<string, SourcebookInfo>
                 dicResults = new ConcurrentDictionary<string, SourcebookInfo>();
-            List<Task<List<SourcebookInfo>>> lstLoadingTasks = new List<Task<List<SourcebookInfo>>>(Utils.MaxParallelBatchSize);
-            int intCounter = 0;
-            if (dicPatternsToMatch?.IsEmpty == false)
+            if (dicPatternsToMatch != null)
             {
                 int intFileCounter = 0;
-                foreach (string strFile in lstFiles)
+                await ParallelExtensions.ForEachAsync(lstFiles, async strFile =>
                 {
-                    token.ThrowIfCancellationRequested();
-                    lstLoadingTasks.Add(GetSourcebookInfo(strFile, dicPatternsToMatch));
-                    ++intFileCounter;
-                    if (++intCounter != Utils.MaxParallelBatchSize)
-                        continue;
-                    await Task.WhenAll(lstLoadingTasks).ConfigureAwait(false);
-                    foreach (Task<List<SourcebookInfo>> tskLoop in lstLoadingTasks)
+                    if (!dicPatternsToMatch.IsEmpty)
                     {
-                        foreach (SourcebookInfo objInfo in await tskLoop.ConfigureAwait(false))
+                        Interlocked.Increment(ref intFileCounter);
+                        foreach (SourcebookInfo objInfo in await GetSourcebookInfo(strFile, dicPatternsToMatch).ConfigureAwait(false))
                         {
                             // ReSharper disable once AccessToDisposedClosure
                             if (objInfo == null)
@@ -2542,54 +2537,27 @@ namespace Chummer
                             });
                         }
                     }
-
-                    intCounter = 0;
-                    lstLoadingTasks.Clear();
-                    if (dicPatternsToMatch.IsEmpty)
-                    {
-                        for (; intFileCounter <= lstFiles.Length; ++intFileCounter)
-                        {
-                            await frmProgressBar
-                              .PerformStepAsync(eUseTextPattern: LoadingBar.ProgressBarTextPatterns.Scanning, token: token)
-                              .ConfigureAwait(false);
-                        }
-                        break;
-                    }
-                }
-
-                await Task.WhenAll(lstLoadingTasks).ConfigureAwait(false);
-                foreach (Task<List<SourcebookInfo>> tskLoop in lstLoadingTasks)
+                }, token).ConfigureAwait(false);
+                if (dicPatternsToMatch.IsEmpty)
                 {
-                    foreach (SourcebookInfo objInfo in await tskLoop.ConfigureAwait(false))
+                    for (; intFileCounter <= lstFiles.Length; ++intFileCounter)
                     {
-                        // ReSharper disable once AccessToDisposedClosure
-                        if (objInfo == null)
-                            continue;
-                        dicResults.AddOrUpdate(objInfo.Code, objInfo, (x, y) =>
-                        {
-                            y.Path = objInfo.Path;
-                            y.Offset = objInfo.Offset;
-                            objInfo.Dispose();
-                            return y;
-                        });
+                        await frmProgressBar
+                          .PerformStepAsync(eUseTextPattern: LoadingBar.ProgressBarTextPatterns.Scanning, token: token)
+                          .ConfigureAwait(false);
                     }
                 }
             }
-            if (dicBackupPatternsToMatch?.IsEmpty == false)
+            if (dicBackupPatternsToMatch != null)
             {
-                intCounter = 0;
-                lstLoadingTasks.Clear();
                 string strFallbackFormat = await LanguageManager.GetStringAsync("String_Fallback_Pattern", _strSelectedLanguage, token: token).ConfigureAwait(false);
-                foreach (string strFile in lstFiles)
+                int intFileCounter = 0;
+                await ParallelExtensions.ForEachAsync(lstFiles, async strFile =>
                 {
-                    token.ThrowIfCancellationRequested();
-                    lstLoadingTasks.Add(GetSourcebookInfo(strFile, dicBackupPatternsToMatch, strFallbackFormat));
-                    if (++intCounter != Utils.MaxParallelBatchSize)
-                        continue;
-                    await Task.WhenAll(lstLoadingTasks).ConfigureAwait(false);
-                    foreach (Task<List<SourcebookInfo>> tskLoop in lstLoadingTasks)
+                    if (!dicBackupPatternsToMatch.IsEmpty)
                     {
-                        foreach (SourcebookInfo objInfo in await tskLoop.ConfigureAwait(false))
+                        Interlocked.Increment(ref intFileCounter);
+                        foreach (SourcebookInfo objInfo in await GetSourcebookInfo(strFile, dicBackupPatternsToMatch, strFallbackFormat).ConfigureAwait(false))
                         {
                             // ReSharper disable once AccessToDisposedClosure
                             if (objInfo == null)
@@ -2603,28 +2571,14 @@ namespace Chummer
                             });
                         }
                     }
-
-                    intCounter = 0;
-                    lstLoadingTasks.Clear();
-                    if (dicBackupPatternsToMatch.IsEmpty)
-                        break;
-                }
-
-                await Task.WhenAll(lstLoadingTasks).ConfigureAwait(false);
-                foreach (Task<List<SourcebookInfo>> tskLoop in lstLoadingTasks)
+                }, token).ConfigureAwait(false);
+                if (dicBackupPatternsToMatch.IsEmpty)
                 {
-                    foreach (SourcebookInfo objInfo in await tskLoop.ConfigureAwait(false))
+                    for (; intFileCounter <= lstFiles.Length; ++intFileCounter)
                     {
-                        // ReSharper disable once AccessToDisposedClosure
-                        if (objInfo == null)
-                            continue;
-                        dicResults.AddOrUpdate(objInfo.Code, objInfo, (x, y) =>
-                        {
-                            y.Path = objInfo.Path;
-                            y.Offset = objInfo.Offset;
-                            objInfo.Dispose();
-                            return y;
-                        });
+                        await frmProgressBar
+                          .PerformStepAsync(eUseTextPattern: LoadingBar.ProgressBarTextPatterns.Scanning, token: token)
+                          .ConfigureAwait(false);
                     }
                 }
             }
