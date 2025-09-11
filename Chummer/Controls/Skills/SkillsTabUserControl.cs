@@ -497,8 +497,9 @@ namespace Chummer.UI.Skills
 
             if (objSkillSection.CharacterSkills == null || objSkillSection.CharacterSkills.Count == 0)
             {
+                skill.Base = 1;
                 await objSkillSection.AddNewSkillAsync(skill, token);          
-            
+           
                 await lstNewSkills.AddAsync(skill, token);
                 try
                 {
@@ -732,12 +733,11 @@ namespace Chummer.UI.Skills
                     {
                         await objSkillsSection.RemoveNewSkillsAsync(objSkillControl.SkillUsed,token).ConfigureAwait(false); 
                         await lstNewSkills.RemoveAsync(objSkillControl.SkillUsed).ConfigureAwait(false);
+                        tlpSkills.Controls.Remove(objSkillControl);
                         _lstNewSkills.Controls.Remove(objSkillControl);
-                        //objCharacter.SkillsSection.RemoveSkills(
-                        //                (SkillsSection.FilterOption)Enum.Parse(typeof(SkillsSection.FilterOption),
-                        //                    strImprovedName), objImprovement.Target,
-                        //                !blnReapplyImprovements && objCharacter.Created, token: token);
-                }
+                        objSkillControl.Dispose();
+                        _lstNewSkills.Refresh();
+                    }
                     catch (Exception ex)
                     {
                         var message = ex.Message;

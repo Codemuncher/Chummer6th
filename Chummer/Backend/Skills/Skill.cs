@@ -17,6 +17,10 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Annotations;
+using Chummer.Backend.Attributes;
+using Chummer.Backend.Equipment;
+using Chummer.UI.Skills;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -31,9 +35,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Annotations;
-using Chummer.Backend.Attributes;
-using Chummer.Backend.Equipment;
 
 namespace Chummer.Backend.Skills
 {
@@ -5049,9 +5050,71 @@ namespace Chummer.Backend.Skills
             }
         }
 
-        public async Task SetTopMostDisplaySpecializationAsync(string value, CancellationToken token = default)
+        public async Task ClearSkillSpecialization(string value, CancellationToken token = default)
         {
             if (string.IsNullOrWhiteSpace(value))
+            {
+                await (await GetSpecializationsAsync(token).ConfigureAwait(false)).RemoveAllAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
+                return;
+            }
+            IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                ThreadSafeObservableCollection<SkillSpecialization> lstSpecs
+                    = await GetSpecializationsAsync(token).ConfigureAwait(false);
+
+                int intIndexToReplace = await lstSpecs.FindIndexAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                // SkillSpecialization objNewSpec = new SkillSpecialization(CharacterObject, value);
+                if (intIndexToReplace >= 0)
+                {
+                    await lstSpecs.RemoveAtAsync(intIndexToReplace, token).ConfigureAwait(false);
+                    return;
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        public async Task ResetControlsAsync(Skill skillToDelete, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (skillToDelete == null)
+                throw new ArgumentNullException(skillToDelete.Name);
+
+            IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                
+
+               // int intIndexToReplace = await lstSpecs.FindIndexAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                // SkillSpecialization objNewSpec = new SkillSpecialization(CharacterObject, value);
+
+              //  await lstSpecs.RemoveAtAsync(intIndexToReplace, token).ConfigureAwait(false);
+                return;
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        public async Task SetTopMostDisplaySpecializationAsync(string value, CancellationToken token = default)
+        {
+                  if (string.IsNullOrWhiteSpace(value))
             {
                 await (await GetSpecializationsAsync(token).ConfigureAwait(false)).RemoveAllAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
                 return;

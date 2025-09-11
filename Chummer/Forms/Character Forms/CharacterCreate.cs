@@ -14003,14 +14003,7 @@ namespace Chummer
                 SkillsSection objSkillSection =
                     await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false);
 
-                token.ThrowIfCancellationRequested();
-                // ------------------------------------------------------------------------------
-                // Calculate the BP used by Skill Groups.
-                int intSkillGroupsPoints = await objSkillSection.SkillGroups
-                    .SumAsync(x => x.GetCurrentKarmaCostAsync(token),
-                        token: token).ConfigureAwait(false);
-                intKarmaPointsRemain -= intSkillGroupsPoints;
-
+                          
                 token.ThrowIfCancellationRequested();
                 // ------------------------------------------------------------------------------
                 // Calculate the BP used by Active Skills.
@@ -14826,25 +14819,6 @@ namespace Chummer
                                                           + intSkillGroupPointsMaximum.ToString(
                                                               GlobalSettings.CultureInfo);
             }
-
-            int intSkillGroupsTotalCostKarma = await CharacterObject.SkillsSection.SkillGroups
-                                                                    .SumAsync(
-                                                                        x => x.GetCurrentKarmaCostAsync(token),
-                                                                        token: token).ConfigureAwait(false);
-            if (intSkillGroupsTotalCostKarma > 0)
-            {
-                if (strTemp3 != strZeroKarma)
-                {
-                    strTemp3 += strColon + strSpace + intSkillGroupsTotalCostKarma.ToString(GlobalSettings.CultureInfo)
-                                + strSpace + strKarma;
-                }
-                else
-                {
-                    strTemp3 = intSkillGroupsTotalCostKarma.ToString(GlobalSettings.CultureInfo) + strSpace + strKarma;
-                }
-            }
-
-            await lblSkillGroupsBP.DoThreadSafeAsync(x => x.Text = strTemp3, token).ConfigureAwait(false);
         }
 
         private int _intFileUpdateQueued;

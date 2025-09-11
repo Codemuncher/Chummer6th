@@ -2110,19 +2110,7 @@ namespace Chummer
                     }
 
                     blnDoSwitch = false;
-                    await (await _objCharacter.SkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachWithBreakAsync(async objGroup =>
-                    {
-                        if (await objGroup.GetBaseAsync(token).ConfigureAwait(false) > 0)
-                        {
-                            blnDoSwitch = false;
-                            return false;
-                        }
-
-                        if (await objGroup.GetKarmaAsync(token).ConfigureAwait(false) > 0)
-                            blnDoSwitch = true;
-                        return true;
-                    }, token).ConfigureAwait(false);
-
+                   
                     if (blnDoSwitch)
                     {
                         int intPointsSpent = 0;

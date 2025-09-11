@@ -56,12 +56,10 @@ namespace Chummer.Backend.Skills
             _lstSkills = new ThreadSafeBindingList<Skill>(LockObject);
             _lstKnowledgeSkills = new ThreadSafeBindingList<KnowledgeSkill>(LockObject);
             _lstKnowsoftSkills = new ThreadSafeBindingList<KnowledgeSkill>(LockObject);
-            _lstSkillGroups = new ThreadSafeBindingList<SkillGroup>(LockObject);
             objCharacter.PropertyChangedAsync += OnCharacterPropertyChanged;
             CharacterSettings objSettings = objCharacter.Settings;
             if (objSettings?.IsDisposed == false)
                 objSettings.MultiplePropertiesChangedAsync += OnCharacterSettingsPropertyChanged;
-            SkillGroups.BeforeRemoveAsync += SkillGroupsOnBeforeRemove;
             KnowsoftSkills.BeforeRemoveAsync += KnowsoftSkillsOnBeforeRemove;
             KnowledgeSkills.BeforeRemoveAsync += KnowledgeSkillsOnBeforeRemove;
             KnowledgeSkills.ListChangedAsync += KnowledgeSkillsOnListChanged;
@@ -3028,16 +3026,6 @@ namespace Chummer.Backend.Skills
                 }
 
                 objWriter.WriteEndElement();
-
-                objWriter.WriteStartElement("groups");
-                List<SkillGroup> lstSkillGroups = new List<SkillGroup>(SkillGroups);
-                lstSkillGroups.Sort(CompareSkillGroups);
-                foreach (SkillGroup objSkillGroup in lstSkillGroups)
-                {
-                    objSkillGroup.WriteTo(objWriter);
-                }
-
-                objWriter.WriteEndElement();
                 objWriter.WriteEndElement();
             }
         }
@@ -3059,15 +3047,12 @@ namespace Chummer.Backend.Skills
                         x.MultiplePropertiesChangedAsync -= OnKnowledgeSkillPropertyChanged;
                         x.Remove();
                     }, token);
-                    SkillGroups.ForEach(x => x.Dispose(), token);
                     _dicSkillBackups.Clear();
                     _dicSkills.Clear();
                     _lstSkills.Clear();
                     KnowledgeSkills.Clear();
                     KnowsoftSkills.Clear();
-                    SkillGroups.Clear();
                     SkillPointsMaximum = 0;
-                    SkillGroupPointsMaximum = 0;
                     _blnSkillsInitialized = false;
                 }
                 finally

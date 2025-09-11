@@ -1201,6 +1201,12 @@ namespace Chummer.UI.Skills
                     return;
                 await _objSkill.CharacterObject.SkillsSection.CharacterSkills.RemoveAsync(_objSkill, _objMyToken)
                                .ConfigureAwait(false);
+                //ThreadSafeObservableCollection<SkillSpecialization> lstSpecs
+                //   = await _objSkill.GetSpecializationsAsync().ConfigureAwait(false);
+                //await ;//.ResetControlsAsync(sender as SkillControl).ConfigureAwait(false);
+                await _objSkill.ClearSkillSpecialization(_objSkill.Name).ConfigureAwait(false);
+               
+                UnbindSkillControl();
                 //TODO: Remove from Dictionary to keep things in sync
                 // Raise the event to notify parent control
                 SkillDeleted?.Invoke(this, EventArgs.Empty);

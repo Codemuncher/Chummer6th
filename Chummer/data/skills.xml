@@ -32,18 +32,103 @@
   <skills>
     <skill>
       <id>7d7e3193-d603-4934-9595-ffec7abd31b7</id>
-      <name>Engineering</name>
+      <name>Engineering - Aeronautics Mecahanic</name>
       <attribute>LOG</attribute>
       <category>All Active</category>
       <default>False</default>
       <specs>
         <spec>Aeronautics Mechanic</spec>
+      </specs>
+      <forbidden>
+        <oneof>
+          <skill>
+            <name>Engineering - Armorer</name>
+            <type>Academic</type>
+          </skill>
+        </oneof>
+      </forbidden>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>8b8af214-05c6-446c-8f19-8f7b902590e2</id>
+      <name>Engineering - Armorer</name>
+      <attribute>LOG</attribute>
+      <category>All Active</category>
+      <default>False</default>
+      <specs>
         <spec>Armorer</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>969431dc-4f6b-42ba-bbc3-e7d91c18f790</id>
+      <name>Engineering - LOG</name>
+      <attribute>LOG</attribute>
+      <category>All Active</category>
+      <default>False</default>
+      <specs>
         <spec>Automotive Mechanic</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>02d20f89-8751-4eee-9ff3-d476e3c70f91</id>
+      <name>Engineering - LOG</name>
+      <attribute>LOG</attribute>
+      <category>All Active</category>
+      <default>False</default>
+      <specs>
         <spec>Demolitions</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>85acdcc1-73f6-48a0-a507-8b6f459e4b56</id>
+      <name>Engineering - LOG</name>
+      <attribute>LOG</attribute>
+      <category>All Active</category>
+      <default>False</default>
+      <specs>
         <spec>Gunnery</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>a3e91ed2-f587-48dc-b749-7f368ec98097</id>
+      <name>Engineering - LOG</name>
+      <attribute>LOG</attribute>
+      <category>All Active</category>
+      <default>False</default>
+      <specs>
         <spec>Industrial Mechanic</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>f2ae78c2-ebd1-4e70-8547-3b68a8b8b382</id>
+      <name>Engineering - LOG</name>
+      <attribute>LOG</attribute>
+      <category>All Active</category>
+      <default>False</default>
+      <specs>
         <spec>lock picking</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>c6f02759-6b7a-4407-ae36-a2f47ce82124</id>
+      <name>Engineering - LOG</name>
+      <attribute>LOG</attribute>
+      <category>All Active</category>
+      <default>False</default>
+      <specs>
         <spec>Nautical Mechanic</spec>
       </specs>
       <source>SR6</source>
