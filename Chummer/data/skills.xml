@@ -22,7 +22,8 @@
          xsi:schemaLocation="http://www.w3.org/2001/XMLSchema skills.xsd">
 
   <categories>
-    <category type="active">All Active</category>
+    <category type="active">Astral</category>
+    <category type="active">Engineering</category>
     <category type="knowledge">Academic</category>
     <category type="knowledge">Interest</category>
     <category type="knowledge">Language</category>
@@ -31,43 +32,22 @@
   </categories>
   <skills>
     <skill>
-      <id>7d7e3193-d603-4934-9595-ffec7abd31b7</id>
-      <name>Engineering - Aeronautics Mecahanic</name>
+      <id>16f4c5ed-b9f5-4143-a0ec-9696c1638666</id>
+      <name>Engineering</name>
       <attribute>LOG</attribute>
-      <category>All Active</category>
-      <default>False</default>
+      <category>Engineering</category>
+      <default>True</default>
       <specs>
-        <spec>Aeronautics Mechanic</spec>
-      </specs>
-      <forbidden>
-        <oneof>
-          <skill>
-            <name>Engineering - Armorer</name>
-            <type>Academic</type>
-          </skill>
-        </oneof>
-      </forbidden>
-      <source>SR6</source>
-      <page>95</page>
-    </skill>
-    <skill>
-      <id>8b8af214-05c6-446c-8f19-8f7b902590e2</id>
-      <name>Engineering - Armorer</name>
-      <attribute>LOG</attribute>
-      <category>All Active</category>
-      <default>False</default>
-      <specs>
-        <spec>Armorer</spec>
       </specs>
       <source>SR6</source>
       <page>95</page>
     </skill>
     <skill>
       <id>969431dc-4f6b-42ba-bbc3-e7d91c18f790</id>
-      <name>Engineering - LOG</name>
+      <name>Engineering</name>
       <attribute>LOG</attribute>
-      <category>All Active</category>
-      <default>False</default>
+      <category>Engineering: Automotive Mechanic</category>
+      <default>True</default>
       <specs>
         <spec>Automotive Mechanic</spec>
       </specs>
@@ -75,11 +55,35 @@
       <page>95</page>
     </skill>
     <skill>
-      <id>02d20f89-8751-4eee-9ff3-d476e3c70f91</id>
-      <name>Engineering - LOG</name>
+      <id>7d7e3193-d603-4934-9595-ffec7abd31b7</id>
+      <name>Engineering: Aeronautics Mecahanic</name>
       <attribute>LOG</attribute>
-      <category>All Active</category>
-      <default>False</default>
+      <category>Engineering</category>
+      <default>True</default>
+      <specs>
+        <spec>Aeronautics Mechanic</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>
+    <skill>
+      <id>8b8af214-05c6-446c-8f19-8f7b902590e2</id>
+      <name>Engineering: Armorer</name>
+      <attribute>LOG</attribute>
+      <category>Engineering</category>
+      <default>True</default>
+      <specs>
+        <spec>Armorer</spec>
+      </specs>
+      <source>SR6</source>
+      <page>95</page>
+    </skill>  
+    <skill>
+      <id>02d20f89-8751-4eee-9ff3-d476e3c70f91</id>
+      <name>Engineering: Demolitions</name>
+      <attribute>LOG</attribute>
+      <category>Engineering</category>
+      <default>True</default>
       <specs>
         <spec>Demolitions</spec>
       </specs>
@@ -88,10 +92,10 @@
     </skill>
     <skill>
       <id>85acdcc1-73f6-48a0-a507-8b6f459e4b56</id>
-      <name>Engineering - LOG</name>
+      <name>Engineering: Gunnery</name>
       <attribute>LOG</attribute>
-      <category>All Active</category>
-      <default>False</default>
+      <category>Engineering</category>
+      <default>True</default>
       <specs>
         <spec>Gunnery</spec>
       </specs>
@@ -100,9 +104,9 @@
     </skill>
     <skill>
       <id>a3e91ed2-f587-48dc-b749-7f368ec98097</id>
-      <name>Engineering - LOG</name>
+      <name>Engineering: Industrial Mechanic</name>
       <attribute>LOG</attribute>
-      <category>All Active</category>
+      <category>Engineering</category>
       <default>False</default>
       <specs>
         <spec>Industrial Mechanic</spec>
@@ -112,22 +116,22 @@
     </skill>
     <skill>
       <id>f2ae78c2-ebd1-4e70-8547-3b68a8b8b382</id>
-      <name>Engineering - LOG</name>
-      <attribute>LOG</attribute>
-      <category>All Active</category>
-      <default>False</default>
+      <name>Engineering: Lockpicking</name>
+      <attribute>AGI</attribute>
+      <category>Engineering</category>
+      <default>True</default>
       <specs>
-        <spec>lock picking</spec>
+        <spec>Lockpicking</spec>
       </specs>
       <source>SR6</source>
       <page>95</page>
     </skill>
     <skill>
       <id>c6f02759-6b7a-4407-ae36-a2f47ce82124</id>
-      <name>Engineering - LOG</name>
+      <name>Engineering: Nautical Mechanic </name>
       <attribute>LOG</attribute>
-      <category>All Active</category>
-      <default>False</default>
+      <category>Engineering</category>
+      <default>True</default>
       <specs>
         <spec>Nautical Mechanic</spec>
       </specs>
@@ -136,27 +140,38 @@
     </skill>
     <skill>
     <id>2477ed00-a119-4002-8afb-20aa1fb32901</id>
-    <name>Engineering - INT</name>
+    <name>Engineering: Juryrigging</name>
     <attribute>INT</attribute>
-    <category>All Active</category>
-    <default>False</default>
+    <category>Engineering</category>
+    <default>True</default>
     <specs>
       <spec>Juryrigging</spec>
     </specs>
     <source>SR6</source>
     <page>95</page>
-    </skill>
+    </skill>    
+  <skill>
+    <id>44f249c9-1f1c-4070-8769-ee7ced3269d0</id>
+    <name>Astral</name>
+    <attribute>INT</attribute>
+    <category>Astral</category>
+    <default>True</default>
+    <specs>
+    </specs>
+    <source>SR6</source>
+    <page>93</page>
+  </skill>
     <skill>
-      <id>1998d20a-8669-4e48-9d0b-3533440af0b2</id>
-      <name>Engineering - AGI</name>
-      <attribute>AGI</attribute>
-      <category>All Active</category>
-      <default>False</default>
+      <id>86bec342-05e2-4e8e-9723-e75709dee979</id>
+      <name>Astral: Astral Combat</name>
+      <attribute>INT</attribute>
+      <category>Astral</category>
+      <default>True</default>
       <specs>
-        <spec>Lock Picking</spec>
+        <spec>Astral Combat</spec>
       </specs>
       <source>SR6</source>
-      <page>95</page>
+      <page>93</page>
     </skill>
   </skills>
   <knowledgeskills>
