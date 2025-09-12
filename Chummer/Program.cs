@@ -588,22 +588,7 @@ namespace Chummer
                             using (ThreadSafeForm<LoadingBar> frmLoadingBar
                                    = CreateAndShowProgressBar(Application.ProductName, Utils.BasicDataFileNames.Count))
                             {
-                                List<Task> lstCachingTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                                int intCounter = 0;
-                                foreach (string strLoopFile in Utils.BasicDataFileNames)
-                                {
-                                    // ReSharper disable once AccessToDisposedClosure
-                                    lstCachingTasks.Add(
-                                        Task.Run(() => CacheCommonFile(strLoopFile, frmLoadingBar.MyForm)));
-                                    if (++intCounter != Utils.MaxParallelBatchSize)
-                                        continue;
-                                    Utils.RunWithoutThreadLock(() => Task.WhenAll(lstCachingTasks));
-                                    lstCachingTasks.Clear();
-                                    intCounter = 0;
-                                }
-
-                                Utils.RunWithoutThreadLock(() => Task.WhenAll(lstCachingTasks));
-
+                                Utils.RunWithoutThreadLock(() => ParallelExtensions.ForEachAsync(Utils.BasicDataFileNames, strLoopFile => CacheCommonFile(strLoopFile, frmLoadingBar.MyForm)));
                                 async Task CacheCommonFile(string strFile, LoadingBar frmLoadingBarInner)
                                 {
                                     // Load default language data first for performance reasons
@@ -1534,10 +1519,13 @@ namespace Chummer
         /// <summary>
         /// Opens the correct window for a single character in the main form, queues the command to open on the main form if it is not assigned (thread-safe).
         /// </summary>
-        public static Task OpenCharacter(Character objCharacter, bool blnIncludeInMru = true, CancellationToken token = default)
+        public static async Task OpenCharacter(Character objCharacter, bool blnIncludeInMru = true, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            return objCharacter == null ? Task.CompletedTask : OpenCharacterList(objCharacter.Yield(), blnIncludeInMru, token);
+            if (objCharacter == null)
+                return;
+            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
+                await OpenCharacterList(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1567,10 +1555,13 @@ namespace Chummer
         /// <summary>
         /// Open a character's print form up without necessarily opening them up fully for editing.
         /// </summary>
-        public static Task OpenCharacterForPrinting(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
+        public static async Task OpenCharacterForPrinting(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            return objCharacter == null ? Task.CompletedTask : OpenCharacterListForPrinting(objCharacter.Yield(), blnIncludeInMru, token);
+            if (objCharacter == null)
+                return;
+            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
+                await OpenCharacterListForPrinting(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -1600,10 +1591,13 @@ namespace Chummer
         /// <summary>
         /// Open a character for exporting without necessarily opening them up fully for editing.
         /// </summary>
-        public static Task OpenCharacterForExport(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
+        public static async Task OpenCharacterForExport(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            return objCharacter == null ? Task.CompletedTask : OpenCharacterListForExport(objCharacter.Yield(), blnIncludeInMru, token);
+            if (objCharacter == null)
+                return;
+            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
+                await OpenCharacterListForExport(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
         }
 
         /// <summary>

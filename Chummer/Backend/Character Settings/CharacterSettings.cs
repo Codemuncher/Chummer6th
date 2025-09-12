@@ -79,6 +79,7 @@ namespace Chummer
         private bool _blnExceedPositiveQualities;
         private bool _blnExceedPositiveQualitiesCostDoubled;
         private bool _blnExtendAnyDetectionSpell;
+        private bool _blnAllowLimitedSpellsForBareHandedAdept;
         private bool _blnDroneArmorMultiplierEnabled;
         private bool _blnFreeSpiritPowerPointsMAG;
         private bool _blnNoArmorEncumbrance;
@@ -477,19 +478,7 @@ namespace Chummer
                     {
                         MultiplePropertiesChangedEventArgs objArgs =
                             new MultiplePropertiesChangedEventArgs(setNamesOfChangedProperties.ToArray());
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (MultiplePropertiesChangedAsyncEventHandler objEvent in _setMultiplePropertiesChangedAsync)
-                        {
-                            lstTasks.Add(objEvent.Invoke(this, objArgs, token));
-                            if (++i < Utils.MaxParallelBatchSize)
-                                continue;
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                            lstTasks.Clear();
-                            i = 0;
-                        }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(_setMultiplePropertiesChangedAsync, objEvent => objEvent.Invoke(this, objArgs, token), token).ConfigureAwait(false);
                         if (MultiplePropertiesChanged != null)
                         {
                             await Utils.RunOnMainThreadAsync(() =>
@@ -514,22 +503,16 @@ namespace Chummer
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
+                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstTasks.Add(objEvent.Invoke(this, objArg, token));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
+                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
 
                         if (PropertyChanged != null)
                         {
@@ -1285,7 +1268,7 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                return GetEquatableHashCodeCommon();
+                return await GetEquatableHashCodeCommonAsync(token).ConfigureAwait(false);
             }
             finally
             {
@@ -1467,6 +1450,193 @@ namespace Chummer
                 hashCode = (hashCode * 397) ^ (_setBooks?.GetOrderInvariantEnsembleHashCodeSmart() ?? 0);
                 hashCode = (hashCode * 397) ^ (_setBannedWareGrades?.GetOrderInvariantEnsembleHashCodeSmart() ?? 0);
                 hashCode = (hashCode * 397) ^ (_setRedlinerExcludes?.GetOrderInvariantEnsembleHashCodeSmart() ?? 0);
+                hashCode = (hashCode * 397) ^ _decKarmaMAGInitiationGroupPercent.GetHashCode();
+                hashCode = (hashCode * 397) ^ _decKarmaRESInitiationGroupPercent.GetHashCode();
+                hashCode = (hashCode * 397) ^ _decKarmaMAGInitiationOrdealPercent.GetHashCode();
+                hashCode = (hashCode * 397) ^ _decKarmaRESInitiationOrdealPercent.GetHashCode();
+                hashCode = (hashCode * 397) ^ _decKarmaMAGInitiationSchoolingPercent.GetHashCode();
+                hashCode = (hashCode * 397) ^ _decKarmaRESInitiationSchoolingPercent.GetHashCode();
+                hashCode = (hashCode * 397) ^ SpecializationBonus;
+                hashCode = (hashCode * 397) ^ ExpertiseBonus;
+                return hashCode;
+            }
+        }
+
+        private async Task<int> GetEquatableHashCodeCommonAsync(CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            unchecked
+            {
+                int hashCode = _guiSourceId.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_strFileName?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strName?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ _blnAllowBiowareSuites.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowCyberwareESSDiscounts.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowEditPartOfBaseWeapon.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowHigherStackedFoci.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowInitiationInCreateMode.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDontUseCyberlimbCalculation.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowSkillRegrouping.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnSpecializationsBreakSkillGroups.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAlternateMetatypeAttributeKarma.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnArmorDegradation.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnStrictSkillGroupsInCreateMode.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowPointBuySpecializationsOnKarmaSkills.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnCyberlegMovement.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDontDoubleQualityPurchaseCost.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDontDoubleQualityRefundCost.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnEnforceCapacity.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnESSLossReducesMaximumOnly.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnExceedNegativeQualities.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnExceedNegativeQualitiesNoBonus.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnExceedPositiveQualities.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnExceedPositiveQualitiesCostDoubled.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnExtendAnyDetectionSpell.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDroneArmorMultiplierEnabled.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnFreeSpiritPowerPointsMAG.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnNoArmorEncumbrance.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnUncappedArmorAccessoryBonuses.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnIgnoreArt.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnIgnoreComplexFormLimit.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnUnarmedImprovementsApplyToWeapons.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnLicenseRestrictedItems.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnMaximumArmorModifications.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnMetatypeCostsKarma.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnMoreLethalGameplay.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnMultiplyForbiddenCost.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnMultiplyRestrictedCost.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnNoSingleArmorEncumbrance.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnRestrictRecoil.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnSpecialKarmaCostBasedOnShownValue.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnSpiritForceBasedOnTotalMAG.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnUnrestrictedNuyen.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnUseCalculatedPublicAwareness.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnUsePointsOnBrokenGroups.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_strContactPointsExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strKnowledgePointsExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strChargenKarmaToNuyenExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strBoundSpiritExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strRegisteredSpriteExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strEssenceModifierPostExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strLiftLimitExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strCarryLimitExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strEncumbranceIntervalExpression?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ _blnDoEncumbrancePenaltyPhysicalLimit.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDoEncumbrancePenaltyMovementSpeed.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDoEncumbrancePenaltyAgility.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDoEncumbrancePenaltyReaction.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDoEncumbrancePenaltyWoundModifier.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intEncumbrancePenaltyPhysicalLimit.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intEncumbrancePenaltyMovementSpeed.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intEncumbrancePenaltyAgility.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intEncumbrancePenaltyReaction.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intEncumbrancePenaltyWoundModifier.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDoNotRoundEssenceInternally.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnEnableEnemyTracking.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnEnemyKarmaQualityLimit.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_strEssenceFormat?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ _intForbiddenCostMultiplier;
+                hashCode = (hashCode * 397) ^ _intDroneArmorMultiplier;
+                hashCode = (hashCode * 397) ^ _intLimbCount;
+                hashCode = (hashCode * 397) ^ _intMetatypeCostMultiplier;
+                hashCode = (hashCode * 397) ^ _decNuyenPerBPWftM.GetHashCode();
+                hashCode = (hashCode * 397) ^ _decNuyenPerBPWftP.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intRestrictedCostMultiplier;
+                hashCode = (hashCode * 397) ^ _blnAutomaticBackstory.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnFreeMartialArtSpecialization.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnPrioritySpellsAsAdeptPowers.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnMysAdeptAllowPpCareer.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnMysAdeptSecondMAGAttribute.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnReverseAttributePriorityOrder.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_strNuyenFormat?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strWeightFormat?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ _blnCompensateSkillGroupKarmaDifference.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnIncreasedImprovedAbilityMultiplier.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowFreeGrids.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnAllowTechnomancerSchooling.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnCyberlimbAttributeBonusCapOverride.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_strBookXPath?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strExcludeLimbSlot?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ _intCyberlimbAttributeBonusCap;
+                hashCode = (hashCode * 397) ^ _blnUnclampAttributeMinimum.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDroneMods.GetHashCode();
+                hashCode = (hashCode * 397) ^ _blnDroneModsMaximumPilot.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intMaxNumberMaxAttributesCreate;
+                hashCode = (hashCode * 397) ^ _intMaxSkillRatingCreate;
+                hashCode = (hashCode * 397) ^ _intMaxKnowledgeSkillRatingCreate;
+                hashCode = (hashCode * 397) ^ _intMaxSkillRating;
+                hashCode = (hashCode * 397) ^ _intMaxKnowledgeSkillRating;
+                hashCode = (hashCode * 397) ^ _intMinInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intMaxInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intMinAstralInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intMaxAstralInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intMinColdSimInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intMaxColdSimInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intMinHotSimInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intMaxHotSimInitiativeDice;
+                hashCode = (hashCode * 397) ^ _intKarmaAttribute;
+                hashCode = (hashCode * 397) ^ _intKarmaCarryover;
+                hashCode = (hashCode * 397) ^ _intKarmaContact;
+                hashCode = (hashCode * 397) ^ _intKarmaEnemy;
+                hashCode = (hashCode * 397) ^ _intKarmaEnhancement;
+                hashCode = (hashCode * 397) ^ _intKarmaImproveActiveSkill;
+                hashCode = (hashCode * 397) ^ _intKarmaImproveKnowledgeSkill;
+                hashCode = (hashCode * 397) ^ _intKarmaImproveSkillGroup;
+                hashCode = (hashCode * 397) ^ _intKarmaInitiation;
+                hashCode = (hashCode * 397) ^ _intKarmaInitiationFlat;
+                hashCode = (hashCode * 397) ^ _intKarmaJoinGroup;
+                hashCode = (hashCode * 397) ^ _intKarmaLeaveGroup;
+                hashCode = (hashCode * 397) ^ _intKarmaTechnique;
+                hashCode = (hashCode * 397) ^ _intKarmaMetamagic;
+                hashCode = (hashCode * 397) ^ _intKarmaNewActiveSkill;
+                hashCode = (hashCode * 397) ^ _intKarmaNewComplexForm;
+                hashCode = (hashCode * 397) ^ _intKarmaNewKnowledgeSkill;
+                hashCode = (hashCode * 397) ^ _intKarmaNewSkillGroup;
+                hashCode = (hashCode * 397) ^ _intKarmaQuality;
+                hashCode = (hashCode * 397) ^ _intKarmaSpecialization;
+                hashCode = (hashCode * 397) ^ _intKarmaKnoSpecialization;
+                hashCode = (hashCode * 397) ^ _intKarmaSpell;
+                hashCode = (hashCode * 397) ^ _intKarmaSpirit;
+                hashCode = (hashCode * 397) ^ _intKarmaNewAIProgram;
+                hashCode = (hashCode * 397) ^ _intKarmaNewAIAdvancedProgram;
+                hashCode = (hashCode * 397) ^ _intKarmaMysticAdeptPowerPoint;
+                hashCode = (hashCode * 397) ^ _intKarmaSpiritFettering;
+                hashCode = (hashCode * 397) ^ _intKarmaAlchemicalFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaDisenchantingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaCenteringFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaFlexibleSignatureFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaMaskingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaSpellShapingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaPowerFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaQiFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaCounterspellingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaRitualSpellcastingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaSpellcastingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaSustainingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaBanishingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaBindingFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaSummoningFocus;
+                hashCode = (hashCode * 397) ^ _intKarmaWeaponFocus;
+                hashCode = (hashCode * 397) ^ _intDicePenaltySustaining;
+                hashCode = (hashCode * 397) ^ (int)_eBuildMethod;
+                hashCode = (hashCode * 397) ^ _intBuildPoints;
+                hashCode = (hashCode * 397) ^ _intQualityKarmaLimit;
+                hashCode = (hashCode * 397) ^ (_strPriorityArray?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (_strPriorityTable?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ _intSumtoTen;
+                hashCode = (hashCode * 397) ^ _decNuyenMaximumBP.GetHashCode();
+                hashCode = (hashCode * 397) ^ _intAvailability;
+                hashCode = (hashCode * 397) ^ _intMaxMartialArts;
+                hashCode = (hashCode * 397) ^ _intMaxMartialTechniques;
+                hashCode = (hashCode * 397) ^ _decNuyenCarryover.GetHashCode();
+                hashCode = (hashCode * 397) ^ (_dicCustomDataDirectoryKeys != null ? await _dicCustomDataDirectoryKeys.GetEnsembleHashCodeAsync(token).ConfigureAwait(false) : 0);
+                hashCode = (hashCode * 397) ^ (_setEnabledCustomDataDirectories?.GetEnsembleHashCode(token) ?? 0);
+                hashCode = (hashCode * 397)
+                           ^ (_setEnabledCustomDataDirectoryGuids?.GetOrderInvariantEnsembleHashCodeSmart(token) ?? 0);
+                hashCode = (hashCode * 397) ^ (_lstEnabledCustomDataDirectoryPaths?.GetEnsembleHashCode(token) ?? 0);
+                hashCode = (hashCode * 397) ^ (_setBooks?.GetOrderInvariantEnsembleHashCodeSmart(token) ?? 0);
+                hashCode = (hashCode * 397) ^ (_setBannedWareGrades?.GetOrderInvariantEnsembleHashCodeSmart(token) ?? 0);
+                hashCode = (hashCode * 397) ^ (_setRedlinerExcludes?.GetOrderInvariantEnsembleHashCodeSmart(token) ?? 0);
                 hashCode = (hashCode * 397) ^ _decKarmaMAGInitiationGroupPercent.GetHashCode();
                 hashCode = (hashCode * 397) ^ _decKarmaRESInitiationGroupPercent.GetHashCode();
                 hashCode = (hashCode * 397) ^ _decKarmaMAGInitiationOrdealPercent.GetHashCode();
@@ -1803,6 +1973,10 @@ namespace Chummer
                     // <extendanydetectionspell />
                     objWriter.WriteElementString("extendanydetectionspell",
                                                     _blnExtendAnyDetectionSpell.ToString(
+                                                        GlobalSettings.InvariantCultureInfo));
+                    // <allowlimitedspells />
+                    objWriter.WriteElementString("allowlimitedspellsforbarehandedadept",
+                                                    _blnAllowLimitedSpellsForBareHandedAdept.ToString(
                                                         GlobalSettings.InvariantCultureInfo));
                     //<dontusecyberlimbcalculation />
                     objWriter.WriteElementString("dontusecyberlimbcalculation",
@@ -2641,6 +2815,10 @@ namespace Chummer
                             _blnExtendAnyDetectionSpell.ToString(
                                 GlobalSettings.InvariantCultureInfo), token: token)
                         .ConfigureAwait(false);
+                    await objWriter.WriteElementStringAsync("allowlimitedspellsforbarehandedadept",
+                            _blnAllowLimitedSpellsForBareHandedAdept.ToString(
+                                GlobalSettings.InvariantCultureInfo), token: token)
+                        .ConfigureAwait(false);
                     //<dontusecyberlimbcalculation />
                     await objWriter.WriteElementStringAsync("dontusecyberlimbcalculation",
                             _blnDontUseCyberlimbCalculation.ToString(
@@ -3173,8 +3351,9 @@ namespace Chummer
         /// </summary>
         /// <param name="strFileName">Settings file to load from.</param>
         /// <param name="blnShowDialogs">Whether to show message boxes on failures to load.</param>
+        /// <param name="blnPatient">Whether to wait in case of an exception (usually because a file is in use).</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public bool Load(string strFileName, bool blnShowDialogs = true, CancellationToken token = default)
+        public bool Load(string strFileName, bool blnShowDialogs = true, bool blnPatient = true, CancellationToken token = default)
         {
             using (LockObject.EnterWriteLock(token))
             {
@@ -3186,7 +3365,9 @@ namespace Chummer
                 {
                     try
                     {
-                        objXmlDocument = XPathDocumentExtensions.LoadStandardFromFile(strFilePath, token: token);
+                        objXmlDocument = blnPatient
+                            ? XPathDocumentExtensions.LoadStandardFromFilePatient(strFilePath, token: token)
+                            : XPathDocumentExtensions.LoadStandardFromFile(strFilePath, token: token);
                     }
                     catch (Exception e) when ((e is IOException) || (e is XmlException))
                     {
@@ -3414,7 +3595,8 @@ namespace Chummer
                 // Format in which weight values are displayed
                 if (objXmlNode.TryGetStringFieldQuickly("weightformat", ref _strWeightFormat))
                 {
-                    if (!_strWeightFormat.Contains('.'))
+                    int intDecimalPlaces = _strWeightFormat.IndexOf('.');
+                    if (intDecimalPlaces == -1)
                         _strWeightFormat += ".###";
                 }
 
@@ -3464,6 +3646,8 @@ namespace Chummer
                                                   ref _blnAllowPointBuySpecializationsOnKarmaSkills);
                 // Whether any Detection Spell can be taken as Extended range version.
                 objXmlNode.TryGetBoolFieldQuickly("extendanydetectionspell", ref _blnExtendAnyDetectionSpell);
+                // Whether Adepts can take Limited Spells as Barehanded Adept Powers.
+                objXmlNode.TryGetBoolFieldQuickly("allowlimitedspellsforbarehandedadept", ref _blnAllowLimitedSpellsForBareHandedAdept);
                 // Whether cyberlimbs are used for augmented attribute calculation.
                 objXmlNode.TryGetBoolFieldQuickly("dontusecyberlimbcalculation", ref _blnDontUseCyberlimbCalculation);
                 // House rule: Treat the Metatype Attribute Minimum as 1 for the purpose of calculating Karma costs.
@@ -3919,8 +4103,9 @@ namespace Chummer
         /// </summary>
         /// <param name="strFileName">Settings file to load from.</param>
         /// <param name="blnShowDialogs">Whether to show message boxes on failures to load.</param>
+        /// <param name="blnPatient">Whether to wait in case of an exception (usually because a file is in use).</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public async Task<bool> LoadAsync(string strFileName, bool blnShowDialogs = true, CancellationToken token = default)
+        public async Task<bool> LoadAsync(string strFileName, bool blnShowDialogs = true, bool blnPatient = true, CancellationToken token = default)
         {
             IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
             try
@@ -3935,7 +4120,9 @@ namespace Chummer
                     try
                     {
                         objXmlDocument
-                            = await XPathDocumentExtensions.LoadStandardFromFileAsync(strFilePath, token: token).ConfigureAwait(false);
+                            = blnPatient
+                            ? await XPathDocumentExtensions.LoadStandardFromFilePatientAsync(strFilePath, token: token).ConfigureAwait(false)
+                            : await XPathDocumentExtensions.LoadStandardFromFileAsync(strFilePath, token: token).ConfigureAwait(false);
                     }
                     catch (Exception e) when ((e is IOException) || (e is XmlException))
                     {
@@ -4174,7 +4361,8 @@ namespace Chummer
                 // Format in which weight values are displayed
                 if (objXmlNode.TryGetStringFieldQuickly("weightformat", ref _strWeightFormat))
                 {
-                    if (!_strWeightFormat.Contains('.'))
+                    int intDecimalPlaces = _strWeightFormat.IndexOf('.');
+                    if (intDecimalPlaces == -1)
                         _strWeightFormat += ".###";
                 }
 
@@ -4289,6 +4477,9 @@ namespace Chummer
 
                 //House Rule: The DicePenalty per sustained spell or form
                 objXmlNode.TryGetInt32FieldQuickly("dicepenaltysustaining", ref _intDicePenaltySustaining);
+
+                // Whether Adepts can take Limited Spells as Barehanded Adept Powers.
+                objXmlNode.TryGetBoolFieldQuickly("allowlimitedspellsforbarehandedadept", ref _blnAllowLimitedSpellsForBareHandedAdept);
 
                 // Initiative dice
                 objXmlNode.TryGetInt32FieldQuickly("mininitiativedice", ref _intMinInitiativeDice);
@@ -12638,6 +12829,90 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 return _blnExtendAnyDetectionSpell;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Whether the UI should allow selecting Limited versions of spells (e.g. for Barehanded Adept).
+        /// </summary>
+        public bool AllowLimitedSpellsForBareHandedAdept
+        {
+            get
+            {
+                using (LockObject.EnterReadLock())
+                    return _blnAllowLimitedSpellsForBareHandedAdept;
+            }
+            set
+            {
+                using (LockObject.EnterUpgradeableReadLock())
+                {
+                    if (_blnAllowLimitedSpellsForBareHandedAdept == value)
+                        return;
+                    using (LockObject.EnterWriteLock())
+                    {
+                        _blnAllowLimitedSpellsForBareHandedAdept = value;
+                        OnPropertyChanged();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Whether the UI should allow selecting Limited versions of spells (e.g. for Barehanded Adept).
+        /// </summary>
+        public async Task<bool> GetAllowLimitedSpellsForBareHandedAdeptAsync(CancellationToken token = default)
+        {
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                return _blnAllowLimitedSpellsForBareHandedAdept;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Whether the UI should allow selecting Limited versions of spells (e.g. for Barehanded Adept).
+        /// </summary>
+        public async Task SetAllowLimitedSpellsForBareHandedAdeptAsync(bool value, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (_blnAllowLimitedSpellsForBareHandedAdept == value)
+                    return;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+            token.ThrowIfCancellationRequested();
+            objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                if (_blnAllowLimitedSpellsForBareHandedAdept == value)
+                    return;
+                IAsyncDisposable objLocker2 = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    _blnAllowLimitedSpellsForBareHandedAdept = value;
+                    await OnPropertyChangedAsync(nameof(AllowLimitedSpellsForBareHandedAdept), token).ConfigureAwait(false);
+                }
+                finally
+                {
+                    await objLocker2.DisposeAsync().ConfigureAwait(false);
+                }
             }
             finally
             {

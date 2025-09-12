@@ -19,11 +19,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.XPath;
 using Chummer.Backend.Skills;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -139,7 +139,7 @@ namespace Chummer
                 await cboSpec.DoThreadSafeAsync(x => x.SelectedIndex = x.FindStringExact(_strForceItem)).ConfigureAwait(false);
                 if (await cboSpec.DoThreadSafeFuncAsync(x => x.SelectedIndex).ConfigureAwait(false) == -1)
                 {
-                    await cboSpec.PopulateWithListItemsAsync(new ListItem(_strForceItem, _strForceItem).Yield()).ConfigureAwait(false);
+                    await cboSpec.PopulateWithListItemAsync(new ListItem(_strForceItem, _strForceItem)).ConfigureAwait(false);
                     await cboSpec.DoThreadSafeAsync(x => x.SelectedIndex = 0).ConfigureAwait(false);
                 }
 
@@ -189,14 +189,13 @@ namespace Chummer
         /// </summary>
         public bool AllowAutoSelect { get; } = true;
 
+       
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Type of skill that we're selecting. Used to differentiate knowledge skills.
         /// </summary>
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Mode { get; set; }
 
-        
         #endregion Properties
 
         #region Methods

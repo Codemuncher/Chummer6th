@@ -30,6 +30,7 @@ using Chummer.Backend.Attributes;
 using Chummer.Backend.Skills;
 using Chummer.Properties;
 using Timer = System.Windows.Forms.Timer;
+using System.ComponentModel;
 
 namespace Chummer.UI.Skills
 {
@@ -113,7 +114,7 @@ namespace Chummer.UI.Skills
                     {
                         AutoSize = true,
                         AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                        Dock = DockStyle.Fill,
+                        Dock = DockStyle.None,
                         Margin = new Padding(3, 0, 3, 0),
                         Name = "cmdDelete",
                         Tag = "String_Delete",
@@ -241,8 +242,10 @@ namespace Chummer.UI.Skills
                             Margin = new Padding(3, 0, 3, 0),
                             Name = "cboSpec",
                             TabStop = false
+                            
                         };
                         cboSpec.TextChanged += cboSpec_TextChanged;
+                        cboSpec.SelectedIndexChanged += CboSpec_SelectedIndexChanged;
                         _tmrSpecChangeTimer = new Timer { Interval = 1000 };
                         _tmrSpecChangeTimer.Tick += SpecChangeTimer_Tick;
                         chkKarma = new ColorableCheckBox
@@ -281,6 +284,22 @@ namespace Chummer.UI.Skills
             if (_objAttributeActive != null)
             {
                 _objAttributeActive.MultiplePropertiesChangedAsync += Attribute_PropertyChanged;
+            }
+        }
+
+        private void CboSpec_SelectedIndexChanged(object sender, EventArgs e)
+        {
+          
+           // IAsyncDisposable objLocker = await _objSkill.LockObject.EnterReadLockAsync().ConfigureAwait(false);
+            try
+            {
+                var cb = (ElasticComboBox)sender;
+              // cb.SelectedText = cb.Text;
+                cb.Text = cb.Text;
+            }
+            finally
+            {
+               // objLocker?.DisposeAsync().AsTask().Wait();
             }
         }
 
@@ -675,8 +694,8 @@ namespace Chummer.UI.Skills
                                          await _objSkill.GetCGLSpecializationsAsync(_objMyToken)
                                                         .ConfigureAwait(false), token: token)
                                      .ConfigureAwait(false);
-                        await cboSpec.DoThreadSafeAsync(x => x.Text = strDisplaySpec, token: token)
-                                     .ConfigureAwait(false);
+                       // await cboSpec.DoThreadSafeAsync(x => x.Text = "Gunnery", token: token)
+                        //             .ConfigureAwait(false);
                     }
                     finally
                     {
@@ -1178,6 +1197,13 @@ namespace Chummer.UI.Skills
             }, token: token).ConfigureAwait(false);
         }
 
+        private async void refreshAfterDelete_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        public event EventHandler SkillDeleted;
+
         private async void cmdDelete_Click(object sender, EventArgs e)
         {
             try
@@ -1191,13 +1217,26 @@ namespace Chummer.UI.Skills
                                          _objSkill.IsExoticSkill ? "Message_DeleteExoticSkill" : "Message_DeleteSkill",
                                          token: _objMyToken).ConfigureAwait(false), _objMyToken).ConfigureAwait(false))
                     return;
-                await _objSkill.CharacterObject.SkillsSection.Skills.RemoveAsync(_objSkill, _objMyToken)
+                await _objSkill.CharacterObject.SkillsSection.CharacterSkills.RemoveAsync(_objSkill, _objMyToken)
                                .ConfigureAwait(false);
+                //ThreadSafeObservableCollection<SkillSpecialization> lstSpecs
+                //   = await _objSkill.GetSpecializationsAsync().ConfigureAwait(false);
+                //await ;//.ResetControlsAsync(sender as SkillControl).ConfigureAwait(false);
+                await _objSkill.ClearSkillSpecialization(_objSkill.Name).ConfigureAwait(false);
+               
+                UnbindSkillControl();
+                //TODO: Remove from Dictionary to keep things in sync
+                // Raise the event to notify parent control
+                SkillDeleted?.Invoke(this, EventArgs.Empty);
 
             }
             catch (OperationCanceledException)
             {
                 //swallow this
+            }
+            finally
+            {
+                //refresh8
             }
         }
 
@@ -1323,6 +1362,12 @@ namespace Chummer.UI.Skills
             }
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Skill SkillUsed
+        {
+            get { return _objSkill; }
+            internal set {;} }
+
         private ButtonWithToolTip FindToolTipControl(Point pt)
         {
             return Controls.OfType<ButtonWithToolTip>().FirstOrDefault(c => c.ClientRectangle.Contains(pt));
@@ -1408,16 +1453,54 @@ namespace Chummer.UI.Skills
                     string strSpec = await cboSpec.DoThreadSafeFuncAsync(x => x.Text, token: _objMyToken)
                                                   .ConfigureAwait(false);
                     await _objSkill.SetTopMostDisplaySpecializationAsync(strSpec, _objMyToken).ConfigureAwait(false);
+                  
+                }
+                catch (Exception ex)
+                {
+                    var error = ex.Demystify;
                 }
                 finally
                 {
                     Interlocked.Decrement(ref _intUpdatingSpec);
+                    //                    SetSelectedSpecialization(cboSpec.Text);
                 }
             }
             catch (OperationCanceledException)
             {
                 //swallow this
             }
+        }
+        public void SetSelectedSpecialization(string specializationName)
+        {
+            if (cboSpec == null)
+                return;
+
+            //// Try to find the item in the ComboBox that matches the specializationName
+            //int index = -1;
+            //for (int i = 0; i < cboSpec.Items.Count; i++)
+            //{
+            //    var item = cboSpec.Items[i];
+            //    if (item != null && item.ToString().Equals(specializationName, StringComparison.CurrentCultureIgnoreCase))
+            //    {
+            //        index = i;
+            //        break;
+            //    }
+            //}
+
+            //if (index >= 0)
+            //{
+            //    cboSpec.SelectedIndex = -1;
+            //    cboSpec.Text = specializationName;
+            //    //cboSpec.Text = specializationName;
+
+            //}
+            //else
+            //{
+            //    // If not found, set the text directly (for custom/typed-in specializations)
+            //   // cboSpec.SelectedIndex = -1;
+            //    cboSpec.Text = specializationName;
+            cboSpec.SelectedText = specializationName;
+            //}
         }
     }
 }

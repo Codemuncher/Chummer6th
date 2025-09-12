@@ -18,13 +18,7 @@
  */
 
 using System;
-
-#if DEBUG
-
 using System.Diagnostics;
-
-#endif
-
 using System.Globalization;
 using System.Xml;
 using System.Runtime.CompilerServices;
@@ -125,6 +119,7 @@ namespace Chummer
 #else
                 string errorMsg = "Tried to read missing field \"" + field + '\"';
 #endif
+                ex = ex.Demystify();
                 Log.Error(ex, errorMsg);
                 //Finally, we have to assign an out parameter something, so default
                 //null or 0 most likely
@@ -245,10 +240,11 @@ namespace Chummer
         /// <param name="xmlParentNode">The parent node against which the filter operations are checked.</param>
         /// <returns>True if the parent node passes the conditions set in the operation node/nodelist, false otherwise.</returns>
         public static bool ProcessFilterOperationNode(this XmlNode xmlParentNode, XPathNavigator xmlOperationNode,
-                                                      bool blnIsOrNode)
+                                                      bool blnIsOrNode, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             XPathNavigator xmlParentNavigator = xmlParentNode?.CreateNavigator();
-            return xmlParentNavigator.ProcessFilterOperationNode(xmlOperationNode, blnIsOrNode);
+            return xmlParentNavigator.ProcessFilterOperationNode(xmlOperationNode, blnIsOrNode, token);
         }
 
         /// <summary>
@@ -258,10 +254,11 @@ namespace Chummer
         /// <param name="xmlOperationNode">The node containing the filter operation or a list of filter operations. Every element here is checked against corresponding elements in the parent node, using an operation specified in the element's attributes.</param>
         /// <param name="xmlParentNode">The parent node against which the filter operations are checked.</param>
         /// <returns>True if the parent node passes the conditions set in the operation node/nodelist, false otherwise.</returns>
-        public static bool ProcessFilterOperationNode(this XmlNode xmlParentNode, XmlNode xmlOperationNode, bool blnIsOrNode)
+        public static bool ProcessFilterOperationNode(this XmlNode xmlParentNode, XmlNode xmlOperationNode, bool blnIsOrNode, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             XPathNavigator xmlParentNavigator = xmlParentNode?.CreateNavigator();
-            return xmlParentNavigator.ProcessFilterOperationNode(xmlOperationNode?.CreateNavigator(), blnIsOrNode);
+            return xmlParentNavigator.ProcessFilterOperationNode(xmlOperationNode?.CreateNavigator(), blnIsOrNode, token);
         }
 
         /// <summary>

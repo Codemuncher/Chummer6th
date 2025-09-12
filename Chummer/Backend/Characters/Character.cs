@@ -466,6 +466,8 @@ namespace Chummer
                     blnUpdateSubmersion = true;
                     break;
             }
+            if (!blnUpdateSubmersion && !blnUpdateInitiation)
+                return;
             // Need a complete recalculation because of potential issues where grades can change in between the grade getter and setter calls.
             IAsyncDisposable objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
             try
@@ -474,12 +476,15 @@ namespace Chummer
                 ThreadSafeObservableCollection<InitiationGrade> lstInitiationGrades = await GetInitiationGradesAsync(token).ConfigureAwait(false);
                 // Don't do checks for update submersion/initiation in the accumulator because it's faster to just index counts than to do those checks every iteration.
                 int intSubmersion = await lstInitiationGrades.CountAsync(objItem => objItem.Technomancer, token: token).ConfigureAwait(false);
-                int intInitiation = await lstInitiationGrades.GetCountAsync(token).ConfigureAwait(false) - intSubmersion;
-
-                if (blnUpdateSubmersion)
-                    await SetSubmersionGradeAsync(intSubmersion, token).ConfigureAwait(false);
                 if (blnUpdateInitiation)
+                {
+                    int intInitiation = await lstInitiationGrades.GetCountAsync(token).ConfigureAwait(false) - intSubmersion;
+                    if (blnUpdateSubmersion)
+                        await SetSubmersionGradeAsync(intSubmersion, token).ConfigureAwait(false);
                     await SetInitiateGradeAsync(intInitiation, token).ConfigureAwait(false);
+                }
+                else if (blnUpdateSubmersion)
+                    await SetSubmersionGradeAsync(intSubmersion, token).ConfigureAwait(false);
             }
             finally
             {
@@ -1179,19 +1184,7 @@ namespace Chummer
                     if (_lstSettingsMultiplePropertiesChangedAsync.Count > 0)
                     {
                         MultiplePropertiesChangedEventArgs objArgs = new MultiplePropertiesChangedEventArgs(lstProperties);
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (MultiplePropertiesChangedAsyncEventHandler objEvent in _lstSettingsMultiplePropertiesChangedAsync)
-                        {
-                            lstTasks.Add(objEvent.Invoke(this, objArgs, token));
-                            if (++i < Utils.MaxParallelBatchSize)
-                                continue;
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                            lstTasks.Clear();
-                            i = 0;
-                        }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(_setMultiplePropertiesChangedAsync, objEvent => objEvent.Invoke(this, objArgs, token), token).ConfigureAwait(false);
 
                         if (SettingsPropertyChanged != null)
                         {
@@ -1219,22 +1212,16 @@ namespace Chummer
                     {
                         List<PropertyChangedEventArgs> lstArgsList = lstProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (PropertyChangedAsyncEventHandler objEvent in _lstSettingsPropertyChangedAsync)
+                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstTasks.Add(objEvent.Invoke(this, objArg, token));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
+                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
 
                         if (SettingsPropertyChanged != null)
                         {
@@ -1464,7 +1451,7 @@ namespace Chummer
                     foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToProcess in
                              dicChangedProperties)
                     {
-                        await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token).ConfigureAwait(false);
+                        await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token).ConfigureAwait(false);
                     }
                 }
                 finally
@@ -1552,7 +1539,7 @@ namespace Chummer
                     foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                              dicChangedProperties)
                     {
-                        await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token).ConfigureAwait(false);
+                        await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token).ConfigureAwait(false);
                     }
                 }
                 finally
@@ -1641,7 +1628,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                                  dicChangedProperties)
                         {
-                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token)
+                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -1731,7 +1718,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                                  dicChangedProperties)
                         {
-                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token)
+                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -1821,7 +1808,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToUpdate in
                                  dicChangedProperties)
                         {
-                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value.ToList(), token)
+                            await kvpToUpdate.Key.OnMultiplePropertiesChangedAsync(kvpToUpdate.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -1908,7 +1895,7 @@ namespace Chummer
                 }
 
                 if (setPropertiesToRefresh.Count > 0)
-                    await OnMultiplePropertiesChangedAsync(setPropertiesToRefresh.ToList(), token).ConfigureAwait(false);
+                    await OnMultiplePropertiesChangedAsync(setPropertiesToRefresh, token).ConfigureAwait(false);
             }
         }
 
@@ -2047,7 +2034,7 @@ namespace Chummer
                         foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToProcess in
                                  dicChangedProperties)
                         {
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2211,7 +2198,7 @@ namespace Chummer
                                  dicChangedProperties)
                         {
                             token.ThrowIfCancellationRequested();
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2401,7 +2388,7 @@ namespace Chummer
                                  dicChangedProperties)
                         {
                             token.ThrowIfCancellationRequested();
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2627,7 +2614,7 @@ namespace Chummer
                                  dicChangedProperties)
                         {
                             token.ThrowIfCancellationRequested();
-                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                            await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                 .ConfigureAwait(false);
                         }
                     }
@@ -2854,7 +2841,7 @@ namespace Chummer
                                 throw;
                             }
 
-                            ImprovementManager.Commit(this);
+                            ImprovementManager.Commit(this, token);
                         }
                     }
                 }
@@ -2939,7 +2926,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                         bImprovementAdded = true;
                     }
 
@@ -2990,7 +2977,7 @@ namespace Chummer
                                     throw;
                                 }
 
-                                ImprovementManager.Commit(this);
+                                ImprovementManager.Commit(this, token);
                             }
                             catch
                             {
@@ -3023,7 +3010,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                 }
 
@@ -3095,7 +3082,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                 }
 
@@ -3140,7 +3127,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                 }
 
                 //Load any cyberware the character has.
@@ -3175,7 +3162,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                     catch
                     {
@@ -3216,7 +3203,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                     catch
                     {
@@ -3272,7 +3259,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                 }
 
                 // Add any Gear the Critter comes with (typically Programs for A.I.s)
@@ -3331,7 +3318,7 @@ namespace Chummer
                             throw;
                         }
 
-                        ImprovementManager.Commit(this);
+                        ImprovementManager.Commit(this, token);
                     }
                     catch
                     {
@@ -3395,6 +3382,49 @@ namespace Chummer
                                 if (objXmlCritterPower != null)
                                 {
                                     CritterPower objPower = new CritterPower(this);
+                                    try
+                                    {
+                                        objPower.Create(objXmlCritterPower, 0, string.Empty);
+                                        objPower.CountTowardsLimit = false;
+                                        CritterPowers.Add(objPower);
+
+                                        try
+                                        {
+                                            token.ThrowIfCancellationRequested();
+                                            ImprovementManager.CreateImprovement(this, objPower.InternalId,
+                                                                                 Improvement.ImprovementSource.Metatype,
+                                                                                 string.Empty,
+                                                                                 Improvement.ImprovementType.CritterPower,
+                                                                                 string.Empty, token: token);
+                                        }
+                                        catch
+                                        {
+                                            ImprovementManager.Rollback(this, CancellationToken.None);
+                                            throw;
+                                        }
+
+                                        ImprovementManager.Commit(this, token);
+                                    }
+                                    catch
+                                    {
+                                        objPower.Remove(false);
+                                        throw;
+                                    }
+                                }
+                            }
+                        }
+                        else if (CritterPowers.All(x =>
+                                     x.Name != "Materialization" && !x.Name.Contains("Possession") &&
+                                     !x.Name.Contains("Inhabitation"), token))
+                        {
+                            // Add the Materialization Power.
+                            XmlNode objXmlCritterPower =
+                                xmlCritterPowerDocumentPowersNode.SelectSingleNode("power[name = \"Materialization\"]");
+                            if (objXmlCritterPower != null)
+                            {
+                                CritterPower objPower = new CritterPower(this);
+                                try
+                                {
                                     objPower.Create(objXmlCritterPower, 0, string.Empty);
                                     objPower.CountTowardsLimit = false;
                                     CritterPowers.Add(objPower);
@@ -3414,40 +3444,13 @@ namespace Chummer
                                         throw;
                                     }
 
-                                    ImprovementManager.Commit(this);
-                                }
-                            }
-                        }
-                        else if (CritterPowers.All(x =>
-                                     x.Name != "Materialization" && !x.Name.Contains("Possession") &&
-                                     !x.Name.Contains("Inhabitation"), token))
-                        {
-                            // Add the Materialization Power.
-                            XmlNode objXmlCritterPower =
-                                xmlCritterPowerDocumentPowersNode.SelectSingleNode("power[name = \"Materialization\"]");
-                            if (objXmlCritterPower != null)
-                            {
-                                CritterPower objPower = new CritterPower(this);
-                                objPower.Create(objXmlCritterPower, 0, string.Empty);
-                                objPower.CountTowardsLimit = false;
-                                CritterPowers.Add(objPower);
-
-                                try
-                                {
-                                    token.ThrowIfCancellationRequested();
-                                    ImprovementManager.CreateImprovement(this, objPower.InternalId,
-                                                                         Improvement.ImprovementSource.Metatype,
-                                                                         string.Empty,
-                                                                         Improvement.ImprovementType.CritterPower,
-                                                                         string.Empty, token: token);
+                                    ImprovementManager.Commit(this, token);
                                 }
                                 catch
                                 {
-                                    ImprovementManager.Rollback(this, CancellationToken.None);
+                                    objPower.Remove(false);
                                     throw;
                                 }
-
-                                ImprovementManager.Commit(this);
                             }
                         }
                     }
@@ -7859,7 +7862,7 @@ namespace Chummer
                                         {
                                             if (!(blnSync
                                                     // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                    ? CorrectedUnleveledQuality(objXmlQuality, xmlRootQualitiesNode)
+                                                    ? CorrectedUnleveledQuality(objXmlQuality, xmlRootQualitiesNode, token)
                                                     : await CorrectedUnleveledQualityAsync(objXmlQuality, xmlRootQualitiesNode, token).ConfigureAwait(false)))
                                             {
                                                 Quality objQuality = new Quality(this);
@@ -8241,7 +8244,7 @@ namespace Chummer
 
                                                         if (blnSync)
                                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                            ImprovementManager.Commit(this);
+                                                            ImprovementManager.Commit(this, token);
                                                         else
                                                             await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                                                     }
@@ -8319,7 +8322,7 @@ namespace Chummer
 
                                                         if (blnSync)
                                                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                                            ImprovementManager.Commit(this);
+                                                            ImprovementManager.Commit(this, token);
                                                         else
                                                             await ImprovementManager.CommitAsync(this, token).ConfigureAwait(false);
                                                     }
@@ -9012,17 +9015,20 @@ namespace Chummer
                                             : await objCyberware.GetNodeAsync(token: token).ConfigureAwait(false);
                                         if (objNode != null)
                                         {
-                                            if (blnSync)
+                                            using (TemporaryArray<string> aParams = new TemporaryArray<string>(objCyberware.InternalId, objCyberware.InternalId + "Pair"))
                                             {
-                                                // ReSharper disable once MethodHasAsyncOverload
-                                                ImprovementManager.RemoveImprovements(this, objCyberware.SourceType,
-                                                    new[] { objCyberware.InternalId, objCyberware.InternalId + "Pair" }, token: token);
-                                            }
-                                            else
-                                            {
-                                                await ImprovementManager.RemoveImprovementsAsync(
-                                                    this, objCyberware.SourceType,
-                                                    new[] { objCyberware.InternalId, objCyberware.InternalId + "Pair" }, token: token).ConfigureAwait(false);
+                                                if (blnSync)
+                                                {
+                                                    // ReSharper disable once MethodHasAsyncOverload
+                                                    ImprovementManager.RemoveImprovements(this, objCyberware.SourceType,
+                                                        aParams, token: token);
+                                                }
+                                                else
+                                                {
+                                                    await ImprovementManager.RemoveImprovementsAsync(
+                                                        this, objCyberware.SourceType,
+                                                        aParams, token: token).ConfigureAwait(false);
+                                                }
                                             }
 
                                             objCyberware.Bonus = objNode["bonus"];
@@ -9135,8 +9141,10 @@ namespace Chummer
                                                 XmlNode objNode = objCyberware.GetNode(token: token);
                                                 if (objNode != null)
                                                 {
-                                                    ImprovementManager.RemoveImprovements(this, objCyberware.SourceType,
-                                                        new[] { objCyberware.InternalId, objCyberware.InternalId + "Pair" }, token: token);
+                                                    using (TemporaryArray<string> aParams = new TemporaryArray<string>(objCyberware.InternalId, objCyberware.InternalId + "Pair"))
+                                                    {
+                                                        ImprovementManager.RemoveImprovements(this, objCyberware.SourceType, aParams, token: token);
+                                                    }
 
                                                     objCyberware.Bonus = objNode["bonus"];
                                                     objCyberware.WirelessBonus = objNode["wirelessbonus"];
@@ -9212,13 +9220,10 @@ namespace Chummer
                                                 XmlNode objNode = await objCyberware.GetNodeAsync(token: token).ConfigureAwait(false);
                                                 if (objNode != null)
                                                 {
-                                                    await ImprovementManager.RemoveImprovementsAsync(
-                                                        this, objCyberware.SourceType,
-                                                        new[]
-                                                        {
-                                                            objCyberware.InternalId,
-                                                            objCyberware.InternalId + "Pair"
-                                                        }, token: token).ConfigureAwait(false);
+                                                    using (TemporaryArray<string> aParams = new TemporaryArray<string>(objCyberware.InternalId, objCyberware.InternalId + "Pair"))
+                                                    {
+                                                        await ImprovementManager.RemoveImprovementsAsync(this, objCyberware.SourceType, aParams, token: token).ConfigureAwait(false);
+                                                    }
                                                     objCyberware.Bonus = objNode["bonus"];
                                                     objCyberware.WirelessBonus = objNode["wirelessbonus"];
                                                     objCyberware.PairBonus = objNode["pairbonus"];
@@ -11127,10 +11132,10 @@ namespace Chummer
                                              dicChangedProperties)
                                     {
                                         if (blnSync)
-                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value.ToList());
+                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value);
                                         else
                                             await kvpToProcess.Key
-                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                                 .ConfigureAwait(false);
                                     }
                                 }
@@ -13472,9 +13477,8 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 foreach (string strId in lstIds)
                 {
-                    string strToAdd = strId?.TrimEndOnce("Pair").TrimEndOnce("Wireless");
                     if (!string.IsNullOrEmpty(strId))
-                        setIds.Add(strToAdd);
+                        setIds.Add(strId.TrimEndOnce("Pair").TrimEndOnce("Wireless"));
                 }
                 if (setIds.Count == 0)
                     yield break;
@@ -14057,9 +14061,8 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 foreach (string strId in lstIds)
                 {
-                    string strToAdd = strId?.TrimEndOnce("Pair").TrimEndOnce("Wireless");
                     if (!string.IsNullOrEmpty(strId))
-                        setIds.Add(strToAdd);
+                        setIds.Add(strId.TrimEndOnce("Pair").TrimEndOnce("Wireless"));
                 }
                 List<IHasInternalId> lstReturn = new List<IHasInternalId>(setIds.Count);
                 if (setIds.Count == 0)
@@ -14863,7 +14866,7 @@ namespace Chummer
                             }
 
                             objReturnGear
-                                = Armor.FindArmorGear(strImprovedSourceName, out Armor objArmor, out ArmorMod objArmorMod);
+                                = Armor.FindArmorGear(strImprovedSourceName, out Armor objArmor, out ArmorMod objArmorMod, token);
                             if (objReturnGear != null)
                             {
                                 string strGearReturn = objReturnGear.DisplayNameShort(strLanguage);
@@ -14887,7 +14890,7 @@ namespace Chummer
                             }
 
                             objReturnGear
-                                = Cyberware.FindCyberwareGear(strImprovedSourceName, out Cyberware objGearCyberware);
+                                = Cyberware.FindCyberwareGear(strImprovedSourceName, out Cyberware objGearCyberware, token);
 
                             if (objReturnGear != null)
                             {
@@ -16217,6 +16220,33 @@ namespace Chummer
             }
         }
 
+        public void FormatImprovementModifiers(StringBuilder sbdToolTip, Improvement.ImprovementType eType, string strSpace, int intModifiers, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (sbdToolTip == null)
+                return;
+            sbdToolTip.Append(strSpace).Append('+').Append(strSpace).Append(LanguageManager.GetString("Tip_Modifiers", token: token));
+            bool blnFirstModifier = true;
+            using (LockObject.EnterReadLock(token))
+            {
+                foreach (Improvement objLoopImprovement in ImprovementManager.GetCachedImprovementListForValueOf(
+                                 this, eType, token: token))
+                {
+                    if (blnFirstModifier)
+                    {
+                        blnFirstModifier = false;
+                        sbdToolTip.Append(LanguageManager.GetString("String_Colon", token: token));
+                    }
+                    else
+                        sbdToolTip.Append(',');
+
+                    sbdToolTip.Append(strSpace).Append(GetObjectName(objLoopImprovement, token: token));
+                }
+            }
+
+            sbdToolTip.Append(strSpace).Append('(').Append(intModifiers.ToString(GlobalSettings.CultureInfo)).Append(')');
+        }
+
         public void FormatImprovementModifiers(StringBuilder sbdToolTip, IEnumerable<Improvement.ImprovementType> improvements, string strSpace, int intModifiers, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -16242,6 +16272,40 @@ namespace Chummer
                         sbdToolTip.Append(strSpace).Append(GetObjectName(objLoopImprovement, token: token));
                     }
                 }
+            }
+
+            sbdToolTip.Append(strSpace).Append('(').Append(intModifiers.ToString(GlobalSettings.CultureInfo)).Append(')');
+        }
+
+        public async Task FormatImprovementModifiersAsync(StringBuilder sbdToolTip, Improvement.ImprovementType eType, string strSpace, int intModifiers, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (sbdToolTip == null)
+                return;
+            sbdToolTip.Append(strSpace).Append('+').Append(strSpace).Append(await LanguageManager.GetStringAsync("Tip_Modifiers", token: token).ConfigureAwait(false));
+            bool blnFirstModifier = true;
+            token.ThrowIfCancellationRequested();
+            IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                foreach (Improvement objLoopImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
+                                this, eType, token: token).ConfigureAwait(false))
+                {
+                    if (blnFirstModifier)
+                    {
+                        blnFirstModifier = false;
+                        sbdToolTip.Append(await LanguageManager.GetStringAsync("String_Colon", token: token).ConfigureAwait(false));
+                    }
+                    else
+                        sbdToolTip.Append(',');
+
+                    sbdToolTip.Append(strSpace).Append(await GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false));
+                }
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
             }
 
             sbdToolTip.Append(strSpace).Append('(').Append(intModifiers.ToString(GlobalSettings.CultureInfo)).Append(')');
@@ -18160,7 +18224,7 @@ namespace Chummer
                 //TODO: Better interface for determining what the parent of a bit of gear is.
                 Gear objGear = Vehicles.FindVehicleGear(nodeId.InternalId, out Vehicle objOldVehicle,
                                                         out WeaponAccessory objOldWeaponAccessory,
-                                                        out Cyberware objOldCyberware);
+                                                        out Cyberware objOldCyberware, token);
 
                 if (objGear == null)
                     return;
@@ -19881,7 +19945,7 @@ namespace Chummer
                             // ReSharper disable once MethodHasAsyncOverload
                             objWriter.WriteElementString(
                                 // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                "mugshot", GlobalSettings.ImageToBase64StringForStorage(imgMugshot));
+                                "mugshot", GlobalSettings.ImageToBase64StringForStorage(imgMugshot, token));
                         }
                     }
                     // </mugshot>
@@ -19926,26 +19990,60 @@ namespace Chummer
             {
                 xmlSavedNode.TryGetInt32FieldQuickly("mainmugshotindex", ref _intMainMugshotIndex);
                 XPathNodeIterator xmlMugshotsList = xmlSavedNode.SelectAndCacheExpression("mugshots/mugshot", token);
-                List<string> lstMugshotsBase64 = new List<string>(xmlMugshotsList.Count);
-                foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
+                if (xmlMugshotsList.Count > 0)
                 {
-                    string strMugshot = objXmlMugshot.Value;
-                    if (!string.IsNullOrWhiteSpace(strMugshot))
+                    string[] astrMugshotsBase64 = ArrayPool<string>.Shared.Rent(xmlMugshotsList.Count);
+                    try
                     {
-                        lstMugshotsBase64.Add(strMugshot);
-                    }
-                }
+                        token.ThrowIfCancellationRequested();
+                        int j = 0;
+                        foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
+                        {
+                            string strMugshot = objXmlMugshot.Value;
+                            if (!string.IsNullOrWhiteSpace(strMugshot))
+                                astrMugshotsBase64[j++] = strMugshot;
+                            else
+                                astrMugshotsBase64[j++] = string.Empty;
+                        }
 
-                if (lstMugshotsBase64.Count > 1)
-                {
-                    Image[] objMugshotImages = new Image[lstMugshotsBase64.Count];
-                    Parallel.For(0, lstMugshotsBase64.Count,
-                                 i => objMugshotImages[i] = lstMugshotsBase64[i].ToImage(PixelFormat.Format32bppPArgb));
-                    _lstMugshots.AddRange(objMugshotImages);
-                }
-                else if (lstMugshotsBase64.Count == 1)
-                {
-                    _lstMugshots.Add(lstMugshotsBase64[0].ToImage(PixelFormat.Format32bppPArgb));
+                        if (xmlMugshotsList.Count > 1)
+                        {
+                            Image[] objMugshotImages = ArrayPool<Image>.Shared.Rent(xmlMugshotsList.Count);
+                            try
+                            {
+                                token.ThrowIfCancellationRequested();
+                                Parallel.For(0, xmlMugshotsList.Count,
+                                             i =>
+                                             {
+                                                 string strLoop = astrMugshotsBase64[i];
+                                                 if (!string.IsNullOrEmpty(strLoop))
+                                                     objMugshotImages[i] = strLoop.ToImage(PixelFormat.Format32bppPArgb, token);
+                                                 else
+                                                     objMugshotImages[i] = null;
+                                             });
+                                for (int i = 0; i < xmlMugshotsList.Count; ++i)
+                                {
+                                    Image objLoop = objMugshotImages[i];
+                                    if (objLoop != null)
+                                        _lstMugshots.Add(objLoop);
+                                }
+                            }
+                            finally
+                            {
+                                ArrayPool<Image>.Shared.Return(objMugshotImages);
+                            }
+                        }
+                        else
+                        {
+                            string strLoop = astrMugshotsBase64[0];
+                            if (!string.IsNullOrEmpty(strLoop))
+                                _lstMugshots.Add(strLoop.ToImage(PixelFormat.Format32bppPArgb, token));
+                        }
+                    }
+                    finally
+                    {
+                        ArrayPool<string>.Shared.Return(astrMugshotsBase64);
+                    }
                 }
 
                 // Legacy Shimmer
@@ -19955,7 +20053,7 @@ namespace Chummer
                     string strMugshot = objOldMugshotNode?.Value;
                     if (!string.IsNullOrWhiteSpace(strMugshot))
                     {
-                        _lstMugshots.Add(strMugshot.ToImage(PixelFormat.Format32bppPArgb));
+                        _lstMugshots.Add(strMugshot.ToImage(PixelFormat.Format32bppPArgb, token));
                         _intMainMugshotIndex = 0;
                     }
                 }
@@ -19971,30 +20069,55 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 xmlSavedNode.TryGetInt32FieldQuickly("mainmugshotindex", ref _intMainMugshotIndex);
                 XPathNodeIterator xmlMugshotsList = xmlSavedNode.SelectAndCacheExpression("mugshots/mugshot", token);
-                List<string> lstMugshotsBase64 = new List<string>(xmlMugshotsList.Count);
-                foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
+                if (xmlMugshotsList.Count > 0)
                 {
-                    string strMugshot = objXmlMugshot.Value;
-                    if (!string.IsNullOrWhiteSpace(strMugshot))
+                    string[] astrMugshotsBase64 = ArrayPool<string>.Shared.Rent(xmlMugshotsList.Count);
+                    try
                     {
-                        lstMugshotsBase64.Add(strMugshot);
-                    }
-                }
+                        token.ThrowIfCancellationRequested();
+                        int j = 0;
+                        foreach (XPathNavigator objXmlMugshot in xmlMugshotsList)
+                        {
+                            string strMugshot = objXmlMugshot.Value;
+                            if (!string.IsNullOrWhiteSpace(strMugshot))
+                                astrMugshotsBase64[j++] = strMugshot;
+                            else
+                                astrMugshotsBase64[j++] = string.Empty;
+                        }
 
-                if (lstMugshotsBase64.Count > 1)
-                {
-                    Task<Bitmap>[] atskMugshotImages = new Task<Bitmap>[lstMugshotsBase64.Count];
-                    for (int i = 0; i < lstMugshotsBase64.Count; ++i)
-                    {
-                        int iLocal = i;
-                        atskMugshotImages[i]
-                            = Task.Run(() => lstMugshotsBase64[iLocal].ToImageAsync(PixelFormat.Format32bppPArgb, token), token);
+                        if (xmlMugshotsList.Count > 1)
+                        {
+                            Bitmap[] aobjMugshots = await ParallelExtensions.ForAsync(0, xmlMugshotsList.Count, async i =>
+                            {
+                                string strLoop = astrMugshotsBase64[i];
+                                if (!string.IsNullOrEmpty(strLoop))
+                                    return await strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false);
+                                return null;
+                            }, true, token).ConfigureAwait(false);
+                            try
+                            {
+                                foreach (Bitmap objImage in aobjMugshots)
+                                {
+                                    if (objImage != null)
+                                        await _lstMugshots.AddAsync(objImage, token).ConfigureAwait(false);
+                                }
+                            }
+                            finally
+                            {
+                                ArrayPool<Bitmap>.Shared.Return(aobjMugshots);
+                            }
+                        }
+                        else
+                        {
+                            string strLoop = astrMugshotsBase64[0];
+                            if (!string.IsNullOrEmpty(strLoop))
+                                await _lstMugshots.AddAsync(await strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false), token).ConfigureAwait(false);
+                        }
                     }
-                    await _lstMugshots.AddRangeAsync(await Task.WhenAll(atskMugshotImages).ConfigureAwait(false), token).ConfigureAwait(false);
-                }
-                else if (lstMugshotsBase64.Count == 1)
-                {
-                    await _lstMugshots.AddAsync(await lstMugshotsBase64[0].ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false), token).ConfigureAwait(false);
+                    finally
+                    {
+                        ArrayPool<string>.Shared.Return(astrMugshotsBase64);
+                    }
                 }
 
                 // Legacy Shimmer
@@ -21949,7 +22072,7 @@ namespace Chummer
                     throw;
                 }
 
-                ImprovementManager.Commit(this);
+                ImprovementManager.Commit(this, token);
                 return true;
             }
         }
@@ -30078,7 +30201,7 @@ namespace Chummer
                         {
                             FormatImprovementModifiers(
                                 sbdToolTip,
-                                Improvement.ImprovementType.Composure.Yield(),
+                                Improvement.ImprovementType.Composure,
                                 strSpace,
                                 intModifiers);
                         }
@@ -30129,7 +30252,7 @@ namespace Chummer
                     {
                         await FormatImprovementModifiersAsync(
                             sbdToolTip,
-                            Improvement.ImprovementType.Composure.Yield(),
+                            Improvement.ImprovementType.Composure,
                             strSpace,
                             intModifiers, token).ConfigureAwait(false);
                     }
@@ -30221,11 +30344,10 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[] { Improvement.ImprovementType.JudgeIntentions, Improvement.ImprovementType.JudgeIntentionsOffense },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.JudgeIntentions, Improvement.ImprovementType.JudgeIntentionsOffense))
+                            {
+                                FormatImprovementModifiers(sbdToolTip, aParams, strSpace, intModifiers);
+                            }
                         }
                     }
 
@@ -30274,11 +30396,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[] { Improvement.ImprovementType.JudgeIntentions, Improvement.ImprovementType.JudgeIntentionsOffense },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.JudgeIntentions, Improvement.ImprovementType.JudgeIntentionsOffense))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
                 }
                 finally
@@ -30448,7 +30573,7 @@ namespace Chummer
                         {
                             FormatImprovementModifiers(
                                 sbdToolTip,
-                                Improvement.ImprovementType.LiftAndCarry.Yield(),
+                                Improvement.ImprovementType.LiftAndCarry,
                                 strSpace,
                                 intModifiers);
                         }
@@ -30499,7 +30624,7 @@ namespace Chummer
                     {
                         await FormatImprovementModifiersAsync(
                             sbdToolTip,
-                            Improvement.ImprovementType.LiftAndCarry.Yield(),
+                            Improvement.ImprovementType.LiftAndCarry,
                             strSpace,
                             intModifiers, token).ConfigureAwait(false);
                     }
@@ -30621,7 +30746,7 @@ namespace Chummer
                         {
                             FormatImprovementModifiers(
                                 sbdToolTip,
-                                Improvement.ImprovementType.Memory.Yield(),
+                                Improvement.ImprovementType.Memory,
                                 strSpace,
                                 intModifiers);
                         }
@@ -30672,7 +30797,7 @@ namespace Chummer
                     {
                         await FormatImprovementModifiersAsync(
                             sbdToolTip,
-                            Improvement.ImprovementType.Memory.Yield(),
+                            Improvement.ImprovementType.Memory,
                             strSpace,
                             intModifiers, token).ConfigureAwait(false);
                     }
@@ -33377,18 +33502,18 @@ namespace Chummer
                         if (string.IsNullOrEmpty(strCustomFitName) || strCustomFitName != objInnerArmor.Name)
                         {
                             if (objArmor.ArmorValue.StartsWith('+') || objArmor.ArmorValue.StartsWith('-'))
-                                dicArmorStackingValues[objInnerArmor] += objArmor.TotalArmor;
+                                dicArmorStackingValues[objInnerArmor] += objArmor.GetTotalArmor();
                         }
                         else if (objArmor.ArmorOverrideValue.StartsWith('+') || objArmor.ArmorOverrideValue.StartsWith('-'))
                         {
-                            dicArmorStackingValues[objInnerArmor] += objArmor.TotalOverrideArmor;
+                            dicArmorStackingValues[objInnerArmor] += objArmor.GetTotalOverrideArmor();
                         }
                     }
 
                     if (intNakedStackingValue < intAverageStrength
                         && (objArmor.ArmorValue.StartsWith('+') || objArmor.ArmorValue.StartsWith('-')))
                         intNakedStackingValue
-                            = Math.Min(intNakedStackingValue + objArmor.TotalArmor, intAverageStrength);
+                            = Math.Min(intNakedStackingValue + objArmor.GetTotalArmor(), intAverageStrength);
                 }
 
                 // Run through list of Armor again to cap off any whose stacking bonuses are greater than STR
@@ -33407,7 +33532,7 @@ namespace Chummer
                         || objArmor.ArmorValue.StartsWith('-'))
                         continue;
 
-                    int intArmorValue = objArmor.TotalArmor + dicArmorStackingValues[objArmor] + dicArmorImprovementValues[objArmor].StandardRound();
+                    int intArmorValue = objArmor.GetTotalArmor() + dicArmorStackingValues[objArmor] + dicArmorImprovementValues[objArmor].StandardRound();
                     if (intArmorValue > intHighest)
                     {
                         intHighest = intArmorValue;
@@ -33502,18 +33627,18 @@ namespace Chummer
                         if (string.IsNullOrEmpty(strCustomFitName) || strCustomFitName != objInnerArmor.Name)
                         {
                             if (objArmor.ArmorValue.StartsWith('+') || objArmor.ArmorValue.StartsWith('-'))
-                                dicArmorStackingValues[objInnerArmor] += await objArmor.GetTotalArmorAsync(token).ConfigureAwait(false);
+                                dicArmorStackingValues[objInnerArmor] += await objArmor.GetTotalArmorAsync(token: token).ConfigureAwait(false);
                         }
                         else if (objArmor.ArmorOverrideValue.StartsWith('+') || objArmor.ArmorOverrideValue.StartsWith('-'))
                         {
-                            dicArmorStackingValues[objInnerArmor] += await objArmor.GetTotalOverrideArmorAsync(token).ConfigureAwait(false);
+                            dicArmorStackingValues[objInnerArmor] += await objArmor.GetTotalOverrideArmorAsync(token: token).ConfigureAwait(false);
                         }
                     }
 
                     if (intNakedStackingValue < intAverageStrength
                         && (objArmor.ArmorValue.StartsWith('+') || objArmor.ArmorValue.StartsWith('-')))
                         intNakedStackingValue
-                            = Math.Min(intNakedStackingValue + await objArmor.GetTotalArmorAsync(token).ConfigureAwait(false), intAverageStrength);
+                            = Math.Min(intNakedStackingValue + await objArmor.GetTotalArmorAsync(token: token).ConfigureAwait(false), intAverageStrength);
                 }
 
                 // Run through list of Armor again to cap off any whose stacking bonuses are greater than STR
@@ -33532,7 +33657,7 @@ namespace Chummer
                         || objArmor.ArmorValue.StartsWith('-'))
                         continue;
 
-                    int intArmorValue = await objArmor.GetTotalArmorAsync(token).ConfigureAwait(false) + dicArmorStackingValues[objArmor] + dicArmorImprovementValues[objArmor].StandardRound();
+                    int intArmorValue = await objArmor.GetTotalArmorAsync(token: token).ConfigureAwait(false) + dicArmorStackingValues[objArmor] + dicArmorImprovementValues[objArmor].StandardRound();
                     if (intArmorValue > intHighest)
                     {
                         intHighest = intArmorValue;
@@ -33864,7 +33989,7 @@ namespace Chummer
                         {
                             FormatImprovementModifiers(
                                 sbdToolTip,
-                                Improvement.ImprovementType.Dodge.Yield(),
+                                Improvement.ImprovementType.Dodge,
                                 strSpace,
                                 intModifiers);
                         }
@@ -33914,7 +34039,7 @@ namespace Chummer
                     {
                         await FormatImprovementModifiersAsync(
                             sbdToolTip,
-                            Improvement.ImprovementType.Dodge.Yield(),
+                            Improvement.ImprovementType.Dodge,
                             strSpace,
                             intModifiers, token).ConfigureAwait(false);
                     }
@@ -34165,15 +34290,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DamageResistance
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DamageResistance))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -34231,15 +34355,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DamageResistance
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DamageResistance))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -34353,15 +34476,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DirectManaSpellResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DirectManaSpellResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -34400,15 +34522,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DirectManaSpellResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DirectManaSpellResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -34558,15 +34679,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DirectPhysicalSpellResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DirectPhysicalSpellResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -34617,15 +34737,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DirectPhysicalSpellResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DirectPhysicalSpellResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -34743,15 +34862,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DetectionSpellResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DetectionSpellResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -34794,15 +34912,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DetectionSpellResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DetectionSpellResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -34956,15 +35073,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseBODResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseBODResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -35019,15 +35135,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseBODResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseBODResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -35143,15 +35258,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseAGIResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseAGIResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -35194,15 +35308,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseAGIResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseAGIResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -35318,15 +35431,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseREAResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseREAResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -35369,15 +35481,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseREAResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseREAResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -35525,15 +35636,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseSTRResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseSTRResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -35588,15 +35698,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseSTRResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseSTRResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -35712,15 +35821,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseCHAResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseCHAResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -35763,15 +35871,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseCHAResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseCHAResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -35887,15 +35994,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseINTResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseINTResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -35938,15 +36044,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseINTResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseINTResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36062,15 +36167,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseLOGResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseLOGResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -36113,15 +36217,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseLOGResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseLOGResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36238,15 +36341,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.DecreaseWILResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseWILResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -36288,15 +36390,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseWILResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.DecreaseWILResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36412,15 +36513,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.ManaIllusionResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.ManaIllusionResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -36463,15 +36563,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.ManaIllusionResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.ManaIllusionResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36586,15 +36685,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        FormatImprovementModifiers(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.PhysicalIllusionResist
-                            },
-                            strSpace,
-                            intModifiers);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.PhysicalIllusionResist))
+                        {
+                            FormatImprovementModifiers(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36636,15 +36734,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.PhysicalIllusionResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.PhysicalIllusionResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36758,15 +36855,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        FormatImprovementModifiers(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.MentalManipulationResist
-                            },
-                            strSpace,
-                            intModifiers);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.MentalManipulationResist))
+                        {
+                            FormatImprovementModifiers(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36808,15 +36904,14 @@ namespace Chummer
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.MentalManipulationResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.MentalManipulationResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -36967,15 +37062,14 @@ namespace Chummer
 
                         if (intModifiers != 0)
                         {
-                            FormatImprovementModifiers(
-                                sbdToolTip,
-                                new[]
-                                {
-                                    Improvement.ImprovementType.SpellResistance,
-                                    Improvement.ImprovementType.PhysicalManipulationResist
-                                },
-                                strSpace,
-                                intModifiers);
+                            using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.PhysicalManipulationResist))
+                            {
+                                FormatImprovementModifiers(
+                                    sbdToolTip,
+                                    aParams,
+                                    strSpace,
+                                    intModifiers);
+                            }
                         }
 
                         return sbdToolTip.ToString();
@@ -37030,19 +37124,18 @@ namespace Chummer
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
                            + await ImprovementManager.ValueOfAsync(
-                               this, Improvement.ImprovementType.DecreaseBODResist, token: token).ConfigureAwait(false)).StandardRound();
+                               this, Improvement.ImprovementType.PhysicalManipulationResist, token: token).ConfigureAwait(false)).StandardRound();
 
                     if (intModifiers != 0)
                     {
-                        await FormatImprovementModifiersAsync(
-                            sbdToolTip,
-                            new[]
-                            {
-                                Improvement.ImprovementType.SpellResistance,
-                                Improvement.ImprovementType.DecreaseBODResist
-                            },
-                            strSpace,
-                            intModifiers, token).ConfigureAwait(false);
+                        using (TemporaryArray<Improvement.ImprovementType> aParams = new TemporaryArray<Improvement.ImprovementType>(Improvement.ImprovementType.SpellResistance, Improvement.ImprovementType.PhysicalManipulationResist))
+                        {
+                            await FormatImprovementModifiersAsync(
+                                sbdToolTip,
+                                aParams,
+                                strSpace,
+                                intModifiers, token).ConfigureAwait(false);
+                        }
                     }
 
                     return sbdToolTip.ToString();
@@ -37132,7 +37225,7 @@ namespace Chummer
                         {
                             FormatImprovementModifiers(
                                 sbdToolTip,
-                                Improvement.ImprovementType.Surprise.Yield(),
+                                Improvement.ImprovementType.Surprise,
                                 strSpace,
                                 intModifiers);
                         }
@@ -37183,7 +37276,7 @@ namespace Chummer
                     {
                         await FormatImprovementModifiersAsync(
                             sbdToolTip,
-                            Improvement.ImprovementType.Surprise.Yield(),
+                            Improvement.ImprovementType.Surprise,
                             strSpace,
                             intModifiers, token).ConfigureAwait(false);
                     }
@@ -37682,8 +37775,9 @@ namespace Chummer
                         string strCustomFitName = objArmor.ArmorMods.FirstOrDefault(x => x.Name == "Custom Fit (Stack)" && x.Equipped)?.Extra ?? string.Empty;
 
                         int intLoopStack = objArmor.ArmorValue.StartsWith('+') || objArmor.ArmorValue.StartsWith('-')
-                            ? objArmor.TotalArmor
+                            ? objArmor.GetTotalArmor()
                             : 0;
+                        int intLoopEncumbrance = objArmor.GetTotalArmor(true);
                         foreach (Armor objInnerArmor in lstArmorsToConsider)
                         {
                             if (objInnerArmor == objArmor
@@ -37695,26 +37789,29 @@ namespace Chummer
                                 (int intI, int intJ) = dicArmorStackingValues[objInnerArmor];
                                 if (objArmor.Encumbrance)
                                     dicArmorStackingValues[objInnerArmor]
-                                        = new Tuple<int, int>(intI + intLoopStack, intJ + intLoopStack);
+                                        = new Tuple<int, int>(intI + intLoopStack, intJ + intLoopEncumbrance);
                                 else
                                     dicArmorStackingValues[objInnerArmor]
                                         = new Tuple<int, int>(intI + intLoopStack, intJ);
                             }
                             else if (objArmor.ArmorOverrideValue.StartsWith('+') || objArmor.ArmorOverrideValue.StartsWith('-'))
                             {
-                                int intLoopCustomFitStack = objArmor.TotalOverrideArmor;
+                                int intLoopCustomFitStack = objArmor.GetTotalOverrideArmor();
                                 (int intI, int intJ) = dicArmorStackingValues[objInnerArmor];
                                 if (objArmor.Encumbrance)
+                                {
+                                    int intLoopCustomFitEncumbrance = objArmor.GetTotalOverrideArmor(true);
                                     dicArmorStackingValues[objInnerArmor]
                                         = new Tuple<int, int>(intI + intLoopCustomFitStack,
-                                                              intJ + intLoopCustomFitStack);
+                                                              intJ + intLoopCustomFitEncumbrance);
+                                }
                                 else
                                     dicArmorStackingValues[objInnerArmor] = new Tuple<int, int>(intI + intLoopCustomFitStack, intJ);
                             }
                         }
 
                         if (objArmor.Encumbrance)
-                            intNakedEncumbranceValue += intLoopStack;
+                            intNakedEncumbranceValue += intLoopEncumbrance;
                     }
 
                     // Run through list of Armor again to cap off any whose stacking bonuses are greater than STR
@@ -37739,7 +37836,7 @@ namespace Chummer
                             || objArmor.ArmorValue.StartsWith('-'))
                             continue;
                         (int intLoopStack, int intLoopEncumbrance) = dicArmorStackingValues[objArmor];
-                        int intLoopTotal = objArmor.TotalArmor + intLoopStack;
+                        int intLoopTotal = objArmor.GetTotalArmor() + intLoopStack;
                         if (intLoopTotal >= intHighest && (intLoopTotal > intHighest || intLoopEncumbrance < intLowestEncumbrance))
                         {
                             intHighest = intLoopTotal;
@@ -37789,8 +37886,9 @@ namespace Chummer
                     string strCustomFitName = (await objArmor.ArmorMods.FirstOrDefaultAsync(x => x.Name == "Custom Fit (Stack)" && x.Equipped, token: token).ConfigureAwait(false))?.Extra ?? string.Empty;
 
                     int intLoopStack = objArmor.ArmorValue.StartsWith('+') || objArmor.ArmorValue.StartsWith('-')
-                        ? await objArmor.GetTotalArmorAsync(token).ConfigureAwait(false)
+                        ? await objArmor.GetTotalArmorAsync(false, token).ConfigureAwait(false)
                         : 0;
+                    int intLoopEncumbrance = await objArmor.GetTotalArmorAsync(true, token).ConfigureAwait(false);
                     foreach (Armor objInnerArmor in lstArmorsToConsider)
                     {
                         if (objInnerArmor == objArmor
@@ -37802,7 +37900,7 @@ namespace Chummer
                             (int intI, int intJ) = dicArmorStackingValues[objInnerArmor];
                             if (objArmor.Encumbrance)
                                 dicArmorStackingValues[objInnerArmor]
-                                    = new Tuple<int, int>(intI + intLoopStack, intJ + intLoopStack);
+                                    = new Tuple<int, int>(intI + intLoopStack, intJ + intLoopEncumbrance);
                             else
                                 dicArmorStackingValues[objInnerArmor]
                                     = new Tuple<int, int>(intI + intLoopStack, intJ);
@@ -37810,12 +37908,15 @@ namespace Chummer
                         else if (objArmor.ArmorOverrideValue.StartsWith('+')
                                  || objArmor.ArmorOverrideValue.StartsWith('-'))
                         {
-                            int intLoopCustomFitStack = await objArmor.GetTotalOverrideArmorAsync(token).ConfigureAwait(false);
+                            int intLoopCustomFitStack = await objArmor.GetTotalOverrideArmorAsync(false, token).ConfigureAwait(false);
                             (int intI, int intJ) = dicArmorStackingValues[objInnerArmor];
                             if (objArmor.Encumbrance)
+                            {
+                                int intLoopCustomFitEncumbrance = await objArmor.GetTotalOverrideArmorAsync(false, token).ConfigureAwait(false);
                                 dicArmorStackingValues[objInnerArmor]
                                     = new Tuple<int, int>(intI + intLoopCustomFitStack,
-                                                          intJ + intLoopCustomFitStack);
+                                                          intJ + intLoopCustomFitEncumbrance);
+                            }
                             else
                                 dicArmorStackingValues[objInnerArmor]
                                     = new Tuple<int, int>(intI + intLoopCustomFitStack, intJ);
@@ -37823,7 +37924,7 @@ namespace Chummer
                     }
 
                     if (objArmor.Encumbrance)
-                        intNakedEncumbranceValue += intLoopStack;
+                        intNakedEncumbranceValue += intLoopEncumbrance;
                 }
 
                 // Run through list of Armor again to cap off any whose stacking bonuses are greater than STR
@@ -37848,7 +37949,7 @@ namespace Chummer
                         || objArmor.ArmorValue.StartsWith('-'))
                         continue;
                     (int intLoopStack, int intLoopEncumbrance) = dicArmorStackingValues[objArmor];
-                    int intLoopTotal = await objArmor.GetTotalArmorAsync(token).ConfigureAwait(false) + intLoopStack;
+                    int intLoopTotal = await objArmor.GetTotalArmorAsync(token: token).ConfigureAwait(false) + intLoopStack;
                     if (intLoopTotal >= intHighest
                         && (intLoopTotal > intHighest || intLoopEncumbrance < intLowestEncumbrance))
                     {
@@ -41144,7 +41245,7 @@ namespace Chummer
                 }
 
                 string strReturn = CurrentWalkingRateString.SplitNoAlloc('/', StringSplitOptions.RemoveEmptyEntries)
-                                                           .ElementAtOrDefault(intIndexToGet);
+                                                           .ElementAtOrDefaultBetter(intIndexToGet);
                 if (strReturn != null)
                     decimal.TryParse(strReturn, NumberStyles.Any, GlobalSettings.InvariantCultureInfo,
                                      out decTmp);
@@ -41184,7 +41285,7 @@ namespace Chummer
 
                 string strReturn = (await GetCurrentWalkingRateStringAsync(token).ConfigureAwait(false))
                                    .SplitNoAlloc('/', StringSplitOptions.RemoveEmptyEntries)
-                                   .ElementAtOrDefault(intIndexToGet);
+                                   .ElementAtOrDefaultBetter(intIndexToGet);
                 if (strReturn != null)
                     decimal.TryParse(strReturn, NumberStyles.Any, GlobalSettings.InvariantCultureInfo,
                                      out decTmp);
@@ -41225,7 +41326,7 @@ namespace Chummer
                 }
 
                 string strReturn = CurrentRunningRateString.SplitNoAlloc('/', StringSplitOptions.RemoveEmptyEntries)
-                                                           .ElementAtOrDefault(intIndexToGet);
+                                                           .ElementAtOrDefaultBetter(intIndexToGet);
                 if (strReturn != null)
                     decimal.TryParse(strReturn, NumberStyles.Any, GlobalSettings.InvariantCultureInfo,
                                      out decTmp);
@@ -41265,7 +41366,7 @@ namespace Chummer
 
                 string strReturn = (await GetCurrentRunningRateStringAsync(token).ConfigureAwait(false))
                                    .SplitNoAlloc('/', StringSplitOptions.RemoveEmptyEntries)
-                                   .ElementAtOrDefault(intIndexToGet);
+                                   .ElementAtOrDefaultBetter(intIndexToGet);
                 if (strReturn != null)
                     decimal.TryParse(strReturn, NumberStyles.Any, GlobalSettings.InvariantCultureInfo,
                                      out decTmp);
@@ -41306,7 +41407,7 @@ namespace Chummer
                 }
 
                 string strReturn = CurrentSprintingRateString.SplitNoAlloc('/', StringSplitOptions.RemoveEmptyEntries)
-                                                             .ElementAtOrDefault(intIndexToGet);
+                                                             .ElementAtOrDefaultBetter(intIndexToGet);
                 if (strReturn != null)
                     decimal.TryParse(strReturn, NumberStyles.Any, GlobalSettings.InvariantCultureInfo,
                                      out decTmp);
@@ -41346,7 +41447,7 @@ namespace Chummer
 
                 string strReturn = (await GetCurrentSprintingRateStringAsync(token).ConfigureAwait(false))
                                    .SplitNoAlloc('/', StringSplitOptions.RemoveEmptyEntries)
-                                   .ElementAtOrDefault(intIndexToGet);
+                                   .ElementAtOrDefaultBetter(intIndexToGet);
                 if (strReturn != null)
                     decimal.TryParse(strReturn, NumberStyles.Any, GlobalSettings.InvariantCultureInfo,
                                      out decTmp);
@@ -45202,29 +45303,32 @@ namespace Chummer
         /// Check for older instances of certain qualities that were manually numbered to be replaced with multiple instances of the first level quality (so that it works with the level system)
         /// Returns true if it's a corrected quality, false otherwise
         /// </summary>
-        private bool CorrectedUnleveledQuality(XmlNode xmlOldQuality, XmlNode xmlRootQualitiesNode)
+        private bool CorrectedUnleveledQuality(XmlNode xmlOldQuality, XmlNode xmlRootQualitiesNode, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             (XmlNode xmlNewQuality, int intRanks) = CorrectedUnleveledQualityCommon(xmlOldQuality["name"]?.InnerText, xmlRootQualitiesNode);
+            token.ThrowIfCancellationRequested();
             if (intRanks > 0)
             {
-                using (LockObject.EnterWriteLock())
+                using (LockObject.EnterWriteLock(token))
                 {
                     for (int i = 0; i < intRanks; ++i)
                     {
+                        token.ThrowIfCancellationRequested();
                         Quality objQuality = new Quality(this);
                         try
                         {
                             if (i == 0 && xmlOldQuality.TryGetField("guid", Guid.TryParse, out Guid guidOld))
                             {
                                 ImprovementManager.RemoveImprovements(this, Improvement.ImprovementSource.Quality,
-                                                                      guidOld.ToString());
+                                                                      guidOld.ToString(), token);
                                 objQuality.SetGUID(guidOld);
                             }
 
                             QualitySource objQualitySource =
                                 Quality.ConvertToQualitySource(xmlOldQuality["qualitysource"]?.InnerText);
                             objQuality.Create(xmlNewQuality, objQualitySource, _lstWeapons,
-                                              xmlOldQuality["extra"]?.InnerText);
+                                              xmlOldQuality["extra"]?.InnerText, token: token);
                             if (xmlOldQuality["bp"] != null
                                 && int.TryParse(xmlOldQuality["bp"].InnerText, out int intOldBP))
                                 objQuality.BP = intOldBP / intRanks;
@@ -45233,7 +45337,7 @@ namespace Chummer
                         }
                         catch
                         {
-                            objQuality.DeleteQuality();
+                            objQuality.DeleteQuality(token: CancellationToken.None);
                             throw;
                         }
                     }
@@ -45253,13 +45357,16 @@ namespace Chummer
         {
             token.ThrowIfCancellationRequested();
             (XmlNode xmlNewQuality, int intRanks) = CorrectedUnleveledQualityCommon(xmlOldQuality["name"]?.InnerText, xmlRootQualitiesNode);
+            token.ThrowIfCancellationRequested();
             if (intRanks > 0)
             {
                 IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
                 try
                 {
+                    token.ThrowIfCancellationRequested();
                     for (int i = 0; i < intRanks; ++i)
                     {
+                        token.ThrowIfCancellationRequested();
                         Quality objQuality = new Quality(this);
                         try
                         {
@@ -45737,7 +45844,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                     return true;
                 }
             }
@@ -45969,13 +46076,13 @@ namespace Chummer
                             : Improvement.ImprovementSource.EssenceLossChargen;
                         using (LockObject.EnterWriteLock(token))
                         {
-                            ImprovementManager.RemoveImprovements(this, new[]
-                            {
-                                Improvement.ImprovementSource.EssenceLossChargen,
-                                Improvement.ImprovementSource.EssenceLoss,
+                            using (TemporaryArray<Improvement.ImprovementSource> aParams = new TemporaryArray<Improvement.ImprovementSource>(
+                                Improvement.ImprovementSource.EssenceLossChargen, Improvement.ImprovementSource.EssenceLoss,
                                 // With this house rule, Cyberadept Daemon just negates a penalty from Essence based on Grade instead of restoring Resonance, so delete all old improvements
-                                Improvement.ImprovementSource.CyberadeptDaemon
-                            }, token: token);
+                                Improvement.ImprovementSource.CyberadeptDaemon))
+                            {
+                                ImprovementManager.RemoveImprovements(this, aParams, token: token);
+                            }
                             try
                             {
                                 token.ThrowIfCancellationRequested();
@@ -46048,7 +46155,7 @@ namespace Chummer
                             }
 
                             if (intMagMaxReduction != 0 || intResMaxReduction != 0 || intDepMaxReduction != 0)
-                                ImprovementManager.Commit(this);
+                                ImprovementManager.Commit(this, token);
                         }
                     }
                     // RAW Career mode: complicated. Similar to RAW Create mode, but with the extra possibility of burning current karma levels and/or PPs instead of pure minima reduction,
@@ -46220,7 +46327,7 @@ namespace Chummer
                                                 throw;
                                             }
 
-                                            ImprovementManager.Commit(this);
+                                            ImprovementManager.Commit(this, token);
                                         }
                                     }
                                 }
@@ -46291,7 +46398,7 @@ namespace Chummer
 
                                 if (intMAGMinimumReduction != 0 || intMAGMaximumReduction != 0 ||
                                     intMAGAdeptMinimumReduction != 0 || intMAGAdeptMaximumReduction != 0)
-                                    ImprovementManager.Commit(this);
+                                    ImprovementManager.Commit(this, token);
                             }
 
                             // Create the Essence Loss (or gain, in case of essence restoration and increasing maxima) Improvements.
@@ -46354,7 +46461,7 @@ namespace Chummer
                                         ImprovementManager.Rollback(this, CancellationToken.None);
                                         throw;
                                     }
-                                    ImprovementManager.Commit(this);
+                                    ImprovementManager.Commit(this, token);
                                 }
                             }
 
@@ -46418,7 +46525,7 @@ namespace Chummer
                                         throw;
                                     }
 
-                                    ImprovementManager.Commit(this);
+                                    ImprovementManager.Commit(this, token);
                                 }
                             }
                         }
@@ -46456,11 +46563,11 @@ namespace Chummer
 
                         using (LockObject.EnterWriteLock(token))
                         {
-                            ImprovementManager.RemoveImprovements(this, new[]
+                            using (TemporaryArray<Improvement.ImprovementSource> aParams = new TemporaryArray<Improvement.ImprovementSource>(
+                                Improvement.ImprovementSource.EssenceLossChargen, Improvement.ImprovementSource.EssenceLoss))
                             {
-                                Improvement.ImprovementSource.EssenceLossChargen,
-                                Improvement.ImprovementSource.EssenceLoss
-                            }, token: token);
+                                ImprovementManager.RemoveImprovements(this, aParams, token: token);
+                            }
 
                             try
                             {
@@ -46510,7 +46617,7 @@ namespace Chummer
                                 throw;
                             }
 
-                            ImprovementManager.Commit(this);
+                            ImprovementManager.Commit(this, token);
                         }
 
                         // If the character is in Career mode, it is possible for them to be forced to burn out.
@@ -46603,13 +46710,11 @@ namespace Chummer
                 // Otherwise any essence loss improvements that might have been left need to be deleted (e.g. character is in create mode and had access to special attributes, but that access was removed)
                 else
                 {
-                    ImprovementManager.RemoveImprovements(
-                        this,
-                        new[]
-                        {
-                            Improvement.ImprovementSource.EssenceLossChargen,
-                            Improvement.ImprovementSource.EssenceLoss
-                        }, token: token);
+                    using (TemporaryArray<Improvement.ImprovementSource> aParams = new TemporaryArray<Improvement.ImprovementSource>(
+                                Improvement.ImprovementSource.EssenceLossChargen, Improvement.ImprovementSource.EssenceLoss))
+                    {
+                        ImprovementManager.RemoveImprovements(this, aParams, token: token);
+                    }
                 }
 
                 // If the character is Cyberzombie, adjust their Attributes based on their Essence.
@@ -46686,7 +46791,7 @@ namespace Chummer
                                 throw;
                             }
 
-                            ImprovementManager.Commit(this);
+                            ImprovementManager.Commit(this, token);
                         }
                     }
                 }
@@ -46764,16 +46869,13 @@ namespace Chummer
                         try
                         {
                             token.ThrowIfCancellationRequested();
-                            await ImprovementManager.RemoveImprovementsAsync(
-                                    this, new[]
-                                    {
-                                        Improvement.ImprovementSource.EssenceLossChargen,
-                                        Improvement.ImprovementSource.EssenceLoss,
-                                        // With this house rule, Cyberadept Daemon just negates a penalty from Essence based on Grade instead of restoring Resonance, so delete all old improvements
-                                        Improvement.ImprovementSource.CyberadeptDaemon
-                                    },
-                                    token: token)
-                                .ConfigureAwait(false);
+                            using (TemporaryArray<Improvement.ImprovementSource> aParams = new TemporaryArray<Improvement.ImprovementSource>(
+                                Improvement.ImprovementSource.EssenceLossChargen, Improvement.ImprovementSource.EssenceLoss,
+                                // With this house rule, Cyberadept Daemon just negates a penalty from Essence based on Grade instead of restoring Resonance, so delete all old improvements
+                                Improvement.ImprovementSource.CyberadeptDaemon))
+                            {
+                                await ImprovementManager.RemoveImprovementsAsync(this, aParams, token: token).ConfigureAwait(false);
+                            }
 
                             try
                             {
@@ -47355,14 +47457,11 @@ namespace Chummer
                         try
                         {
                             token.ThrowIfCancellationRequested();
-                            await ImprovementManager.RemoveImprovementsAsync(
-                                    this, new[]
-                                    {
-                                        Improvement.ImprovementSource.EssenceLossChargen,
-                                        Improvement.ImprovementSource.EssenceLoss
-                                    },
-                                    token: token)
-                                .ConfigureAwait(false);
+                            using (TemporaryArray<Improvement.ImprovementSource> aParams = new TemporaryArray<Improvement.ImprovementSource>(
+                                Improvement.ImprovementSource.EssenceLossChargen, Improvement.ImprovementSource.EssenceLoss))
+                            {
+                                await ImprovementManager.RemoveImprovementsAsync(this, aParams, token: token).ConfigureAwait(false);
+                            }
 
                             try
                             {
@@ -47531,14 +47630,11 @@ namespace Chummer
                 // Otherwise any essence loss improvements that might have been left need to be deleted (e.g. character is in create mode and had access to special attributes, but that access was removed)
                 else
                 {
-                    await ImprovementManager.RemoveImprovementsAsync(
-                            this, new[]
-                            {
-                                Improvement.ImprovementSource.EssenceLossChargen,
-                                Improvement.ImprovementSource.EssenceLoss
-                            },
-                            token: token)
-                        .ConfigureAwait(false);
+                    using (TemporaryArray<Improvement.ImprovementSource> aParams = new TemporaryArray<Improvement.ImprovementSource>(
+                        Improvement.ImprovementSource.EssenceLossChargen, Improvement.ImprovementSource.EssenceLoss))
+                    {
+                        await ImprovementManager.RemoveImprovementsAsync(this, aParams, token: token).ConfigureAwait(false);
+                    }
                 }
 
                 // If the character is Cyberzombie, adjust their Attributes based on their Essence.
@@ -47666,24 +47762,21 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.TotalValue)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(LimitPhysical),
-                        nameof(DamageResistancePool),
-                        nameof(LiftAndCarry),
-                        nameof(FatigueResist),
-                        nameof(RadiationResist),
-                        nameof(PhysiologicalAddictionResistFirstTime),
-                        nameof(PhysiologicalAddictionResistAlreadyAddicted),
-                        nameof(StunCMNaturalRecovery),
-                        nameof(PhysicalCMNaturalRecovery),
-                        nameof(PhysicalCM),
-                        nameof(CMOverflow),
-                        nameof(SpellDefenseIndirectSoak),
-                        nameof(SpellDefenseDirectSoakPhysical),
-                        nameof(SpellDefenseDecreaseBOD),
-                        nameof(SpellDefenseManipulationPhysical)
-                    });
+                    lstProperties.Add(nameof(LimitPhysical));
+                    lstProperties.Add(nameof(DamageResistancePool));
+                    lstProperties.Add(nameof(LiftAndCarry));
+                    lstProperties.Add(nameof(FatigueResist));
+                    lstProperties.Add(nameof(RadiationResist));
+                    lstProperties.Add(nameof(PhysiologicalAddictionResistFirstTime));
+                    lstProperties.Add(nameof(PhysiologicalAddictionResistAlreadyAddicted));
+                    lstProperties.Add(nameof(StunCMNaturalRecovery));
+                    lstProperties.Add(nameof(PhysicalCMNaturalRecovery));
+                    lstProperties.Add(nameof(PhysicalCM));
+                    lstProperties.Add(nameof(CMOverflow));
+                    lstProperties.Add(nameof(SpellDefenseIndirectSoak));
+                    lstProperties.Add(nameof(SpellDefenseDirectSoakPhysical));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseBOD));
+                    lstProperties.Add(nameof(SpellDefenseManipulationPhysical));
                     await ProcessSettingsExpressionsForDependentProperties(lstProperties, "{BOD}", token)
                         .ConfigureAwait(false);
                 }
@@ -47776,14 +47869,11 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.TotalValue)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(LimitPhysical),
-                        nameof(InitiativeValue),
-                        nameof(Dodge),
-                        nameof(SpellDefenseDecreaseREA),
-                        nameof(Surprise)
-                    });
+                    lstProperties.Add(nameof(LimitPhysical));
+                    lstProperties.Add(nameof(InitiativeValue));
+                    lstProperties.Add(nameof(Dodge));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseREA));
+                    lstProperties.Add(nameof(Surprise));
                     await ProcessSettingsExpressionsForDependentProperties(lstProperties, "{REA}", token)
                         .ConfigureAwait(false);
                 }
@@ -47826,15 +47916,12 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.TotalValue)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(LimitPhysical),
-                        nameof(LiftAndCarry),
-                        nameof(SpellDefenseDecreaseSTR),
-                        nameof(SpellDefenseManipulationPhysical),
-                        nameof(CalculatedMovement),
-                        nameof(ArmorEncumbrance)
-                    });
+                    lstProperties.Add(nameof(LimitPhysical));
+                    lstProperties.Add(nameof(LiftAndCarry));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseSTR));
+                    lstProperties.Add(nameof(SpellDefenseManipulationPhysical));
+                    lstProperties.Add(nameof(CalculatedMovement));
+                    lstProperties.Add(nameof(ArmorEncumbrance));
                     await ProcessSettingsExpressionsForDependentProperties(lstProperties, "{STR}", token)
                         .ConfigureAwait(false);
                 }
@@ -47877,14 +47964,11 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.TotalValue)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(LimitSocial),
-                        nameof(Composure),
-                        nameof(JudgeIntentions),
-                        nameof(JudgeIntentionsResist),
-                        nameof(SpellDefenseDecreaseCHA)
-                    });
+                    lstProperties.Add(nameof(LimitSocial));
+                    lstProperties.Add(nameof(Composure));
+                    lstProperties.Add(nameof(JudgeIntentions));
+                    lstProperties.Add(nameof(JudgeIntentionsResist));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseCHA));
                     await ProcessSettingsExpressionsForDependentProperties(lstProperties, "{CHA}", token)
                         .ConfigureAwait(false);
                 }
@@ -47927,20 +48011,17 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.TotalValue)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(LimitMental),
-                        nameof(JudgeIntentions),
-                        nameof(InitiativeValue),
-                        nameof(AstralInitiativeValue),
-                        nameof(MatrixInitiativeValue),
-                        nameof(MatrixInitiativeColdValue),
-                        nameof(MatrixInitiativeHotValue),
-                        nameof(Dodge),
-                        nameof(SpellDefenseDecreaseINT),
-                        nameof(SpellDefenseIllusionPhysical),
-                        nameof(Surprise)
-                    });
+                    lstProperties.Add(nameof(LimitMental));
+                    lstProperties.Add(nameof(JudgeIntentions));
+                    lstProperties.Add(nameof(InitiativeValue));
+                    lstProperties.Add(nameof(AstralInitiativeValue));
+                    lstProperties.Add(nameof(MatrixInitiativeValue));
+                    lstProperties.Add(nameof(MatrixInitiativeColdValue));
+                    lstProperties.Add(nameof(MatrixInitiativeHotValue));
+                    lstProperties.Add(nameof(Dodge));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseINT));
+                    lstProperties.Add(nameof(SpellDefenseIllusionPhysical));
+                    lstProperties.Add(nameof(Surprise));
                     await ProcessSettingsExpressionsForDependentProperties(lstProperties, "{INT}", token)
                         .ConfigureAwait(false);
                 }
@@ -47983,18 +48064,15 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.TotalValue)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(LimitMental),
-                        nameof(Memory),
-                        nameof(PsychologicalAddictionResistFirstTime),
-                        nameof(PsychologicalAddictionResistAlreadyAddicted),
-                        nameof(SpellDefenseDetection),
-                        nameof(SpellDefenseDecreaseLOG),
-                        nameof(SpellDefenseIllusionMana),
-                        nameof(SpellDefenseIllusionPhysical),
-                        nameof(SpellDefenseManipulationMental)
-                    });
+                    lstProperties.Add(nameof(LimitMental));
+                    lstProperties.Add(nameof(Memory));
+                    lstProperties.Add(nameof(PsychologicalAddictionResistFirstTime));
+                    lstProperties.Add(nameof(PsychologicalAddictionResistAlreadyAddicted));
+                    lstProperties.Add(nameof(SpellDefenseDetection));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseLOG));
+                    lstProperties.Add(nameof(SpellDefenseIllusionMana));
+                    lstProperties.Add(nameof(SpellDefenseIllusionPhysical));
+                    lstProperties.Add(nameof(SpellDefenseManipulationMental));
                     await ProcessSettingsExpressionsForDependentProperties(lstProperties, "{LOG}", token)
                         .ConfigureAwait(false);
                 }
@@ -48037,35 +48115,31 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.TotalValue)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(LimitSocial),
-                        nameof(LimitMental),
-                        nameof(Composure),
-                        nameof(Memory),
-                        nameof(JudgeIntentionsResist),
-                        nameof(FatigueResist),
-                        nameof(SonicResist),
-                        nameof(RadiationResist),
-                        nameof(PhysiologicalAddictionResistFirstTime),
-                        nameof(PhysiologicalAddictionResistAlreadyAddicted),
-                        nameof(PsychologicalAddictionResistFirstTime),
-                        nameof(PsychologicalAddictionResistAlreadyAddicted),
-                        nameof(StunCMNaturalRecovery),
-                        nameof(StunCM),
-                        nameof(SpellDefenseDirectSoakMana),
-                        nameof(SpellDefenseDetection),
-                        nameof(SpellDefenseDecreaseBOD),
-                        nameof(SpellDefenseDecreaseAGI),
-                        nameof(SpellDefenseDecreaseREA),
-                        nameof(SpellDefenseDecreaseSTR),
-                        nameof(SpellDefenseDecreaseCHA),
-                        nameof(SpellDefenseDecreaseINT),
-                        nameof(SpellDefenseDecreaseLOG),
-                        nameof(SpellDefenseDecreaseWIL),
-                        nameof(SpellDefenseIllusionMana),
-                        nameof(SpellDefenseManipulationMental)
-                    });
+                    lstProperties.Add(nameof(LimitSocial));
+                    lstProperties.Add(nameof(LimitMental));
+                    lstProperties.Add(nameof(Composure));
+                    lstProperties.Add(nameof(Memory));
+                    lstProperties.Add(nameof(JudgeIntentionsResist));
+                    lstProperties.Add(nameof(FatigueResist));
+                    lstProperties.Add(nameof(SonicResist));
+                    lstProperties.Add(nameof(RadiationResist));
+                    lstProperties.Add(nameof(PhysiologicalAddictionResistFirstTime));
+                    lstProperties.Add(nameof(PhysiologicalAddictionResistAlreadyAddicted));
+                    lstProperties.Add(nameof(PsychologicalAddictionResistFirstTime));
+                    lstProperties.Add(nameof(PsychologicalAddictionResistAlreadyAddicted));
+                    lstProperties.Add(nameof(StunCMNaturalRecovery));
+                    lstProperties.Add(nameof(StunCM));
+                    lstProperties.Add(nameof(SpellDefenseDetection));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseBOD));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseAGI));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseREA));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseSTR));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseCHA));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseINT));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseLOG));
+                    lstProperties.Add(nameof(SpellDefenseDecreaseWIL));
+                    lstProperties.Add(nameof(SpellDefenseIllusionMana));
+                    lstProperties.Add(nameof(SpellDefenseManipulationMental));
                     await ProcessSettingsExpressionsForDependentProperties(lstProperties, "{WIL}", token)
                         .ConfigureAwait(false);
                 }
@@ -48384,13 +48458,10 @@ namespace Chummer
                 // Only ESS.MetatypeMaximum is used for the Essence method/property when it comes to attributes
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.MetatypeMaximum)))
                 {
-                    lstProperties.AddRange(new[]
-                    {
-                        nameof(PrototypeTranshumanEssenceUsed),
-                        nameof(BiowareEssence),
-                        nameof(CyberwareEssence),
-                        nameof(EssenceHole)
-                    });
+                    lstProperties.Add(nameof(PrototypeTranshumanEssenceUsed));
+                    lstProperties.Add(nameof(BiowareEssence));
+                    lstProperties.Add(nameof(CyberwareEssence));
+                    lstProperties.Add(nameof(EssenceHole));
                 }
 
                 if (lstProperties.Count > 0)
@@ -48538,7 +48609,7 @@ namespace Chummer
                     throw;
                 }
 
-                ImprovementManager.Commit(this);
+                ImprovementManager.Commit(this, token);
             }
         }
 
@@ -48713,7 +48784,7 @@ namespace Chummer
                         throw;
                     }
 
-                    ImprovementManager.Commit(this);
+                    ImprovementManager.Commit(this, token);
                 }
             }
         }
@@ -50681,19 +50752,8 @@ namespace Chummer
                     {
                         MultiplePropertiesChangedEventArgs objArgs =
                             new MultiplePropertiesChangedEventArgs(setNamesOfChangedProperties.ToArray());
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (MultiplePropertiesChangedAsyncEventHandler objEvent in _setMultiplePropertiesChangedAsync)
-                        {
-                            lstTasks.Add(objEvent.Invoke(this, objArgs, token));
-                            if (++i < Utils.MaxParallelBatchSize)
-                                continue;
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                            lstTasks.Clear();
-                            i = 0;
-                        }
+                        await ParallelExtensions.ForEachAsync(_setMultiplePropertiesChangedAsync, objEvent => objEvent.Invoke(this, objArgs, token), token).ConfigureAwait(false);
 
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
                         if (MultiplePropertiesChanged != null)
                         {
                             await Utils.RunOnMainThreadAsync(() =>
@@ -50718,22 +50778,16 @@ namespace Chummer
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
+                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstTasks.Add(objEvent.Invoke(this, objArg, token));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
+                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
 
                         if (PropertyChanged != null)
                         {
@@ -54133,10 +54187,10 @@ namespace Chummer
                                              dicChangedProperties)
                                     {
                                         if (blnSync)
-                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value.ToList());
+                                            kvpToProcess.Key.OnMultiplePropertiesChanged(kvpToProcess.Value);
                                         else
                                             await kvpToProcess.Key
-                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token)
+                                                .OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token)
                                                 .ConfigureAwait(false);
                                     }
                                 }

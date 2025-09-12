@@ -118,6 +118,8 @@ namespace Chummer.Backend.Equipment
                 return;
             bool blnDoEquippedArmorRefresh = false;
             bool blnDoArmorEncumbranceRefresh = false;
+            bool blnEverDoArmorEncumbranceRefresh = Equipped && Encumbrance && (ArmorValue.StartsWith('+') || ArmorValue.StartsWith('-')
+                || ArmorOverrideValue.StartsWith('+') || ArmorOverrideValue.StartsWith('-'));
             List<ArmorMod> lstImprovementSourcesToProcess = new List<ArmorMod>(e.NewItems?.Count ?? 0);
             switch (e.Action)
             {
@@ -129,7 +131,7 @@ namespace Chummer.Backend.Equipment
                         if (!_blnSkipEvents && objNewItem.Equipped)
                         {
                             blnDoEquippedArmorRefresh = Equipped;
-                            blnDoArmorEncumbranceRefresh = Equipped && objNewItem.Encumbrance;
+                            blnDoArmorEncumbranceRefresh = blnEverDoArmorEncumbranceRefresh && objNewItem.Encumbrance;
                             lstImprovementSourcesToProcess.Add(objNewItem);
                         }
                     }
@@ -143,7 +145,7 @@ namespace Chummer.Backend.Equipment
                         if (!_blnSkipEvents && objOldItem.Equipped)
                         {
                             blnDoEquippedArmorRefresh = Equipped;
-                            blnDoArmorEncumbranceRefresh = Equipped && objOldItem.Encumbrance;
+                            blnDoArmorEncumbranceRefresh = blnEverDoArmorEncumbranceRefresh && objOldItem.Encumbrance;
                         }
                     }
 
@@ -160,7 +162,7 @@ namespace Chummer.Backend.Equipment
                         if (!_blnSkipEvents && objOldItem.Equipped)
                         {
                             blnDoEquippedArmorRefresh = Equipped;
-                            blnDoArmorEncumbranceRefresh = Equipped && objOldItem.Encumbrance;
+                            blnDoArmorEncumbranceRefresh = blnEverDoArmorEncumbranceRefresh && objOldItem.Encumbrance;
                         }
                     }
 
@@ -170,7 +172,7 @@ namespace Chummer.Backend.Equipment
                         if (!_blnSkipEvents && objNewItem.Equipped)
                         {
                             blnDoEquippedArmorRefresh = Equipped;
-                            blnDoArmorEncumbranceRefresh = Equipped && objNewItem.Encumbrance;
+                            blnDoArmorEncumbranceRefresh = blnEverDoArmorEncumbranceRefresh && objNewItem.Encumbrance;
                             lstImprovementSourcesToProcess.Add(objNewItem);
                         }
                     }
@@ -178,7 +180,7 @@ namespace Chummer.Backend.Equipment
                     break;
 
                 case NotifyCollectionChangedAction.Reset:
-                    blnDoArmorEncumbranceRefresh = !_blnSkipEvents && Equipped;
+                    blnDoArmorEncumbranceRefresh = !_blnSkipEvents && blnEverDoArmorEncumbranceRefresh;
                     break;
             }
 
@@ -251,7 +253,7 @@ namespace Chummer.Backend.Equipment
                     foreach (KeyValuePair<INotifyMultiplePropertiesChangedAsync, HashSet<string>> kvpToProcess in
                              dicChangedProperties)
                     {
-                        await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value.ToList(), token).ConfigureAwait(false);
+                        await kvpToProcess.Key.OnMultiplePropertiesChangedAsync(kvpToProcess.Value, token).ConfigureAwait(false);
                     }
                 }
                 finally
@@ -395,7 +397,8 @@ namespace Chummer.Backend.Equipment
                 }
             }
 
-            objXmlArmorNode.TryGetBoolFieldQuickly("encumbrance", ref _blnEncumbrance);
+            if (!objXmlArmorNode.TryGetBoolFieldQuickly("encumbrance", ref _blnEncumbrance))
+                _blnEncumbrance = true;
             _nodBonus = objXmlArmorNode["bonus"];
             _nodWirelessBonus = objXmlArmorNode["wirelessbonus"];
             _blnWirelessOn = false;
@@ -2204,26 +2207,30 @@ namespace Chummer.Backend.Equipment
         /// <summary>
         /// The Armor's total Armor value including Modifications.
         /// </summary>
-        public int TotalArmor
+        public int GetTotalArmor(bool blnForEncumbrance = false)
         {
-            get
-            {
-                // Go through all of the Mods for this piece of Armor and add the Armor value.
-                int intTotalArmor = OwnArmor + ArmorMods.Sum(o => o.Equipped, o => o.Armor);
-                if (_objCharacter?.Settings.ArmorDegradation == true)
-                    intTotalArmor -= ArmorDamage;
+            if (blnForEncumbrance && !ArmorValue.StartsWith('+') && !ArmorValue.StartsWith('-'))
+                return 0;
+            // Go through all of the Mods for this piece of Armor and add the Armor value.
+            int intTotalArmor = OwnArmor + (blnForEncumbrance ? ArmorMods.Sum(o => o.Equipped && o.Encumbrance, o => o.Armor) : ArmorMods.Sum(o => o.Equipped, o => o.Armor));
+            if (_objCharacter?.Settings.ArmorDegradation == true)
+                intTotalArmor -= ArmorDamage;
 
-                return Math.Max(intTotalArmor, 0);
-            }
+            return Math.Max(intTotalArmor, 0);
         }
 
         /// <summary>
         /// The Armor's total Armor value including Modifications.
         /// </summary>
-        public async Task<int> GetTotalArmorAsync(CancellationToken token = default)
+        public async Task<int> GetTotalArmorAsync(bool blnForEncumbrance = false, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
+            if (blnForEncumbrance && !ArmorValue.StartsWith('+') && !ArmorValue.StartsWith('-'))
+                return 0;
             // Go through all of the Mods for this piece of Armor and add the Armor value.
-            int intTotalArmor = await GetOwnArmorAsync(token).ConfigureAwait(false) + await ArmorMods.SumAsync(o => o.Equipped, o => o.Armor, token: token).ConfigureAwait(false);
+            int intTotalArmor = await GetOwnArmorAsync(token).ConfigureAwait(false) + (blnForEncumbrance
+                ? await ArmorMods.SumAsync(o => o.Equipped && o.Encumbrance, o => o.Armor, token: token).ConfigureAwait(false)
+                : await ArmorMods.SumAsync(o => o.Equipped, o => o.Armor, token: token).ConfigureAwait(false));
             if (_objCharacter != null && await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetArmorDegradationAsync(token).ConfigureAwait(false))
                 intTotalArmor -= ArmorDamage;
 
@@ -2243,26 +2250,30 @@ namespace Chummer.Backend.Equipment
         /// <summary>
         /// The Armor's total bonus Armor value including Modifications.
         /// </summary>
-        public int TotalOverrideArmor
+        public int GetTotalOverrideArmor(bool blnForEncumbrance = false)
         {
-            get
-            {
-                // Go through all of the Mods for this piece of Armor and add the Armor value.
-                int intTotalArmor = OwnOverrideArmor + ArmorMods.Sum(o => o.Equipped, o => o.Armor);
-                if (_objCharacter?.Settings.ArmorDegradation == true)
-                    intTotalArmor -= ArmorDamage;
+            if (blnForEncumbrance && !ArmorOverrideValue.StartsWith('+') && !ArmorOverrideValue.StartsWith('-'))
+                return 0;
+            // Go through all of the Mods for this piece of Armor and add the Armor value.
+            int intTotalArmor = OwnOverrideArmor + (blnForEncumbrance ? ArmorMods.Sum(o => o.Equipped && o.Encumbrance, o => o.Armor) : ArmorMods.Sum(o => o.Equipped, o => o.Armor));
+            if (_objCharacter?.Settings.ArmorDegradation == true)
+                intTotalArmor -= ArmorDamage;
 
-                return Math.Max(intTotalArmor, 0);
-            }
+            return Math.Max(intTotalArmor, 0);
         }
 
         /// <summary>
         /// The Armor's total bonus Armor value including Modifications.
         /// </summary>
-        public async Task<int> GetTotalOverrideArmorAsync(CancellationToken token = default)
+        public async Task<int> GetTotalOverrideArmorAsync(bool blnForEncumbrance = false, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
+            if (blnForEncumbrance && !ArmorOverrideValue.StartsWith('+') && !ArmorOverrideValue.StartsWith('-'))
+                return 0;
             // Go through all of the Mods for this piece of Armor and add the Armor value.
-            int intTotalArmor = await GetOwnOverrideArmorAsync(token).ConfigureAwait(false) + await ArmorMods.SumAsync(o => o.Equipped, o => o.Armor, token: token).ConfigureAwait(false);
+            int intTotalArmor = await GetOwnOverrideArmorAsync(token).ConfigureAwait(false) + (blnForEncumbrance
+                ? await ArmorMods.SumAsync(o => o.Equipped && o.Encumbrance, o => o.Armor, token: token).ConfigureAwait(false)
+                : await ArmorMods.SumAsync(o => o.Equipped, o => o.Armor, token: token).ConfigureAwait(false));
             if (_objCharacter != null && await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetArmorDegradationAsync(token).ConfigureAwait(false))
                 intTotalArmor -= ArmorDamage;
 
@@ -2274,7 +2285,7 @@ namespace Chummer.Backend.Equipment
             get
             {
                 string strArmorOverrideValue = ArmorOverrideValue;
-                int intArmor = TotalArmor;
+                int intArmor = GetTotalArmor();
                 if (!string.IsNullOrWhiteSpace(strArmorOverrideValue))
                 {
                     return intArmor.ToString(GlobalSettings.CultureInfo) + '/' + strArmorOverrideValue;
@@ -2293,7 +2304,7 @@ namespace Chummer.Backend.Equipment
         public async Task<string> GetDisplayArmorValueAsync(CancellationToken token = default)
         {
             string strArmorOverrideValue = ArmorOverrideValue;
-            int intArmor = await GetTotalArmorAsync(token).ConfigureAwait(false);
+            int intArmor = await GetTotalArmorAsync(token: token).ConfigureAwait(false);
             if (!string.IsNullOrWhiteSpace(strArmorOverrideValue))
             {
                 return intArmor.ToString(GlobalSettings.CultureInfo) + '/' + strArmorOverrideValue;
@@ -2872,7 +2883,7 @@ namespace Chummer.Backend.Equipment
         public string CalculatedCapacity(CultureInfo objCultureInfo)
         {
             string strReturn;
-            if (ArmorMods.Any(x => x.ArmorCapacity.StartsWith('-') || x.ArmorCapacity.StartsWith("[-")))
+            if (ArmorMods.Any(x => x.ArmorCapacity.StartsWith('-') || x.ArmorCapacity.StartsWith("[-", StringComparison.Ordinal)))
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
                 {
@@ -2881,14 +2892,14 @@ namespace Chummer.Backend.Equipment
                     if (string.IsNullOrEmpty(strCapacity) || strCapacity == "0")
                         sbdReturn.Append("(0)");
                     else
-                        sbdReturn.Append('(' + strCapacity + ')');
+                        sbdReturn.Append('(').Append(strCapacity).Append(')');
 
                     foreach (ArmorMod objMod in ArmorMods)
                     {
                         string strArmorModCapacity = objMod.ArmorCapacity;
                         if (!strArmorModCapacity.StartsWith('-') && !strArmorModCapacity.StartsWith("[-", StringComparison.Ordinal))
                             continue;
-                        sbdReturn.Append("-(" + objMod.GetCalculatedCapacity(GlobalSettings.InvariantCultureInfo).Trim('[', ']') + ')');
+                        sbdReturn.Append("-(").Append(objMod.GetCalculatedCapacity(GlobalSettings.InvariantCultureInfo).Trim('[', ']')).Append(')');
                     }
 
                     strReturn = sbdReturn.ToString();
@@ -2918,7 +2929,7 @@ namespace Chummer.Backend.Equipment
         {
             token.ThrowIfCancellationRequested();
             string strReturn;
-            if (await ArmorMods.AnyAsync(x => x.ArmorCapacity.StartsWith('-') || x.ArmorCapacity.StartsWith("[-"), token).ConfigureAwait(false))
+            if (await ArmorMods.AnyAsync(x => x.ArmorCapacity.StartsWith('-') || x.ArmorCapacity.StartsWith("[-", StringComparison.Ordinal), token).ConfigureAwait(false))
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
                 {
@@ -2927,14 +2938,14 @@ namespace Chummer.Backend.Equipment
                     if (string.IsNullOrEmpty(strCapacity) || strCapacity == "0")
                         sbdReturn.Append("(0)");
                     else
-                        sbdReturn.Append('(' + strCapacity + ')');
+                        sbdReturn.Append('(').Append(strCapacity).Append(')');
 
                     await ArmorMods.ForEachAsync(async objMod =>
                     {
                         string strArmorModCapacity = objMod.ArmorCapacity;
                         if (!strArmorModCapacity.StartsWith('-') && !strArmorModCapacity.StartsWith("[-", StringComparison.Ordinal))
                             return;
-                        sbdReturn.Append("-(" + (await objMod.GetCalculatedCapacityAsync(GlobalSettings.InvariantCultureInfo, token).ConfigureAwait(false)).Trim('[', ']') + ')');
+                        sbdReturn.Append("-(").Append((await objMod.GetCalculatedCapacityAsync(GlobalSettings.InvariantCultureInfo, token).ConfigureAwait(false)).Trim('[', ']')).Append(')');
                     }, token).ConfigureAwait(false);
 
                     strReturn = sbdReturn.ToString();

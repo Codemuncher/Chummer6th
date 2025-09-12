@@ -24,8 +24,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Security.Authentication;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -390,28 +388,21 @@ namespace Chummer
                 blnChummerVersionGotten = false;
             if (blnChummerVersionGotten)
             {
-                var handler = new HttpClientHandler { SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13 };
-                var httpClient = new HttpClient(handler);
-                httpClient.DefaultRequestHeaders.Add("User-Agent",
-                    "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)");
-                httpClient.DefaultRequestHeaders.Accept.Add
-                    (new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-                httpClient.Timeout = TimeSpan.FromSeconds(5);
-                // ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-                //request.Headers["User-Agent"].ToString() = "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)";
-                //request.Accept = "application/json";
-                //request.Timeout = 5000;
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+                request.UserAgent = "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)";
+                request.Accept = "application/json";
+                request.Timeout = 5000;
 
                 // Get the response.
-                HttpResponseMessage response = null;
+                HttpWebResponse response = null;
                 try
                 {
-                    response = await httpClient.GetAsync(uriUpdateLocation, token).ConfigureAwait(false);
+                    response = await request.GetResponseAsync().ConfigureAwait(false) as HttpWebResponse;
 
                     token.ThrowIfCancellationRequested();
 
                     // Get the stream containing content returned by the server.
-                    using (Stream dataStream = await response.Content.ReadAsStreamAsync(token))
+                    using (Stream dataStream = response?.GetResponseStream())
                     {
                         if (dataStream == null)
                             blnChummerVersionGotten = false;
@@ -427,9 +418,9 @@ namespace Chummer
                                 using (StreamReader objReader = new StreamReader(dataStream, Encoding.UTF8, true))
                                 {
                                     token.ThrowIfCancellationRequested();
-                                    for (string strLine = await objReader.ReadLineAsync(token).ConfigureAwait(false);
+                                    for (string strLine = await objReader.ReadLineAsync().ConfigureAwait(false);
                                          strLine != null;
-                                         strLine = await objReader.ReadLineAsync(token).ConfigureAwait(false))
+                                         strLine = await objReader.ReadLineAsync().ConfigureAwait(false))
                                     {
                                         token.ThrowIfCancellationRequested();
                                         if (!string.IsNullOrEmpty(strLine))
@@ -450,7 +441,7 @@ namespace Chummer
 
                                 if (!blnFoundTag && strLine.Contains("tag_name"))
                                 {
-                                    LatestVersion = (_strLatestVersion = strLine.SplitNoAlloc(':').ElementAtOrDefault(1))
+                                    LatestVersion = (_strLatestVersion = strLine.SplitNoAlloc(':').ElementAtOrDefaultBetter(1))
                                         .SplitNoAlloc('}').FirstOrDefault().FastEscape('\"').Trim();
                                     blnFoundTag = true;
                                     if (blnFoundArchive)
@@ -460,7 +451,7 @@ namespace Chummer
                                 if (!blnFoundArchive && strLine.Contains("browser_download_url"))
                                 {
                                     _strDownloadFile = "https://" +
-                                                       (strLine.SplitNoAlloc(':').ElementAtOrDefault(2) ?? string.Empty)
+                                                       (strLine.SplitNoAlloc(':').ElementAtOrDefaultBetter(2) ?? string.Empty)
                                                        .Substring(2).SplitNoAlloc('}').FirstOrDefault()
                                                        .FastEscape('\"');
                                     blnFoundArchive = true;
@@ -487,7 +478,7 @@ namespace Chummer
                 }
                 finally
                 {
-                    response.Dispose();
+                    response?.Close();
                 }
             }
             if (!blnChummerVersionGotten || LatestVersion == strError)
@@ -1208,81 +1199,80 @@ namespace Chummer
 
                 if (blnDoRestart)
                 {
-                    List<string> lstBlocked = new List<string>(lstFilesToDelete.Count);
-                    Dictionary<string, Task<bool>> dicTasks
-                        = new Dictionary<string, Task<bool>>(Utils.MaxParallelBatchSize);
-                    int intCounter = 0;
-                    foreach (string strFileToDelete in lstFilesToDelete)
+                    using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool, out HashSet<string> setBlocked))
                     {
-                        dicTasks.Add(strFileToDelete, FileExtensions.SafeDeleteAsync(strFileToDelete, token: token));
-                        if (++intCounter != Utils.MaxParallelBatchSize)
-                            continue;
-                        await Task.WhenAll(dicTasks.Values).ConfigureAwait(false);
-                        foreach (KeyValuePair<string, Task<bool>> kvpTaskPair in dicTasks)
-                        {
-                            if (!await kvpTaskPair.Value.ConfigureAwait(false))
-                                lstBlocked.Add(kvpTaskPair.Key);
-                        }
-
-                        dicTasks.Clear();
-                        intCounter = 0;
-                    }
-
-                    await Task.WhenAll(dicTasks.Values).ConfigureAwait(false);
-                    foreach (KeyValuePair<string, Task<bool>> kvpTaskPair in dicTasks)
-                    {
-                        if (!await kvpTaskPair.Value.ConfigureAwait(false))
-                            lstBlocked.Add(kvpTaskPair.Key);
-                    }
-
-                    foreach (string strBlockedFile in lstBlocked.ToList())
-                    {
+                        DebuggableSemaphoreSlim objBlockedFilesPopulateSemaphore = Utils.SemaphorePool.Get();
                         try
                         {
-                            if (File.Exists(strBlockedFile + ".old")
-                                && !await FileExtensions.SafeDeleteAsync(strBlockedFile + ".old", !SilentMode, token: token)
-                                               .ConfigureAwait(false))
+                            await ParallelExtensions.ForEachAsync(lstFilesToDelete, async strFileToDelete =>
+                            {
+                                if (!await FileExtensions.SafeDeleteAsync(strFileToDelete, token: token).ConfigureAwait(false))
+                                {
+                                    await objBlockedFilesPopulateSemaphore.WaitAsync(token).ConfigureAwait(false);
+                                    try
+                                    {
+                                        setBlocked.Add(strFileToDelete);
+                                    }
+                                    finally
+                                    {
+                                        objBlockedFilesPopulateSemaphore.Release();
+                                    }
+                                }
+                            }, token).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            Utils.SemaphorePool.Return(ref objBlockedFilesPopulateSemaphore);
+                        }
+                        foreach (string strBlockedFile in setBlocked)
+                        {
+                            try
+                            {
+                                if (File.Exists(strBlockedFile + ".old")
+                                    && !await FileExtensions.SafeDeleteAsync(strBlockedFile + ".old", !SilentMode, token: token)
+                                                   .ConfigureAwait(false))
+                                {
+                                    continue;
+                                }
+
+                                File.Move(strBlockedFile, strBlockedFile + ".old");
+                            }
+                            catch (IOException)
+                            {
+                                continue;
+                            }
+                            catch (NotSupportedException)
+                            {
+                                continue;
+                            }
+                            catch (UnauthorizedAccessException)
                             {
                                 continue;
                             }
 
-                            File.Move(strBlockedFile, strBlockedFile + ".old");
-                        }
-                        catch (IOException)
-                        {
-                            continue;
-                        }
-                        catch (NotSupportedException)
-                        {
-                            continue;
-                        }
-                        catch (UnauthorizedAccessException)
-                        {
-                            continue;
+                            setBlocked.Remove(strBlockedFile);
                         }
 
-                        lstBlocked.Remove(strBlockedFile);
-                    }
-
-                    if (lstBlocked.Count > 0)
-                    {
-                        Utils.BreakIfDebug();
-                        if (!SilentMode)
+                        if (setBlocked.Count > 0)
                         {
-                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
-                                                                          out StringBuilder sbdOutput))
+                            Utils.BreakIfDebug();
+                            if (!SilentMode)
                             {
-                                sbdOutput.Append(
-                                    await LanguageManager
-                                          .GetStringAsync("Message_Files_Cannot_Be_Removed", token: token)
-                                          .ConfigureAwait(false));
-                                foreach (string strFile in lstBlocked)
+                                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
+                                                                              out StringBuilder sbdOutput))
                                 {
-                                    sbdOutput.AppendLine().Append(strFile);
-                                }
+                                    sbdOutput.Append(
+                                        await LanguageManager
+                                              .GetStringAsync("Message_Files_Cannot_Be_Removed", token: token)
+                                              .ConfigureAwait(false));
+                                    foreach (string strFile in setBlocked)
+                                    {
+                                        sbdOutput.AppendLine().Append(strFile);
+                                    }
 
-                                await Program.ShowScrollableMessageBoxAsync(this, sbdOutput.ToString(), null, MessageBoxButtons.OK,
-                                    MessageBoxIcon.Information, token: token).ConfigureAwait(false);
+                                    await Program.ShowScrollableMessageBoxAsync(this, sbdOutput.ToString(), null, MessageBoxButtons.OK,
+                                        MessageBoxIcon.Information, token: token).ConfigureAwait(false);
+                                }
                             }
                         }
                     }

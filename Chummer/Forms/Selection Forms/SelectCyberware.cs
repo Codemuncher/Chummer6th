@@ -19,7 +19,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -30,7 +30,6 @@ using Chummer.Backend.Attributes;
 using Chummer.Backend.Equipment;
 using NLog;
 using System.ComponentModel;
-using System.Globalization;
 
 namespace Chummer
 {
@@ -876,38 +875,34 @@ namespace Chummer
         /// Essence cost multiplier from the character.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Essence cost multiplier from the character.
-        /// </summary>
+     
         public decimal CharacterESSMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Total Essence cost multiplier from the character (stacks multiplicatively at the very last step.
         /// </summary>
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Total Essence cost multiplier from the character (stacks multiplicatively at the very last step.
-        /// </summary>
         public decimal CharacterTotalESSMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Cost multiplier for Genetech.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Cost multiplier for Genetech.
-        /// </summary>
+
         public decimal GenetechCostMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Essence cost multiplier for Genetech.
         /// </summary>
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public decimal GenetechEssMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Essence cost multiplier for Basic Bioware.
         /// </summary>
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public decimal BasicBiowareESSMultiplier { get; set; } = 1.0m;
 
@@ -924,6 +919,7 @@ namespace Chummer
         /// <summary>
         /// Set the maximum Capacity the piece of Cyberware is allowed to be.
         /// </summary>
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public decimal MaximumCapacity
         {
@@ -1077,7 +1073,6 @@ namespace Chummer
                         string strSelectCategory = objXmlCyberware.SelectSingleNodeAndCacheExpression("category", token)?.Value ?? string.Empty;
                         bool blnForceNoESSModifier = objXmlCyberware.SelectSingleNodeAndCacheExpression("forcegrade", token)?.Value == "None";
                         bool blnIsGeneware = objXmlCyberware.SelectSingleNodeAndCacheExpression("isgeneware", token) != null && objXmlCyberware.SelectSingleNodeAndCacheExpression("isgeneware", token)?.Value != bool.FalseString;
-                        bool blnOrGear = false;
 
                         // Place the Genetech cost multiplier in a variable that can be safely modified.
                         decimal decGenetechCostModifier = 1;
@@ -1092,7 +1087,7 @@ namespace Chummer
                         int intMinRating = await nudRating.DoThreadSafeFuncAsync(x => x.MinimumAsInt, token: token).ConfigureAwait(false);
                         string strAvailExpression = objXmlCyberware
                             .SelectSingleNodeAndCacheExpression("avail", token)?.Value ?? string.Empty;
-                        blnOrGear = strAvailExpression.EndsWith(" or Gear", StringComparison.Ordinal);
+                        bool blnOrGear = strAvailExpression.EndsWith(" or Gear", StringComparison.Ordinal);
                         if (blnOrGear)
                             strAvailExpression = strAvailExpression.TrimEndOnce(" or Gear", true);
 
@@ -1425,7 +1420,7 @@ namespace Chummer
             {
                 if (blnDoUIUpdate)
                 {
-                    await lstCyberware.PopulateWithListItemsAsync(ListItem.Blank.Yield(), token: token)
+                    await lstCyberware.PopulateWithListItemAsync(ListItem.Blank, token: token)
                                       .ConfigureAwait(false);
                 }
 
@@ -1778,11 +1773,10 @@ namespace Chummer
             }
         }
 
-       
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Is a given piece of ware being Upgraded?
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Upgrading { get; set; }
 
         /// <summary>

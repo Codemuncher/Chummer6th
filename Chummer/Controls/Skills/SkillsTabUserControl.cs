@@ -40,7 +40,6 @@ namespace Chummer.UI.Skills
 
         private BindingListDisplay<Skill> _lstActiveSkills;
         private BindingListDisplay<Skill> _lstSkills;
-        private BindingListDisplay<SkillGroup> _lstSkillGroups;
         private BindingListDisplay<KnowledgeSkill> _lstKnowledgeSkills;
         private BindingListDisplay<Skill> _lstNewSkills;
         private ThreadSafeBindingList<Skill> lstNewSkills = [];
@@ -376,13 +375,9 @@ namespace Chummer.UI.Skills
                     }
                 }, token: token).ConfigureAwait(false);
 
-               // await Task.WhenAll(_lstActiveSkills.ContentControls.OfType<SkillControl>()
-              //      .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-               // await Task.WhenAll(_lstSkills.ContentControls.OfType<SkillControl>()
-               //     .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-                await Task.WhenAll(_lstKnowledgeSkills.ContentControls.OfType<KnowledgeSkillControl>()
-                    .Select(x => x.DoLoad(token))).ConfigureAwait(false);
-
+                //await ParallelExtensions.ForEachAsync(_lstActiveSkills.ContentControls.OfType<SkillControl>(), x => x.DoLoad(token), token).ConfigureAwait(false);
+                await ParallelExtensions.ForEachAsync(_lstKnowledgeSkills.ContentControls.OfType<KnowledgeSkillControl>(), x => x.DoLoad(token), token).ConfigureAwait(false);
+               
 
                 if (!await _objCharacter.GetCreatedAsync(token).ConfigureAwait(false))
                 {
@@ -494,29 +489,40 @@ namespace Chummer.UI.Skills
             }
         }
 
+
+
         private async void HandleSkillTable(Skill skill, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             SkillsSection objSkillSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
+            ThreadSafeObservableCollection<SkillSpecialization> specialization = await skill.GetSpecializationsAsync(token).ConfigureAwait(false);
+
 
             if (objSkillSection.CharacterSkills == null || objSkillSection.CharacterSkills.Count == 0)
             {
-                await objSkillSection.AddNewSkillAsync(skill, token);          
-            
-                await lstNewSkills.AddAsync(skill, token);
+                skill.Base = 1;
+
+                await objSkillSection.AddNewSkillAsync(skill, token).ConfigureAwait(false);
+
+                await lstNewSkills.AddAsync(skill, token).ConfigureAwait(false);
+
+
+
                 try
                 {
-                    _lstNewSkills = new BindingListDisplay<Skill>(lstNewSkills, MakeSkill)
+
+                    SkillControl objSkillControl = null;
+                    _lstNewSkills = new BindingListDisplay<Skill>(lstNewSkills, MakeSkillAsync)
                     {
                         Dock = DockStyle.Fill
                     };
                     Disposed += (sender, args) => _lstNewSkills.Dispose();
 
-
-                    Control MakeSkill(Skill arg)
+                    Control MakeSkillAsync(Skill arg)
                     {
-                        SkillControl objSkillControl = new SkillControl(arg, token);
+                        objSkillControl = new SkillControl(arg, token);
                         objSkillControl.CustomAttributeChanged += Control_CustomAttributeChanged;
+                        objSkillControl.SkillDeleted += SkillControl_SkillDeleted;
                         return objSkillControl;
                     }
 
@@ -525,8 +531,7 @@ namespace Chummer.UI.Skills
 
                     cboDisplayFilter.SelectedIndexChanged += cboDisplayFilter_SelectedIndexChanged;
                     cboDisplayFilter.TextUpdate += cboDisplayFilter_TextUpdate;
-                    cboSort.SelectedIndexChanged += cboSort_SelectedIndexChanged;
-                    RefreshSkillLabels(token);
+                    //cboSort.SelectedIndexChanged += cboSort_SelectedIndexChanged;
 
                     _lstNewSkills.ChildPropertyChangedAsync += ChildPropertyChanged;
 
@@ -535,45 +540,65 @@ namespace Chummer.UI.Skills
 
                     _lstNewSkills.Refresh();
 
-
+                    if (objSkillControl.SkillUsed.CGLSpecializations.Count == 1)
+                    {
+                        objSkillControl.SetSelectedSpecialization(objSkillControl.SkillUsed.CGLSpecializations[0].Name);
+                        objSkillControl.Refresh();
+                    }
+                    tlpSkills.Refresh();
                 }
                 catch (Exception ex)
                 {
-
+                    var problem = ex.Message;
                 }
                 finally
                 {
-
+                    RefreshSkillLabels(token);
                 }
             }
             else
             {
-                if (!lstNewSkills.Contains(skill))
+                List<Skill> mylist = GetNewSkillsList(token);
+
+                if (!mylist.Contains(skill))
                 {
-                    await lstNewSkills.AddAsync(skill, token);
-                    await objSkillSection.AddNewSkillAsync(skill, token);
-
-                    SkillControl objSkillControl = new SkillControl(skill, token);
-
-                    _lstNewSkills = new BindingListDisplay<Skill>(lstNewSkills, MakeSkill)
+                    skill.Base = 1;                   
+                    try
                     {
-                        Dock = DockStyle.Fill
-                    };
-                    Disposed += (sender, args) => _lstNewSkills.Dispose();
-
-                    Control MakeSkill(Skill arg)
-                    {
-                        SkillControl objSkillControl = new SkillControl(arg, token);
+                        SkillControl objSkillControl = new SkillControl(skill, token);
                         objSkillControl.CustomAttributeChanged += Control_CustomAttributeChanged;
-                        return objSkillControl;
+                        objSkillControl.SkillDeleted += SkillControl_SkillDeleted;
+                        
+                        List<Skill> matchingSkills = mylist
+                         .Where(s => s.SkillCategory == objSkillControl.SkillUsed.SkillCategory && (s.CGLSpecializations.Count == objSkillControl.SkillUsed.CGLSpecializations.Count))
+                         .ToList();                        
+
+                        if (matchingSkills.Count > 0 && skill.CGLSpecializations.Count == 1)                            
+                        {
+                            _lstNewSkills.Refresh();
+                            objSkillControl.Dispose();
+                            return;
+                        }
+
+                        await objSkillSection.AddNewSkillAsync(skill, token).ConfigureAwait(false);
+                        await lstNewSkills.AddAsync(skill, token).ConfigureAwait(false);
+                        _lstNewSkills.Controls.Add(objSkillControl);
+
+                        _lstNewSkills.Refresh();
+                        if (objSkillControl.SkillUsed.CGLSpecializations.Count == 1)
+                        {
+                            objSkillControl.SetSelectedSpecialization(objSkillControl.SkillUsed.CGLSpecializations[0].Name);
+                        }
+                        _lstNewSkills.ResetBindings();
                     }
+                    catch (Exception ex)
+                    {
 
-                    tlpSkills.Controls.Add(_lstNewSkills, 0, 2);
-                    tlpSkills.SetColumnSpan(_lstNewSkills, 4);
-                    RefreshNewSkillLabels(token);
-
-                    _lstNewSkills.Refresh();
-
+                    }
+                    finally
+                    {
+                        RefreshNewSkillLabels(token);
+                    }
                 }
             }
         }
@@ -603,6 +628,7 @@ namespace Chummer.UI.Skills
                         {
                             SkillControl objSkillControl = new SkillControl(arg, token);
                             objSkillControl.CustomAttributeChanged += Control_CustomAttributeChanged;
+                            objSkillControl.SkillDeleted += SkillControl_SkillDeleted;
                             return objSkillControl;
                         }
 
@@ -651,7 +677,7 @@ namespace Chummer.UI.Skills
                 intRatingLabelWidth = Math.Max(intRatingLabelWidth, objSkillControl.NudSkillWidth);
             }
             token.ThrowIfCancellationRequested();
-           // lblActiveSkills.MinimumSize = new Size(intNameLabelWidth, label1.MinimumSize.Height);
+            lblActiveSkills.MinimumSize = new Size(intNameLabelWidth, lblActiveSkills.MinimumSize.Height);
             token.ThrowIfCancellationRequested();
             lblActiveKarma.Margin = new Padding(
                 Math.Max(0, lblActiveSp.Margin.Left + intRatingLabelWidth - lblActiveSp.Width),
@@ -717,6 +743,38 @@ namespace Chummer.UI.Skills
                
                 }
             }
+
+        private async void SkillControl_SkillDeleted(object sender, EventArgs e)
+                {
+            CancellationToken token = default;
+            if (sender is SkillControl objSkillControl && objSkillControl!= null)
+            {
+                SkillsSection objSkillsSection = _objCharacter?.SkillsSection;
+                if (objSkillsSection != null)
+                {
+                    LockObject = new AsyncFriendlyReaderWriterLock();
+                    IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync().ConfigureAwait(false);
+                    try
+                    {
+                        await objSkillsSection.RemoveNewSkillsAsync(objSkillControl.SkillUsed,token).ConfigureAwait(false); 
+                        await lstNewSkills.RemoveAsync(objSkillControl.SkillUsed).ConfigureAwait(false);
+                        tlpSkills.Controls.Remove(objSkillControl);
+                        _lstNewSkills.Controls.Remove(objSkillControl);
+                        objSkillControl.Dispose();
+                        _lstNewSkills.Refresh();
+                    }
+                    catch (Exception ex)
+                    {
+                        var message = ex.Message;
+            }
+                    finally
+            {
+                        await objLocker.DisposeAsync().ConfigureAwait(false);
+                        RefreshNewSkillLabels(token);
+            }
+        }
+            }
+        }
 
         private void KnowledgeSkillsOnListChanged(object sender, ListChangedEventArgs e)
         {
@@ -1803,6 +1861,15 @@ namespace Chummer.UI.Skills
             }
         }
 
+        // Returns a List<Skill> containing all skills from lstNewSkills.
+        private List<Skill> GetNewSkillsList(CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            // ThreadSafeBindingList<Skill> lstNewSkills is assumed to be initialized.
+            return lstNewSkills.ToList();
+        }        
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public AsyncFriendlyReaderWriterLock LockObject { get; internal set; }
     }
 }

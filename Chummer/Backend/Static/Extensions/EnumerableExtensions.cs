@@ -34,11 +34,12 @@ namespace Chummer
         /// </summary>
         /// <param name="strGuid">InternalId of the Needle to Find.</param>
         /// <param name="lstHaystack">Haystack to search.</param>
-        public static T DeepFindById<T>(this IEnumerable<T> lstHaystack, string strGuid) where T : IHasChildren<T>, IHasInternalId
+        public static T DeepFindById<T>(this IEnumerable<T> lstHaystack, string strGuid, CancellationToken token = default) where T : IHasChildren<T>, IHasInternalId
         {
+            token.ThrowIfCancellationRequested();
             if (lstHaystack == null || string.IsNullOrWhiteSpace(strGuid) || strGuid.IsEmptyGuid())
                 return default;
-            return lstHaystack.DeepFirstOrDefault(x => x.Children, x => x.InternalId == strGuid);
+            return lstHaystack.DeepFirstOrDefault(x => x.Children, x => x.InternalId == strGuid, token);
         }
 
         /// <summary>
@@ -155,11 +156,11 @@ namespace Chummer
             {
                 uint result = 0;
                 Parallel.ForEach(lstItems, () => 0, (i, state, local) =>
-                    {
-                        if (token.IsCancellationRequested)
-                            state.Stop();
-                        return state.IsStopped ? 0 : i.GetHashCode();
-                    },
+                {
+                    if (token.IsCancellationRequested)
+                        state.Stop();
+                    return state.IsStopped ? 0 : i.GetHashCode();
+                },
                     localResult => result += (uint)localResult);
                 token.ThrowIfCancellationRequested();
                 return (int)(19u + result * 31u);
@@ -188,6 +189,18 @@ namespace Chummer
         public static IEnumerable<T> ToEnumerable<T>(params T[] lstItems)
         {
             return lstItems; // faster and lighter on memory than yield return
+        }
+
+        /// <summary>
+        /// Syntactic sugar to wraps this object instance into a temporary array consisting of a single item.
+        /// Potentially better than a normal Yield() because of fewer allocations needed, but more cumbersome because it requires disposal.
+        /// </summary>
+        /// <typeparam name="T">Type of the object.</typeparam>
+        /// <param name="objItem">The instance that will be wrapped. </param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static TemporaryArray<T> YieldAsPooled<T>(this T objItem)
+        {
+            return new TemporaryArray<T>(objItem);
         }
 
         /// <summary>

@@ -2285,32 +2285,6 @@ namespace Chummer
                         await chkJoinGroup.DoThreadSafeAsync(x => x.Text = strTemp7, token)
                             .ConfigureAwait(false);
 
-                        CharacterAttrib objMag = await CharacterObject.GetAttributeAsync("MAG", token: GenericToken).ConfigureAwait(false);
-                        if (!await CharacterObject.AttributeSection.Attributes
-                                .ContainsAsync(objMag, token)
-                                .ConfigureAwait(false))
-                        {
-                            await CharacterObject.AttributeSection.Attributes
-                                .AddAsync(objMag, token).ConfigureAwait(false);
-                        }
-
-                        if (await CharacterObjectSettings.GetMysAdeptSecondMAGAttributeAsync(token)
-                                .ConfigureAwait(false) && await CharacterObject.GetIsMysticAdeptAsync(token)
-                                .ConfigureAwait(false))
-                        {
-                            CharacterAttrib objMAGAdept =
-                                await CharacterObject.AttributeSection
-                                    .GetAttributeByNameAsync("MAGAdept", token)
-                                    .ConfigureAwait(false);
-                            if (!await CharacterObject.AttributeSection.Attributes
-                                    .ContainsAsync(objMAGAdept, token)
-                                    .ConfigureAwait(false))
-                            {
-                                await CharacterObject.AttributeSection.Attributes
-                                    .AddAsync(objMAGAdept, token).ConfigureAwait(false);
-                            }
-                        }
-
                         await gpbGearBondedFoci
                             .DoThreadSafeAsync(x => x.Visible = true, token)
                             .ConfigureAwait(false);
@@ -2322,13 +2296,6 @@ namespace Chummer
                         if (!await CharacterObject.GetRESEnabledAsync(token).ConfigureAwait(false))
                             await tabCharacterTabs
                                 .DoThreadSafeAsync(x => x.TabPages.Remove(tabInitiation), token)
-                                .ConfigureAwait(false);
-
-                        await CharacterObject.AttributeSection.Attributes
-                                .RemoveAsync(await CharacterObject.GetAttributeAsync("MAG", token: GenericToken).ConfigureAwait(false), token)
-                                .ConfigureAwait(false);
-                        await CharacterObject.AttributeSection.Attributes
-                                .RemoveAsync(await CharacterObject.GetAttributeAsync("MAGAdept", token: GenericToken).ConfigureAwait(false), token)
                                 .ConfigureAwait(false);
 
                         await gpbGearBondedFoci
@@ -2437,14 +2404,6 @@ namespace Chummer
                             .ConfigureAwait(false);
                         await chkJoinGroup.DoThreadSafeAsync(x => x.Text = strTemp7, token)
                             .ConfigureAwait(false);
-
-                        CharacterAttrib objRes = await CharacterObject.GetAttributeAsync("RES", token: GenericToken).ConfigureAwait(false);
-                        if (!await CharacterObject.AttributeSection.Attributes.ContainsAsync(
-                                objRes, token).ConfigureAwait(false))
-                        {
-                            await CharacterObject.AttributeSection.Attributes.AddAsync(
-                                objRes, token).ConfigureAwait(false);
-                        }
                     }
                     else
                     {
@@ -2452,30 +2411,6 @@ namespace Chummer
                             await tabCharacterTabs
                                 .DoThreadSafeAsync(x => x.TabPages.Remove(tabInitiation), token)
                                 .ConfigureAwait(false);
-                        await CharacterObject.AttributeSection.Attributes
-                                .RemoveAsync(await CharacterObject.GetAttributeAsync("RES", token: GenericToken).ConfigureAwait(false), token)
-                                .ConfigureAwait(false);
-                    }
-                }
-
-                if (e.PropertyNames.Contains(nameof(Character.DEPEnabled)))
-                {
-                    if (await CharacterObject.GetDEPEnabledAsync(token).ConfigureAwait(false))
-                    {
-                        CharacterAttrib objDep = await CharacterObject.GetAttributeAsync("DEP", token: GenericToken).ConfigureAwait(false);
-                        if (!await CharacterObject
-                                .AttributeSection.Attributes
-                                .ContainsAsync(objDep, token)
-                                .ConfigureAwait(false))
-                        {
-                            await CharacterObject.AttributeSection.Attributes
-                                .AddAsync(objDep, token).ConfigureAwait(false);
-                        }
-                    }
-                    else
-                    {
-                        await CharacterObject.AttributeSection.Attributes
-                            .RemoveAsync(await CharacterObject.GetAttributeAsync("DEP", token: GenericToken).ConfigureAwait(false), token).ConfigureAwait(false);
                     }
                 }
 
@@ -2536,17 +2471,6 @@ namespace Chummer
                         }, token).ConfigureAwait(false);
                         await cmdAddSpell.DoThreadSafeAsync(x => x.Enabled = true, token)
                             .ConfigureAwait(false);
-                        if (await CharacterObject.GetIsMysticAdeptAsync(token).ConfigureAwait(false) &&
-                            await CharacterObjectSettings.GetMysAdeptSecondMAGAttributeAsync(token)
-                                .ConfigureAwait(false))
-                        {
-                            CharacterAttrib objMAGAdept =
-                                await CharacterObject.AttributeSection
-                                    .GetAttributeByNameAsync("MAGAdept", token)
-                                    .ConfigureAwait(false);
-                            await CharacterObject.AttributeSection.Attributes.TryAddAsync(objMAGAdept, token)
-                                .ConfigureAwait(false);
-                        }
                     }
                     else
                     {
@@ -2554,15 +2478,6 @@ namespace Chummer
                             .ConfigureAwait(false);
                         await cmdAddSpell.DoThreadSafeAsync(x => x.Enabled = false, token)
                             .ConfigureAwait(false);
-                        if (await CharacterObject.GetIsMysticAdeptAsync(token).ConfigureAwait(false))
-                        {
-                            CharacterAttrib objMAGAdept =
-                                await CharacterObject.AttributeSection
-                                    .GetAttributeByNameAsync("MAGAdept", token)
-                                    .ConfigureAwait(false);
-                            await CharacterObject.AttributeSection.Attributes.RemoveAsync(objMAGAdept, token)
-                                .ConfigureAwait(false);
-                        }
                     }
 
                     await cmdAddSpirit.DoThreadSafeAsync(x => x.Visible = blnMagicianEnabled,
@@ -2583,17 +2498,6 @@ namespace Chummer
                         }, token).ConfigureAwait(false);
                         await cmdAddSpell.DoThreadSafeAsync(x => x.Enabled = true, token)
                             .ConfigureAwait(false);
-                        if (await CharacterObject.GetIsMysticAdeptAsync(token).ConfigureAwait(false) &&
-                            await CharacterObjectSettings.GetMysAdeptSecondMAGAttributeAsync(token)
-                                .ConfigureAwait(false))
-                        {
-                            CharacterAttrib objMAGAdept =
-                                await CharacterObject.AttributeSection
-                                    .GetAttributeByNameAsync("MAGAdept", token)
-                                    .ConfigureAwait(false);
-                            await CharacterObject.AttributeSection.Attributes.TryAddAsync(objMAGAdept, token)
-                                .ConfigureAwait(false);
-                        }
 
                         await tabCharacterTabs.DoThreadSafeAsync(x =>
                         {
@@ -2610,16 +2514,6 @@ namespace Chummer
                                 .ConfigureAwait(false);
                             await cmdAddSpell.DoThreadSafeAsync(x => x.Enabled = false, token)
                                 .ConfigureAwait(false);
-                            if (await CharacterObjectSettings.GetMysAdeptSecondMAGAttributeAsync(token)
-                                    .ConfigureAwait(false))
-                            {
-                                CharacterAttrib objMAGAdept =
-                                    await CharacterObject.AttributeSection
-                                        .GetAttributeByNameAsync("MAGAdept", token)
-                                        .ConfigureAwait(false);
-                                await CharacterObject.AttributeSection.Attributes.RemoveAsync(objMAGAdept, token)
-                                    .ConfigureAwait(false);
-                            }
                         }
                         else
                             await cmdAddSpell.DoThreadSafeAsync(x => x.Enabled = true, token)
@@ -3797,7 +3691,8 @@ namespace Chummer
                         .ConfigureAwait(false),
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question, token: token).ConfigureAwait(false) == DialogResult.No)
                 return;
-            await DoReapplyImprovements(strSelectedId.Yield().ToList(), token: token).ConfigureAwait(false);
+            using (TemporaryArray<string> eParam = strSelectedId.YieldAsPooled())
+                await DoReapplyImprovements(eParam, token: token).ConfigureAwait(false);
         }
 
         private async Task DoReapplyImprovements(IReadOnlyCollection<string> lstInternalIdFilter = null,
@@ -5214,13 +5109,16 @@ namespace Chummer
                                     continue;
                                 }
 
-                                objSpell.FreeBonus = frmPickSpell.MyForm.FreeBonus;
-                                // Barehanded Adept
-                                if (objSpell.FreeBonus && await CharacterObject.GetAdeptEnabledAsync(GenericToken).ConfigureAwait(false)
-                                                       && !await CharacterObject.GetMagicianEnabledAsync(GenericToken).ConfigureAwait(false)
-                                                       && (objSpell.Range == "T" || objSpell.Range == "T (A)"))
+                                if (frmPickSpell.MyForm.FreeBonus)
                                 {
-                                    objSpell.BarehandedAdept = true;
+                                    objSpell.FreeBonus = true;
+                                    // Barehanded Adept
+                                    if (await CharacterObject.GetAdeptEnabledAsync(GenericToken).ConfigureAwait(false)
+                                        && !await CharacterObject.GetMagicianEnabledAsync(GenericToken).ConfigureAwait(false)
+                                        && (objSpell.Range == "T" || objSpell.Range == "T (A)"))
+                                    {
+                                        objSpell.BarehandedAdept = true;
+                                    }
                                 }
 
                                 await CharacterObject.Spells.AddAsync(objSpell, GenericToken).ConfigureAwait(false);
@@ -14105,14 +14003,7 @@ namespace Chummer
                 SkillsSection objSkillSection =
                     await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false);
 
-                token.ThrowIfCancellationRequested();
-                // ------------------------------------------------------------------------------
-                // Calculate the BP used by Skill Groups.
-                int intSkillGroupsPoints = await objSkillSection.SkillGroups
-                    .SumAsync(x => x.GetCurrentKarmaCostAsync(token),
-                        token: token).ConfigureAwait(false);
-                intKarmaPointsRemain -= intSkillGroupsPoints;
-
+                          
                 token.ThrowIfCancellationRequested();
                 // ------------------------------------------------------------------------------
                 // Calculate the BP used by Active Skills.
@@ -14928,25 +14819,6 @@ namespace Chummer
                                                           + intSkillGroupPointsMaximum.ToString(
                                                               GlobalSettings.CultureInfo);
             }
-
-            int intSkillGroupsTotalCostKarma = await CharacterObject.SkillsSection.SkillGroups
-                                                                    .SumAsync(
-                                                                        x => x.GetCurrentKarmaCostAsync(token),
-                                                                        token: token).ConfigureAwait(false);
-            if (intSkillGroupsTotalCostKarma > 0)
-            {
-                if (strTemp3 != strZeroKarma)
-                {
-                    strTemp3 += strColon + strSpace + intSkillGroupsTotalCostKarma.ToString(GlobalSettings.CultureInfo)
-                                + strSpace + strKarma;
-                }
-                else
-                {
-                    strTemp3 = intSkillGroupsTotalCostKarma.ToString(GlobalSettings.CultureInfo) + strSpace + strKarma;
-                }
-            }
-
-            await lblSkillGroupsBP.DoThreadSafeAsync(x => x.Text = strTemp3, token).ConfigureAwait(false);
         }
 
         private int _intFileUpdateQueued;
@@ -18237,80 +18109,33 @@ namespace Chummer
                             .TryGetNodeByNameOrId("/chummer/cyberwares/cyberware",
                                 frmPickCyberware.MyForm.SelectedCyberware);
 
-                        // Create the Cyberware object.
-                        List<Weapon> lstWeapons = new List<Weapon>(1);
-                        List<Vehicle> lstVehicles = new List<Vehicle>(1);
                         Cyberware objCyberware = new Cyberware(CharacterObject);
                         try
                         {
-                            await objCyberware.CreateAsync(objXmlCyberware, frmPickCyberware.MyForm.SelectedGrade,
-                                objSource,
-                                frmPickCyberware.MyForm.SelectedRating, lstWeapons, lstVehicles, true, true,
-                                string.Empty, objSelectedCyberware, token: token).ConfigureAwait(false);
-                            if (objCyberware.InternalId.IsEmptyGuid())
-                            {
+                            await objCyberware
+                                   .SetPrototypeTranshumanAsync(frmPickCyberware.MyForm.PrototypeTranshuman, token)
+                                   .ConfigureAwait(false);
+                            if (await CharacterObjectSettings.GetAllowCyberwareESSDiscountsAsync(token).ConfigureAwait(false))
+                                await objCyberware.SetESSDiscountAsync(frmPickCyberware.MyForm.SelectedESSDiscount, token).ConfigureAwait(false);
+                            await objCyberware.SetParentAsync(objSelectedCyberware, token).ConfigureAwait(false);
+                            if (!await objCyberware.Purchase(objXmlCyberware, objSource,
+                                    frmPickCyberware.MyForm.SelectedGrade,
+                                    frmPickCyberware.MyForm.SelectedRating, null,
+                                    objSelectedCyberware != null
+                                        ? await objSelectedCyberware.GetChildrenAsync(token).ConfigureAwait(false)
+                                        : await CharacterObject.GetCyberwareAsync(token).ConfigureAwait(false),
+                                    await CharacterObject.GetVehiclesAsync(token).ConfigureAwait(false),
+                                    await CharacterObject.GetWeaponsAsync(token).ConfigureAwait(false),
+                                    frmPickCyberware.MyForm.Markup,
+                                    frmPickCyberware.MyForm.FreeCost,
+                                    frmPickCyberware.MyForm.BlackMarketDiscount,
+                                    objParent: objSelectedCyberware, token: token).ConfigureAwait(false))
                                 await objCyberware.DeleteCyberwareAsync(token: token).ConfigureAwait(false);
-                                return false;
-                            }
-
-                            Guid guidSourceId = await objCyberware.GetSourceIDAsync(token).ConfigureAwait(false);
-                            if (guidSourceId == Cyberware.EssenceAntiHoleGUID)
-                            {
-                                await CharacterObject
-                                    .DecreaseEssenceHoleAsync(
-                                        await objCyberware.GetRatingAsync(token).ConfigureAwait(false),
-                                        token: token).ConfigureAwait(false);
-                            }
-                            else if (guidSourceId == Cyberware.EssenceHoleGUID)
-                            {
-                                await CharacterObject
-                                    .IncreaseEssenceHoleAsync(
-                                        await objCyberware.GetRatingAsync(token).ConfigureAwait(false),
-                                        token: token).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                await objCyberware.SetDiscountCostAsync(frmPickCyberware.MyForm.BlackMarketDiscount, token).ConfigureAwait(false);
-                                await objCyberware
-                                    .SetPrototypeTranshumanAsync(frmPickCyberware.MyForm.PrototypeTranshuman, token)
-                                    .ConfigureAwait(false);
-
-                                // Apply the ESS discount if applicable.
-                                if (await CharacterObjectSettings.GetAllowCyberwareESSDiscountsAsync(token).ConfigureAwait(false))
-                                    await objCyberware.SetESSDiscountAsync(frmPickCyberware.MyForm.SelectedESSDiscount, token).ConfigureAwait(false);
-
-                                if (frmPickCyberware.MyForm.FreeCost)
-                                    objCyberware.Cost = "0";
-
-                                if (objSelectedCyberware != null)
-                                    await (await objSelectedCyberware.GetChildrenAsync(token).ConfigureAwait(false)).AddAsync(objCyberware, token).ConfigureAwait(false);
-                                else
-                                    await (await CharacterObject.GetCyberwareAsync(token).ConfigureAwait(false)).AddAsync(objCyberware, token).ConfigureAwait(false);
-
-                                await (await CharacterObject.GetWeaponsAsync(token).ConfigureAwait(false)).AddRangeAsync(lstWeapons, token).ConfigureAwait(false);
-                                await (await CharacterObject.GetVehiclesAsync(token).ConfigureAwait(false)).AddRangeAsync(lstVehicles, token).ConfigureAwait(false);
-                            }
 
                             return frmPickCyberware.MyForm.AddAgain;
                         }
                         catch
                         {
-                            if (lstWeapons.Count > 0)
-                            {
-                                foreach (Weapon objWeapon in lstWeapons)
-                                {
-                                    await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
-                                }
-                            }
-
-                            if (lstVehicles.Count > 0)
-                            {
-                                foreach (Vehicle objVehicle in lstVehicles)
-                                {
-                                    await objVehicle.DeleteVehicleAsync(token: CancellationToken.None).ConfigureAwait(false);
-                                }
-                            }
-
                             await objCyberware.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
                             throw;
                         }
@@ -22028,14 +21853,14 @@ namespace Chummer
                             intUsedPoints -= await (await skill.GetSpecializationsAsync(token).ConfigureAwait(false))
                                 .CountAsync(
                                     async spec =>
-                                        await (await CharacterObject.GetSpellsAsync(token)
+                                    {
+                                        string strNameInner = await spec.GetNameAsync(token).ConfigureAwait(false);
+                                        return await (await CharacterObject.GetSpellsAsync(token)
                                                 .ConfigureAwait(false)).AnyAsync(
-                                                async spell =>
-                                                    spell.Category ==
-                                                    await spec.GetNameAsync(token).ConfigureAwait(false)
-                                                    && !spell.FreeBonus,
+                                                spell => spell.Category == strNameInner && !spell.FreeBonus,
                                                 token)
-                                            .ConfigureAwait(false),
+                                            .ConfigureAwait(false);
+                                    },
                                     token)
                                 .ConfigureAwait(false);
                         }

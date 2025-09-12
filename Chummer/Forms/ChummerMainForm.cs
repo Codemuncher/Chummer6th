@@ -853,15 +853,8 @@ namespace Chummer
                                             }
 
                                             // Delete all old autosaves
-                                            List<Task> lstTasks = new List<Task>(lstOldAutosaves.Count);
-                                            foreach (string strOldAutosave in lstOldAutosaves)
-                                            {
-                                                lstTasks.Add(
-                                                    FileExtensions.SafeDeleteAsync(
-                                                        strOldAutosave, token: _objGenericToken));
-                                            }
-
-                                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                                            await ParallelExtensions.ForEachAsync(lstOldAutosaves, strOldAutosave =>
+                                                FileExtensions.SafeDeleteAsync(strOldAutosave, token: _objGenericToken), _objGenericToken).ConfigureAwait(false);
                                         }
 
                                         if (setFilesToLoad.Count > 0)
@@ -2568,6 +2561,21 @@ namespace Chummer
             }
         }
 
+        private async void mnuXmlEditor_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (ThreadSafeForm<EditXmlData> frmXmlEditor
+                       = await ThreadSafeForm<EditXmlData>.GetAsync(
+                           () => new EditXmlData(), _objGenericToken).ConfigureAwait(false))
+                    await frmXmlEditor.ShowDialogSafeAsync(this, _objGenericToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                //swallow this
+            }
+        }
+
         private async void menuStrip_ItemAdded(object sender, ToolStripItemEventArgs e)
         {
             try
@@ -3290,9 +3298,11 @@ namespace Chummer
         /// <summary>
         /// Opens the correct window for a single character.
         /// </summary>
-        public Task OpenCharacter(Character objCharacter, bool blnIncludeInMru = true, CancellationToken token = default)
+        public async Task OpenCharacter(Character objCharacter, bool blnIncludeInMru = true, CancellationToken token = default)
         {
-            return OpenCharacterList(objCharacter.Yield(), blnIncludeInMru, token);
+            token.ThrowIfCancellationRequested();
+            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
+                await OpenCharacterList(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -3317,7 +3327,8 @@ namespace Chummer
                 {
                     if (lstCharacters == null)
                         return;
-                    List<Character> lstNewCharacters = lstCharacters.ToList();
+                    if (!(lstCharacters is IReadOnlyCollection<Character> lstNewCharacters))
+                        lstNewCharacters = lstCharacters.ToList();
                     if (lstNewCharacters.Count == 0)
                         return;
                     await _objFormOpeningSemaphore.WaitAsync(token).ConfigureAwait(false);
@@ -3507,9 +3518,11 @@ namespace Chummer
         /// <summary>
         /// Open a character's print form up without necessarily opening them up fully for editing.
         /// </summary>
-        public Task OpenCharacterForPrinting(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
+        public async Task OpenCharacterForPrinting(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
         {
-            return OpenCharacterListForPrinting(objCharacter.Yield(), blnIncludeInMru, token);
+            token.ThrowIfCancellationRequested();
+            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
+                await OpenCharacterListForPrinting(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -3752,9 +3765,11 @@ namespace Chummer
         /// <summary>
         /// Open a character's export form up without necessarily opening them up fully for editing.
         /// </summary>
-        public Task OpenCharacterForExport(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
+        public async Task OpenCharacterForExport(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
         {
-            return OpenCharacterListForExport(objCharacter.Yield(), blnIncludeInMru, token);
+            token.ThrowIfCancellationRequested();
+            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
+                await OpenCharacterListForExport(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -3928,17 +3943,8 @@ namespace Chummer
                                                                          * setCharactersToOpen.Count, token)
                                           .ConfigureAwait(false))
                     {
-                        List<Task<Character>> tskCharacterLoads = new List<Task<Character>>(setCharactersToOpen.Count);
-                        while (setCharactersToOpen.TryTake(out string strFile))
-                        {
-                            // ReSharper disable once AccessToDisposedClosure
-                            tskCharacterLoads.Add(Task.Run(
-                                                      () => Program.LoadCharacterAsync(
-                                                          strFile, frmLoadingBar: frmLoadingBar.MyForm,
-                                                          token: token), token));
-                        }
-                        Character[] aobjCharacters = await Task.WhenAll(tskCharacterLoads).ConfigureAwait(false);
-                        lstCharacters.AddRange(aobjCharacters);
+                        lstCharacters.AddRange(await ParallelExtensions.ForEachAsync(setCharactersToOpen, strFile =>
+                            Program.LoadCharacterAsync(strFile, frmLoadingBar: frmLoadingBar.MyForm, token: token), token).ConfigureAwait(false));
                     }
 
                     await OpenCharacterList(lstCharacters, token: token).ConfigureAwait(false);

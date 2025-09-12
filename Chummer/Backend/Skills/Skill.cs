@@ -17,6 +17,10 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Annotations;
+using Chummer.Backend.Attributes;
+using Chummer.Backend.Equipment;
+using Chummer.UI.Skills;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -31,9 +35,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Annotations;
-using Chummer.Backend.Attributes;
-using Chummer.Backend.Equipment;
 
 namespace Chummer.Backend.Skills
 {
@@ -527,11 +528,22 @@ namespace Chummer.Backend.Skills
 
                 if (objLoadingSkill == null)
                 {
-                    XmlNode xmlSkillDataNode = objCharacter.LoadData("skills.xml")
-                        .TryGetNodeById("/chummer/skills/skill", suid);
+                    XmlDocument xmlSkillsDoc = objCharacter.LoadData("skills.xml");
+                    XmlNode xmlSkillDataNode = xmlSkillsDoc.TryGetNodeById("/chummer/skills/skill", suid);
 
                     if (xmlSkillDataNode == null)
-                        return null;
+                    {
+                        // Legacy sweeper: we might have an active skill by the same name whose ID was changed for whatever reason.
+                        string strName = xmlSkillNode["name"]?.InnerText ?? string.Empty;
+                        if (!string.IsNullOrEmpty(strName))
+                        {
+                            xmlSkillDataNode = xmlSkillsDoc.TryGetNodeByNameOrId("/chummer/skills/skill", strName);
+                            if (xmlSkillDataNode == null)
+                                return null;
+                        }
+                        else
+                            return null;
+                    }
 
                     bool blnExotic = false;
                     xmlSkillDataNode.TryGetBoolFieldQuickly("exotic", ref blnExotic);
@@ -769,11 +781,22 @@ namespace Chummer.Backend.Skills
 
                 if (objLoadingSkill == null)
                 {
-                    XmlNode xmlSkillDataNode = (await objCharacter.LoadDataAsync("skills.xml", token: token).ConfigureAwait(false))
-                        .TryGetNodeById("/chummer/skills/skill", suid);
+                    XmlDocument xmlSkillsDoc = await objCharacter.LoadDataAsync("skills.xml", token: token).ConfigureAwait(false);
+                    XmlNode xmlSkillDataNode = xmlSkillsDoc.TryGetNodeById("/chummer/skills/skill", suid);
 
                     if (xmlSkillDataNode == null)
-                        return null;
+                    {
+                        // Legacy sweeper: we might have an active skill by the same name whose ID was changed for whatever reason.
+                        string strName = xmlSkillNode["name"]?.InnerText ?? string.Empty;
+                        if (!string.IsNullOrEmpty(strName))
+                        {
+                            xmlSkillDataNode = xmlSkillsDoc.TryGetNodeByNameOrId("/chummer/skills/skill", strName);
+                            if (xmlSkillDataNode == null)
+                                return new Tuple<Skill, bool>(null, false);
+                        }
+                        else
+                            return new Tuple<Skill, bool>(null, false);
+                    }
 
                     bool blnExotic = false;
                     xmlSkillDataNode.TryGetBoolFieldQuickly("exotic", ref blnExotic);
@@ -4304,11 +4327,9 @@ namespace Chummer.Backend.Skills
         }
 
         public virtual Task<bool> GetAllowNewSkillDeleteAsync(CancellationToken token = default)
-#pragma warning restore CS1998
         {
             return Task.FromResult(AllowDelete);
         }
-
         public bool Default
         {
             get
@@ -5029,9 +5050,71 @@ namespace Chummer.Backend.Skills
             }
         }
 
-        public async Task SetTopMostDisplaySpecializationAsync(string value, CancellationToken token = default)
+        public async Task ClearSkillSpecialization(string value, CancellationToken token = default)
         {
             if (string.IsNullOrWhiteSpace(value))
+            {
+                await (await GetSpecializationsAsync(token).ConfigureAwait(false)).RemoveAllAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
+                return;
+            }
+            IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                ThreadSafeObservableCollection<SkillSpecialization> lstSpecs
+                    = await GetSpecializationsAsync(token).ConfigureAwait(false);
+
+                int intIndexToReplace = await lstSpecs.FindIndexAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                // SkillSpecialization objNewSpec = new SkillSpecialization(CharacterObject, value);
+                if (intIndexToReplace >= 0)
+                {
+                    await lstSpecs.RemoveAtAsync(intIndexToReplace, token).ConfigureAwait(false);
+                    return;
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        public async Task ResetControlsAsync(Skill skillToDelete, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (skillToDelete == null)
+                throw new ArgumentNullException(skillToDelete.Name);
+
+            IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                
+
+               // int intIndexToReplace = await lstSpecs.FindIndexAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                // SkillSpecialization objNewSpec = new SkillSpecialization(CharacterObject, value);
+
+              //  await lstSpecs.RemoveAtAsync(intIndexToReplace, token).ConfigureAwait(false);
+                return;
+
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        public async Task SetTopMostDisplaySpecializationAsync(string value, CancellationToken token = default)
+        {
+                  if (string.IsNullOrWhiteSpace(value))
             {
                 await (await GetSpecializationsAsync(token).ConfigureAwait(false)).RemoveAllAsync(async x => !await x.GetFreeAsync(token).ConfigureAwait(false), token: token).ConfigureAwait(false);
                 return;
@@ -7422,19 +7505,7 @@ namespace Chummer.Backend.Skills
                     {
                         MultiplePropertiesChangedEventArgs objArgs =
                             new MultiplePropertiesChangedEventArgs(setNamesOfChangedProperties.ToArray());
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
-                        foreach (MultiplePropertiesChangedAsyncEventHandler objEvent in _setMultiplePropertiesChangedAsync)
-                        {
-                            lstTasks.Add(objEvent.Invoke(this, objArgs, token));
-                            if (++i < Utils.MaxParallelBatchSize)
-                                continue;
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                            lstTasks.Clear();
-                            i = 0;
-                        }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(_setMultiplePropertiesChangedAsync, objEvent => objEvent.Invoke(this, objArgs, token), token).ConfigureAwait(false);
                         if (MultiplePropertiesChanged != null)
                         {
                             await Utils.RunOnMainThreadAsync(() =>
@@ -7459,22 +7530,16 @@ namespace Chummer.Backend.Skills
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                        int i = 0;
+                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstTasks.Add(objEvent.Invoke(this, objArg, token));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
+                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
-
-                        await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                        await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
 
                         if (PropertyChanged != null)
                         {
@@ -7518,22 +7583,7 @@ namespace Chummer.Backend.Skills
                         if (objSettings != null && await objSettings.GetCompensateSkillGroupKarmaDifferenceAsync(token)
                                 .ConfigureAwait(false))
                         {
-                            List<Task> lstTasks = new List<Task>(Utils.MaxParallelBatchSize);
-                            int i = 0;
-                            foreach (Skill objSkill in SkillGroupObject.SkillList)
-                            {
-                                if (objSkill == this)
-                                    continue;
-                                lstTasks.Add(objSkill.OnMultiplePropertyChangedAsync(token, nameof(UpgradeKarmaCost),
-                                    nameof(RangeCost)));
-                                if (++i < Utils.MaxParallelBatchSize)
-                                    continue;
-                                await Task.WhenAll(lstTasks).ConfigureAwait(false);
-                                lstTasks.Clear();
-                                i = 0;
-                            }
-
-                            await Task.WhenAll(lstTasks).ConfigureAwait(false);
+                            await ParallelExtensions.ForEachAsync(SkillGroupObject.SkillList, objSkill => objSkill.OnMultiplePropertyChangedAsync(token, nameof(UpgradeKarmaCost), nameof(RangeCost)), token).ConfigureAwait(false);
                         }
                     }
                 }
