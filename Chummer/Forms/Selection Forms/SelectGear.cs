@@ -30,7 +30,6 @@ using System.Xml.XPath;
 using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using System.ComponentModel;
-
 namespace Chummer
 {
     public partial class SelectGear : Form
@@ -78,6 +77,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _intAvailModifier = intAvailModifier;
             _intCostMultiplier = intCostMultiplier;
             _objGearParent = objGearParent;
@@ -88,32 +88,6 @@ namespace Chummer
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
             _objGenericCancellationTokenSource = new CancellationTokenSource();
             _objGenericToken = _objGenericCancellationTokenSource.Token;
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objUpdateGearInfoCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objDoRefreshListCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objGearSelectedIndexChangedCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                _objGenericCancellationTokenSource.Dispose();
-                Utils.ListItemListPool.Return(ref _lstCategory);
-                Utils.StringHashSetPool.Return(ref _setAllowedCategories);
-                Utils.StringHashSetPool.Return(ref _setAllowedNames);
-                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
-            };
 
             // Load the Gear information.
             _xmlBaseGearDataNode = objCharacter.LoadDataXPath("gear.xml").SelectSingleNodeAndCacheExpression("/chummer");
@@ -618,7 +592,6 @@ namespace Chummer
         /// </summary>
         public bool AddAgain { get; private set; }
 
-        
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that grant Capacity should be shown.
@@ -634,7 +607,6 @@ namespace Chummer
             }
         }
 
-       
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that consume Capacity should be shown.
@@ -649,7 +621,7 @@ namespace Chummer
                     _blnShowPositiveCapacityOnly = false;
             }
         }
-       
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that consume Armor Capacity should be shown.
@@ -682,6 +654,9 @@ namespace Chummer
         /// </summary>
         public decimal SelectedQty => _decSelectedQty;
 
+        /// <summary>
+        /// Set the maximum Capacity the piece of Gear is allowed to be.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Set the maximum Capacity the piece of Gear is allowed to be.
@@ -692,8 +667,21 @@ namespace Chummer
             set
             {
                 _decMaximumCapacity = value;
-                lblMaximumCapacity.Text = LanguageManager.GetString("Label_MaximumCapacityAllowed") + LanguageManager.GetString("String_Space") + _decMaximumCapacity.ToString("#,0.##", GlobalSettings.CultureInfo);
+                lblMaximumCapacity.Text = LanguageManager.GetString("Label_MaximumCapacityAllowed") + LanguageManager.GetString("String_Space") + value.ToString("#,0.##", GlobalSettings.CultureInfo);
             }
+        }
+
+        /// <summary>
+        /// Set the maximum Capacity the piece of Gear is allowed to be.
+        /// </summary>
+        public async Task SetMaximumCapacityAsync(decimal value, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            _decMaximumCapacity = value;
+            string strText = await LanguageManager.GetStringAsync("Label_MaximumCapacityAllowed", token: token).ConfigureAwait(false)
+                                + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false)
+                                + value.ToString("#,0.##", GlobalSettings.CultureInfo);
+            await lblMaximumCapacity.DoThreadSafeAsync(x => x.Text = strText, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -744,7 +732,6 @@ namespace Chummer
         /// </summary>
         public bool BlackMarketDiscount => _blnBlackMarketDiscount;
 
-        
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Default text string to filter by.
@@ -913,7 +900,7 @@ namespace Chummer
                     SourceString objSource = await SourceString.GetSourceStringAsync(
                         strSource, strPage, GlobalSettings.Language,
                         GlobalSettings.CultureInfo, _objCharacter, token: token).ConfigureAwait(false);
-                    await objSource.SetControlAsync(lblSource, token: token).ConfigureAwait(false);
+                    await objSource.SetControlAsync(lblSource, this, token: token).ConfigureAwait(false);
                     await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSource.ToString()), token: token).ConfigureAwait(false);
                     string strAvail = await new AvailabilityValue(intRating,
                         objXmlGear.SelectSingleNodeAndCacheExpression("avail", token)?.Value, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlGear.SelectSingleNodeAndCacheExpression("id", token)?.Value, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound()).ToStringAsync(token).ConfigureAwait(false);
@@ -1413,7 +1400,7 @@ namespace Chummer
             }
         }
 
-        private async Task<Tuple<decimal, bool>> ProcessInvariantXPathExpression(string strExpression, int intRating, CancellationToken token = default)
+        private async Task<ValueTuple<decimal, bool>> ProcessInvariantXPathExpression(string strExpression, int intRating, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             bool blnSuccess = true;
@@ -1492,10 +1479,10 @@ namespace Chummer
                 (bool blnIsSuccess, object objProcess)
                     = await CommonFunctions.EvaluateInvariantXPathAsync(strExpression, token).ConfigureAwait(false);
                 if (blnIsSuccess)
-                    return new Tuple<decimal, bool>(Convert.ToDecimal((double)objProcess), true);
+                    return new ValueTuple<decimal, bool>(Convert.ToDecimal((double)objProcess), true);
             }
 
-            return new Tuple<decimal, bool>(decValue, blnSuccess);
+            return new ValueTuple<decimal, bool>(decValue, blnSuccess);
         }
 
         #endregion Methods

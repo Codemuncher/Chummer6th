@@ -58,31 +58,10 @@ namespace Chummer
         {
             _objCharacter = objCharacter ?? throw new ArgumentNullException(nameof(objCharacter));
             _objGenericToken = _objGenericCancellationTokenSource.Token;
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateMetatypesCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateMetavariantsCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objRefreshSelectedMetavariantCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                _objGenericCancellationTokenSource.Dispose();
-            };
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
 
             string strXmlFile = _objCharacter.IsCritter ? "critters.xml" : "metatypes.xml";
             _xmlMetatypeDocumentMetatypesNode = _objCharacter.LoadData(strXmlFile).SelectSingleNode("/chummer/metatypes");
@@ -158,7 +137,7 @@ namespace Chummer
                         }
 
                         // Add Possession and Inhabitation to the list of Critter Tradition variations.
-                        await chkPossessionBased.SetToolTipAsync(
+                        await chkPossessionBased.SetToolTipTextAsync(
                             await LanguageManager.GetStringAsync("Tip_Metatype_PossessionTradition", token: _objGenericToken).ConfigureAwait(false), _objGenericToken).ConfigureAwait(false);
 
                         using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
@@ -746,20 +725,20 @@ namespace Chummer
                         if (!string.IsNullOrEmpty(strPage))
                         {
                             SourceString objSource = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language, GlobalSettings.CultureInfo, _objCharacter, token).ConfigureAwait(false);
-                            await objSource.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                            await objSource.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                         }
                         else
                         {
                             string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                             await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                            await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                            await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                         }
                     }
                     else
                     {
                         string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                         await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                        await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                        await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                     }
                 }
                 else if (objXmlMetatype != null)
@@ -898,20 +877,20 @@ namespace Chummer
                         if (!string.IsNullOrEmpty(strPage))
                         {
                             SourceString objSource = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language, GlobalSettings.CultureInfo, _objCharacter, token).ConfigureAwait(false);
-                            await objSource.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                            await objSource.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                         }
                         else
                         {
                             string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                             await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                            await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                            await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                         }
                     }
                     else
                     {
                         string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                         await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                        await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                        await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                     }
                 }
                 else
@@ -933,7 +912,7 @@ namespace Chummer
                     await cmdOK.DoThreadSafeAsync(x => x.Enabled = false, token).ConfigureAwait(false);
                 }
 
-                if (objXmlMetatype != null && objXmlMetatype.SelectSingleNodeAndCacheExpression("category", token)?.InnerXml.EndsWith("Spirits", StringComparison.Ordinal) == true)
+                if (objXmlMetatype != null && objXmlMetatype.SelectSingleNodeAndCacheExpression("category", token)?.InnerXmlViaPool().EndsWith("Spirits", StringComparison.Ordinal) == true)
                 {
                     if (!await chkPossessionBased.DoThreadSafeFuncAsync(x => x.Visible, token).ConfigureAwait(false) && !string.IsNullOrEmpty(_strCurrentPossessionMethod))
                     {

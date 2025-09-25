@@ -17,17 +17,17 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Skills;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+using Chummer.Backend.Skills;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -61,6 +61,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = _objCharacter.LoadDataXPath("skills.xml");
         }
 
@@ -238,7 +239,7 @@ namespace Chummer
                         }
 
                         lstSkills.Add(new ListItem(
-                                          new Tuple<string, bool>(strXmlSkillName, objXmlSkill.SelectSingleNodeAndCacheExpression("exotic")?.Value == bool.TrueString),
+                                          new ValueTuple<string, bool>(strXmlSkillName, objXmlSkill.SelectSingleNodeAndCacheExpression("exotic")?.Value == bool.TrueString),
                                           objXmlSkill.SelectSingleNodeAndCacheExpression("translate")?.Value
                                           ?? strXmlSkillName));
                     }
@@ -312,7 +313,7 @@ namespace Chummer
                                 return;
                             }
 
-                            lstSkills.Add(new ListItem(new Tuple<string, bool>(strLoopName, true),
+                            lstSkills.Add(new ListItem(new ValueTuple<string, bool>(strLoopName, true),
                                                        await objExoticSkill.GetCurrentDisplayNameAsync()
                                                                            .ConfigureAwait(false)));
                             setAddedExotics.Add(strLoopName);
@@ -345,10 +346,10 @@ namespace Chummer
 
             if (await cboSkill.DoThreadSafeFuncAsync(x => x.Items.Count).ConfigureAwait(false) == 1)
             {
-                Tuple<string, bool> tupSelected
+                ValueTuple<string, bool> tupSelected
                     = blnForcedExotic
-                        ? new Tuple<string, bool>(strForcedExoticSkillName, true)
-                        : (Tuple<string, bool>)await cboSkill.DoThreadSafeFuncAsync(x => x.SelectedValue)
+                        ? new ValueTuple<string, bool>(strForcedExoticSkillName, true)
+                        : (ValueTuple<string, bool>)await cboSkill.DoThreadSafeFuncAsync(x => x.SelectedValue)
                                                               .ConfigureAwait(false);
                 if (!tupSelected.Item2)
                 {
@@ -409,7 +410,7 @@ namespace Chummer
 
         private void cmdOK_Click(object sender, EventArgs e)
         {
-            Tuple<string, bool> tupSelected = (Tuple<string, bool>)cboSkill.SelectedValue;
+            ValueTuple<string, bool> tupSelected = (ValueTuple<string, bool>)cboSkill.SelectedValue;
             if (tupSelected.Item2)
                 _strReturnValue = tupSelected.Item1 + " (" + cboExtra.SelectedValue + ')';
             else
@@ -432,6 +433,14 @@ namespace Chummer
         /// Only Skills of the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Only Skills of the selected Category should be in the list.
+        /// </summary>
         public string OnlyCategory
         {
             set => _strIncludeCategory = value;
@@ -441,6 +450,9 @@ namespace Chummer
         /// Only Skills from the selected Categories should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills from the selected Categories should be in the list.
+        /// </summary>
         public XmlNode LimitToCategories
         {
             set
@@ -453,7 +465,7 @@ namespace Chummer
                     {
                         foreach (XmlNode objNode in xmlCategoryList)
                         {
-                            sbdLimitToCategories.Append("category = ").Append(objNode.InnerText.CleanXPath())
+                            sbdLimitToCategories.Append("category = ").Append(objNode.InnerTextViaPool().CleanXPath())
                                                 .Append(" or ");
                         }
 
@@ -470,6 +482,9 @@ namespace Chummer
         /// Only Skills not in the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills not in the selected Category should be in the list.
+        /// </summary>
         public string ExcludeCategory
         {
             set => _strExcludeCategory = value;
@@ -479,6 +494,9 @@ namespace Chummer
         /// Only Skills in the selected Skill Group should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills in the selected Skill Group should be in the list.
+        /// </summary>
         public string OnlySkillGroup
         {
             set => _strIncludeSkillGroup = value;
@@ -488,6 +506,9 @@ namespace Chummer
         /// Restrict the list to only a single Skill.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Restrict the list to only a single Skill.
+        /// </summary>
         public string OnlySkill
         {
             set => _strForceSkill = value;
@@ -497,6 +518,9 @@ namespace Chummer
         /// Only Skills not in the selected Skill Group should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills not in the selected Skill Group should be in the list.
+        /// </summary>
         public string ExcludeSkillGroup
         {
             set => _strExcludeSkillGroup = value;
@@ -506,6 +530,9 @@ namespace Chummer
         /// Only the provided Skills should be shown in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only the provided Skills should be shown in the list.
+        /// </summary>
         public string LimitToSkill
         {
             set => _strLimitToSkill = value;
@@ -515,6 +542,9 @@ namespace Chummer
         /// Only Skills not among the selected should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills not among the selected should be in the list.
+        /// </summary>
         public string ExcludeSkill
         {
             set => _strExcludeSkill = value;
@@ -529,6 +559,9 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description to show in the window.
+        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;
@@ -538,6 +571,9 @@ namespace Chummer
         /// Only show skills with a rating greater than or equal to this
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only show skills with a rating greater than or equal to this
+        /// </summary>
         public int MinimumRating
         {
             set => _intMinimumRating = value;
@@ -547,6 +583,9 @@ namespace Chummer
         /// Only show skills with a rating less than or equal to this
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only show skills with a rating less than or equal to this
+        /// </summary>
         public int MaximumRating
         {
             set => _intMaximumRating = value;
@@ -556,7 +595,7 @@ namespace Chummer
 
         private async void cboSkill_SelectedIndexChanged(object sender, EventArgs e)
         {
-            Tuple<string, bool> tupSelected = (Tuple<string, bool>)await cboSkill.DoThreadSafeFuncAsync(x => x.SelectedValue).ConfigureAwait(false);
+            ValueTuple<string, bool> tupSelected = (ValueTuple<string, bool>)await cboSkill.DoThreadSafeFuncAsync(x => x.SelectedValue).ConfigureAwait(false);
             if (tupSelected.Item2)
             {
                 await BuildExtraList(tupSelected.Item1).ConfigureAwait(false);

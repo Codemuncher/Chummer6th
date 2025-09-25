@@ -13,9 +13,11 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                Utils.SemaphorePool.Return(ref _objRollDiceSemaphore);
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -139,7 +141,6 @@ namespace Chummer
             this.cboMethod.Name = "cboMethod";
             this.cboMethod.Size = new System.Drawing.Size(200, 21);
             this.cboMethod.TabIndex = 3;
-            this.cboMethod.TooltipText = "";
             this.cboMethod.SelectedIndexChanged += new System.EventHandler(this.cboMethod_SelectedIndexChanged);
             // 
             // cmdReroll

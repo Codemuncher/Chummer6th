@@ -306,33 +306,23 @@ namespace Chummer
             await objOutStream.WriteAsync(BitConverter.GetBytes(fileSize), 0, 8, token).ConfigureAwait(false);
             token.ThrowIfCancellationRequested();
             IAsyncCodeProgress funcProgress = funcOnProgress != null ? new AsyncDelegateCodeProgress(funcOnProgress) : null;
-            await Task.Run(() => encoder.CodeAsync(objInStream, objOutStream, -1, -1, funcProgress, token), token).ConfigureAwait(false);
+            await encoder.CodeAsync(objInStream, objOutStream, -1, -1, funcProgress, token).ConfigureAwait(false);
         }
 
         public static void DecompressLzmaFile(this FileStream objInStream, Stream objOutStream, Action<long, long> funcOnProgress = null)
         {
             Decoder decoder = s_LzyDecoder.Value;
-            byte[] properties = ArrayPool<byte>.Shared.Rent(5);
-            try
+            using (new FetchSafelyFromArrayPool<byte>(ArrayPool<byte>.Shared, 5, out byte[] properties))
             {
                 if (objInStream.Read(properties, 0, 5) != 5)
                     throw new ArgumentException("input .lzma is too short");
                 decoder.SetDecoderProperties(properties);
             }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(properties);
-            }
             long outSize;
-            byte[] achrBuffer = ArrayPool<byte>.Shared.Rent(8);
-            try
+            using (new FetchSafelyFromArrayPool<byte>(ArrayPool<byte>.Shared, 8, out byte[] achrBuffer))
             {
                 _ = objInStream.Read(achrBuffer, 0, 8);
                 outSize = BitConverter.ToInt64(achrBuffer, 0);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(achrBuffer);
             }
             long compressedSize = objInStream.Length - objInStream.Position;
             ICodeProgress funcProgress = funcOnProgress != null ? new DelegateCodeProgress(funcOnProgress) : null;
@@ -345,33 +335,23 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             Decoder decoder = s_LzyDecoder.Value;
             token.ThrowIfCancellationRequested();
-            byte[] properties = ArrayPool<byte>.Shared.Rent(5);
-            try
+            using (new FetchSafelyFromArrayPool<byte>(ArrayPool<byte>.Shared, 5, out byte[] properties))
             {
                 if (await objInStream.ReadAsync(properties, 0, 5, token).ConfigureAwait(false) != 5)
                     throw new ArgumentException("input .lzma is too short");
                 decoder.SetDecoderProperties(properties);
             }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(properties);
-            }
             long outSize;
-            byte[] achrBuffer = ArrayPool<byte>.Shared.Rent(8);
-            try
+            using (new FetchSafelyFromArrayPool<byte>(ArrayPool<byte>.Shared, 8, out byte[] achrBuffer))
             {
                 _ = await objInStream.ReadAsync(achrBuffer, 0, 8, token).ConfigureAwait(false);
                 outSize = BitConverter.ToInt64(achrBuffer, 0);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(achrBuffer);
             }
             token.ThrowIfCancellationRequested();
             long compressedSize = objInStream.Length - objInStream.Position;
             token.ThrowIfCancellationRequested();
             IAsyncCodeProgress funcProgress = funcOnProgress != null ? new AsyncDelegateCodeProgress(funcOnProgress) : null;
-            await Task.Run(() => decoder.CodeAsync(objInStream, objOutStream, compressedSize, outSize, funcProgress, token), token).ConfigureAwait(false);
+            await decoder.CodeAsync(objInStream, objOutStream, compressedSize, outSize, funcProgress, token).ConfigureAwait(false);
         }
 
         private sealed class DelegateCodeProgress : ICodeProgress

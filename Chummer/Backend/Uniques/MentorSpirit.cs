@@ -70,10 +70,10 @@ namespace Chummer
             LockObject = objCharacter.LockObject;
             if (xmlNodeMentor != null)
             {
-                string strName = xmlNodeMentor["name"]?.InnerText;
+                string strName = xmlNodeMentor["name"]?.InnerTextViaPool();
                 if (!string.IsNullOrEmpty(strName))
                     Name = strName;
-                string strType = xmlNodeMentor["mentortype"]?.InnerText;
+                string strType = xmlNodeMentor["mentortype"]?.InnerTextViaPool();
                 if (!string.IsNullOrEmpty(strType)
                     && Enum.TryParse(strType, true, out Improvement.ImprovementType outEnum))
                 {
@@ -252,10 +252,10 @@ namespace Chummer
                 /*
                 if (string.IsNullOrEmpty(_strNotes))
                 {
-                    _strNotes = CommonFunctions.GetTextFromPdf(_strSource + ' ' + _strPage, _strName);
+                    _strNotes = CommonFunctions.GetTextFromPdf(_strSource + " " + _strPage, _strName);
                     if (string.IsNullOrEmpty(_strNotes))
                     {
-                        _strNotes = CommonFunctions.GetTextFromPdf(Source + ' ' + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
+                        _strNotes = CommonFunctions.GetTextFromPdf(Source + " " + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
                     }
                 }
                 */
@@ -434,10 +434,10 @@ namespace Chummer
                 /*
                 if (string.IsNullOrEmpty(_strNotes))
                 {
-                    _strNotes = CommonFunctions.GetTextFromPdf(_strSource + ' ' + _strPage, _strName);
+                    _strNotes = CommonFunctions.GetTextFromPdf(_strSource + " " + _strPage, _strName);
                     if (string.IsNullOrEmpty(_strNotes))
                     {
-                        _strNotes = CommonFunctions.GetTextFromPdf(Source + ' ' + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
+                        _strNotes = CommonFunctions.GetTextFromPdf(Source + " " + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
                     }
                 }
                 */
@@ -512,16 +512,16 @@ namespace Chummer
                 objWriter.WriteElementString("disadvantage", _strDisadvantage);
                 objWriter.WriteElementString("mentormask",
                                              _blnMentorMask.ToString(GlobalSettings.InvariantCultureInfo));
-                if (_nodBonus != null)
-                    objWriter.WriteRaw("<bonus>" + _nodBonus.InnerXml + "</bonus>");
+                if (!_nodBonus.IsNullOrInnerTextIsEmpty())
+                    objWriter.WriteRaw("<bonus>" + _nodBonus.InnerXmlViaPool() + "</bonus>");
                 else
                     objWriter.WriteElementString("bonus", string.Empty);
-                if (_nodChoice1 != null)
-                    objWriter.WriteRaw("<choice1>" + _nodChoice1.InnerXml + "</choice1>");
+                if (!_nodChoice1.IsNullOrInnerTextIsEmpty())
+                    objWriter.WriteRaw("<choice1>" + _nodChoice1.InnerXmlViaPool() + "</choice1>");
                 else
                     objWriter.WriteElementString("choice1", string.Empty);
-                if (_nodChoice2 != null)
-                    objWriter.WriteRaw("<choice2>" + _nodChoice2.InnerXml + "</choice2>");
+                if (!_nodChoice2.IsNullOrInnerTextIsEmpty())
+                    objWriter.WriteRaw("<choice2>" + _nodChoice2.InnerXmlViaPool() + "</choice2>");
                 else
                     objWriter.WriteElementString("choice2", string.Empty);
 
@@ -582,7 +582,7 @@ namespace Chummer
 
                 if (objNode["mentortype"] != null)
                 {
-                    _eMentorType = Improvement.ConvertToImprovementType(objNode["mentortype"].InnerText);
+                    _eMentorType = Improvement.ConvertToImprovementType(objNode["mentortype"].InnerTextViaPool(token));
                     _objCachedMyXmlNode = null;
                     _objCachedMyXPathNode = null;
                 }

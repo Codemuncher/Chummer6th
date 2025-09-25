@@ -19,9 +19,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -43,12 +43,13 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void SelectWeaponCategory_Load(object sender, EventArgs e)
         {
             // Build a list of Weapon Categories found in the Weapons file.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstCategory))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstCategory))
             {
                 XPathNavigator objXmlDocument = await XmlManager.LoadXPathAsync("weapons.xml", _objCharacter != null ? await
                     (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).GetEnabledCustomDataDirectoryPathsAsync().ConfigureAwait(false) : null).ConfigureAwait(false);
@@ -129,6 +130,9 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description to show in the window.
+        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;
@@ -138,6 +142,9 @@ namespace Chummer
         /// Restrict the list to only a single Category.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Restrict the list to only a single Category.
+        /// </summary>
         public string OnlyCategory
         {
             get => _strForceCategory;

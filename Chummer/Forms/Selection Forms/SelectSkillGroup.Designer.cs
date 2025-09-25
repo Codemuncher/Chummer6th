@@ -40,7 +40,7 @@ namespace Chummer
             // 
             // cboSkillGroup
             // 
-            this.cboSkillGroup.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.cboSkillGroup.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cboSkillGroup.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboSkillGroup.FormattingEnabled = true;
@@ -48,7 +48,6 @@ namespace Chummer
             this.cboSkillGroup.Name = "cboSkillGroup";
             this.cboSkillGroup.Size = new System.Drawing.Size(280, 21);
             this.cboSkillGroup.TabIndex = 1;
-            this.cboSkillGroup.TooltipText = "";
             // 
             // cmdOK
             // 

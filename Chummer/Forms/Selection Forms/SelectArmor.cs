@@ -68,6 +68,7 @@ namespace Chummer
             tabControl.MouseWheel += CommonFunctions.ShiftTabsOnMouseScroll;
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             // Load the Armor information.
             _objXmlDocument = objCharacter.LoadData("armor.xml");
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
@@ -78,30 +79,6 @@ namespace Chummer
             _lstCategory = Utils.ListItemListPool.Get();
             _objGenericCancellationTokenSource = new CancellationTokenSource();
             _objGenericToken = _objGenericCancellationTokenSource.Token;
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objUpdateArmorInfoCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objDoRefreshListCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objArmorSelectedIndexChangedCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                _objGenericCancellationTokenSource.Dispose();
-                Utils.ListItemListPool.Return(ref _lstCategory);
-                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
-            };
         }
 
         private async void SelectArmor_Load(object sender, EventArgs e)
@@ -297,7 +274,7 @@ namespace Chummer
                                             decimal decCostMultiplier =
                                                 1 + await nudMarkup.DoThreadSafeFuncAsync(x => x.Value, token)
                                                     .ConfigureAwait(false) / 100.0m;
-                                            if (_setBlackMarketMaps.Contains(xmlArmor["category"]?.InnerText))
+                                            if (_setBlackMarketMaps.Contains(xmlArmor["category"]?.InnerTextViaPool()))
                                                 decCostMultiplier *= 0.9m;
                                             int intMaximum = await nudRating
                                                 .DoThreadSafeFuncAsync(x => x.MaximumAsInt, token)
@@ -342,7 +319,7 @@ namespace Chummer
                                         }, token).ConfigureAwait(false);
                                     }
 
-                                    string strRatingLabel = xmlArmor["ratinglabel"]?.InnerText;
+                                    string strRatingLabel = xmlArmor["ratinglabel"]?.InnerTextViaPool();
                                     strRatingLabel = !string.IsNullOrEmpty(strRatingLabel)
                                         ? string.Format(GlobalSettings.CultureInfo,
                                             await LanguageManager.GetStringAsync("Label_RatingFormat", token: token)
@@ -678,11 +655,11 @@ namespace Chummer
                         foreach (XmlNode objXmlArmor in objXmlArmorList)
                         {
                             decimal decCostMultiplier = decBaseMarkup;
-                            if (_setBlackMarketMaps.Contains(objXmlArmor["category"]?.InnerText))
+                            if (_setBlackMarketMaps.Contains(objXmlArmor["category"]?.InnerTextViaPool()))
                                 decCostMultiplier *= 0.9m;
                             if (!blnHideOverAvailLimit
                                 || await SelectionShared
-                                    .CheckAvailRestrictionAsync(objXmlArmor, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlArmor["id"]?.InnerText, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token)
+                                    .CheckAvailRestrictionAsync(objXmlArmor, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlArmor["id"]?.InnerTextViaPool(), blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token)
                                     .ConfigureAwait(false) && (blnFreeItem
                                                                || !blnShowOnlyAffordItems
                                                                || await SelectionShared.CheckNuyenRestrictionAsync(
@@ -765,20 +742,20 @@ namespace Chummer
                         foreach (XmlNode objXmlArmor in objXmlArmorList)
                         {
                             decimal decCostMultiplier = decBaseMarkup;
-                            if (_setBlackMarketMaps.Contains(objXmlArmor["category"]?.InnerText))
+                            if (_setBlackMarketMaps.Contains(objXmlArmor["category"]?.InnerTextViaPool()))
                                 decCostMultiplier *= 0.9m;
                             if ((!blnHideOverAvailLimit
-                                 || await SelectionShared.CheckAvailRestrictionAsync(objXmlArmor, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlArmor["id"]?.InnerText, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token).ConfigureAwait(false))
+                                 || await SelectionShared.CheckAvailRestrictionAsync(objXmlArmor, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlArmor["id"]?.InnerTextViaPool(), blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token).ConfigureAwait(false))
                                 && (blnFreeItem
                                     || !blnShowOnlyAffordItems
                                     || await SelectionShared.CheckNuyenRestrictionAsync(
                                         objXmlArmor, _objCharacter, decNuyen, decCostMultiplier, token: token).ConfigureAwait(false)))
                             {
-                                string strDisplayName = objXmlArmor["translate"]?.InnerText
-                                                        ?? objXmlArmor["name"]?.InnerText;
+                                string strDisplayName = objXmlArmor["translate"]?.InnerTextViaPool()
+                                                        ?? objXmlArmor["name"]?.InnerTextViaPool();
                                 if (!GlobalSettings.SearchInCategoryOnly && txtSearch.TextLength != 0)
                                 {
-                                    string strCategory = objXmlArmor["category"]?.InnerText;
+                                    string strCategory = objXmlArmor["category"]?.InnerTextViaPool();
                                     if (!string.IsNullOrEmpty(strCategory))
                                     {
                                         ListItem objFoundItem
@@ -790,7 +767,7 @@ namespace Chummer
                                     }
                                 }
 
-                                lstArmors.Add(new ListItem(objXmlArmor["id"]?.InnerText, strDisplayName));
+                                lstArmors.Add(new ListItem(objXmlArmor["id"]?.InnerTextViaPool(), strDisplayName));
                             }
                             else
                                 ++intOverLimit;
@@ -976,7 +953,7 @@ namespace Chummer
                     }, token).ConfigureAwait(false);
                     await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = false, token).ConfigureAwait(false);
                     await lblSource.DoThreadSafeAsync(x => x.Text = string.Empty, token).ConfigureAwait(false);
-                    await lblSource.SetToolTipAsync(string.Empty, token).ConfigureAwait(false);
+                    await lblSource.SetToolTipTextAsync(string.Empty, token).ConfigureAwait(false);
 
                     await lblArmorValueLabel.DoThreadSafeAsync(x => x.Visible = false, token).ConfigureAwait(false);
                     await lblArmorValue.DoThreadSafeAsync(x => x.Text = string.Empty, token).ConfigureAwait(false);

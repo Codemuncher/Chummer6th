@@ -97,6 +97,11 @@ namespace Chummer.Backend.Uniques
                         //swallow this
                     }
                 }
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
             finally
             {
@@ -120,6 +125,11 @@ namespace Chummer.Backend.Uniques
                         //swallow this
                     }
                 }
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
         }
 
@@ -466,7 +476,7 @@ namespace Chummer.Backend.Uniques
 
                 objWriter.WriteEndElement();
                 if (_nodBonus != null)
-                    objWriter.WriteRaw(_nodBonus.OuterXml);
+                    objWriter.WriteRaw(_nodBonus.OuterXmlViaPool());
                 else
                     objWriter.WriteElementString("bonus", string.Empty);
                 objWriter.WriteEndElement();
@@ -543,7 +553,7 @@ namespace Chummer.Backend.Uniques
                     if (IsCustomTradition)
                     {
                         foreach (string strAttribute in AttributeSection.AttributeStrings)
-                            _strDrainExpression = _strDrainExpression.Replace(strAttribute, '{' + strAttribute + '}');
+                            _strDrainExpression = _strDrainExpression.Replace(strAttribute, "{" + strAttribute + "}");
                         _strDrainExpression = _strDrainExpression.Replace("{MAG}Adept", "{MAGAdept}");
                     }
                     else
@@ -563,7 +573,7 @@ namespace Chummer.Backend.Uniques
                     {
                         foreach (XmlNode xmlSpiritNode in xmlSpiritList)
                         {
-                            _lstAvailableSpirits.Add(xmlSpiritNode.InnerText);
+                            _lstAvailableSpirits.Add(xmlSpiritNode.InnerTextViaPool(token));
                         }
                     }
                 }
@@ -615,7 +625,7 @@ namespace Chummer.Backend.Uniques
                 if (blnDoDrainSweep)
                 {
                     foreach (string strAttribute in AttributeSection.AttributeStrings)
-                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, '{' + strAttribute + '}');
+                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, "{" + strAttribute + "}");
                     _strDrainExpression = _strDrainExpression.Replace("{MAG}Adept", "{MAGAdept}");
                 }
             }
@@ -661,7 +671,7 @@ namespace Chummer.Backend.Uniques
                 if (blnDoDrainSweep)
                 {
                     foreach (string strAttribute in AttributeSection.AttributeStrings)
-                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, '{' + strAttribute + '}');
+                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, "{" + strAttribute + "}");
                     _strDrainExpression = _strDrainExpression.Replace("{MAG}Adept", "{MAGAdept}");
                 }
             }
@@ -1252,8 +1262,8 @@ namespace Chummer.Backend.Uniques
                 string strReturn = DisplayNameShort(strLanguage);
 
                 if (!string.IsNullOrEmpty(Extra))
-                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + '('
-                        + _objCharacter.TranslateExtra(Extra, strLanguage) + ')';
+                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + "("
+                        + _objCharacter.TranslateExtra(Extra, strLanguage) + ")";
 
                 return strReturn;
             }
@@ -1273,8 +1283,8 @@ namespace Chummer.Backend.Uniques
                 if (!string.IsNullOrEmpty(Extra))
                     strReturn
                         += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token)
-                                                .ConfigureAwait(false) + '(' + await _objCharacter
-                            .TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false) + ')';
+                                                .ConfigureAwait(false) + "(" + await _objCharacter
+                            .TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false) + ")";
 
                 return strReturn;
             }
@@ -2657,13 +2667,13 @@ namespace Chummer.Backend.Uniques
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                                lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
                         await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);

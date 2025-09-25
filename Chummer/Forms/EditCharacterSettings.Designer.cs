@@ -13,9 +13,15 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                _dicEnabledCharacterCustomDataDirectorys.Dispose();
+                _objCharacterSettings.MultiplePropertiesChangedAsync -= SettingsChanged;
+                _objCharacterSettings.Dispose();
+                Utils.ListItemListPool.Return(ref _lstSettings);
+                Utils.StringHashSetPool.Return(ref _setPermanentSourcebooks);
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -541,7 +547,6 @@ namespace Chummer
             this.cboSetting.Name = "cboSetting";
             this.cboSetting.Size = new System.Drawing.Size(548, 21);
             this.cboSetting.TabIndex = 1;
-            this.cboSetting.TooltipText = "";
             this.cboSetting.SelectedIndexChanged += new System.EventHandler(this.cboSetting_SelectedIndexChanged);
             // 
             // tabOptions
@@ -768,7 +773,6 @@ namespace Chummer
             this.tlpBasicOptionsCreateSettings.SetRowSpan(this.cboPriorityTable, 2);
             this.cboPriorityTable.Size = new System.Drawing.Size(180, 21);
             this.cboPriorityTable.TabIndex = 18;
-            this.cboPriorityTable.TooltipText = "";
             this.cboPriorityTable.SelectedIndexChanged += new System.EventHandler(this.cboPriorityTable_SelectedIndexChanged);
             // 
             // lblPriorityTable
@@ -808,7 +812,6 @@ namespace Chummer
             this.cboBuildMethod.Name = "cboBuildMethod";
             this.cboBuildMethod.Size = new System.Drawing.Size(180, 21);
             this.cboBuildMethod.TabIndex = 1;
-            this.cboBuildMethod.TooltipText = "";
             // 
             // lblMaxAvail
             // 
@@ -1856,7 +1859,6 @@ namespace Chummer
             this.cboLimbCount.Name = "cboLimbCount";
             this.cboLimbCount.Size = new System.Drawing.Size(218, 21);
             this.cboLimbCount.TabIndex = 1;
-            this.cboLimbCount.TooltipText = "";
             this.cboLimbCount.SelectedIndexChanged += new System.EventHandler(this.cboLimbCount_SelectedIndexChanged);
             // 
             // tlpCyberlimbAttributeBonusCap

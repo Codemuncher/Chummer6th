@@ -80,16 +80,6 @@ namespace Chummer
             pnlHasNotesColorPreview.BackColor = ColorManager.IsLightMode ? _objSelectedHasNotesColor : ColorManager.GenerateDarkModeColor(_objSelectedHasNotesColor);
             _setCustomDataDirectoryInfos
                 = new HashSet<CustomDataDirectoryInfo>(GlobalSettings.CustomDataDirectoryInfos);
-            Disposed += (sender, args) =>
-            {
-                Stack<HashSet<string>> stkToReturn = new Stack<HashSet<string>>(_dicCachedPdfAppNames.GetValuesToListSafe());
-                _dicCachedPdfAppNames.Clear();
-                while (stkToReturn.Count > 0)
-                {
-                    HashSet<string> setLoop = stkToReturn.Pop();
-                    Utils.StringHashSetPool.Return(ref setLoop);
-                }
-            };
             if (!string.IsNullOrEmpty(strActiveTab))
             {
                 int intActiveTabIndex = tabOptions.TabPages.IndexOfKey(strActiveTab);
@@ -170,7 +160,7 @@ namespace Chummer
 
             if (_blnDirty)
             {
-                await Utils.RestartApplication(_strSelectedLanguage, "Message_Options_CloseForms")
+                await Utils.RestartApplication(_objSelectedCultureInfo, _strSelectedLanguage, "Message_Options_CloseForms")
                            .ConfigureAwait(false);
             }
 
@@ -229,7 +219,7 @@ namespace Chummer
             catch (ArgumentOutOfRangeException ex)
             {
                 ex = ex.Demystify();
-                Log.Error(ex, "How the hell? Give me the callstack! " + ex);
+                Log.Error(ex, "How the hell? Give me the callstack! " + ex.ToString());
                 Utils.BreakIfDebug();
             }
         }
@@ -283,7 +273,7 @@ namespace Chummer
                 }
 
                 string strFilePath
-                    = Path.Combine(Utils.GetStartupPath, "lang", "results_" + strSelectedLanguage + ".xml");
+                    = Path.Combine(Utils.GetLanguageFolderPath, "results_" + strSelectedLanguage + ".xml");
                 await Program.ShowScrollableMessageBoxAsync(
                     this,
                     string.Format(_objSelectedCultureInfo,
@@ -394,7 +384,7 @@ namespace Chummer
                         .GetStringAsync(
                             "MessageTitle_Options_ConfirmTelemetry",
                             _strSelectedLanguage).ConfigureAwait(false),
-                    MessageBoxButtons.YesNo).ConfigureAwait(false) != DialogResult.Yes)
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question).ConfigureAwait(false) != DialogResult.Yes)
             {
                 int intLoading = Interlocked.Increment(ref _intLoading);
                 try
@@ -437,7 +427,7 @@ namespace Chummer
                         .ConfigureAwait(false)).WordWrap(),
                     await LanguageManager
                         .GetStringAsync("MessageTitle_Options_ConfirmDetailedTelemetry", _strSelectedLanguage)
-                        .ConfigureAwait(false), MessageBoxButtons.YesNo).ConfigureAwait(false) != DialogResult.Yes)
+                        .ConfigureAwait(false), MessageBoxButtons.YesNo, MessageBoxIcon.Warning).ConfigureAwait(false) != DialogResult.Yes)
             {
                 int intLoading = Interlocked.Increment(ref _intLoading);
                 try
@@ -751,6 +741,7 @@ namespace Chummer
                 {
                     await Program.ShowScrollableMessageBoxAsync(this,
                         string.Format(
+                            _objSelectedCultureInfo,
                             await LanguageManager.GetStringAsync(
                                 "Message_Duplicate_CustomDataDirectoryPath",
                                 _strSelectedLanguage).ConfigureAwait(false),
@@ -774,6 +765,7 @@ namespace Chummer
                             {
                                 await Program.ShowScrollableMessageBoxAsync(
                                     string.Format(
+                                        GlobalSettings.CultureInfo,
                                         await LanguageManager.GetStringAsync(
                                             "Message_Duplicate_CustomDataDirectory").ConfigureAwait(false),
                                         objExistingInfo.Name, objNewCustomDataDirectory.Name),
@@ -808,6 +800,7 @@ namespace Chummer
                                                              StringComparison.OrdinalIgnoreCase))
                     && await Program.ShowScrollableMessageBoxAsync(this,
                         string.Format(
+                            _objSelectedCultureInfo,
                             await LanguageManager.GetStringAsync(
                                 "Message_Duplicate_CustomDataDirectoryName",
                                 _strSelectedLanguage).ConfigureAwait(false),
@@ -885,6 +878,7 @@ namespace Chummer
                                                               StringComparison.OrdinalIgnoreCase)) &&
                     await Program.ShowScrollableMessageBoxAsync(this,
                         string.Format(
+                            _objSelectedCultureInfo,
                             await LanguageManager.GetStringAsync(
                                 "Message_Duplicate_CustomDataDirectoryName",
                                 _strSelectedLanguage).ConfigureAwait(false), objNewInfo.Name),
@@ -945,7 +939,7 @@ namespace Chummer
                     return;
                 }
 
-                using (RecyclableMemoryStream objStream = new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                using (RecyclableMemoryStream objStream = new RecyclableMemoryStream(Utils.MemoryStreamManager, null, bytes.Length))
                 {
                     await objStream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
                     using (StreamReader reader = new StreamReader(objStream, Encoding.UTF8, true))
@@ -1166,7 +1160,7 @@ namespace Chummer
             {
                 string strNewFileName = string.Empty;
                 string strFilter
-                    = await LanguageManager.GetStringAsync("DialogFilter_Pdf", token: token).ConfigureAwait(false) + '|'
+                    = await LanguageManager.GetStringAsync("DialogFilter_Pdf", token: token).ConfigureAwait(false) + "|"
                     +
                     await LanguageManager.GetStringAsync("DialogFilter_All", token: token).ConfigureAwait(false);
                 DialogResult eResult = await this.DoThreadSafeFuncAsync(x =>
@@ -1204,6 +1198,7 @@ namespace Chummer
                 catch
                 {
                     await Program.ShowScrollableMessageBoxAsync(this, string.Format(
+                            _objSelectedCultureInfo,
                             await LanguageManager.GetStringAsync(
                                 "Message_Options_FileIsNotPDF",
                                 _strSelectedLanguage, token: token).ConfigureAwait(false),
@@ -1234,7 +1229,7 @@ namespace Chummer
             {
                 string strFileName = string.Empty;
                 string strFilter
-                    = await LanguageManager.GetStringAsync("DialogFilter_Exe", token: token).ConfigureAwait(false) + '|'
+                    = await LanguageManager.GetStringAsync("DialogFilter_Exe", token: token).ConfigureAwait(false) + "|"
                     +
                     await LanguageManager.GetStringAsync("DialogFilter_All", token: token).ConfigureAwait(false);
                 DialogResult eResult = await this.DoThreadSafeFuncAsync(x =>
@@ -2074,7 +2069,7 @@ namespace Chummer
         private async Task SetToolTips(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            await cboUseLoggingApplicationInsights.SetToolTipAsync(string.Format(_objSelectedCultureInfo,
+            await chkUseLogging.SetToolTipTextAsync(string.Format(_objSelectedCultureInfo,
                                                                              await LanguageManager.GetStringAsync(
                                                                                      "Tip_Options_TelemetryId",
                                                                                      _strSelectedLanguage, token: token)
@@ -2387,14 +2382,14 @@ namespace Chummer
                     sw.Start();
                     XPathNavigator objBooks = await tskLoadBooks.ConfigureAwait(false);
                     string[] astrFiles = Directory.GetFiles(strSelectedPath, "*.pdf", eOption);
-                    ConcurrentDictionary<string, Tuple<string, int>> dicPatternsToMatch
-                        = new ConcurrentDictionary<string, Tuple<string, int>>();
-                    ConcurrentDictionary<string, Tuple<string, int>> dicBackupPatternsToMatch
-                        = new ConcurrentDictionary<string, Tuple<string, int>>();
+                    ConcurrentDictionary<string, ValueTuple<string, int>> dicPatternsToMatch
+                        = new ConcurrentDictionary<string, ValueTuple<string, int>>();
+                    ConcurrentDictionary<string, ValueTuple<string, int>> dicBackupPatternsToMatch
+                        = new ConcurrentDictionary<string, ValueTuple<string, int>>();
                     foreach (XPathNavigator objBook in objBooks
                                  .SelectAndCacheExpression(
                                      "/chummer/books/book[matches/match/language = "
-                                     + _strSelectedLanguage.CleanXPath() + ']'))
+                                     + _strSelectedLanguage.CleanXPath() + "]"))
                     {
                         string strCode
                             = objBook.SelectSingleNodeAndCacheExpression("code")
@@ -2403,7 +2398,7 @@ namespace Chummer
                             continue;
                         XPathNavigator objMatch
                             = objBook.SelectSingleNodeAndCacheExpression(
-                                    "matches/match[language = " + _strSelectedLanguage.CleanXPath() + ']');
+                                    "matches/match[language = " + _strSelectedLanguage.CleanXPath() + "]");
                         if (objMatch == null)
                             continue;
                         string strMatchText
@@ -2415,7 +2410,7 @@ namespace Chummer
                                 objMatch.SelectSingleNodeAndCacheExpression("page")
                                 ?.Value, out int intMatchPage))
                             continue;
-                        Tuple<string, int> tupValue = new Tuple<string, int>(strMatchText, intMatchPage);
+                        ValueTuple<string, int> tupValue = new ValueTuple<string, int>(strMatchText, intMatchPage);
                         dicPatternsToMatch.AddOrUpdate(strCode, tupValue, (x, y) => tupValue);
                     }
 
@@ -2432,7 +2427,7 @@ namespace Chummer
                         if (_strSelectedLanguage != GlobalSettings.DefaultLanguage)
                         {
                             objMatch = objBook.SelectSingleNodeAndCacheExpression(
-                                    "matches/match[language = " + GlobalSettings.DefaultLanguage.CleanXPath() + ']');
+                                    "matches/match[language = " + GlobalSettings.DefaultLanguage.CleanXPath() + "]");
                         }
                         if (objMatch == null)
                         {
@@ -2445,14 +2440,14 @@ namespace Chummer
                             ?.Value;
                         if (string.IsNullOrEmpty(strMatchText))
                             continue;
-                        if (dicPatternsToMatch.TryGetValue(strCode, out Tuple<string, int> tupMainValue)
+                        if (dicPatternsToMatch.TryGetValue(strCode, out ValueTuple<string, int> tupMainValue)
                             && string.Equals(strMatchText, tupMainValue.Item1))
                             continue;
                         if (!int.TryParse(
                                 objMatch.SelectSingleNodeAndCacheExpression("page")
                                 ?.Value, out int intMatchPage))
                             continue;
-                        Tuple<string, int> tupValue = new Tuple<string, int>(strMatchText, intMatchPage);
+                        ValueTuple<string, int> tupValue = new ValueTuple<string, int>(strMatchText, intMatchPage);
                         dicBackupPatternsToMatch.AddOrUpdate(strCode, tupValue, (x, y) => tupValue);
                     }
 
@@ -2506,8 +2501,8 @@ namespace Chummer
         }
 
         private async Task<List<SourcebookInfo>> ScanFilesForPDFTexts(string[] lstFiles,
-                                                                      ConcurrentDictionary<string, Tuple<string, int>> dicPatternsToMatch,
-                                                                      ConcurrentDictionary<string, Tuple<string, int>> dicBackupPatternsToMatch,
+                                                                      ConcurrentDictionary<string, ValueTuple<string, int>> dicPatternsToMatch,
+                                                                      ConcurrentDictionary<string, ValueTuple<string, int>> dicBackupPatternsToMatch,
                                                                       LoadingBar frmProgressBar,
                                                                       CancellationToken token = default)
         {
@@ -2583,7 +2578,7 @@ namespace Chummer
                 }
             }
 
-            async Task<List<SourcebookInfo>> GetSourcebookInfo(string strBookFile, ConcurrentDictionary<string, Tuple<string, int>> dicPatternsToUse, string strProgressBarTextFormat = "")
+            async Task<List<SourcebookInfo>> GetSourcebookInfo(string strBookFile, ConcurrentDictionary<string, ValueTuple<string, int>> dicPatternsToUse, string strProgressBarTextFormat = "")
             {
                 FileInfo objFileInfo = new FileInfo(strBookFile);
                 string strText = string.IsNullOrEmpty(strProgressBarTextFormat)
@@ -2613,12 +2608,12 @@ namespace Chummer
         }
 
         private static async Task<List<SourcebookInfo>> ScanPDFForMatchingText(
-            string strPath, ConcurrentDictionary<string, Tuple<string, int>> dicPatternsToMatch, CancellationToken token = default)
+            string strPath, ConcurrentDictionary<string, ValueTuple<string, int>> dicPatternsToMatch, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            List<SourcebookInfo> lstReturn = new List<SourcebookInfo>();
             if (dicPatternsToMatch.IsEmpty)
-                return lstReturn;
+                return new List<SourcebookInfo>();
+            List<SourcebookInfo> lstReturn = new List<SourcebookInfo>(dicPatternsToMatch.Count);
             PdfReader objPdfReader = null;
             PdfDocument objPdfDocument = null;
             try
@@ -2667,7 +2662,7 @@ namespace Chummer
                         string strKey = lstKeysToLoop[i];
                         token.ThrowIfCancellationRequested();
                         // We already got a match elsewhere, skip this going forward
-                        if (!dicPatternsToMatch.TryGetValue(strKey, out Tuple<string, int> tupValue))
+                        if (!dicPatternsToMatch.TryGetValue(strKey, out ValueTuple<string, int> tupValue))
                         {
                             lstKeysToLoop.RemoveAt(i);
                             continue;
@@ -2746,7 +2741,7 @@ namespace Chummer
                                      StringSplitOptions.RemoveEmptyEntries, StringComparison.OrdinalIgnoreCase))
                         {
                             token.ThrowIfCancellationRequested();
-                            if (!string.IsNullOrEmpty(strLine))
+                            if (!string.IsNullOrWhiteSpace(strLine))
                                 sbdAllLines.AppendLine(strLine.Trim());
                         }
                     }

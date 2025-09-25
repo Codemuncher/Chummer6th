@@ -79,11 +79,11 @@ namespace Chummer
                                                                 ? (i + 1).ToString(GlobalSettings
                                                                     .InvariantCultureInfo)
                                                                 .CleanXPath()
-                                                                : "\"5\"") + ']', token: token)?.Value;
+                                                                : "\"5\"") + "]", token: token)?.Value;
                     int j;
                     for (j = i; j < modules.Count; j++)
                     {
-                        if (modules[j]["stage"]?.InnerText == stageName)
+                        if (modules[j]["stage"]?.InnerTextViaPool(token) == stageName)
                             break;
                     }
 
@@ -96,40 +96,20 @@ namespace Chummer
                 string[] story = ArrayPool<string>.Shared.Rent(modules.Count);
                 try
                 {
-                    Task<string>[] atskStoryTasks = ArrayPool<Task<string>>.Shared.Rent(modules.Count);
-                    try
-                    {
-                        XPathNavigator xmlBaseMacrosNode = xdoc
+                    XPathNavigator xmlBaseMacrosNode = xdoc
                             .SelectSingleNodeAndCacheExpression(
                                 "/chummer/storybuilder/macros", token: token);
-                        //Actually "write" the story
-                        for (int i = 0; i < modules.Count; ++i)
-                        {
-                            int intLocal = i;
-                            atskStoryTasks[i] = Task.Run(async () =>
-                            {
-                                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
-                                           out StringBuilder sbdTemp))
-                                {
-                                    return (await Write(sbdTemp, modules[intLocal]["story"]?.InnerText ?? string.Empty, 5,
-                                        xmlBaseMacrosNode, token).ConfigureAwait(false)).ToString();
-                                }
-                            }, token);
-                        }
-
-                        await Task.WhenAll(atskStoryTasks).ConfigureAwait(false);
-
-                        for (int i = 0; i < modules.Count; ++i)
-                        {
-                            story[i] = await atskStoryTasks[i].ConfigureAwait(false);
-                        }
-                    }
-                    finally
+                    await ParallelExtensions.ForAsync(0, modules.Count, async i =>
                     {
-                        ArrayPool<Task<string>>.Shared.Return(atskStoryTasks);
-                    }
+                        using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
+                                           out StringBuilder sbdTemp))
+                        {
+                            story[i] = (await Write(sbdTemp, modules[i]["story"]?.InnerTextViaPool(token) ?? string.Empty, 5,
+                                xmlBaseMacrosNode, token).ConfigureAwait(false)).ToTrimmedString();
+                        }
+                    }, token).ConfigureAwait(false);
 
-                    return string.Join(Environment.NewLine + Environment.NewLine, story);
+                    return StringExtensions.JoinFast(Environment.NewLine + Environment.NewLine, story, 0, modules.Count);
                 }
                 finally
                 {
@@ -157,11 +137,11 @@ namespace Chummer
                 if (innerText.StartsWith('$') && innerText.IndexOf(' ') < 0)
                 {
                     words = (await Macro(innerText, xmlBaseMacrosNode, token).ConfigureAwait(false)).SplitNoAlloc(
-                        ' ', '\n', '\r', '\t');
+                        StringSplitOptions.RemoveEmptyEntries, ' ', '\n', '\r', '\t');
                 }
                 else
                 {
-                    words = innerText.SplitNoAlloc(' ', '\n', '\r', '\t');
+                    words = innerText.SplitNoAlloc(StringSplitOptions.RemoveEmptyEntries, ' ', '\n', '\r', '\t');
                 }
 
                 bool mfix = false;
@@ -290,7 +270,7 @@ namespace Chummer
                                         if (xmlPossibleNodeList.Count > 0)
                                         {
                                             int intUseIndex = xmlPossibleNodeList.Count > 1
-                                                ? await GlobalSettings.RandomGenerator
+                                                ? await Utils.GlobalRandom
                                                     .NextModuloBiasRemovedAsync(
                                                         xmlPossibleNodeList.Count, token: token)
                                                     .ConfigureAwait(false)
@@ -319,7 +299,7 @@ namespace Chummer
                                         if (xmlPossibleNodeList.Count > 0)
                                         {
                                             int intUseIndex = xmlPossibleNodeList.Count > 1
-                                                ? await GlobalSettings.RandomGenerator
+                                                ? await Utils.GlobalRandom
                                                     .NextModuloBiasRemovedAsync(
                                                         xmlPossibleNodeList.Count, token: token)
                                                     .ConfigureAwait(false)
@@ -344,7 +324,7 @@ namespace Chummer
                                         break;
                                     }
                                 default:
-                                    return "(Formating error in $DOLLAR" + macroName + ')';
+                                    return "(Formating error in $DOLLAR" + macroName + ")";
                             }
                         }
 
@@ -362,13 +342,13 @@ namespace Chummer
                             return strDefault;
                         }
 
-                        return "(Unknown key " + macroPool + " in $DOLLAR" + macroName + ')';
+                        return "(Unknown key " + macroPool + " in $DOLLAR" + macroName + ")";
                     }
 
                     return xmlUserMacroNode.Value;
                 }
 
-                return "(Unknown Macro $DOLLAR" + innerText.Substring(1) + ')';
+                return "(Unknown Macro $DOLLAR" + innerText.Substring(1) + ")";
             }
             finally
             {

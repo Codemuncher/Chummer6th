@@ -19,7 +19,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
@@ -87,10 +86,9 @@ namespace Chummer
             _tmrHobbiesViceChangeTimer = new Timer { Interval = 1000 };
             _tmrHobbiesViceChangeTimer.Tick += UpdateHobbiesVice;
 
-            Disposed += (sender, args) => UnbindContactControl();
-
             this.UpdateLightDarkMode(objMyToken);
             this.TranslateWinForm(token: objMyToken);
+            this.UpdateParentForToolTipControls();
 
             foreach (ToolStripItem tssItem in cmsContact.Items)
             {
@@ -170,7 +168,7 @@ namespace Chummer
             _tmrPreferredPaymentChangeTimer.Dispose();
             _tmrHobbiesViceChangeTimer.Dispose();
             foreach (Control objControl in Controls)
-                objControl.DataBindings.Clear();
+                objControl.ResetBindings();
         }
 
         private async void cmdDelete_Click(object sender, EventArgs e)
@@ -1357,6 +1355,7 @@ namespace Chummer
                         {
                             x.tlpMain.SetColumnSpan(x.tlpStatBlock, 13);
                             x.tlpMain.Controls.Add(x.tlpStatBlock, 0, 3);
+                            x.tlpStatBlock.UpdateParentForToolTipControls();
                         }
                         finally
                         {
@@ -1585,6 +1584,7 @@ namespace Chummer
                         {
                             x.tlpMain.SetColumnSpan(x.tlpStatBlock, 13);
                             x.tlpMain.Controls.Add(x.tlpStatBlock, 0, 3);
+                            x.tlpStatBlock.UpdateParentForToolTipControls();
                         }
                         finally
                         {

@@ -34,12 +34,13 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void SelectSetting_Load(object sender, EventArgs e)
         {
             // Build the list of XML files found in the settings directory.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSettings))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSettings))
             {
                 foreach (KeyValuePair<string, CharacterSettings> kvpSetting in await SettingsManager.GetLoadedCharacterSettingsAsync().ConfigureAwait(false))
                 {

@@ -20,7 +20,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -28,6 +27,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -55,12 +55,12 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
 
             // Load the Quality information.
             _xmlBaseQualityDataNode = _objCharacter.LoadDataXPath("qualities.xml").SelectSingleNodeAndCacheExpression("/chummer");
             _xmlMetatypeQualityRestrictionNode = _objCharacter.GetNodeXPath().SelectSingleNodeAndCacheExpression("qualityrestriction");
             _lstCategory = Utils.ListItemListPool.Get();
-            Disposed += (sender, args) => Utils.ListItemListPool.Return(ref _lstCategory);
         }
 
         private async void SelectQuality_Load(object sender, EventArgs e)
@@ -158,7 +158,7 @@ namespace Chummer
                     SourceString objSource = await SourceString.GetSourceStringAsync(
                         strSource, strPage, GlobalSettings.Language,
                         GlobalSettings.CultureInfo, _objCharacter).ConfigureAwait(false);
-                    await objSource.SetControlAsync(lblSource).ConfigureAwait(false);
+                    await objSource.SetControlAsync(lblSource, this).ConfigureAwait(false);
                     await lblSourceLabel.DoThreadSafeAsync(
                         x => x.Visible = !string.IsNullOrEmpty(objSource.ToString())).ConfigureAwait(false);
                     await tlpRight.DoThreadSafeAsync(x => x.Visible = true).ConfigureAwait(false);
@@ -333,6 +333,9 @@ namespace Chummer
         /// Forcefully add a Category to the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Forcefully add a Category to the list.
+        /// </summary>
         public string ForceCategory
         {
             set
@@ -357,6 +360,9 @@ namespace Chummer
         /// A Quality the character has that should be ignored for checking Forbidden requirements (which would prevent upgrading/downgrading a Quality).
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// A Quality the character has that should be ignored for checking Forbidden requirements (which would prevent upgrading/downgrading a Quality).
+        /// </summary>
         public string IgnoreQuality { get; set; } = string.Empty;
 
         /// <summary>

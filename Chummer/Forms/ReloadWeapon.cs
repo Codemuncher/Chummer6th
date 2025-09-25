@@ -43,11 +43,12 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void ReloadWeapon_Load(object sender, EventArgs e)
         {
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool,
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
                                                            out List<ListItem> lstAmmo))
             {
                 string strSpace = await LanguageManager.GetStringAsync("String_Space").ConfigureAwait(false);
@@ -85,13 +86,12 @@ namespace Chummer
                     // Retrieve the plugin information if it has any.
                     if (await objGear.Children.GetCountAsync().ConfigureAwait(false) > 0)
                     {
-                        using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                        using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                       out StringBuilder sbdPlugins))
                         {
                             await objGear.Children.ForEachAsync(async objChild =>
-                            {
-                                sbdPlugins.Append(await objChild.GetCurrentDisplayNameShortAsync().ConfigureAwait(false)).Append(',').Append(strSpace);
-                            }).ConfigureAwait(false);
+                                sbdPlugins.Append(await objChild.GetCurrentDisplayNameShortAsync().ConfigureAwait(false)).Append(',').Append(strSpace))
+                                .ConfigureAwait(false);
 
                             // Remove the trailing comma.
                             sbdPlugins.Length -= 1 + strSpace.Length;
@@ -153,6 +153,14 @@ namespace Chummer
         /// List of Ammo Gear that the user can selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// List of Ammo Gear that the user can selected.
+        /// </summary>
         public IEnumerable<Gear> Ammo
         {
             set
@@ -166,6 +174,9 @@ namespace Chummer
         /// List of ammunition that the user can select.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// List of ammunition that the user can select.
+        /// </summary>
         public IEnumerable<string> Count
         {
             set

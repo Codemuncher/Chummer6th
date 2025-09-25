@@ -19,7 +19,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -28,6 +27,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
 using Chummer.Backend.Equipment;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -63,16 +63,12 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _xmlBaseDrugDataNode = objCharacter.LoadDataXPath("drugcomponents.xml").SelectSingleNodeAndCacheExpression("/chummer");
             _lstGrades = _objCharacter.GetGradesList(Improvement.ImprovementSource.Drug);
             _strNoneGradeId = _lstGrades.Find(x => x.Name == "None")?.SourceIDString;
             _setDisallowedGrades = Utils.StringHashSetPool.Get();
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
-            Disposed += (sender, args) =>
-            {
-                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
-                Utils.StringHashSetPool.Return(ref _setDisallowedGrades);
-            };
             _setBlackMarketMaps.AddRange(_objCharacter.GenerateBlackMarketMappings(_xmlBaseDrugDataNode));
         }
 
@@ -321,7 +317,7 @@ namespace Chummer
                     SourceString objSource = await SourceString.GetSourceStringAsync(
                         strSource, strPage, GlobalSettings.Language,
                         GlobalSettings.CultureInfo, _objCharacter).ConfigureAwait(false);
-                    await objSource.SetControlAsync(lblSource).ConfigureAwait(false);
+                    await objSource.SetControlAsync(lblSource, this).ConfigureAwait(false);
                     await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSource.ToString()))
                                         .ConfigureAwait(false);
 
@@ -546,6 +542,9 @@ namespace Chummer
         /// Manually set the Grade of the piece of Drug.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Manually set the Grade of the piece of Drug.
+        /// </summary>
         public Grade SetGrade
         {
             set => _objForcedGrade = value;
@@ -580,14 +579,25 @@ namespace Chummer
         /// Parent vehicle that the cyberlimb will be attached to.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Parent vehicle that the cyberlimb will be attached to.
+        /// </summary>
         public Vehicle ParentVehicle { get; set; }
+
+        public decimal Markup => _decMarkup;
 
         /// <summary>
         /// Parent Drug that the current selection will be added to.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Parent Drug that the current selection will be added to.
+        /// </summary>
         public Drug DrugParent { get; set; }
 
+        /// <summary>
+        /// Default text string to filter by.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Default text string to filter by.

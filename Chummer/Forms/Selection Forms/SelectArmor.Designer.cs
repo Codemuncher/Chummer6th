@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Chummer
@@ -15,9 +16,31 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objUpdateArmorInfoCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objDoRefreshListCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objArmorSelectedIndexChangedCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                _objGenericCancellationTokenSource.Dispose();
+                Utils.ListItemListPool.Return(ref _lstCategory);
+                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -63,7 +86,7 @@ namespace Chummer
             this.chkShowOnlyAffordItems = new Chummer.ColorableCheckBox();
             this.bufferedTableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.lblCapacityLabel = new System.Windows.Forms.Label();
-            this.lblSource = new System.Windows.Forms.Label();
+            this.lblSource = new Chummer.LabelWithToolTip();
             this.lblCapacity = new System.Windows.Forms.Label();
             this.lblSourceLabel = new System.Windows.Forms.Label();
             this.lblArmorValueLabel = new System.Windows.Forms.Label();
@@ -156,7 +179,7 @@ namespace Chummer
             // 
             // cboCategory
             // 
-            this.cboCategory.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.cboCategory.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cboCategory.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboCategory.FormattingEnabled = true;
@@ -164,7 +187,6 @@ namespace Chummer
             this.cboCategory.Name = "cboCategory";
             this.cboCategory.Size = new System.Drawing.Size(323, 21);
             this.cboCategory.TabIndex = 21;
-            this.cboCategory.TooltipText = "";
             this.cboCategory.SelectedIndexChanged += new System.EventHandler(this.RefreshCurrentList);
             // 
             // cmdOKAdd
@@ -184,7 +206,7 @@ namespace Chummer
             // 
             // txtSearch
             // 
-            this.txtSearch.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtSearch.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtSearch.Location = new System.Drawing.Point(440, 3);
             this.txtSearch.Name = "txtSearch";
@@ -999,7 +1021,7 @@ namespace Chummer
         private System.Windows.Forms.Label lblCapacity;
         private System.Windows.Forms.Label lblCapacityLabel;
         private Chummer.ColorableCheckBox chkFreeItem;
-        private System.Windows.Forms.Label lblSource;
+        private Chummer.LabelWithToolTip lblSource;
         private System.Windows.Forms.Label lblSourceLabel;
         private System.Windows.Forms.Label lblCost;
         private System.Windows.Forms.Label lblCostLabel;

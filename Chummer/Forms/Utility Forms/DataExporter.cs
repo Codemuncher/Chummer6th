@@ -48,27 +48,10 @@ namespace Chummer
         public DataExporter()
         {
             _objGenericToken = _objGenericCancellationTokenSource.Token;
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objProcessCharacterSettingIndexChangedCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objRepopulateCharacterSettingsCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                _objGenericCancellationTokenSource.Dispose();
-                dlgSaveFile?.Dispose();
-                _objExportSemaphore?.Dispose();
-            };
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void cmdOK_Click(object sender, EventArgs e)
@@ -463,24 +446,24 @@ namespace Chummer
                                 using (ZipArchive zipNewArchive = new ZipArchive(objZipFileStream, ZipArchiveMode.Create))
                                 {
                                     token.ThrowIfCancellationRequested();
-                                    ZipArchiveEntry objSettingsEntry = zipNewArchive.CreateEntry("_selectedsetting.xml");
+                                    ZipArchiveEntry objSettingsEntry = zipNewArchive.CreateEntry("_selectedsetting.xml", CompressionLevel.Optimal);
                                     token.ThrowIfCancellationRequested();
                                     using (Stream objStream = objSettingsEntry.Open())
                                     {
                                         token.ThrowIfCancellationRequested();
-                                        await Task.Run(() => objSettings.SaveAsync(objStream, token: token), token).ConfigureAwait(false);
+                                        await objSettings.SaveAsync(objStream, token: token).ConfigureAwait(false);
                                     }
                                     await pgbExportProgress.DoThreadSafeAsync(x => ++x.Value, _objGenericToken).ConfigureAwait(false);
                                     foreach (string strFileName in Utils.BasicDataFileNames)
                                     {
                                         token.ThrowIfCancellationRequested();
                                         XmlDocument xmlDocument = await objSettings.LoadDataAsync(strFileName, strLanguage, token: token).ConfigureAwait(false);
-                                        ZipArchiveEntry objEntry = zipNewArchive.CreateEntry(Path.GetFileName(strFileName));
+                                        ZipArchiveEntry objEntry = zipNewArchive.CreateEntry(Path.GetFileName(strFileName), CompressionLevel.Optimal);
                                         token.ThrowIfCancellationRequested();
                                         using (Stream objStream = objEntry.Open())
                                         {
                                             token.ThrowIfCancellationRequested();
-                                            await Task.Run(() => xmlDocument.Save(objStream), token).ConfigureAwait(false);
+                                            await TaskExtensions.RunWithoutEC(() => xmlDocument.Save(objStream), token).ConfigureAwait(false);
                                         }
                                         await pgbExportProgress.DoThreadSafeAsync(x => ++x.Value, _objGenericToken).ConfigureAwait(false);
                                     }

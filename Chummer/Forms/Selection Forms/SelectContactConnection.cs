@@ -42,6 +42,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private void cboMembership_SelectedIndexChanged(object sender, EventArgs e)
@@ -223,6 +224,9 @@ namespace Chummer
         /// Area of Influence.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Area of Influence.
+        /// </summary>
         public int AreaOfInfluence
         {
             get => _intAreaOfInfluence;
@@ -243,6 +247,9 @@ namespace Chummer
         /// Matrix Resources.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Matrix Resources.
+        /// </summary>
         public int MatrixResources
         {
             get => _intMatrixResources;
@@ -253,6 +260,9 @@ namespace Chummer
         /// Group Name.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Group Name.
+        /// </summary>
         public string GroupName
         {
             get => _strGroupName;
@@ -263,6 +273,9 @@ namespace Chummer
         /// Contact Color.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Contact Color.
+        /// </summary>
         public Color Color
         {
             get => _objColor;
@@ -273,6 +286,9 @@ namespace Chummer
         /// Whether this is a free contact.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether this is a free contact.
+        /// </summary>
         public bool Free
         {
             get => _blnFree;

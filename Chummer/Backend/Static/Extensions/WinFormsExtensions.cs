@@ -43,12 +43,8 @@ namespace Chummer
         #region Forms Extensions
 
         /// <summary>
-        /// Alternative to Form.ShowDialog() that will not stall out unit tests.
+        /// Alternative to <see cref="Form.ShowDialog"/> that will not stall out unit tests.
         /// </summary>
-        /// <param name="frmForm"></param>
-        /// <param name="owner"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         public static DialogResult ShowDialogSafe(this Form frmForm, IWin32Window owner = null, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -82,12 +78,8 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Alternative to Form.ShowDialog() that will not stall out unit tests.
+        /// Alternative to <see cref="Form.ShowDialog"/> that will not stall out unit tests.
         /// </summary>
-        /// <param name="frmForm"></param>
-        /// <param name="objCharacter"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         public static DialogResult ShowDialogSafe(this Form frmForm, Character objCharacter, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -95,12 +87,8 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Alternative to Form.ShowDialog() that will not stall out unit tests.
+        /// Async alternative to <see cref="Form.ShowDialog"/> that will not stall out unit tests.
         /// </summary>
-        /// <param name="frmForm"></param>
-        /// <param name="owner"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         public static Task<DialogResult> ShowDialogSafeAsync(this Form frmForm, IWin32Window owner = null, CancellationToken token = default)
         {
             if (token.IsCancellationRequested)
@@ -114,7 +102,7 @@ namespace Chummer
                 return Utils.RunOnMainThreadAsync(() => frmForm.ShowDialog(owner), token);
 
             TaskCompletionSource<DialogResult> objCompletionSource = new TaskCompletionSource<DialogResult>();
-            using (token.Register(() => objCompletionSource.TrySetCanceled(token)))
+            using (token.RegisterWithoutEC(x => ((TaskCompletionSource<DialogResult>)x).TrySetCanceled(token), objCompletionSource))
             {
                 void BeginShow(Form frmInner)
                 {
@@ -135,12 +123,8 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Alternative to Form.ShowDialog() that will not stall out unit tests.
+        /// Async alternative to <see cref="Form.ShowDialog"/> that will not stall out unit tests.
         /// </summary>
-        /// <param name="frmForm"></param>
-        /// <param name="objCharacter"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         public static async Task<DialogResult> ShowDialogSafeAsync(this Form frmForm, Character objCharacter, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -149,13 +133,9 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Non-blocking version of ShowDialog() based on the following blog post:
+        /// Async, non-blocking version of <see cref="Form.ShowDialog"/> based on the following blog post:
         /// https://sriramsakthivel.wordpress.com/2015/04/19/asynchronous-showdialog/
         /// </summary>
-        /// <param name="frmForm"></param>
-        /// <param name="owner"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         public static Task<DialogResult> ShowDialogNonBlockingAsync(this Form frmForm, IWin32Window owner = null, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -176,22 +156,32 @@ namespace Chummer
 
             TaskCompletionSource<DialogResult> objCompletionSource = new TaskCompletionSource<DialogResult>();
             CancellationTokenRegistration objCancelRegistration
-                = token.Register(() => objCompletionSource.TrySetCanceled(token));
-            frmForm.BeginInvoke(new Action(() =>
+                = token.RegisterWithoutEC(x => ((TaskCompletionSource<DialogResult>)x).TrySetCanceled(token), objCompletionSource);
+            try
             {
-                objCompletionSource.SetResult(frmForm.ShowDialog(owner));
+                frmForm.BeginInvoke(new Action(() =>
+                {
+                    try
+                    {
+                        objCompletionSource.SetResult(frmForm.ShowDialog(owner));
+                    }
+                    finally
+                    {
+                        objCancelRegistration.Dispose();
+                    }
+                }));
+                return objCompletionSource.Task;
+            }
+            catch
+            {
                 objCancelRegistration.Dispose();
-            }));
-            return objCompletionSource.Task;
+                throw;
+            }
         }
 
         /// <summary>
-        /// Alternative to Form.ShowDialog() that will not stall out unit tests.
+        /// Async alternative to <see cref="Form.ShowDialog"/> that will not stall out unit tests.
         /// </summary>
-        /// <param name="frmForm"></param>
-        /// <param name="owner"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         public static Task<DialogResult> ShowDialogNonBlockingSafeAsync(this Form frmForm, IWin32Window owner = null, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -215,11 +205,19 @@ namespace Chummer
 
             TaskCompletionSource<DialogResult> objCompletionSource = new TaskCompletionSource<DialogResult>();
             CancellationTokenRegistration objCancelRegistration
-                = token.Register(() => objCompletionSource.TrySetCanceled(token));
+                = token.RegisterWithoutEC(x => ((TaskCompletionSource<DialogResult>)x).TrySetCanceled(token), objCompletionSource);
             void BeginShow(Form frmInner)
             {
-                frmInner.Shown += FormOnShown;
-                frmInner.Show(owner);
+                try
+                {
+                    frmInner.Shown += FormOnShown;
+                    frmInner.Show(owner);
+                }
+                catch
+                {
+                    objCancelRegistration.Dispose();
+                    throw;
+                }
                 void FormOnShown(object sender, EventArgs args)
                 {
                     frmForm.DoThreadSafe(x => x.Close(), token);
@@ -228,18 +226,22 @@ namespace Chummer
                 }
             }
 
-            Action<Form> funcBegin = BeginShow;
-            frmForm.BeginInvoke(funcBegin, frmForm);
-            return objCompletionSource.Task;
+            try
+            {
+                Action<Form> funcBegin = BeginShow;
+                frmForm.BeginInvoke(funcBegin, frmForm);
+                return objCompletionSource.Task;
+            }
+            catch
+            {
+                objCancelRegistration.Dispose();
+                throw;
+            }
         }
 
         /// <summary>
-        /// Alternative to Form.ShowDialog() that will not stall out unit tests.
+        /// Alternative to <see cref="Form.ShowDialog"/> that will not stall out unit tests.
         /// </summary>
-        /// <param name="frmForm"></param>
-        /// <param name="objCharacter"></param>
-        /// <param name="token"></param>
-        /// <returns></returns>
         public static Task<DialogResult> ShowDialogNonBlockingSafeAsync(this Form frmForm, Character objCharacter, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -446,7 +448,9 @@ namespace Chummer
                 return Task.CompletedTask;
             try
             {
-                return objControl == null ? Task.Run(funcToRun, token) : Utils.RunOnMainThreadAsync(funcToRun, token);
+                return objControl == null
+                    ? Task.Run(funcToRun, token)
+                    : Utils.RunOnMainThreadAsync(funcToRun, token);
             }
             catch (ObjectDisposedException) // e)
             {
@@ -1089,7 +1093,16 @@ namespace Chummer
             T3 objData = Utils.SafelyRunSynchronously(() => funcAsyncDataGetter.Invoke(objDataSource), token);
             objControl.DoThreadSafe((x, y) => funcControlSetter.Invoke(x, objData), token);
             objDataSource.PropertyChangedAsync += OnPropertyChangedAsync;
-            Utils.RunOnMainThread(() => objControl.Disposed += (o, args) =>
+            try
+            {
+                Utils.RunOnMainThread(() => objControl.Disposed += RemoveEvent, token: token);
+            }
+            catch
+            {
+                RemoveEvent(null, default);
+                throw;
+            }
+            void RemoveEvent(object sender, EventArgs e)
             {
                 try
                 {
@@ -1099,7 +1112,7 @@ namespace Chummer
                 {
                     //swallow this
                 }
-            }, token: token);
+            }
             return;
 
             async Task OnPropertyChangedAsync(object sender, PropertyChangedEventArgs e, CancellationToken innerToken = default)
@@ -1148,19 +1161,26 @@ namespace Chummer
             await objControl.DoThreadSafeAsync(x => funcControlSetter.Invoke(x, objData), token)
                 .ConfigureAwait(false);
             objDataSource.PropertyChangedAsync += OnPropertyChangedAsync;
-            await Utils.RunOnMainThreadAsync(
-                () => objControl.Disposed += (o, args) =>
+            try
+            {
+                await Utils.RunOnMainThreadAsync(() => objControl.Disposed += RemoveEvent, token: token).ConfigureAwait(false);
+            }
+            catch
+            {
+                RemoveEvent(null, default);
+                throw;
+            }
+            void RemoveEvent(object sender, EventArgs e)
+            {
+                try
                 {
-                    try
-                    {
-                        objDataSource.PropertyChangedAsync -= OnPropertyChangedAsync;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        //swallow this
-                    }
-                },
-                token).ConfigureAwait(false);
+                    objDataSource.PropertyChangedAsync -= OnPropertyChangedAsync;
+                }
+                catch (ObjectDisposedException)
+                {
+                    //swallow this
+                }
+            }
             return;
 
             async Task OnPropertyChangedAsync(object sender, PropertyChangedEventArgs e, CancellationToken innerToken = default)
@@ -1219,7 +1239,16 @@ namespace Chummer
             int intSkipControlSetter = 0;
             int intSkipDataSetter = 0;
             objDataSource.PropertyChangedAsync += OnPropertyChangedAsync;
-            Utils.RunOnMainThread(() => objControl.Disposed += (o, args) =>
+            try
+            {
+                Utils.RunOnMainThread(() => objControl.Disposed += RemoveEvent, token: token);
+            }
+            catch
+            {
+                RemoveEvent(null, default);
+                throw;
+            }
+            void RemoveEvent(object sender, EventArgs e)
             {
                 try
                 {
@@ -1229,7 +1258,7 @@ namespace Chummer
                 {
                     //swallow this
                 }
-            }, token: token);
+            }
 
             funcControlEventHandlerAdder.Invoke(objControl, FuncControlEventHandler);
             return;
@@ -1326,19 +1355,26 @@ namespace Chummer
             int intSkipControlSetter = 0;
             int intSkipDataSetter = 0;
             objDataSource.PropertyChangedAsync += OnPropertyChangedAsync;
-            await Utils.RunOnMainThreadAsync(
-                () => objControl.Disposed += (o, args) =>
+            try
+            {
+                await Utils.RunOnMainThreadAsync(() => objControl.Disposed += RemoveEvent, token: token).ConfigureAwait(false);
+            }
+            catch
+            {
+                RemoveEvent(null, default);
+                throw;
+            }
+            void RemoveEvent(object sender, EventArgs e)
+            {
+                try
                 {
-                    try
-                    {
-                        objDataSource.PropertyChangedAsync -= OnPropertyChangedAsync;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        //swallow this
-                    }
-                },
-                token).ConfigureAwait(false);
+                    objDataSource.PropertyChangedAsync -= OnPropertyChangedAsync;
+                }
+                catch (ObjectDisposedException)
+                {
+                    //swallow this
+                }
+            }
 
             await objControl
                 .DoThreadSafeAsync(x => funcControlEventHandlerAdder.Invoke(x, FuncControlEventHandler), token)
@@ -1437,7 +1473,16 @@ namespace Chummer
             int intSkipControlSetter = 0;
             int intSkipDataSetter = 0;
             objDataSource.PropertyChangedAsync += OnPropertyChangedAsync;
-            Utils.RunOnMainThread(() => objControl.Disposed += (o, args) =>
+            try
+            {
+                Utils.RunOnMainThread(() => objControl.Disposed += RemoveEvent, token: token);
+            }
+            catch
+            {
+                RemoveEvent(null, default);
+                throw;
+            }
+            void RemoveEvent(object sender, EventArgs e)
             {
                 try
                 {
@@ -1447,11 +1492,15 @@ namespace Chummer
                 {
                     //swallow this
                 }
-            }, token: token);
+            }
 
-            Timer tmrDelay = new Timer { Interval = intDelay };
-            tmrDelay.Tick += TmrDelayOnTick;
-            Utils.RunOnMainThread(() => objControl.Disposed += (o, args) => tmrDelay.Dispose(), token: token);
+            Timer tmrDelay = objControl.DoThreadSafeFunc(x =>
+            {
+                tmrDelay = new Timer { Interval = intDelay };
+                tmrDelay.Tick += TmrDelayOnTick;
+                x.Disposed += (o, args) => tmrDelay.Dispose();
+                return tmrDelay;
+            }, token: token);
             funcControlEventHandlerAdder.Invoke(objControl, FuncControlEventHandler);
             return;
 
@@ -1566,7 +1615,16 @@ namespace Chummer
             int intSkipControlSetter = 0;
             int intSkipDataSetter = 0;
             objDataSource.PropertyChangedAsync += OnPropertyChangedAsync;
-            await Utils.RunOnMainThreadAsync(() => objControl.Disposed += (o, args) =>
+            try
+            {
+                await Utils.RunOnMainThreadAsync(() => objControl.Disposed += RemoveEvent, token: token).ConfigureAwait(false);
+            }
+            catch
+            {
+                RemoveEvent(null, default);
+                throw;
+            }
+            void RemoveEvent(object sender, EventArgs e)
             {
                 try
                 {
@@ -1576,12 +1634,15 @@ namespace Chummer
                 {
                     //swallow this
                 }
-            }, token: token).ConfigureAwait(false);
+            }
 
-            Timer tmrDelay = new Timer { Interval = intDelay };
-            tmrDelay.Tick += TmrDelayOnTick;
-            await Utils.RunOnMainThreadAsync(() => objControl.Disposed += (o, args) => tmrDelay.Dispose(), token: token)
-                .ConfigureAwait(false);
+            Timer tmrDelay = await objControl.DoThreadSafeFuncAsync(x =>
+            {
+                tmrDelay = new Timer { Interval = intDelay };
+                tmrDelay.Tick += TmrDelayOnTick;
+                x.Disposed += (o, args) => tmrDelay.Dispose();
+                return tmrDelay;
+            }, token: token).ConfigureAwait(false);
             await objControl
                 .DoThreadSafeAsync(x => funcControlEventHandlerAdder.Invoke(x, FuncControlEventHandler), token)
                 .ConfigureAwait(false);
@@ -2657,7 +2718,7 @@ namespace Chummer
         /// Get the number of preferred shown lines for a TextBox control and the maximum height of these lines. Multiply the two to get the preferred height of the control.
         /// </summary>
         /// <param name="txtTextBox">Control to analyze</param>
-        public static Tuple<int, int> MeasureLineHeights(this TextBox txtTextBox)
+        public static ValueTuple<int, int> MeasureLineHeights(this TextBox txtTextBox)
         {
             string[] astrLines = txtTextBox.Lines;
             int intNumDisplayedLines = 0;
@@ -2672,7 +2733,7 @@ namespace Chummer
                     intMaxLineHeight = Math.Max(intMaxLineHeight, objTextSize.Height);
                 }
             }
-            return new Tuple<int, int>(intNumDisplayedLines, intMaxLineHeight);
+            return new ValueTuple<int, int>(intNumDisplayedLines, intMaxLineHeight);
         }
 
         /// <summary>

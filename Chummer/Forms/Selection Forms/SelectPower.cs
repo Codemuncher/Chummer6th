@@ -19,13 +19,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using System.ComponentModel;
+
 namespace Chummer
 {
     public partial class SelectPower : Form
@@ -46,6 +47,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             // Load the Powers information.
             _xmlBasePowerDataNode = _objCharacter.LoadDataXPath("powers.xml").SelectSingleNodeAndCacheExpression("/chummer");
         }
@@ -80,12 +82,12 @@ namespace Chummer
                 string strPowerPointsText = objXmlPower.SelectSingleNodeAndCacheExpression("points")?.Value ?? string.Empty;
                 if (objXmlPower.SelectSingleNodeAndCacheExpression("levels")?.Value == bool.TrueString)
                 {
-                    strPowerPointsText += strSpace + '/' + strSpace + await LanguageManager.GetStringAsync("Label_Power_Level").ConfigureAwait(false);
+                    strPowerPointsText += strSpace + "/" + strSpace + await LanguageManager.GetStringAsync("Label_Power_Level").ConfigureAwait(false);
                 }
                 string strExtrPointCost = objXmlPower.SelectSingleNodeAndCacheExpression("extrapointcost")?.Value;
                 if (!string.IsNullOrEmpty(strExtrPointCost))
                 {
-                    strPowerPointsText = strExtrPointCost + strSpace + '+' + strSpace + strPowerPointsText;
+                    strPowerPointsText = strExtrPointCost + strSpace + "+" + strSpace + strPowerPointsText;
                 }
                 await lblPowerPoints.DoThreadSafeAsync(x => x.Text = strPowerPointsText).ConfigureAwait(false);
 
@@ -93,7 +95,7 @@ namespace Chummer
                 string strPage = objXmlPower.SelectSingleNodeAndCacheExpression("altpage")?.Value ?? objXmlPower.SelectSingleNodeAndCacheExpression("page")?.Value ?? await LanguageManager.GetStringAsync("String_Unknown").ConfigureAwait(false);
                 SourceString objSource = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language,
                     GlobalSettings.CultureInfo, _objCharacter).ConfigureAwait(false);
-                await objSource.SetControlAsync(lblSource).ConfigureAwait(false);
+                await objSource.SetControlAsync(lblSource, this).ConfigureAwait(false);
                 await lblPowerPointsLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strPowerPointsText)).ConfigureAwait(false);
                 await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSource.ToString())).ConfigureAwait(false);
                 await tlpRight.DoThreadSafeAsync(x => x.Visible = true).ConfigureAwait(false);
@@ -190,6 +192,7 @@ namespace Chummer
         /// Only the provided Powers should be shown in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
         public string LimitToPowers
         {
             set => _strLimitToPowers = value;
@@ -219,7 +222,7 @@ namespace Chummer
             if (_blnLoading)
                 return;
 
-            string strFilter = '(' + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ')';
+            string strFilter = "(" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ")";
             if (!string.IsNullOrEmpty(_strLimitToPowers))
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
@@ -230,7 +233,7 @@ namespace Chummer
                     if (sbdFilter.Length > 0)
                     {
                         sbdFilter.Length -= 4;
-                        strFilter += " and (" + sbdFilter + ')';
+                        strFilter += " and (" + sbdFilter.ToString() + ")";
                     }
                 }
             }
@@ -241,7 +244,7 @@ namespace Chummer
 
             using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPower))
             {
-                foreach (XPathNavigator objXmlPower in _xmlBasePowerDataNode.Select("powers/power[" + strFilter + ']'))
+                foreach (XPathNavigator objXmlPower in _xmlBasePowerDataNode.Select("powers/power[" + strFilter + "]"))
                 {
                     decimal.TryParse(objXmlPower.SelectSingleNodeAndCacheExpression("points", token: token)?.Value, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decPoints);
                     string strExtraPointCost = objXmlPower.SelectSingleNodeAndCacheExpression("extrapointcost", token: token)?.Value;

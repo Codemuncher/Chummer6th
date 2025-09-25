@@ -19,13 +19,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -52,13 +52,13 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _blnAdvancedProgramAllowed = blnAdvancedProgramAllowed;
             _blnInherentProgram = blnInherentProgram;
             // Load the Programs information.
             _xmlBaseChummerNode = _objCharacter.LoadDataXPath("programs.xml").SelectSingleNodeAndCacheExpression("/chummer");
             _xmlOptionalAIProgramsNode = _objCharacter.GetNodeXPath().SelectSingleNodeAndCacheExpression("optionalaiprograms");
             _lstCategory = Utils.ListItemListPool.Get();
-            Disposed += (sender, args) => Utils.ListItemListPool.Return(ref _lstCategory);
         }
 
         private async void SelectAIProgram_Load(object sender, EventArgs e)
@@ -190,6 +190,9 @@ namespace Chummer
         /// Program that was selected in the dialogue.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Program that was selected in the dialogue.
+        /// </summary>
         public string SelectedProgram
         {
             get => _strSelectedAIProgram;
@@ -248,20 +251,20 @@ namespace Chummer
                                 SourceString objSource = await SourceString.GetSourceStringAsync(
                                     strSource, strPage, GlobalSettings.Language, GlobalSettings.CultureInfo,
                                     _objCharacter, token).ConfigureAwait(false);
-                                await objSource.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                                await objSource.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                             }
                             else
                             {
                                 string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                                 await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token: token).ConfigureAwait(false);
-                                await lblSource.SetToolTipAsync(strUnknown, token: token).ConfigureAwait(false);
+                                await lblSource.SetToolTipTextAsync(strUnknown, token: token).ConfigureAwait(false);
                             }
                         }
                         else
                         {
                             string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                             await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token: token).ConfigureAwait(false);
-                            await lblSource.SetToolTipAsync(strUnknown, token: token).ConfigureAwait(false);
+                            await lblSource.SetToolTipTextAsync(strUnknown, token: token).ConfigureAwait(false);
                         }
 
                         await tlpRight.DoThreadSafeAsync(x => x.Visible = true, token: token).ConfigureAwait(false);

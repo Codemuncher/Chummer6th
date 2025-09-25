@@ -32,6 +32,7 @@ using Chummer;
 using Microsoft.Win32.SafeHandles;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using TaskExtensions = Chummer.TaskExtensions;
 
 namespace CrashHandler
 {
@@ -76,8 +77,8 @@ namespace CrashHandler
 
             CrashLogWriter = new StreamWriter(CrashDumpLogName, false, Encoding.UTF8);
 
-            CrashLogWriter.WriteLine("This file contains information on a crash report for Chummer5A.");
-            CrashLogWriter.WriteLine("You can safely delete this file, but a developer might want to look at it.");
+            CrashLogWriter.WriteLine("This file contains information on a crash report generation for Chummer5A.");
+            CrashLogWriter.WriteLine("You can safely delete this file once the report has been assembled, though if that could not happen, a developer can look at this file to see where the crash reporter failed.");
 
             if (_dicPretendFilePaths.TryGetValue("exception.txt", out string exception))
             {
@@ -96,7 +97,7 @@ namespace CrashHandler
 
             Attributes["visible-crashhandler-major-minor"] = "v3_0";
 
-            CrashLogWriter.WriteLine("Crash working directory is " + WorkingDirectory);
+            CrashLogWriter.WriteLine("Crash working directory is " + WorkingDirectory.AnonymizePath());
             CrashLogWriter.Flush();
 
             _worker.WorkerReportsProgress = false;
@@ -181,9 +182,9 @@ namespace CrashHandler
                 SetProgress(CrashDumperProgress.Compressing);
                 await CrashLogWriter.WriteLineAsync("Creating .zip file").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
-                await Task.Run(() => ZipFile.CreateFromDirectory(WorkingDirectory,
-                                                                 Path.Combine(Utils.GetStartupPath, CrashDumpName)
-                                                                 + ".zip",
+                string strFileName = Path.Combine(Utils.GetStartupPath, CrashDumpName + ".zip");
+                await TaskExtensions.RunWithoutEC(() => ZipFile.CreateFromDirectory(WorkingDirectory,
+                                                                 strFileName,
                                                                  CompressionLevel.Optimal, false, Encoding.UTF8)).ConfigureAwait(false);
                 await CrashLogWriter.WriteLineAsync("Zip file created").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
@@ -251,11 +252,7 @@ namespace CrashHandler
                 };
 
                 const NativeMethods.MINIDUMP_TYPE dtype = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
+                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs;
 
                 bool extraInfo = !(exceptionInfo == IntPtr.Zero || threadId == 0 || !debugger);
 

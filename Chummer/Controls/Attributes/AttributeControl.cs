@@ -36,7 +36,7 @@ namespace Chummer.UI.Attributes
         public event EventHandlerExtensions.SafeAsyncEventHandler ValueChanged;
 
         private readonly string _strAttributeName;
-        private readonly Character _objCharacter;
+        private Character _objCharacter;
 
         private readonly NumericUpDownEx nudKarma;
         private readonly NumericUpDownEx nudBase;
@@ -60,8 +60,6 @@ namespace Chummer.UI.Attributes
             _objCharacter = attribute.CharacterObject;
 
             InitializeComponent();
-
-            Disposed += (sender, args) => UnbindAttributeControl();
 
             SuspendLayout();
             try
@@ -142,6 +140,7 @@ namespace Chummer.UI.Attributes
 
                 this.UpdateLightDarkMode(token: objMyToken);
                 this.TranslateWinForm(token: objMyToken);
+                this.UpdateParentForToolTipControls();
             }
             finally
             {
@@ -153,27 +152,28 @@ namespace Chummer.UI.Attributes
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
+            CharacterAttrib objAttrib = await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false);
             if (e.PropertyNames.Contains(nameof(CharacterAttrib.DisplayNameFormatted)))
             {
-                string strName = await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                string strName = await objAttrib
                     .GetDisplayNameFormattedAsync(token).ConfigureAwait(false);
                 await lblName.DoThreadSafeAsync(x => x.Text = strName, token).ConfigureAwait(false);
             }
             if (e.PropertyNames.Contains(nameof(CharacterAttrib.AugmentedMetatypeLimits)))
             {
                 string strAugmentedMetatypeLimits =
-                    await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                    await objAttrib
                         .GetAugmentedMetatypeLimitsAsync(token).ConfigureAwait(false);
                 await lblLimits.DoThreadSafeAsync(x => x.Text = strAugmentedMetatypeLimits, token)
                     .ConfigureAwait(false);
             }
             if (e.PropertyNames.Contains(nameof(CharacterAttrib.DisplayValue)))
             {
-                string strValue = await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                string strValue = await objAttrib
                     .GetDisplayValueAsync(token).ConfigureAwait(false);
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.ToolTip)))
                 {
-                    string strToolTip = await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                    string strToolTip = await objAttrib
                         .GetToolTipAsync(token).ConfigureAwait(false);
                     await lblValue.DoThreadSafeAsync(x =>
                     {
@@ -186,7 +186,7 @@ namespace Chummer.UI.Attributes
             }
             else if (e.PropertyNames.Contains(nameof(CharacterAttrib.ToolTip)))
             {
-                string strToolTip = await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                string strToolTip = await objAttrib
                     .GetToolTipAsync(token).ConfigureAwait(false);
                 await lblValue.DoThreadSafeAsync(x => x.ToolTipText = strToolTip, token).ConfigureAwait(false);
             }
@@ -196,12 +196,12 @@ namespace Chummer.UI.Attributes
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.UpgradeToolTip)))
                 {
                     string strUpgradeToolTip =
-                        await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                        await objAttrib
                             .GetUpgradeToolTipAsync(token).ConfigureAwait(false);
                     if (e.PropertyNames.Contains(nameof(CharacterAttrib.CanUpgradeCareer)))
                     {
                         bool blnCanUpgradeCareer =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                            await objAttrib
                                 .GetCanUpgradeCareerAsync(token).ConfigureAwait(false);
                         await cmdImproveATT.DoThreadSafeAsync(x =>
                         {
@@ -217,7 +217,7 @@ namespace Chummer.UI.Attributes
                 else if (e.PropertyNames.Contains(nameof(CharacterAttrib.CanUpgradeCareer)))
                 {
                     bool blnCanUpgradeCareer =
-                        await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                        await objAttrib
                             .GetCanUpgradeCareerAsync(token).ConfigureAwait(false);
                     await cmdImproveATT.DoThreadSafeAsync(x => x.Enabled = blnCanUpgradeCareer, token)
                         .ConfigureAwait(false);
@@ -228,17 +228,17 @@ namespace Chummer.UI.Attributes
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.PriorityMaximum)))
                 {
                     int intPriorityMaximum =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                            await objAttrib
                                 .GetPriorityMaximumAsync(token).ConfigureAwait(false);
                     if (e.PropertyNames.Contains(nameof(CharacterAttrib.BaseUnlocked)))
                     {
                         bool blnBaseUnlocked =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                            await objAttrib
                                 .GetBaseUnlockedAsync(token).ConfigureAwait(false);
                         if (e.PropertyNames.Contains(nameof(CharacterAttrib.Base)) && _intChangingBase == 0)
                         {
                             int intBase =
-                                await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetBaseAsync(token)
+                                await objAttrib.GetBaseAsync(token)
                                     .ConfigureAwait(false);
                             await nudBase.DoThreadSafeAsync(x =>
                             {
@@ -259,7 +259,7 @@ namespace Chummer.UI.Attributes
                     else if (e.PropertyNames.Contains(nameof(CharacterAttrib.Base)) && _intChangingBase == 0)
                     {
                         int intBase =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetBaseAsync(token)
+                            await objAttrib.GetBaseAsync(token)
                                 .ConfigureAwait(false);
                         await nudBase.DoThreadSafeAsync(x =>
                         {
@@ -275,12 +275,12 @@ namespace Chummer.UI.Attributes
                 else if (e.PropertyNames.Contains(nameof(CharacterAttrib.BaseUnlocked)))
                 {
                     bool blnBaseUnlocked =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                            await objAttrib
                                 .GetBaseUnlockedAsync(token).ConfigureAwait(false);
                     if (e.PropertyNames.Contains(nameof(CharacterAttrib.Base)) && _intChangingBase == 0)
                     {
                         int intBase =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetBaseAsync(token)
+                            await objAttrib.GetBaseAsync(token)
                                 .ConfigureAwait(false);
                         await nudBase.DoThreadSafeAsync(x =>
                         {
@@ -296,7 +296,7 @@ namespace Chummer.UI.Attributes
                 else if (e.PropertyNames.Contains(nameof(CharacterAttrib.Base)) && _intChangingBase == 0)
                 {
                     int intBase =
-                        await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetBaseAsync(token)
+                        await objAttrib.GetBaseAsync(token)
                             .ConfigureAwait(false);
                     await nudBase.DoThreadSafeAsync(x => x.Value = intBase, token)
                         .ConfigureAwait(false);
@@ -305,12 +305,12 @@ namespace Chummer.UI.Attributes
                 if (e.PropertyNames.Contains(nameof(CharacterAttrib.KarmaMaximum)))
                 {
                     int intKarmaMaximum =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false))
+                            await objAttrib
                                 .GetKarmaMaximumAsync(token).ConfigureAwait(false);
                     if (e.PropertyNames.Contains(nameof(CharacterAttrib.Karma)) && _intChangingKarma == 0)
                     {
                         int intKarma =
-                            await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetKarmaAsync(token)
+                            await objAttrib.GetKarmaAsync(token)
                                 .ConfigureAwait(false);
                         await nudKarma.DoThreadSafeAsync(x =>
                         {
@@ -326,7 +326,7 @@ namespace Chummer.UI.Attributes
                 else if (e.PropertyNames.Contains(nameof(CharacterAttrib.Karma)) && _intChangingKarma == 0)
                 {
                     int intKarma =
-                        await (await GetAttributeObjectAsync(_objMyToken).ConfigureAwait(false)).GetKarmaAsync(token)
+                        await objAttrib.GetKarmaAsync(token)
                             .ConfigureAwait(false);
                     await nudKarma.DoThreadSafeAsync(x => x.Value = intKarma, token)
                         .ConfigureAwait(false);
@@ -510,11 +510,25 @@ namespace Chummer.UI.Attributes
 
         private void UnbindAttributeControl()
         {
+            foreach (Control objControl in Controls)
+                objControl.ResetBindings();
             _tmrKarmaChangeTimer?.Dispose();
             _tmrBaseChangeTimer?.Dispose();
-            Character objCharacter = _objCharacter; // for thread safety
+            ButtonWithToolTip objOld = Interlocked.Exchange(ref _activeButton, null);
+            if (!objOld.IsNullOrDisposed())
+                objOld.Dispose();
+            Character objCharacter = Interlocked.Exchange(ref _objCharacter, null); // for thread safety
             if (objCharacter?.IsDisposed == false)
-                objCharacter.AttributeSection.DeregisterAsyncPropertyChangedForActiveAttribute(AttributeName, OnAttributePropertyChanged);
+            {
+                try
+                {
+                    objCharacter.AttributeSection.DeregisterAsyncPropertyChangedForActiveAttribute(AttributeName, OnAttributePropertyChanged);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // swallow this
+                }
+            }
         }
 
         private async void cmdImproveATT_Click(object sender, EventArgs e)

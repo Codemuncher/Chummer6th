@@ -19,12 +19,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.XPath;
 using Chummer.Backend.Equipment;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -47,8 +47,8 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _lstGeneralItems = Utils.ListItemListPool.Get();
-            Disposed += (sender, args) => Utils.ListItemListPool.Return(ref _lstGeneralItems);
         }
 
         private async void SelectItem_Load(object sender, EventArgs e)
@@ -413,6 +413,14 @@ namespace Chummer
         /// Internal ID of the item that was selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Internal ID of the item that was selected.
+        /// </summary>
         public string SelectedItem
         {
             get => _strSelectedItem;
@@ -428,6 +436,9 @@ namespace Chummer
         /// Whether the Form should be accepted if there is only one item left in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether the Form should be accepted if there is only one item left in the list.
+        /// </summary>
         public bool AllowAutoSelect
         {
             get => _blnAllowAutoSelect;
@@ -438,6 +449,9 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description to show in the window.
+        /// </summary>
         public string Description
         {
             get => lblDescription.Text;

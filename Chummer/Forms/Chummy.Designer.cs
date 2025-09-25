@@ -13,9 +13,14 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                _thickPen?.Dispose();
+                _myToolTip?.Dispose();
+                _tmrDraw?.Dispose();
+                _tmrTip?.Dispose();
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -28,26 +33,26 @@ namespace Chummer
         /// </summary>
         private void InitializeComponent()
         {
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Chummy));
-			this.SuspendLayout();
-			// 
-			// Chummy
-			// 
-			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.BackColor = System.Drawing.Color.WhiteSmoke;
-			this.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("$this.BackgroundImage")));
-			this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
-			this.ClientSize = new System.Drawing.Size(165, 218);
-			this.DoubleBuffered = true;
-			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
-			this.Name = "Chummy";
-			this.ShowIcon = false;
-			this.ShowInTaskbar = false;
-			this.Text = "Chummy";
-			this.TransparencyKey = System.Drawing.Color.WhiteSmoke;
-			this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Chummy_MouseDown);
-			this.ResumeLayout(false);
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Chummy));
+            this.SuspendLayout();
+            // 
+            // Chummy
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.WhiteSmoke;
+            this.BackgroundImage = ((System.Drawing.Image)(resources.GetObject("$this.BackgroundImage")));
+            this.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Zoom;
+            this.ClientSize = new System.Drawing.Size(165, 218);
+            this.DoubleBuffered = true;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.Name = "Chummy";
+            this.ShowIcon = false;
+            this.ShowInTaskbar = false;
+            this.Text = "Chummy";
+            this.TransparencyKey = System.Drawing.Color.WhiteSmoke;
+            this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Chummy_MouseDown);
+            this.ResumeLayout(false);
 
         }
 

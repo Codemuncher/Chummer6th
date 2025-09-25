@@ -29,7 +29,6 @@ using System.Xml.XPath;
 using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using Timer = System.Windows.Forms.Timer;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -57,6 +56,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             if (_objLifestyle.StyleType == LifestyleType.Standard)
             {
                 lblAreaLabel.Visible = false;
@@ -84,12 +84,6 @@ namespace Chummer
             _tmrCityChangeTimer = new Timer { Interval = 1000 };
             _tmrDistrictChangeTimer = new Timer { Interval = 1000 };
             _tmrBoroughChangeTimer = new Timer { Interval = 1000 };
-            Disposed += (o, args) =>
-            {
-                _tmrCityChangeTimer?.Dispose();
-                _tmrDistrictChangeTimer?.Dispose();
-                _tmrBoroughChangeTimer?.Dispose();
-            };
             _tmrCityChangeTimer.Tick += CityChangeTimer_Tick;
             _tmrDistrictChangeTimer.Tick += DistrictChangeTimer_Tick;
             _tmrBoroughChangeTimer.Tick += BoroughChangeTimer_Tick;
@@ -98,18 +92,6 @@ namespace Chummer
         private void SelectLifestyleAdvanced_FormClosing(object sender, FormClosingEventArgs e)
         {
             _objLifestyle.LifestyleQualities.CollectionChangedAsync -= LifestyleQualitiesOnCollectionChanged;
-            _objLifestyle.PropertyChangedAsync -= RefreshLifestyleQualities;
-        }
-
-        private Task RefreshLifestyleQualities(object sender, PropertyChangedEventArgs e,
-            CancellationToken token = default)
-        {
-            if (token.IsCancellationRequested)
-                return Task.FromCanceled(token);
-            if (e.PropertyName == nameof(Lifestyle.LifestyleQualities))
-                return LifestyleQualitiesOnCollectionChanged(sender,
-                    new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset), token);
-            return Task.CompletedTask;
         }
 
         private async Task LifestyleQualitiesOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e, CancellationToken token = default)
@@ -468,19 +450,19 @@ namespace Chummer
                 if (await _objLifestyle.GetStyleTypeAsync().ConfigureAwait(false) == LifestyleType.Standard)
                     strFilter += " and (source = \"SR5\" or category = \"Contracts\")";
                 using (XmlNodeList xmlLifestyleList
-                       = _xmlDocument.SelectNodes("/chummer/lifestyles/lifestyle[" + strFilter + ']'))
+                       = _xmlDocument.SelectNodes("/chummer/lifestyles/lifestyle[" + strFilter + "]"))
                 {
                     if (xmlLifestyleList?.Count > 0)
                     {
                         foreach (XmlNode objXmlLifestyle in xmlLifestyleList)
                         {
-                            string strLifestyleName = objXmlLifestyle["name"]?.InnerText;
+                            string strLifestyleName = objXmlLifestyle["name"]?.InnerTextViaPool();
 
                             if (!string.IsNullOrEmpty(strLifestyleName) &&
                                 strLifestyleName != "ID ERROR. Re-add life style to fix")
                             {
                                 lstLifestyles.Add(new ListItem(strLifestyleName,
-                                                               objXmlLifestyle["translate"]?.InnerText
+                                                               objXmlLifestyle["translate"]?.InnerTextViaPool()
                                                                ?? strLifestyleName));
                             }
                         }
@@ -638,7 +620,6 @@ namespace Chummer
             }).ConfigureAwait(false);
 
             _objLifestyle.LifestyleQualities.CollectionChangedAsync += LifestyleQualitiesOnCollectionChanged;
-            _objLifestyle.PropertyChangedAsync += RefreshLifestyleQualities;
 
             // Populate the City ComboBox
             using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstCity))
@@ -649,9 +630,9 @@ namespace Chummer
                     {
                         foreach (XmlNode objXmlCity in xmlCityList)
                         {
-                            string strName = objXmlCity["name"]?.InnerText
+                            string strName = objXmlCity["name"]?.InnerTextViaPool()
                                              ?? await LanguageManager.GetStringAsync("String_Unknown").ConfigureAwait(false);
-                            lstCity.Add(new ListItem(strName, objXmlCity["translate"]?.InnerText ?? strName));
+                            lstCity.Add(new ListItem(strName, objXmlCity["translate"]?.InnerTextViaPool() ?? strName));
                         }
                     }
                 }
@@ -882,7 +863,7 @@ namespace Chummer
                 return;
             if (await chkBonusLPRandomize.DoThreadSafeFuncAsync(x => x.Checked).ConfigureAwait(false))
             {
-                int intRandom = await GlobalSettings.RandomGenerator.NextD6ModuloBiasRemovedAsync().ConfigureAwait(false);
+                int intRandom = await Utils.GlobalRandom.NextD6ModuloBiasRemovedAsync().ConfigureAwait(false);
                 await nudBonusLP.DoThreadSafeAsync(x =>
                 {
                     x.Enabled = false;
@@ -988,10 +969,11 @@ namespace Chummer
         /// </summary>
         public bool AddAgain { get; private set; }
 
+       
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Lifestyle that was created in the dialogue.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Lifestyle SelectedLifestyle { get; set; }
 
         #endregion Properties
@@ -1019,10 +1001,10 @@ namespace Chummer
             XmlNode objXmlLifestyle = _xmlDocument.TryGetNodeByNameOrId("/chummer/lifestyles/lifestyle", strBaseLifestyle);
             if (objXmlLifestyle == null)
                 return;
-            _objLifestyle.Source = objXmlLifestyle["source"]?.InnerText;
-            _objLifestyle.Page = objXmlLifestyle["page"]?.InnerText;
+            _objLifestyle.Source = objXmlLifestyle["source"]?.InnerTextViaPool(token);
+            _objLifestyle.Page = objXmlLifestyle["page"]?.InnerTextViaPool(token);
             await _objLifestyle.SetNameAsync(strLifestyleName, token).ConfigureAwait(false);
-            decimal.TryParse(objXmlLifestyle["cost"]?.InnerText, System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decCost);
+            decimal.TryParse(objXmlLifestyle["cost"]?.InnerTextViaPool(token), System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decCost);
             await _objLifestyle.SetCostAsync(decCost, token).ConfigureAwait(false);
             await _objLifestyle.SetPercentageAsync(await nudPercentage.DoThreadSafeFuncAsync(x => x.Value, token).ConfigureAwait(false), token).ConfigureAwait(false);
             await _objLifestyle.SetBaseLifestyleAsync(strBaseLifestyle, token).ConfigureAwait(false);
@@ -1048,9 +1030,9 @@ namespace Chummer
                 await _objLifestyle.SetBonusLPAsync(await nudBonusLP.DoThreadSafeFuncAsync(x => x.ValueAsInt, token).ConfigureAwait(false), token).ConfigureAwait(false);
 
             // Get the starting Nuyen information.
-            if (int.TryParse(objXmlLifestyle["dice"]?.InnerText, System.Globalization.NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intDice))
+            if (int.TryParse(objXmlLifestyle["dice"]?.InnerTextViaPool(token), System.Globalization.NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intDice))
                 await _objLifestyle.SetDiceAsync(intDice, token).ConfigureAwait(false);
-            decimal.TryParse(objXmlLifestyle["multiplier"]?.InnerText, System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decMultiplier);
+            decimal.TryParse(objXmlLifestyle["multiplier"]?.InnerTextViaPool(token), System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decMultiplier);
             await _objLifestyle.SetMultiplierAsync(decMultiplier, token).ConfigureAwait(false);
             SelectedLifestyle = _objLifestyle;
             await this.DoThreadSafeAsync(x =>
@@ -1077,18 +1059,18 @@ namespace Chummer
                 {
                     SourceString objSource = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language,
                         GlobalSettings.CultureInfo, _objCharacter, token).ConfigureAwait(false);
-                    await objSource.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                    await objSource.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                     await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = true, token).ConfigureAwait(false);
                 }
                 else
                 {
-                    await SourceString.Blank.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                    await SourceString.Blank.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                     await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = false, token).ConfigureAwait(false);
                 }
             }
             else
             {
-                await SourceString.Blank.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                await SourceString.Blank.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                 await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = false, token).ConfigureAwait(false);
             }
 
@@ -1136,7 +1118,7 @@ namespace Chummer
 
                 if (await chkBonusLPRandomize.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false))
                 {
-                    int intValue = await GlobalSettings.RandomGenerator.NextD6ModuloBiasRemovedAsync(token).ConfigureAwait(false);
+                    int intValue = await Utils.GlobalRandom.NextD6ModuloBiasRemovedAsync(token).ConfigureAwait(false);
                     await nudBonusLP.DoThreadSafeAsync(x =>
                     {
                         x.Enabled = false;
@@ -1186,9 +1168,9 @@ namespace Chummer
                         {
                             foreach (XmlNode objXmlDistrict in xmlDistrictList)
                             {
-                                string strName = objXmlDistrict["name"]?.InnerText
+                                string strName = objXmlDistrict["name"]?.InnerTextViaPool(token)
                                                     ?? await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
-                                lstDistrict.Add(new ListItem(strName, objXmlDistrict["translate"]?.InnerText ?? strName));
+                                lstDistrict.Add(new ListItem(strName, objXmlDistrict["translate"]?.InnerTextViaPool(token) ?? strName));
                             }
                         }
                     }
@@ -1218,9 +1200,9 @@ namespace Chummer
                             {
                                 foreach (XmlNode objXmlDistrict in xmlBoroughList)
                                 {
-                                    string strName = objXmlDistrict["name"]?.InnerText
+                                    string strName = objXmlDistrict["name"]?.InnerTextViaPool(token)
                                                      ?? await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
-                                    lstBorough.Add(new ListItem(strName, objXmlDistrict["translate"]?.InnerText ?? strName));
+                                    lstBorough.Add(new ListItem(strName, objXmlDistrict["translate"]?.InnerTextViaPool(token) ?? strName));
                                 }
                             }
                         }

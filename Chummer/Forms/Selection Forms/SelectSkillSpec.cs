@@ -43,6 +43,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = XmlManager.LoadXPath("skills.xml", _objCharacter?.Settings.EnabledCustomDataDirectoryPaths);
         }
 
@@ -189,7 +190,9 @@ namespace Chummer
         /// </summary>
         public bool AllowAutoSelect { get; } = true;
 
-       
+        /// <summary>
+        /// Type of skill that we're selecting. Used to differentiate knowledge skills.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Type of skill that we're selecting. Used to differentiate knowledge skills.

@@ -19,7 +19,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Data;
 using System.Text;
 using System.Threading;
@@ -28,6 +27,7 @@ using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
 using Chummer.Backend.Equipment;
+using System.ComponentModel;
 
 // ReSharper disable LocalizableElement
 
@@ -43,6 +43,7 @@ namespace Chummer
         private bool _blnAddAgain;
         private bool _blnBlackMarketDiscount;
         private HashSet<string> _setLimitToCategories;
+        private string _strWeaponFilter = string.Empty;
         private static string _strSelectCategory = string.Empty;
         private readonly Character _objCharacter;
         private readonly XmlDocument _objXmlDocument;
@@ -67,38 +68,13 @@ namespace Chummer
             tabControl.MouseWheel += CommonFunctions.ShiftTabsOnMouseScroll;
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _lstCategory = Utils.ListItemListPool.Get();
             _setLimitToCategories = Utils.StringHashSetPool.Get();
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
             _setMounts = Utils.StringHashSetPool.Get();
             _objGenericCancellationTokenSource = new CancellationTokenSource();
             _objGenericToken = _objGenericCancellationTokenSource.Token;
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objUpdateWeaponInfoCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objDoRefreshListCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objWeaponSelectedIndexChangedCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                _objGenericCancellationTokenSource.Dispose();
-                Utils.ListItemListPool.Return(ref _lstCategory);
-                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
-                Utils.StringHashSetPool.Return(ref _setLimitToCategories);
-                Utils.StringHashSetPool.Return(ref _setMounts);
-            };
             // Load the Weapon information.
             _objXmlDocument = _objCharacter.LoadData("weapons.xml");
             _setBlackMarketMaps.AddRange(_objCharacter.GenerateBlackMarketMappings(_objCharacter.LoadDataXPath("weapons.xml").SelectSingleNodeAndCacheExpression("/chummer")));
@@ -133,13 +109,13 @@ namespace Chummer
                         {
                             foreach (XmlNode objXmlCategory in xmlCategoryList)
                             {
-                                string strInnerText = objXmlCategory.InnerText;
+                                string strInnerText = objXmlCategory.InnerTextViaPool();
                                 if ((_setLimitToCategories.Count == 0 || _setLimitToCategories.Contains(strInnerText))
                                     && await BuildWeaponList(
                                         _objXmlDocument.SelectNodes(strFilterPrefix + strInnerText.CleanXPath() + ']'),
                                         true, _objGenericToken).ConfigureAwait(false))
                                     _lstCategory.Add(new ListItem(strInnerText,
-                                        objXmlCategory.Attributes?["translate"]?.InnerText ?? strInnerText));
+                                        objXmlCategory.Attributes?["translate"]?.InnerTextViaPool() ?? strInnerText));
                             }
                         }
                     }
@@ -394,7 +370,7 @@ namespace Chummer
                                 .ConfigureAwait(false);
                         (string strRC, string strRCTooltip) = await objSelectedWeapon.GetDisplayTotalRCAsync(token).ConfigureAwait(false);
                         await lblWeaponRC.DoThreadSafeAsync(x => x.Text = strRC, token: token).ConfigureAwait(false);
-                        await lblWeaponRC.SetToolTipAsync(strRCTooltip, token: token)
+                        await lblWeaponRC.SetToolTipTextAsync(strRCTooltip, token: token)
                                             .ConfigureAwait(false);
                         await lblWeaponRCLabel
                                 .DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strRC), token: token)
@@ -573,23 +549,23 @@ namespace Chummer
                                 continue;
                             }
 
-                            if (objXmlWeapon["cyberware"]?.InnerText == bool.TrueString)
+                            if (objXmlWeapon["cyberware"]?.InnerTextIsTrueString() == true)
                                 continue;
-                            string strTest = objXmlWeapon["mount"]?.InnerText;
+                            string strTest = objXmlWeapon["mount"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strTest) && !Mounts.Contains(strTest))
                                 continue;
-                            strTest = objXmlWeapon["extramount"]?.InnerText;
+                            strTest = objXmlWeapon["extramount"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strTest) && !Mounts.Contains(strTest))
                                 continue;
                             if (blnHideOverAvailLimit
                                 && !await SelectionShared
-                                    .CheckAvailRestrictionAsync(objXmlWeapon, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlWeapon["id"]?.InnerText, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token)
+                                    .CheckAvailRestrictionAsync(objXmlWeapon, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlWeapon["id"]?.InnerTextViaPool(), blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token)
                                     .ConfigureAwait(false))
                                 continue;
                             if (!blnFreeItem && blnShowOnlyAffordItems)
                             {
                                 decimal decCostMultiplier = decBaseCostMultiplier;
-                                if (_setBlackMarketMaps.Contains(objXmlWeapon["category"]?.InnerText))
+                                if (_setBlackMarketMaps.Contains(objXmlWeapon["category"]?.InnerTextViaPool()))
                                     decCostMultiplier *= 0.9m;
                                 if (!await SelectionShared.CheckNuyenRestrictionAsync(objXmlWeapon, _objCharacter, decNuyen,
                                         decCostMultiplier, token: token).ConfigureAwait(false))
@@ -725,16 +701,16 @@ namespace Chummer
                                 continue;
                             }
 
-                            if (objXmlWeapon["cyberware"]?.InnerText == bool.TrueString)
+                            if (objXmlWeapon["cyberware"]?.InnerTextIsTrueString() == true)
                                 continue;
 
-                            string strMount = objXmlWeapon["mount"]?.InnerText;
+                            string strMount = objXmlWeapon["mount"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strMount) && !Mounts.Contains(strMount))
                             {
                                 continue;
                             }
 
-                            string strExtraMount = objXmlWeapon["extramount"]?.InnerText;
+                            string strExtraMount = objXmlWeapon["extramount"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strExtraMount) && !Mounts.Contains(strExtraMount))
                             {
                                 continue;
@@ -743,7 +719,7 @@ namespace Chummer
                             if (blnForCategories)
                                 return true;
                             if (blnHideOverAvailLimit
-                                && !await SelectionShared.CheckAvailRestrictionAsync(objXmlWeapon, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlWeapon["id"]?.InnerText, blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token).ConfigureAwait(false))
+                                && !await SelectionShared.CheckAvailRestrictionAsync(objXmlWeapon, _objCharacter, (await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Availability, strImprovedName: objXmlWeapon["id"]?.InnerTextViaPool(), blnIncludeNonImproved: true, token: token).ConfigureAwait(false)).StandardRound(), token: token).ConfigureAwait(false))
                             {
                                 ++intOverLimit;
                                 continue;
@@ -752,7 +728,7 @@ namespace Chummer
                             if (!blnFreeItem && blnShowOnlyAffordItems)
                             {
                                 decimal decCostMultiplier = decBaseCostMultiplier;
-                                if (_setBlackMarketMaps.Contains(objXmlWeapon["category"]?.InnerText))
+                                if (_setBlackMarketMaps.Contains(objXmlWeapon["category"]?.InnerTextViaPool()))
                                     decCostMultiplier *= 0.9m;
                                 if (!string.IsNullOrEmpty(ParentWeapon?.DoubledCostModificationSlots) &&
                                     (!string.IsNullOrEmpty(strMount) || !string.IsNullOrEmpty(strExtraMount)))
@@ -779,9 +755,9 @@ namespace Chummer
                                 }
                             }
 
-                            lstWeapons.Add(new ListItem(objXmlWeapon["id"]?.InnerText,
-                                                        objXmlWeapon["translate"]?.InnerText
-                                                        ?? objXmlWeapon["name"]?.InnerText));
+                            lstWeapons.Add(new ListItem(objXmlWeapon["id"]?.InnerTextViaPool(),
+                                                        objXmlWeapon["translate"]?.InnerTextViaPool()
+                                                        ?? objXmlWeapon["name"]?.InnerTextViaPool()));
                         }
 
                         if (blnForCategories)
@@ -1000,6 +976,21 @@ namespace Chummer
             }
         }
 
+        /// <summary>
+        /// Additional XPath filter expression for weapon filtering beyond categories.
+        /// This allows for flexible filtering on any weapon property (reach, type, damage, etc.).
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Additional XPath filter expression for weapon filtering beyond categories.
+        /// This allows for flexible filtering on any weapon property (reach, type, damage, etc.).
+        /// </summary>
+        public string WeaponFilter
+        {
+            get => _strWeaponFilter;
+            set => _strWeaponFilter = value;
+        }
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Weapon ParentWeapon { get; set; }
 
@@ -1068,6 +1059,10 @@ namespace Chummer
                         if (!string.IsNullOrEmpty(txtSearch.Text))
                             sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(txtSearch.Text));
 
+                        // Apply additional weapon filter if specified
+                        if (!string.IsNullOrEmpty(_strWeaponFilter))
+                            sbdFilter.Append(" and (").Append(_strWeaponFilter).Append(')');
+
                         if (sbdFilter.Length > 0)
                             strFilter = '[' + sbdFilter.ToString() + ']';
                     }
@@ -1099,8 +1094,8 @@ namespace Chummer
                         {
                             _strSelectCategory = GlobalSettings.SearchInCategoryOnly || txtSearch.TextLength == 0
                                 ? cboCategory.SelectedValue?.ToString()
-                                : objNode["category"]?.InnerText;
-                            _strSelectedWeapon = objNode["id"]?.InnerText;
+                                : objNode["category"]?.InnerTextViaPool();
+                            _strSelectedWeapon = objNode["id"]?.InnerTextViaPool();
                             _decMarkup = nudMarkup.Value;
                             _blnFreeCost = chkFreeItem.Checked;
                             _blnBlackMarketDiscount = chkBlackMarketDiscount.Checked;
@@ -1127,8 +1122,8 @@ namespace Chummer
                         }
                         if (objNode != null)
                         {
-                            _strSelectCategory = GlobalSettings.SearchInCategoryOnly || txtSearch.TextLength == 0 ? cboCategory.SelectedValue?.ToString() : objNode["category"]?.InnerText;
-                            _strSelectedWeapon = objNode["id"]?.InnerText;
+                            _strSelectCategory = GlobalSettings.SearchInCategoryOnly || txtSearch.TextLength == 0 ? cboCategory.SelectedValue?.ToString() : objNode["category"]?.InnerTextViaPool();
+                            _strSelectedWeapon = objNode["id"]?.InnerTextViaPool();
                         }
                         _decMarkup = nudMarkup.Value;
                         _blnFreeCost = chkFreeItem.Checked;

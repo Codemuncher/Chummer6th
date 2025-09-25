@@ -63,7 +63,7 @@ namespace Chummer
         private SafeAsyncEventHandler _onMyDoubleClick;
         private SafeAsyncEventHandler _onMyContextMenuDeleteClick;
         private SafeAsyncEventHandler<TreeViewEventArgs> _onMyAfterSelect;
-        private SafeAsyncEventHandler<Tuple<KeyEventArgs, TreeNode>> _onMyKeyDown;
+        private SafeAsyncEventHandler<ValueTuple<KeyEventArgs, TreeNode>> _onMyKeyDown;
 
         public AsyncFriendlyReaderWriterLock LockObject { get; } = new AsyncFriendlyReaderWriterLock();
 
@@ -524,13 +524,16 @@ namespace Chummer
             SetDefaultEventHandlers();
         }
 
+        /// <summary>
+        /// Syntactic sugar to call <see cref="CopyFrom(CharacterCache)"/> immediately after the constructor.
+        /// </summary>
         public CharacterCache(CharacterCache objExistingCache) : this()
         {
             CopyFrom(objExistingCache);
         }
 
         /// <summary>
-        /// Syntactic sugar to call LoadFromFile() synchronously immediately after the constructor.
+        /// Syntactic sugar to call <see cref="LoadFromFile(string)"/> immediately after the constructor.
         /// </summary>
         public CharacterCache(string strFile) : this()
         {
@@ -538,9 +541,9 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar to call CopyFrom() asynchronously immediately after the constructor.
+        /// Syntactic sugar to call <see cref="CopyFromAsync(CharacterCache, CancellationToken)"/> immediately after the constructor.
         /// </summary>
-        public static async Task<CharacterCache> CreateFromFileAsync(CharacterCache objExistingCache, CancellationToken token = default)
+        public static async Task<CharacterCache> CreateCopyFromAsync(CharacterCache objExistingCache, CancellationToken token = default)
         {
             CharacterCache objReturn = new CharacterCache();
             try
@@ -556,7 +559,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar to call LoadFromFile() asynchronously immediately after the constructor.
+        /// Syntactic sugar to call <see cref="LoadFromFileAsync(string, CancellationToken)"/> immediately after the constructor.
         /// </summary>
         public static async Task<CharacterCache> CreateFromFileAsync(string strFile, CancellationToken token = default)
         {
@@ -687,7 +690,7 @@ namespace Chummer
         [JsonIgnore]
         [XmlIgnore]
         [IgnoreDataMember]
-        public SafeAsyncEventHandler<Tuple<KeyEventArgs, TreeNode>> OnMyKeyDown
+        public SafeAsyncEventHandler<ValueTuple<KeyEventArgs, TreeNode>> OnMyKeyDown
         {
             get
             {
@@ -793,7 +796,7 @@ namespace Chummer
                     {
                         XPathDocument xmlDoc = blnSync
                             ? LoadXPathDocument()
-                            : await Task.Run(LoadXPathDocumentAsync, token).ConfigureAwait(false);
+                            : await LoadXPathDocumentAsync().ConfigureAwait(false);
 
                         XPathDocument LoadXPathDocument()
                         {
@@ -864,7 +867,7 @@ namespace Chummer
                                                        .ConfigureAwait(false) +
                                   await LanguageManager.GetStringAsync("String_Space", token: token)
                                                        .ConfigureAwait(false);
-                            _strSettingsFile = strTemp + '[' + strSettings + ']';
+                            _strSettingsFile = strTemp + "[" + strSettings + "]";
                         }
                     }
                     else
@@ -972,8 +975,8 @@ namespace Chummer
             {
                 if (!string.IsNullOrEmpty(ErrorText))
                 {
-                    strReturn = Path.GetFileNameWithoutExtension(FileName) + strSpace + '(' +
-                                LanguageManager.GetString("String_Error") + ')';
+                    strReturn = Path.GetFileNameWithoutExtension(FileName) + strSpace + "(" +
+                                LanguageManager.GetString("String_Error") + ")";
                 }
                 else
                 {
@@ -988,8 +991,8 @@ namespace Chummer
                     string strBuildMethod = LanguageManager.GetString("String_" + BuildMethod, false);
                     if (string.IsNullOrEmpty(strBuildMethod))
                         strBuildMethod = LanguageManager.GetString("String_Unknown");
-                    strReturn += strSpace + '(' + strBuildMethod + strSpace + '-' + strSpace
-                                 + LanguageManager.GetString(Created ? "Title_CareerMode" : "Title_CreateMode") + ')';
+                    strReturn += strSpace + "(" + strBuildMethod + strSpace + "-" + strSpace
+                                 + LanguageManager.GetString(Created ? "Title_CareerMode" : "Title_CreateMode") + ")";
                 }
 
                 if (blnAddMarkerIfOpen && Program.MainForm != null)
@@ -999,16 +1002,16 @@ namespace Chummer
                     if (Program.MainForm.OpenCharacterEditorForms?.Any(
                             x => !x.CharacterObject.IsDisposed && string.Equals(x.CharacterObject.FileName, strFilePath,
                                 StringComparison.Ordinal)) == true)
-                        strMarker += '*';
+                        strMarker += "*";
                     if (Program.MainForm.OpenCharacterSheetViewers?.Any(
                             x => x.CharacterObjects.Any(y =>
                                 !y.IsDisposed && string.Equals(y.FileName, strFilePath,
                                     StringComparison.Ordinal))) == true)
-                        strMarker += '^';
+                        strMarker += "^";
                     if (Program.MainForm.OpenCharacterExportForms?.Any(
                             x => !x.CharacterObject.IsDisposed && string.Equals(x.CharacterObject.FileName, strFilePath,
                                 StringComparison.Ordinal)) == true)
-                        strMarker += '\'';
+                        strMarker += "\'";
                     if (!string.IsNullOrEmpty(strMarker))
                         strReturn = strMarker + strSpace + strReturn;
                 }
@@ -1036,7 +1039,7 @@ namespace Chummer
                 if (!string.IsNullOrEmpty(strErrorText))
                 {
                     strReturn = Path.GetFileNameWithoutExtension(await GetFileNameAsync(token).ConfigureAwait(false))
-                        + strSpace + '(' + await LanguageManager.GetStringAsync("String_Error", token: token).ConfigureAwait(false) + ')';
+                        + strSpace + "(" + await LanguageManager.GetStringAsync("String_Error", token: token).ConfigureAwait(false) + ")";
                 }
                 else
                 {
@@ -1054,12 +1057,12 @@ namespace Chummer
                     if (string.IsNullOrEmpty(strBuildMethod))
                         strBuildMethod = await LanguageManager.GetStringAsync("String_Unknown", token: token)
                             .ConfigureAwait(false);
-                    strReturn += strSpace + '(' + strBuildMethod + strSpace + '-' + strSpace
+                    strReturn += strSpace + "(" + strBuildMethod + strSpace + "-" + strSpace
                                  + await LanguageManager
                                      .GetStringAsync(await GetCreatedAsync(token).ConfigureAwait(false)
                                         ? "Title_CareerMode"
                                         : "Title_CreateMode", token: token)
-                                     .ConfigureAwait(false) + ')';
+                                     .ConfigureAwait(false) + ")";
                 }
 
                 if (blnAddMarkerIfOpen && Program.MainForm != null)
@@ -1075,7 +1078,7 @@ namespace Chummer
                                                await x.CharacterObject.GetFileNameAsync(token).ConfigureAwait(false),
                                                strFilePath, StringComparison.Ordinal), token)
                             .ConfigureAwait(false))
-                        strMarker += '*';
+                        strMarker += "*";
                     ThreadSafeObservableCollection<CharacterSheetViewer> lstToProcess2
                         = Program.MainForm.OpenCharacterSheetViewers;
                     if (lstToProcess2 != null && await lstToProcess2
@@ -1084,7 +1087,7 @@ namespace Chummer
                                     async y => !y.IsDisposed && string.Equals(
                                         await y.GetFileNameAsync(token).ConfigureAwait(false), strFilePath,
                                         StringComparison.Ordinal), token), token).ConfigureAwait(false))
-                        strMarker += '^';
+                        strMarker += "^";
                     ThreadSafeObservableCollection<ExportCharacter> lstToProcess3
                         = Program.MainForm.OpenCharacterExportForms;
                     if (lstToProcess3 != null && await lstToProcess3
@@ -1094,7 +1097,7 @@ namespace Chummer
                                                await x.CharacterObject.GetFileNameAsync(token).ConfigureAwait(false),
                                                strFilePath, StringComparison.Ordinal), token)
                             .ConfigureAwait(false))
-                        strMarker += '\'';
+                        strMarker += "\'";
                     if (!string.IsNullOrEmpty(strMarker))
                         strReturn = strMarker + strSpace + strReturn;
                 }
@@ -1107,10 +1110,10 @@ namespace Chummer
             return strReturn;
         }
 
-        public async Task OnDefaultKeyDown(object sender, Tuple<KeyEventArgs, TreeNode> args, CancellationToken token = default)
+        public async Task OnDefaultKeyDown(object sender, ValueTuple<KeyEventArgs, TreeNode> args, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            if (args?.Item1.KeyCode == Keys.Delete)
+            if (args.Item1.KeyCode == Keys.Delete)
             {
                 switch (args.Item2.Parent.Tag.ToString())
                 {

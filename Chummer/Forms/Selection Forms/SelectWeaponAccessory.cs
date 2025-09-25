@@ -56,8 +56,8 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
-            Disposed += (sender, args) => Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
             // Load the Weapon information.
             _xmlBaseChummerNode = _objCharacter.LoadDataXPath("weapons.xml").SelectSingleNodeAndCacheExpression("/chummer");
             _setBlackMarketMaps.AddRange(_objCharacter.GenerateBlackMarketMappings(_xmlBaseChummerNode));
@@ -266,7 +266,7 @@ namespace Chummer
         /// <summary>
         /// Mount that was selected in the dialogue.
         /// </summary>
-        public Tuple<string, string> SelectedMount => new Tuple<string, string>(cboMount.SelectedItem?.ToString(), cboExtraMount.SelectedItem?.ToString());
+        public ValueTuple<string, string> SelectedMount => new ValueTuple<string, string>(cboMount.SelectedItem?.ToString(), cboExtraMount.SelectedItem?.ToString());
 
         /// <summary>
         /// Rating of the Accessory.
@@ -684,7 +684,7 @@ namespace Chummer
                                                  .GetSourceStringAsync(strSource, strPage, GlobalSettings.Language,
                                                                        GlobalSettings.CultureInfo, _objCharacter,
                                                                        token: token).ConfigureAwait(false);
-            await objSourceString.SetControlAsync(lblSource, token: token).ConfigureAwait(false);
+            await objSourceString.SetControlAsync(lblSource, this, token: token).ConfigureAwait(false);
             await lblSourceLabel
                   .DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSourceString.ToString()), token: token)
                   .ConfigureAwait(false);

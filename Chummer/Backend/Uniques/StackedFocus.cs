@@ -87,7 +87,7 @@ namespace Chummer
             {
                 objNode.TryGetField("guid", Guid.TryParse, out _guiID);
                 objNode.TryGetField("gearid", Guid.TryParse, out _guiGearId);
-                _blnBonded = objNode["bonded"]?.InnerText == bool.TrueString;
+                _blnBonded = objNode["bonded"]?.InnerTextIsTrueString() == true;
                 using (XmlNodeList nodGearList = objNode.SelectNodes("gears/gear"))
                 {
                     if (nodGearList == null)
@@ -122,7 +122,7 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 objNode.TryGetField("guid", Guid.TryParse, out _guiID);
                 objNode.TryGetField("gearid", Guid.TryParse, out _guiGearId);
-                _blnBonded = objNode["bonded"]?.InnerText == bool.TrueString;
+                _blnBonded = objNode["bonded"]?.InnerTextIsTrueString() == true;
                 using (XmlNodeList nodGearList = objNode.SelectNodes("gears/gear"))
                 {
                     if (nodGearList != null)
@@ -545,6 +545,7 @@ namespace Chummer
         /// </summary>
         public string Name(CultureInfo objCulture, string strLanguage)
         {
+            string strSpace = LanguageManager.GetString("String_Space", strLanguage);
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                           out StringBuilder sbdReturn))
             {
@@ -552,7 +553,7 @@ namespace Chummer
                 {
                     foreach (Gear objGear in Gear)
                     {
-                        sbdReturn.Append(objGear.DisplayName(objCulture, strLanguage)).Append(", ");
+                        sbdReturn.Append(objGear.DisplayName(objCulture, strLanguage)).Append(',').Append(strSpace);
                     }
                 }
 
@@ -569,6 +570,7 @@ namespace Chummer
         /// </summary>
         public async Task<string> NameAsync(CultureInfo objCulture, string strLanguage, CancellationToken token = default)
         {
+            string strSpace = await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false);
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                           out StringBuilder sbdReturn))
             {
@@ -579,7 +581,7 @@ namespace Chummer
                     await Gear.ForEachAsync(async objGear =>
                     {
                         sbdReturn.Append(await objGear.DisplayNameAsync(objCulture, strLanguage, token: token)
-                                                      .ConfigureAwait(false)).Append(", ");
+                                                      .ConfigureAwait(false)).Append(',').Append(strSpace);
                     }, token).ConfigureAwait(false);
                 }
                 finally

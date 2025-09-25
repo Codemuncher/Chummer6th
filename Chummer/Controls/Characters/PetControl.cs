@@ -53,10 +53,9 @@ namespace Chummer
             _tmrMetatypeChangeTimer = new Timer { Interval = 1000 };
             _tmrMetatypeChangeTimer.Tick += UpdateMetatype;
 
-            Disposed += (sender, args) => UnbindPetControl();
-
             this.UpdateLightDarkMode(objMyToken);
             this.TranslateWinForm(token: objMyToken);
+            this.UpdateParentForToolTipControls();
             foreach (ToolStripItem tssItem in cmsContact.Items)
             {
                 tssItem.UpdateLightDarkMode(objMyToken);
@@ -87,7 +86,7 @@ namespace Chummer
         {
             _tmrMetatypeChangeTimer.Dispose();
             foreach (Control objControl in Controls)
-                objControl.DataBindings.Clear();
+                objControl.ResetBindings();
         }
 
         private void cboMetatype_TextChanged(object sender, EventArgs e)

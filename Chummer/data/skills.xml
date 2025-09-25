@@ -44,9 +44,9 @@
     </skill>
     <skill>
       <id>969431dc-4f6b-42ba-bbc3-e7d91c18f790</id>
-      <name>Engineering</name>
+      <name>Engineering: Automotive Mechanic</name>
       <attribute>LOG</attribute>
-      <category>Engineering: Automotive Mechanic</category>
+      <category>Engineering</category>
       <default>True</default>
       <specs>
         <spec>Automotive Mechanic</spec>

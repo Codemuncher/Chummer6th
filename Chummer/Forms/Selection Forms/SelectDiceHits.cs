@@ -34,6 +34,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void SelectDiceHits_Load(object sender, EventArgs e)
@@ -91,10 +92,10 @@ namespace Chummer
             int intResult = 0;
             for (int i = 0; i < Dice; ++i)
             {
-                intResult += await GlobalSettings.RandomGenerator.NextD6ModuloBiasRemovedAsync(token: token).ConfigureAwait(false);
+                intResult += await Utils.GlobalRandom.NextD6ModuloBiasRemovedAsync(token: token).ConfigureAwait(false);
             }
 
-            await nudDiceResult.DoThreadSafeAsync(x => x.ValueAsInt = intResult, token: token).ConfigureAwait(false);
+            await nudDiceResult.DoThreadSafeAsync(x => x.Value = intResult, token: token).ConfigureAwait(false);
         }
 
         #endregion Control Events
@@ -107,6 +108,9 @@ namespace Chummer
         /// Number of dice that are rolled for the lifestyle.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Number of dice that are rolled for the lifestyle.
+        /// </summary>
         public int Dice
         {
             get => _intDice;
@@ -167,6 +171,9 @@ namespace Chummer
         /// Description text.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description text.
+        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;

@@ -49,6 +49,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _intStage = intStage;
             _xmlLifeModulesDocumentChummerNode
                 = _objCharacter.LoadDataXPath("lifemodules.xml").SelectSingleNode("/chummer");
@@ -84,7 +85,7 @@ namespace Chummer
         private async Task<TreeNode[]> BuildList(XPathNodeIterator lstXmlNodes, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            List<TreeNode> lstTreeNodes = new List<TreeNode>();
+            List<TreeNode> lstTreeNodes = new List<TreeNode>(5);
             bool blnLimitList = await chkLimitList.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false);
             AsyncLazy<string> strBookPath = new AsyncLazy<string>(async () => await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false), Utils.JoinableTaskFactory);
             foreach (XPathNavigator xmlNode in lstXmlNodes)
@@ -169,14 +170,14 @@ namespace Chummer
 
             if (xmlSelectedNodeInfo != null)
             {
-                string strBP = xmlSelectedNodeInfo["karma"]?.InnerText
+                string strBP = xmlSelectedNodeInfo["karma"]?.InnerTextViaPool()
                                ?? await LanguageManager.GetStringAsync("String_Unknown").ConfigureAwait(false);
-                string strSource = await (await SourceString.GetSourceStringAsync(xmlSelectedNodeInfo["source"]?.InnerText,
-                                                                            strPage: xmlSelectedNodeInfo["altpage"]?.InnerText
-                                                                            ?? xmlSelectedNodeInfo["page"]?.InnerText,
+                string strSource = await (await SourceString.GetSourceStringAsync(xmlSelectedNodeInfo["source"]?.InnerTextViaPool(),
+                                                                            strPage: xmlSelectedNodeInfo["altpage"]?.InnerTextViaPool()
+                                                                            ?? xmlSelectedNodeInfo["page"]?.InnerTextViaPool(),
                                                                             objSettings: await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).ConfigureAwait(false))
                                                .ToStringAsync().ConfigureAwait(false);
-                string strStage = xmlSelectedNodeInfo["stage"]?.InnerText
+                string strStage = xmlSelectedNodeInfo["stage"]?.InnerTextViaPool()
                                   ?? await LanguageManager.GetStringAsync("String_Unknown").ConfigureAwait(false);
                 await lblBP.DoThreadSafeAsync(x => x.Text = strBP).ConfigureAwait(false);
                 await lblSource.DoThreadSafeAsync(x => x.Text = strSource).ConfigureAwait(false);

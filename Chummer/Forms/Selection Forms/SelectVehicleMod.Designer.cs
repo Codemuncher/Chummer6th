@@ -13,9 +13,12 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                Utils.ListItemListPool.Return(ref _lstCategory);
+                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -57,7 +60,7 @@ namespace Chummer
             this.chkBlackMarketDiscount = new Chummer.ColorableCheckBox();
             this.label1 = new System.Windows.Forms.Label();
             this.lblVehicleCapacity = new System.Windows.Forms.Label();
-            this.lblVehicleCapacityLabel = new System.Windows.Forms.Label();
+            this.lblVehicleCapacityLabel = new Chummer.LabelWithToolTip();
             this.chkHideOverAvailLimit = new Chummer.ColorableCheckBox();
             this.tlpMain = new System.Windows.Forms.TableLayoutPanel();
             this.chkShowOnlyAffordItems = new Chummer.ColorableCheckBox();
@@ -558,7 +561,6 @@ namespace Chummer
             this.cboCategory.Name = "cboCategory";
             this.cboCategory.Size = new System.Drawing.Size(239, 21);
             this.cboCategory.TabIndex = 41;
-            this.cboCategory.TooltipText = "";
             this.cboCategory.SelectedIndexChanged += new System.EventHandler(this.RefreshCurrentList);
             // 
             // tlpButtons
@@ -777,7 +779,7 @@ namespace Chummer
         private Chummer.ColorableCheckBox chkBlackMarketDiscount;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label lblVehicleCapacity;
-        private System.Windows.Forms.Label lblVehicleCapacityLabel;
+        private Chummer.LabelWithToolTip lblVehicleCapacityLabel;
         private Chummer.ColorableCheckBox chkHideOverAvailLimit;
         private System.Windows.Forms.TableLayoutPanel tlpMain;
         private Chummer.ColorableCheckBox chkShowOnlyAffordItems;

@@ -18,11 +18,11 @@
  */
 
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -72,6 +72,7 @@ namespace Chummer
             TopMost = !Utils.IsUnitTest && !Debugger.IsAttached;
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         /// <summary>
@@ -165,10 +166,10 @@ namespace Chummer
             {
                 int intLoadingMaximum = x.Maximum;
                 if (intLoadingMaximum > 2)
-                    strNewText += strSpace + '('
+                    strNewText += strSpace + "("
                                            + (x.Value + 1).ToString(
                                                GlobalSettings.CultureInfo)
-                                           + '/' + (intLoadingMaximum - 1).ToString(GlobalSettings.CultureInfo) + ')';
+                                           + "/" + (intLoadingMaximum - 1).ToString(GlobalSettings.CultureInfo) + ")";
                 x.PerformStep();
             });
             lblLoadingInfo.DoThreadSafe(x => x.Text = strNewText);
@@ -230,10 +231,10 @@ namespace Chummer
             {
                 int intLoadingMaximum = x.Maximum;
                 if (intLoadingMaximum > 2)
-                    strNewText += strSpace + '('
+                    strNewText += strSpace + "("
                                            + (x.Value + 1).ToString(
                                                GlobalSettings.CultureInfo)
-                                           + '/' + (intLoadingMaximum - 1).ToString(GlobalSettings.CultureInfo) + ')';
+                                           + "/" + (intLoadingMaximum - 1).ToString(GlobalSettings.CultureInfo) + ")";
                 x.PerformStep();
             }, token).ConfigureAwait(false);
             await lblLoadingInfo.DoThreadSafeAsync(x => x.Text = strNewText, token).ConfigureAwait(false);

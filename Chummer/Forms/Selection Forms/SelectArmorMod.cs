@@ -25,9 +25,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using System.ComponentModel;
 using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -51,6 +51,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             // Load the Armor information.
             _xmlBaseDataNode = _objCharacter.LoadDataXPath("armor.xml").SelectSingleNodeAndCacheExpression("/chummer");
             _objArmor = objParentNode;
@@ -68,7 +69,6 @@ namespace Chummer
                 _objParentNode = _objArmor.GetNodeXPath();
             }
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
-            Disposed += (sender, args) => Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
             if (_xmlBaseDataNode != null)
             {
                 _setBlackMarketMaps.AddRange(
@@ -185,17 +185,17 @@ namespace Chummer
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
+        /// Categories that the Armor allows to be used.
+        /// </summary>
         public string AllowedCategories { get; set; } = string.Empty;
 
         /// <summary>
         /// Whether the General category should be included.
         /// </summary>
-        /// <summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Whether the General category should be included.
         /// </summary>
-        /// <summary>
         public bool ExcludeGeneralCategory { get; set; }
 
         /// <summary>
@@ -381,9 +381,9 @@ namespace Chummer
 
                         string strNuyenFormat = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false);
                         string strCost = decMax == decimal.MaxValue
-                            ? decMin.ToString(strNuyenFormat, GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false) + '+'
+                            ? decMin.ToString(strNuyenFormat, GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false) + "+"
                             : decMin.ToString(strNuyenFormat, GlobalSettings.CultureInfo)
-                              + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + '-'
+                              + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + "-"
                               + await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false)
                               + decMax.ToString(strNuyenFormat, GlobalSettings.CultureInfo) + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                         await lblCost.DoThreadSafeAsync(x => x.Text = strCost, token: token).ConfigureAwait(false);
@@ -412,7 +412,7 @@ namespace Chummer
 
                 // Handle YNT Softweave
                 if (string.IsNullOrEmpty(strCapacity) || _objArmor?.CapacityDisplayStyle != CapacityStyle.Standard)
-                    await lblCapacity.DoThreadSafeAsync(x => x.Text = '[' + 0.ToString(GlobalSettings.CultureInfo) + ']', token: token).ConfigureAwait(false);
+                    await lblCapacity.DoThreadSafeAsync(x => x.Text = "[" + 0.ToString(GlobalSettings.CultureInfo) + "]", token: token).ConfigureAwait(false);
                 else
                 {
                     strCapacity = strCapacity.ProcessFixedValuesString(intRating);
@@ -423,7 +423,7 @@ namespace Chummer
                     (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(strCapacity, intRating, token).ConfigureAwait(false);
                     string strReturn = blnIsSuccess ? decValue.ToString("#,0.##", GlobalSettings.CultureInfo) : strCapacity;
                     if (blnSquareBrackets)
-                        strReturn = '[' + strReturn + ']';
+                        strReturn = "[" + strReturn + "]";
 
                     await lblCapacity.DoThreadSafeAsync(x => x.Text = strReturn, token: token).ConfigureAwait(false);
                 }
@@ -439,7 +439,7 @@ namespace Chummer
                 SourceString objSource = await SourceString.GetSourceStringAsync(
                     strSource, strPage, GlobalSettings.Language,
                     GlobalSettings.CultureInfo, _objCharacter, token: token).ConfigureAwait(false);
-                await objSource.SetControlAsync(lblSource, token: token).ConfigureAwait(false);
+                await objSource.SetControlAsync(lblSource, this, token: token).ConfigureAwait(false);
                 await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSource.ToString()), token: token).ConfigureAwait(false);
                 await tlpRight.DoThreadSafeAsync(x => x.Visible = true, token: token).ConfigureAwait(false);
             }
@@ -487,7 +487,7 @@ namespace Chummer
                         sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(txtSearch.Text));
 
                     if (sbdFilter.Length > 0)
-                        strFilter = '[' + sbdFilter.ToString() + ']';
+                        strFilter = "[" + sbdFilter.ToString() + "]";
                 }
 
                 int intOverLimit = 0;
@@ -589,7 +589,7 @@ namespace Chummer
         private readonly Lazy<string> _strCachedParentOwnWeight;
         private readonly Microsoft.VisualStudio.Threading.AsyncLazy<string> _strCachedParentCapacity;
 
-        private async Task<Tuple<decimal, bool>> ProcessInvariantXPathExpression(string strExpression, int intRating, CancellationToken token = default)
+        private async Task<ValueTuple<decimal, bool>> ProcessInvariantXPathExpression(string strExpression, int intRating, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             bool blnSuccess = true;
@@ -673,10 +673,10 @@ namespace Chummer
                 (bool blnIsSuccess, object objProcess)
                     = await CommonFunctions.EvaluateInvariantXPathAsync(strExpression, token).ConfigureAwait(false);
                 if (blnIsSuccess)
-                    return new Tuple<decimal, bool>(Convert.ToDecimal((double)objProcess), true);
+                    return new ValueTuple<decimal, bool>(Convert.ToDecimal((double)objProcess), true);
             }
 
-            return new Tuple<decimal, bool>(decValue, blnSuccess);
+            return new ValueTuple<decimal, bool>(decValue, blnSuccess);
         }
 
         #endregion Methods

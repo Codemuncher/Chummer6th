@@ -19,7 +19,9 @@
 
 using System;
 using System.Globalization;
+using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -29,6 +31,43 @@ namespace Chummer
 {
     public static class XPathNavigatorExtensions
     {
+        private static readonly XmlDocument s_objEmptyDocument = new XmlDocument { XmlResolver = null };
+        private static readonly DebuggableSemaphoreSlim s_ObjXPathNavigatorDocumentLock = new DebuggableSemaphoreSlim();
+
+        /// <summary>
+        /// Get an XPathNavigator linked to an empty XmlDocument.
+        /// </summary>
+        public static XPathNavigator GetEmptyDocumentNavigator(CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            s_ObjXPathNavigatorDocumentLock.SafeWait(token);
+            try
+            {
+                return s_objEmptyDocument.CreateNavigator();
+            }
+            finally
+            {
+                s_ObjXPathNavigatorDocumentLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Get an XPathNavigator linked to an empty XmlDocument.
+        /// </summary>
+        public static async Task<XPathNavigator> GetEmptyDocumentNavigatorAsync(CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            await s_ObjXPathNavigatorDocumentLock.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                return s_objEmptyDocument.CreateNavigator();
+            }
+            finally
+            {
+                s_ObjXPathNavigatorDocumentLock.Release();
+            }
+        }
+
         public delegate bool TryParseFunction<T>(string input, out T result);
 
         /// <summary>
@@ -172,7 +211,7 @@ namespace Chummer
                                     XPathNavigator objCheckTypeAttribute = xmlOperationChildNode.SelectSingleNodeAndCacheExpression("@checktype", token);
                                     bool blnCheckAll = objCheckTypeAttribute?.Value == "all";
                                     blnOperationChildNodeResult = blnCheckAll;
-                                    string strOperationChildNodeText = xmlOperationChildNode.Value;
+                                    string strOperationChildNodeText = xmlOperationChildNode.Value.Trim();
                                     bool blnOperationChildNodeEmpty = string.IsNullOrWhiteSpace(strOperationChildNodeText);
 
                                     foreach (XPathNavigator xmlTargetNode in objXmlTargetNodeList)
@@ -194,7 +233,7 @@ namespace Chummer
                                         }
                                         else
                                         {
-                                            string strTargetNodeText = xmlTargetNode.Value;
+                                            string strTargetNodeText = xmlTargetNode.Value.Trim();
                                             bool blnTargetNodeEmpty = string.IsNullOrWhiteSpace(strTargetNodeText);
                                             if (blnTargetNodeEmpty || blnOperationChildNodeEmpty)
                                             {
@@ -255,7 +294,7 @@ namespace Chummer
                                                         }
                                                     default:
                                                         boolSubNodeResult =
-                                                            (strTargetNodeText.Trim() == strOperationChildNodeText.Trim())
+                                                            (strTargetNodeText == strOperationChildNodeText)
                                                             != blnInvert;
                                                         break;
                                                 }
@@ -309,7 +348,7 @@ namespace Chummer
                 : node.SelectSingleNode(field);
             if (objField == null && !field.StartsWith('@'))
             {
-                field = '@' + field;
+                field = "@" + field;
                 objField = Utils.CachedXPathExpressions.TryGetValue(field, out objCachedExpression)
                     ? node.SelectSingleNode(objCachedExpression)
                     : node.SelectSingleNode(field);
@@ -609,7 +648,7 @@ namespace Chummer
                     throw new InvalidOperationException(nameof(xmlNode.NodeType));
             }
             XmlNode xmlReturn = xmlParentDocument.CreateNode(eNodeType, xmlNode.Prefix, xmlNode.Name, xmlNode.NamespaceURI);
-            xmlReturn.InnerXml = xmlNode.InnerXml;
+            xmlReturn.InnerXml = xmlNode.InnerXmlViaPool();
             return xmlReturn;
         }
 
@@ -637,6 +676,100 @@ namespace Chummer
             XPathExpression objExpression = Utils.CachedXPathExpressions.GetOrAdd(xpath, XPathExpression.Compile);
             token.ThrowIfCancellationRequested();
             return xmlNode.Select(objExpression);
+        }
+
+        // XmlWriterSettings used for InnerXml and OuterXml extension methods
+        private static Lazy<XmlWriterSettings> s_xmlWriterSettings = new Lazy<XmlWriterSettings>(() => new XmlWriterSettings
+        {
+            Indent = true,
+            OmitXmlDeclaration = true,
+            ConformanceLevel = ConformanceLevel.Auto
+        });
+
+        /// <summary>
+        /// Copy of <see cref="XPathNavigator.InnerXml"/>, but going through <see cref="Utils.StringBuilderPool"/> instead creating a new one via heap allocation
+        /// </summary>
+        public static string InnerXmlViaPool(this XPathNavigator xmlNode, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            switch (xmlNode.NodeType)
+            {
+                case XPathNodeType.Root:
+                case XPathNodeType.Element:
+                    {
+                        token.ThrowIfCancellationRequested();
+                        using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                        {
+                            token.ThrowIfCancellationRequested();
+                            using (StringWriter objStringWriter = new StringWriter(sbdReturn, GlobalSettings.InvariantCultureInfo))
+                            {
+                                token.ThrowIfCancellationRequested();
+                                using (XmlWriter objXmlWriter = XmlWriter.Create(objStringWriter, s_xmlWriterSettings.Value))
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    if (xmlNode.MoveToFirstChild())
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        do
+                                        {
+                                            token.ThrowIfCancellationRequested();
+                                            objXmlWriter.WriteNode(xmlNode, defattr: true);
+                                        }
+                                        while (xmlNode.MoveToNext());
+                                        token.ThrowIfCancellationRequested();
+                                        xmlNode.MoveToParent();
+                                    }
+                                }
+                            }
+                            token.ThrowIfCancellationRequested();
+                            return sbdReturn.ToString();
+                        }
+                    }
+                case XPathNodeType.Attribute:
+                case XPathNodeType.Namespace:
+                    return xmlNode.Value;
+                default:
+                    return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Copy of <see cref="XPathNavigator.OuterXml"/>, but going through <see cref="Utils.StringBuilderPool"/> instead creating a new one via heap allocation
+        /// </summary>
+        public static string OuterXmlViaPool(this XPathNavigator xmlNode, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (xmlNode.NodeType == XPathNodeType.Attribute)
+            {
+                return xmlNode.Name + "=\"" + xmlNode.Value + "\"";
+            }
+
+            if (xmlNode.NodeType == XPathNodeType.Namespace)
+            {
+                if (xmlNode.LocalName.Length == 0)
+                {
+                    return "xmlns=\"" + xmlNode.Value + "\"";
+                }
+
+                return "xmlns:" + xmlNode.LocalName + "=\"" + xmlNode.Value + "\"";
+            }
+
+            token.ThrowIfCancellationRequested();
+            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+            {
+                token.ThrowIfCancellationRequested();
+                using (StringWriter objStringWriter = new StringWriter(sbdReturn, GlobalSettings.InvariantCultureInfo))
+                {
+                    token.ThrowIfCancellationRequested();
+                    using (XmlWriter objXmlWriter = XmlWriter.Create(objStringWriter, s_xmlWriterSettings.Value))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        objXmlWriter.WriteNode(xmlNode, defattr: true);
+                    }
+                }
+                token.ThrowIfCancellationRequested();
+                return sbdReturn.ToString();
+            }
         }
     }
 }

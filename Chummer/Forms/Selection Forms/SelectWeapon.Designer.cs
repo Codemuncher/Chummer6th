@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace Chummer
 {
     partial class SelectWeapon
@@ -13,9 +15,33 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objUpdateWeaponInfoCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objDoRefreshListCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objWeaponSelectedIndexChangedCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                _objGenericCancellationTokenSource.Dispose();
+                Utils.ListItemListPool.Return(ref _lstCategory);
+                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
+                Utils.StringHashSetPool.Return(ref _setLimitToCategories);
+                Utils.StringHashSetPool.Return(ref _setMounts);
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -45,7 +71,7 @@ namespace Chummer
             this.lblWeaponConceal = new System.Windows.Forms.Label();
             this.lblSourceLabel = new System.Windows.Forms.Label();
             this.lblWeaponDamageLabel = new System.Windows.Forms.Label();
-            this.lblSource = new System.Windows.Forms.Label();
+            this.lblSource = new Chummer.LabelWithToolTip();
             this.lblWeaponConcealLabel = new System.Windows.Forms.Label();
             this.lblWeaponDamage = new System.Windows.Forms.Label();
             this.lblWeaponRCLabel = new System.Windows.Forms.Label();
@@ -61,7 +87,7 @@ namespace Chummer
             this.lblWeaponCostLabel = new System.Windows.Forms.Label();
             this.lblWeaponAmmo = new System.Windows.Forms.Label();
             this.lblWeaponModeLabel = new System.Windows.Forms.Label();
-            this.lblWeaponRC = new System.Windows.Forms.Label();
+            this.lblWeaponRC = new Chummer.LabelWithToolTip();
             this.lblWeaponReach = new System.Windows.Forms.Label();
             this.lblTest = new System.Windows.Forms.Label();
             this.lblTestLabel = new System.Windows.Forms.Label();
@@ -1037,7 +1063,6 @@ namespace Chummer
             this.cboCategory.Name = "cboCategory";
             this.cboCategory.Size = new System.Drawing.Size(323, 21);
             this.cboCategory.TabIndex = 30;
-            this.cboCategory.TooltipText = "";
             this.cboCategory.SelectedIndexChanged += new System.EventHandler(this.RefreshCurrentList);
             // 
             // txtSearch
@@ -1168,7 +1193,7 @@ namespace Chummer
         private Chummer.NumericUpDownEx nudMarkup;
         private System.Windows.Forms.Label lblMarkupPercentLabel;
         private Chummer.ColorableCheckBox chkFreeItem;
-        private System.Windows.Forms.Label lblSource;
+        private LabelWithToolTip lblSource;
         private System.Windows.Forms.Label lblSourceLabel;
         private System.Windows.Forms.Label lblIncludedAccessories;
         private System.Windows.Forms.Label lblTestLabel;
@@ -1185,7 +1210,7 @@ namespace Chummer
         private System.Windows.Forms.Label lblWeaponCostLabel;
         private System.Windows.Forms.Label lblWeaponAvail;
         private System.Windows.Forms.Label lblWeaponAvailLabel;
-        private System.Windows.Forms.Label lblWeaponRC;
+        private Chummer.LabelWithToolTip lblWeaponRC;
         private System.Windows.Forms.Label lblWeaponRCLabel;
         private System.Windows.Forms.Label lblWeaponDamage;
         private System.Windows.Forms.Label lblWeaponDamageLabel;

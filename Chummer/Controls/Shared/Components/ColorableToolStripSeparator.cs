@@ -18,7 +18,6 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
@@ -28,15 +27,14 @@ namespace Chummer
 {
     public class ColorableToolStripSeparator : ToolStripSeparator
     {
-        public ColorableToolStripSeparator()
+        protected override void Dispose(bool disposing)
         {
-            Disposed += OnDisposed;
-        }
-
-        private void OnDisposed(object sender, EventArgs e)
-        {
-            _objBackColorBrush?.Dispose();
-            _objForeColorPen?.Dispose();
+            if (disposing)
+            {
+                _objBackColorBrush?.Dispose();
+                _objForeColorPen?.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
         /// <inheritdoc />

@@ -75,63 +75,12 @@ namespace Chummer
         {
             _objCharacter = objCharacter ?? throw new ArgumentNullException(nameof(objCharacter));
             _objGenericToken = _objGenericCancellationTokenSource.Token;
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objLoadMetatypesCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateMetatypesCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateMetavariantsCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateTalentsCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objRefreshSelectedMetatypeCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objProcessTalentsIndexChangedCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objManagePriorityItemsCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objSumToTenCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                _objGenericCancellationTokenSource.Dispose();
-            };
             if (string.IsNullOrEmpty(_objCharacter.SettingsKey))
                 _objCharacter.SettingsKey = GlobalSettings.DefaultCharacterSetting;
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
 
             _lstPrioritySkills = new List<string>(objCharacter.PriorityBonusSkillList);
             _xmlMetatypeDocumentMetatypesNode = _objCharacter.LoadData(strXmlFile).SelectSingleNode("/chummer/metatypes");
@@ -207,7 +156,7 @@ namespace Chummer
                                 XPathNodeIterator objItems = xmlBasePrioritiesNode.Select(
                                     "priority[category = " + objXmlPriorityCategory.Value.CleanXPath()
                                                            + " and prioritytable = "
-                                                           + (await (await _objCharacter.GetSettingsAsync(_objGenericToken).ConfigureAwait(false)).GetPriorityTableAsync(_objGenericToken).ConfigureAwait(false)).CleanXPath() + ']');
+                                                           + (await (await _objCharacter.GetSettingsAsync(_objGenericToken).ConfigureAwait(false)).GetPriorityTableAsync(_objGenericToken).ConfigureAwait(false)).CleanXPath() + "]");
 
                                 if (objItems.Count == 0)
                                 {
@@ -402,7 +351,7 @@ namespace Chummer
 
                         // Set up possession boxes
                         // Add Possession and Inhabitation to the list of Critter Tradition variations.
-                        await chkPossessionBased.SetToolTipAsync(
+                        await chkPossessionBased.SetToolTipTextAsync(
                                                     await LanguageManager.GetStringAsync("Tip_Metatype_PossessionTradition", token: _objGenericToken)
                                                                          .ConfigureAwait(false), _objGenericToken)
                                                 .ConfigureAwait(false);
@@ -651,7 +600,7 @@ namespace Chummer
                         {
                             xmlTalentNode
                                 = xmlBaseTalentPriority.SelectSingleNode(
-                                    "talents/talent[value = " + strSelectedTalents.CleanXPath() + ']');
+                                    "talents/talent[value = " + strSelectedTalents.CleanXPath() + "]");
                             break;
                         }
                     }
@@ -1415,7 +1364,7 @@ namespace Chummer
                         if (await frmSelectExotic.ShowDialogSafeAsync(this, token).ConfigureAwait(false) !=
                             DialogResult.OK)
                             return;
-                        strSkill1 += " (" + await frmSelectExotic.MyForm.GetSelectedExoticSkillSpecialisationAsync(token).ConfigureAwait(false) + ')';
+                        strSkill1 += " (" + await frmSelectExotic.MyForm.GetSelectedExoticSkillSpecialisationAsync(token).ConfigureAwait(false) + ")";
                     }
                 }
 
@@ -1429,7 +1378,7 @@ namespace Chummer
                         if (await frmSelectExotic.ShowDialogSafeAsync(this, token).ConfigureAwait(false) !=
                             DialogResult.OK)
                             return;
-                        strSkill2 += " (" + await frmSelectExotic.MyForm.GetSelectedExoticSkillSpecialisationAsync(token).ConfigureAwait(false) + ')';
+                        strSkill2 += " (" + await frmSelectExotic.MyForm.GetSelectedExoticSkillSpecialisationAsync(token).ConfigureAwait(false) + ")";
                     }
                 }
 
@@ -1443,7 +1392,7 @@ namespace Chummer
                         if (await frmSelectExotic.ShowDialogSafeAsync(this, token).ConfigureAwait(false) !=
                             DialogResult.OK)
                             return;
-                        strSkill3 += " (" + await frmSelectExotic.MyForm.GetSelectedExoticSkillSpecialisationAsync(token).ConfigureAwait(false) + ')';
+                        strSkill3 += " (" + await frmSelectExotic.MyForm.GetSelectedExoticSkillSpecialisationAsync(token).ConfigureAwait(false) + ")";
                     }
                 }
 
@@ -1490,7 +1439,7 @@ namespace Chummer
                     return;
                 }
 
-                strSelectedMetatype = objXmlMetatype["id"]?.InnerText ?? Utils.GuidEmptyString;
+                strSelectedMetatype = objXmlMetatype["id"]?.InnerTextViaPool(token) ?? Utils.GuidEmptyString;
 
                 System.IAsyncDisposable objLocker2
                     = await _objCharacter.LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
@@ -1526,7 +1475,7 @@ namespace Chummer
                         strSelectedMetavariant = "Human";
                     XmlNode objXmlMetavariant
                         = objXmlMetatype.TryGetNodeByNameOrId("metavariants/metavariant", strSelectedMetavariant);
-                    strSelectedMetavariant = objXmlMetavariant?["id"]?.InnerText ?? Utils.GuidEmptyString;
+                    strSelectedMetavariant = objXmlMetavariant?["id"]?.InnerTextViaPool(token) ?? Utils.GuidEmptyString;
                     int intForce = await nudForce.DoThreadSafeFuncAsync(x => x.Visible ? x.ValueAsInt : 0, token)
                         .ConfigureAwait(false);
 
@@ -1690,7 +1639,7 @@ namespace Chummer
                                 XPathNavigator xmlTalentPriorityNode
                                     = xmlBaseTalentPriority.SelectSingleNode(
                                         "talents/talent[value = " + _objCharacter.TalentPriority.CleanXPath()
-                                                                  + ']');
+                                                                  + "]");
 
                                 if (xmlTalentPriorityNode != null)
                                 {
@@ -1738,7 +1687,7 @@ namespace Chummer
                                                         = new List<string>(xmlRelevantUnlocksNodesList.Count);
                                                     foreach (XmlNode xmlLoopNode in xmlRelevantUnlocksNodesList)
                                                     {
-                                                        string[] astrOptions = xmlLoopNode.InnerText.SplitToPooledArray(out _, ',');
+                                                        string[] astrOptions = xmlLoopNode.InnerTextViaPool(token).SplitToPooledArray(out _, ',');
                                                         try
                                                         {
                                                             if (!string.IsNullOrEmpty(strSkill1) &&
@@ -1830,7 +1779,7 @@ namespace Chummer
                                         intTemp = 1;
                                     if (!xmlTalentPriorityNode.TryGetInt32FieldQuickly("maxmagic", ref intMax))
                                         intMax = Math.Max(await CommonFunctions.ExpressionToIntAsync(
-                                                charNode["magmax"]?.InnerText, intForce,
+                                                charNode["magmax"]?.InnerTextViaPool(token), intForce,
                                                 token: token).ConfigureAwait(false),
                                             intTemp);
                                     await _objCharacter.MAG.AssignLimitsAsync(intTemp, intMax, intMax, token)
@@ -1844,7 +1793,7 @@ namespace Chummer
                                         intTemp = 1;
                                     if (!xmlTalentPriorityNode.TryGetInt32FieldQuickly("maxresonance", ref intMax))
                                         intMax = Math.Max(await CommonFunctions.ExpressionToIntAsync(
-                                                charNode["resmax"]?.InnerText, intForce,
+                                                charNode["resmax"]?.InnerTextViaPool(token), intForce,
                                                 token: token).ConfigureAwait(false),
                                             intTemp);
                                     await _objCharacter.RES.AssignLimitsAsync(intTemp, intMax, intMax, token)
@@ -1858,7 +1807,7 @@ namespace Chummer
                                         intTemp = 1;
                                     if (!xmlTalentPriorityNode.TryGetInt32FieldQuickly("maxdepth", ref intMax))
                                         intMax = Math.Max(await CommonFunctions.ExpressionToIntAsync(
-                                                charNode["depmax"]?.InnerText, intForce,
+                                                charNode["depmax"]?.InnerTextViaPool(token), intForce,
                                                 token: token).ConfigureAwait(false),
                                             intTemp);
                                     await _objCharacter.DEP.AssignLimitsAsync(intTemp, intMax, intMax, token)
@@ -2109,8 +2058,8 @@ namespace Chummer
                         }
                     }
 
-                    blnDoSwitch = false;
-                   
+                    blnDoSwitch = false;                 
+
                     if (blnDoSwitch)
                     {
                         int intPointsSpent = 0;
@@ -2417,7 +2366,7 @@ namespace Chummer
                     intReturn += _dicSumtoTenValues[await cboSkills.DoThreadSafeFuncAsync(x => x.SelectedValue.ToString(), token).ConfigureAwait(false)];
                     intReturn += _dicSumtoTenValues[await cboResources.DoThreadSafeFuncAsync(x => x.SelectedValue.ToString(), token).ConfigureAwait(false)];
 
-                    string strText = intReturn.ToString(GlobalSettings.CultureInfo) + '/'
+                    string strText = intReturn.ToString(GlobalSettings.CultureInfo) + "/"
                                                                 + (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetSumtoTenAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
                     await lblSumtoTen.DoThreadSafeAsync(x => x.Text = strText, token).ConfigureAwait(false);
                 }
@@ -2571,20 +2520,20 @@ namespace Chummer
                             SourceString objSource = await SourceString.GetSourceStringAsync(
                                 strSource, strPage, GlobalSettings.Language, GlobalSettings.CultureInfo,
                                 _objCharacter, token).ConfigureAwait(false);
-                            await objSource.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                            await objSource.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                         }
                         else
                         {
                             string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                             await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                            await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                            await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                         }
                     }
                     else
                     {
                         string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                         await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                        await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                        await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                     }
 
                     // Set the special attributes label.
@@ -2606,7 +2555,7 @@ namespace Chummer
                         {
                             XPathNavigator objXmlTalentsNode = xmlBaseTalentPriority.SelectSingleNode(
                                 "talents/talent[value = "
-                                + (await cboTalents.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath() + ']');
+                                + (await cboTalents.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath() + "]");
                             if (objXmlTalentsNode != null
                                 && int.TryParse(
                                     objXmlTalentsNode.SelectSingleNodeAndCacheExpression("specialattribpoints", token)?.Value, out int intTemp))
@@ -2633,15 +2582,15 @@ namespace Chummer
 
                             string strSelect = objXmlQuality.SelectSingleNodeAndCacheExpression("@select", token)?.Value;
                             if (!string.IsNullOrEmpty(strSelect))
-                                strQuality += strSpace + '(' + await _objCharacter.TranslateExtraAsync(strSelect, token: token).ConfigureAwait(false)
-                                              + ')';
+                                strQuality += strSpace + "(" + await _objCharacter.TranslateExtraAsync(strSelect, token: token).ConfigureAwait(false)
+                                              + ")";
                         }
                         else
                         {
                             strQuality = objXmlQuality.Value;
                             string strSelect = objXmlQuality.SelectSingleNodeAndCacheExpression("@select", token)?.Value;
                             if (!string.IsNullOrEmpty(strSelect))
-                                strQuality += strSpace + '(' + strSelect + ')';
+                                strQuality += strSpace + "(" + strSelect + ")";
                         }
 
                         if (dicQualities.TryGetValue(strQuality, out int intExistingRating))
@@ -2758,15 +2707,15 @@ namespace Chummer
 
                             string strSelect = xmlQuality.SelectSingleNodeAndCacheExpression("@select", token)?.Value;
                             if (!string.IsNullOrEmpty(strSelect))
-                                strQuality += strSpace + '(' + await _objCharacter.TranslateExtraAsync(strSelect, token: token).ConfigureAwait(false)
-                                              + ')';
+                                strQuality += strSpace + "(" + await _objCharacter.TranslateExtraAsync(strSelect, token: token).ConfigureAwait(false)
+                                              + ")";
                         }
                         else
                         {
                             strQuality = xmlQuality.Value;
                             string strSelect = xmlQuality.SelectSingleNodeAndCacheExpression("@select", token)?.Value;
                             if (!string.IsNullOrEmpty(strSelect))
-                                strQuality += strSpace + '(' + strSelect + ')';
+                                strQuality += strSpace + "(" + strSelect + ")";
                         }
 
                         if (dicQualities.TryGetValue(strQuality, out int intExistingRating))
@@ -2814,20 +2763,20 @@ namespace Chummer
                             SourceString objSource = await SourceString.GetSourceStringAsync(
                                 strSource, strPage, GlobalSettings.Language, GlobalSettings.CultureInfo,
                                 _objCharacter, token).ConfigureAwait(false);
-                            await objSource.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                            await objSource.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                         }
                         else
                         {
                             string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                             await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                            await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                            await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                         }
                     }
                     else
                     {
                         string strUnknown = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                         await lblSource.DoThreadSafeAsync(x => x.Text = strUnknown, token).ConfigureAwait(false);
-                        await lblSource.SetToolTipAsync(strUnknown, token).ConfigureAwait(false);
+                        await lblSource.SetToolTipTextAsync(strUnknown, token).ConfigureAwait(false);
                     }
 
                     // Set the special attributes label.
@@ -2849,7 +2798,7 @@ namespace Chummer
                         {
                             XPathNavigator objXmlTalentsNode = xmlBaseTalentPriority.SelectSingleNode(
                                 "talents/talent[value = "
-                                + (await cboTalents.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath() + ']');
+                                + (await cboTalents.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath() + "]");
                             if (objXmlTalentsNode != null
                                 && int.TryParse(
                                     objXmlTalentsNode.SelectSingleNodeAndCacheExpression(
@@ -2886,7 +2835,7 @@ namespace Chummer
                         {
                             XPathNavigator objXmlTalentsNode = xmlBaseTalentPriority.SelectSingleNode(
                                 "talents/talent[value = "
-                                + (await cboTalents.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath() + ']');
+                                + (await cboTalents.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false) ?? string.Empty).CleanXPath() + "]");
                             if (objXmlTalentsNode != null
                                 && int.TryParse(
                                     objXmlTalentsNode.SelectSingleNodeAndCacheExpression("specialattribpoints", token)
@@ -3181,7 +3130,7 @@ namespace Chummer
                             // Retrieve the list of Metavariants for the selected Metatype.
                             foreach (XPathNavigator objXmlMetavariant in objXmlMetatype.Select(
                                          "metavariants/metavariant[" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false))
-                                             .BookXPathAsync(token: token).ConfigureAwait(false) + ']'))
+                                             .BookXPathAsync(token: token).ConfigureAwait(false) + "]"))
                             {
                                 string strId = objXmlMetavariant
                                     .SelectSingleNodeAndCacheExpression("id", token)?.Value;
@@ -3363,7 +3312,7 @@ namespace Chummer
                                              + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token)
                                                                   .ConfigureAwait(false)
                                              + ") and category = " + strSelectedCategory.CleanXPath()
-                                             + ']'))
+                                             + "]"))
                                 {
                                     string strId = objXmlMetatype
                                         .SelectSingleNodeAndCacheExpression("id", token)?.Value;
@@ -3589,7 +3538,7 @@ namespace Chummer
         private XPathNodeIterator GetActiveSkillList(string strXPathFilter = "", CancellationToken token = default)
         {
             return _xmlBaseSkillDataNode.SelectAndCacheExpression(!string.IsNullOrEmpty(strXPathFilter)
-                ? "skills/skill[" + strXPathFilter + ']'
+                ? "skills/skill[" + strXPathFilter + "]"
                 : "skills/skill", token);
         }
 

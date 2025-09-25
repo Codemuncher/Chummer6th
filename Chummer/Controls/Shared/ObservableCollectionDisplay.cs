@@ -67,25 +67,6 @@ namespace Chummer.Controls.Shared
         public ObservableCollectionDisplay(ThreadSafeObservableCollection<TType> contents, Func<TType, Control> funcCreateControl, bool blnLoadVisibleOnly = true)
         {
             InitializeComponent();
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldSource = Interlocked.Exchange(ref _objFilterCancellationTokenSource, null);
-                if (objOldSource != null)
-                {
-                    objOldSource.Cancel(false);
-                    objOldSource.Dispose();
-                }
-                objOldSource = Interlocked.Exchange(ref _objSortCancellationTokenSource, null);
-                if (objOldSource != null)
-                {
-                    objOldSource.Cancel(false);
-                    objOldSource.Dispose();
-                }
-                foreach (ControlWithMetaData _objControlWithMetaData in _lstContentList)
-                {
-                    _objControlWithMetaData.Dispose();
-                }
-            };
             Contents = contents ?? throw new ArgumentNullException(nameof(contents));
             _funcCreateControl = funcCreateControl;
             _blnLoadVisibleOnly = blnLoadVisibleOnly;
@@ -110,17 +91,6 @@ namespace Chummer.Controls.Shared
                 _comparisonAsync = null;
 
                 Contents.CollectionChangedAsync += OnCollectionChanged;
-                Disposed += (sender, args) =>
-                {
-                    try
-                    {
-                        Contents.CollectionChangedAsync -= OnCollectionChanged;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        //swallow this
-                    }
-                };
                 ComputeDisplayIndex();
                 LoadScreenContent();
                 ObservableCollectionDisplay_SizeChanged(null, null);
@@ -141,7 +111,7 @@ namespace Chummer.Controls.Shared
         /// <summary>
         /// Base ObservableCollection that represents all possible contents of the display, not necessarily all visible.
         /// </summary>
-        public ThreadSafeObservableCollection<TType> Contents { get; }
+        public ThreadSafeObservableCollection<TType> Contents { get; private set; }
 
         public Panel DisplayPanel => pnlDisplay;
 
@@ -239,13 +209,13 @@ namespace Chummer.Controls.Shared
         private void ComputeDisplayIndex(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            List<Tuple<TType, int>> objTTypeList = new List<Tuple<TType, int>>(_lstContentList.Count);
+            List<ValueTuple<TType, int>> objTTypeList = new List<ValueTuple<TType, int>>(_lstContentList.Count);
             for (int i = 0; i < _lstContentList.Count; ++i)
             {
                 ControlWithMetaData objLoopControl = _lstContentList[i];
                 if (objLoopControl.Visible)
                 {
-                    objTTypeList.Add(new Tuple<TType, int>(objLoopControl.Item, i));
+                    objTTypeList.Add(new ValueTuple<TType, int>(objLoopControl.Item, i));
                 }
             }
 
@@ -255,7 +225,7 @@ namespace Chummer.Controls.Shared
             int intDisplayIndexCount = _lstDisplayIndex.Count;
 
             // Array is temporary and of primitives, so stackalloc used instead of List.ToArray() (which would put the array on the heap) when possible
-            int[] aintSharedOldDisplayIndexes = intDisplayIndexCount > GlobalSettings.MaxStackLimit
+            int[] aintSharedOldDisplayIndexes = intDisplayIndexCount > Utils.MaxStackLimit32BitTypes
                 ? ArrayPool<int>.Shared.Rent(intDisplayIndexCount)
                 : null;
             try
@@ -293,13 +263,13 @@ namespace Chummer.Controls.Shared
         private async Task ComputeDisplayIndexAsync(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            List<Tuple<TType, int>> objTTypeList = new List<Tuple<TType, int>>(_lstContentList.Count);
+            List<ValueTuple<TType, int>> objTTypeList = new List<ValueTuple<TType, int>>(_lstContentList.Count);
             for (int i = 0; i < _lstContentList.Count; ++i)
             {
                 ControlWithMetaData objLoopControl = _lstContentList[i];
                 if (objLoopControl.Visible)
                 {
-                    objTTypeList.Add(new Tuple<TType, int>(objLoopControl.Item, i));
+                    objTTypeList.Add(new ValueTuple<TType, int>(objLoopControl.Item, i));
                 }
             }
 
@@ -987,8 +957,7 @@ namespace Chummer.Controls.Shared
                     Utils.RunOnMainThread(() => _parent.ChildPropertyChanged?.Invoke(sender, e));
                 if (changes)
                 {
-                    using (TemporaryArray<ControlWithMetaData> objYielded = this.YieldAsPooled())
-                        _parent.RedrawControls(objYielded);
+                    _parent.RedrawControls(this.Yield());
                 }
             }
 
@@ -1008,8 +977,7 @@ namespace Chummer.Controls.Shared
                     await Utils.RunOnMainThreadAsync(() => _parent.ChildPropertyChanged?.Invoke(sender, e), token).ConfigureAwait(false);
                 if (changes)
                 {
-                    using (TemporaryArray<ControlWithMetaData> objYielded = this.YieldAsPooled())
-                        await _parent.RedrawControlsAsync(objYielded, token).ConfigureAwait(false);
+                    await _parent.RedrawControlsAsync(this.Yield(), token).ConfigureAwait(false);
                 }
             }
 

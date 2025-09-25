@@ -18,9 +18,11 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -43,6 +45,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
 
             // Determine the DateTime format and use that to display the date field (removing seconds since they're not important).
 
@@ -113,6 +116,14 @@ namespace Chummer
         /// Amount gained or spent.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Amount gained or spent.
+        /// </summary>
         public decimal Amount
         {
             get => _decAmount;
@@ -170,6 +181,9 @@ namespace Chummer
         /// The Expense's mode (either Karma or Nuyen).
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// The Expense's mode (either Karma or Nuyen).
+        /// </summary>
         public ExpenseType Mode
         {
             set
@@ -192,6 +206,39 @@ namespace Chummer
                     lblPercent.Visible = false;
                 }
             }
+        }
+
+        public async Task SetModeAsync(ExpenseType value, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (InterlockedExtensions.Exchange(ref _eMode, value) == value)
+                return;
+            string strAmountText;
+            string strText;
+            string strRefundText;
+            bool blnPercentVisible;
+            if (value == ExpenseType.Nuyen)
+            {
+                strAmountText = await LanguageManager.GetStringAsync("Label_Expense_NuyenAmount", token: token).ConfigureAwait(false);
+                strText = await LanguageManager.GetStringAsync("Title_Expense_Nuyen", token: token).ConfigureAwait(false);
+                strRefundText = await LanguageManager.GetStringAsync("Checkbox_Expense_RefundNuyen", token: token).ConfigureAwait(false);
+                blnPercentVisible = true;
+            }
+            else
+            {
+                strAmountText = await LanguageManager.GetStringAsync("Label_Expense_KarmaAmount", token: token).ConfigureAwait(false);
+                strText = await LanguageManager.GetStringAsync("Title_Expense_Karma", token: token).ConfigureAwait(false);
+                strRefundText = string.Empty;
+                blnPercentVisible = false;
+            }
+            await this.DoThreadSafeAsync(() =>
+            {
+                lblKarma.Text = strAmountText;
+                Text = strText;
+                chkRefund.Text = strRefundText;
+                nudPercent.Visible = blnPercentVisible;
+                lblPercent.Visible = blnPercentVisible;
+            }, token).ConfigureAwait(false);
         }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]

@@ -16,13 +16,13 @@
  *  You can obtain the full source code for Chummer5a at
  *  https://github.com/chummer5a/chummer5a
  */
-using Chummer;
+using System;
+using System.Windows.Forms;
 using Chummer.Plugins;
 using ChummerHub.Client.Backend;
 using ChummerHub.Client.Sinners;
-using System;
+using Chummer;
 using System.ComponentModel;
-using System.Windows.Forms;
 
 
 namespace ChummerHub.Client.UI
@@ -107,7 +107,7 @@ namespace ChummerHub.Client.UI
             if (ParentForm != null)
                 ParentForm.AcceptButton = bOk;
             string admintooltip = "This field allowes an GroupAdmin (a global role assigned only by one of " + Environment.NewLine;
-            admintooltip +=  " the chummer devs) to chose other users/roles for this group to be a local \"groupadmin\"";
+            admintooltip += " the chummer devs) to chose other users/roles for this group to be a local \"groupadmin\"";
 
             tbAdminRole.SetToolTip(admintooltip);
         }

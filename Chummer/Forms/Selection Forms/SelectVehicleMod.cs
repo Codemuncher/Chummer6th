@@ -58,13 +58,9 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _lstCategory = Utils.ListItemListPool.Get();
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
-            Disposed += (sender, args) =>
-            {
-                Utils.ListItemListPool.Return(ref _lstCategory);
-                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
-            };
             // Load the Vehicle information.
             _xmlBaseVehicleDataNode = _objCharacter.LoadDataXPath("vehicles.xml").SelectSingleNodeAndCacheExpression("/chummer");
             if (_xmlBaseVehicleDataNode != null)
@@ -254,6 +250,9 @@ namespace Chummer
         /// The slots taken up by a weapon mount to which the vehicle mod might be being added
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// The slots taken up by a weapon mount to which the vehicle mod might be being added
+        /// </summary>
         public int WeaponMountSlots
         {
             set => _intWeaponMountSlots = value;
@@ -283,12 +282,18 @@ namespace Chummer
         /// Is the mod being added to a vehicle weapon mount?
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Is the mod being added to a vehicle weapon mount?
+        /// </summary>
         public bool VehicleMountMods { get; set; }
 
         /// <summary>
         /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
+        /// </summary>
         public decimal ParentWeaponMountOwnCost { get; set; }
 
         #endregion Properties
@@ -802,7 +807,7 @@ namespace Chummer
                                 x.Text = strCapacity;
                             }, token: token).ConfigureAwait(false);
                             await lblVehicleCapacityLabel
-                                  .SetToolTipAsync(
+                                  .SetToolTipTextAsync(
                                       await LanguageManager
                                             .GetStringAsync("Tip_RemainingVehicleModCapacity", token: token)
                                             .ConfigureAwait(false), token: token).ConfigureAwait(false);
@@ -911,7 +916,7 @@ namespace Chummer
                                                              strSource, strPage, GlobalSettings.Language,
                                                              GlobalSettings.CultureInfo, _objCharacter, token: token)
                                                          .ConfigureAwait(false);
-                    await objSourceString.SetControlAsync(lblSource, token: token).ConfigureAwait(false);
+                    await objSourceString.SetControlAsync(lblSource, this, token: token).ConfigureAwait(false);
                     await lblSourceLabel
                           .DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSourceString.ToString()),
                                              token: token).ConfigureAwait(false);
@@ -962,7 +967,7 @@ namespace Chummer
             await CommonFunctions.OpenPdfFromControl(sender).ConfigureAwait(false);
         }
 
-        private async Task<Tuple<decimal, bool>> ProcessInvariantXPathExpression(string strExpression, int intRating, int intExtraSlots = 0, CancellationToken token = default)
+        private async Task<ValueTuple<decimal, bool>> ProcessInvariantXPathExpression(string strExpression, int intRating, int intExtraSlots = 0, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             bool blnSuccess = true;
@@ -991,10 +996,10 @@ namespace Chummer
                 (bool blnIsSuccess, object objProcess)
                     = await CommonFunctions.EvaluateInvariantXPathAsync(strExpression, token).ConfigureAwait(false);
                 if (blnIsSuccess)
-                    return new Tuple<decimal, bool>(Convert.ToDecimal((double)objProcess), true);
+                    return new ValueTuple<decimal, bool>(Convert.ToDecimal((double)objProcess), true);
             }
 
-            return new Tuple<decimal, bool>(decValue, blnSuccess);
+            return new ValueTuple<decimal, bool>(decValue, blnSuccess);
         }
 
         #endregion Methods

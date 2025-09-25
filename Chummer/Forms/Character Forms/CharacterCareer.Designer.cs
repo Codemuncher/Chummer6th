@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Windows.Forms;
 using Chummer.UI.Powers;
 
@@ -16,9 +17,30 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                _fntNormal?.Dispose();
+                _fntStrikeout?.Dispose();
+                Interlocked.Exchange(ref _objKarmaChartSemaphore, null)?.Dispose();
+                Interlocked.Exchange(ref _objNuyenChartSemaphore, null)?.Dispose();
+                Interlocked.Exchange(ref _objFormClosingSemaphore, null)?.Dispose();
+                // These tabs might not necessarily be present in our form, so check to dispose them manually
+                if (tabInitiation?.IsDisposed == false)
+                    tabInitiation.Dispose();
+                if (tabMagician?.IsDisposed == false)
+                    tabMagician.Dispose();
+                if (tabAdept?.IsDisposed == false)
+                    tabAdept.Dispose();
+                if (tabTechnomancer?.IsDisposed == false)
+                    tabTechnomancer.Dispose();
+                if (tabAdvancedPrograms?.IsDisposed == false)
+                    tabAdvancedPrograms.Dispose();
+                if (tabCritter?.IsDisposed == false)
+                    tabCritter.Dispose();
+                if (tabEnemies?.IsDisposed == false)
+                    tabEnemies.Dispose();
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -58,7 +80,7 @@ namespace Chummer
             System.Windows.Forms.TreeNode treeNode24 = new System.Windows.Forms.TreeNode("Selected Vehicles");
             System.Windows.Forms.TreeNode treeNode25 = new System.Windows.Forms.TreeNode("Selected Improvements");
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CharacterCareer));
-            this.lblTraditionSource = new System.Windows.Forms.Label();
+            this.lblTraditionSource = new Chummer.LabelWithToolTip();
             this.lblTraditionSourceLabel = new System.Windows.Forms.Label();
             this.tabPowerUc = new Chummer.UI.Powers.PowersTabUserControl();
             this.StatusStrip = new System.Windows.Forms.StatusStrip();
@@ -71,22 +93,22 @@ namespace Chummer
             this.tslCarriedWeightLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.tslCarriedWeight = new System.Windows.Forms.ToolStripStatusLabel();
             this.pgbProgress = new System.Windows.Forms.ToolStripProgressBar();
-            this.lblCMStunLabel = new System.Windows.Forms.Label();
-            this.lblCMPhysicalLabel = new System.Windows.Forms.Label();
-            this.lblRemainingNuyenLabel = new System.Windows.Forms.Label();
-            this.lblESS = new System.Windows.Forms.Label();
-            this.lblCareerKarmaLabel = new System.Windows.Forms.Label();
-            this.lblMemoryLabel = new System.Windows.Forms.Label();
-            this.lblLiftCarryLabel = new System.Windows.Forms.Label();
-            this.lblJudgeIntentionsLabel = new System.Windows.Forms.Label();
-            this.lblComposureLabel = new System.Windows.Forms.Label();
-            this.lblCMPenaltyLabel = new System.Windows.Forms.Label();
-            this.lblCMArmorLabel = new System.Windows.Forms.Label();
-            this.lblCMDamageResistancePoolLabel = new System.Windows.Forms.Label();
+            this.lblCMStunLabel = new Chummer.LabelWithToolTip();
+            this.lblCMPhysicalLabel = new Chummer.LabelWithToolTip();
+            this.lblRemainingNuyenLabel = new Chummer.LabelWithToolTip();
+            this.lblESS = new Chummer.LabelWithToolTip();
+            this.lblCareerKarmaLabel = new Chummer.LabelWithToolTip();
+            this.lblMemoryLabel = new Chummer.LabelWithToolTip();
+            this.lblLiftCarryLabel = new Chummer.LabelWithToolTip();
+            this.lblJudgeIntentionsLabel = new Chummer.LabelWithToolTip();
+            this.lblComposureLabel = new Chummer.LabelWithToolTip();
+            this.lblCMPenaltyLabel = new Chummer.LabelWithToolTip();
+            this.lblCMArmorLabel = new Chummer.LabelWithToolTip();
+            this.lblCMDamageResistancePoolLabel = new Chummer.LabelWithToolTip();
             this.lblCareerNuyenLabel = new System.Windows.Forms.Label();
-            this.lblArmorLabel = new System.Windows.Forms.Label();
-            this.lblAstralINILabel = new System.Windows.Forms.Label();
-            this.lblINILabel = new System.Windows.Forms.Label();
+            this.lblArmorLabel = new Chummer.LabelWithToolTip();
+            this.lblAstralINILabel = new Chummer.LabelWithToolTip();
+            this.lblINILabel = new Chummer.LabelWithToolTip();
             this.cmdEdgeGained = new Chummer.ButtonWithToolTip();
             this.cmdEdgeSpent = new Chummer.ButtonWithToolTip();
             this.lblCounterspellingDiceLabel = new System.Windows.Forms.Label();
@@ -107,8 +129,8 @@ namespace Chummer
             this.lblSpellDefenseDirectSoakManaLabel = new System.Windows.Forms.Label();
             this.lblSpellDefenseIndirectSoakLabel = new System.Windows.Forms.Label();
             this.lblSpellDefenseIndirectDodgeLabel = new System.Windows.Forms.Label();
-            this.lblStreetCred = new System.Windows.Forms.Label();
-            this.lblNotoriety = new System.Windows.Forms.Label();
+            this.lblStreetCred = new Chummer.LabelWithToolTip();
+            this.lblNotoriety = new Chummer.LabelWithToolTip();
             this.cmdBurnStreetCred = new Chummer.ButtonWithToolTip();
             this.cmdVehicleGearReduceQty = new Chummer.ButtonWithToolTip();
             this.cmdVehicleMoveToInventory = new Chummer.ButtonWithToolTip();
@@ -119,8 +141,8 @@ namespace Chummer
             this.lblRiggingINILabel = new System.Windows.Forms.Label();
             this.lblMatrixINIHotLabel = new System.Windows.Forms.Label();
             this.lblMatrixINIColdLabel = new System.Windows.Forms.Label();
-            this.lblMatrixINILabel = new System.Windows.Forms.Label();
-            this.lblMovementLabel = new System.Windows.Forms.Label();
+            this.lblMatrixINILabel = new Chummer.LabelWithToolTip();
+            this.lblMovementLabel = new Chummer.LabelWithToolTip();
             this.cmsMartialArts = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.tsMartialArtsAddTechnique = new Chummer.DpiFriendlyToolStripMenuItem();
             this.tsMartialArtsNotes = new Chummer.DpiFriendlyToolStripMenuItem();
@@ -264,9 +286,9 @@ namespace Chummer
             this.lblCMDodge = new Chummer.LabelWithToolTip();
             this.tabOtherInfo = new System.Windows.Forms.TabPage();
             this.tlpInfo = new System.Windows.Forms.TableLayoutPanel();
-            this.lblFlyLabel = new System.Windows.Forms.Label();
+            this.lblFlyLabel = new Chummer.LabelWithToolTip();
             this.lblFly = new System.Windows.Forms.Label();
-            this.lblSwimLabel = new System.Windows.Forms.Label();
+            this.lblSwimLabel = new Chummer.LabelWithToolTip();
             this.lblCareerNuyen = new System.Windows.Forms.Label();
             this.lblSwim = new System.Windows.Forms.Label();
             this.lblRiggingINI = new Chummer.LabelWithToolTip();
@@ -289,7 +311,7 @@ namespace Chummer
             this.lblSurprise = new Chummer.LabelWithToolTip();
             this.lblDodgeLabel = new Chummer.LabelWithToolTip();
             this.lblDodge = new Chummer.LabelWithToolTip();
-            this.lblLiftCarryLimitsLabel = new System.Windows.Forms.Label();
+            this.lblLiftCarryLimitsLabel = new Chummer.LabelWithToolTip();
             this.lblLiftCarryLimits = new Chummer.LabelWithToolTip();
             this.lblLiftCarryHitsLabel = new System.Windows.Forms.Label();
             this.nudLiftCarryHits = new Chummer.NumericUpDownEx();
@@ -398,7 +420,7 @@ namespace Chummer
             this.tabCommon = new System.Windows.Forms.TabPage();
             this.tlpCommon = new System.Windows.Forms.TableLayoutPanel();
             this.tlpCommonLeftSide = new System.Windows.Forms.TableLayoutPanel();
-            this.lblQualitySource = new System.Windows.Forms.Label();
+            this.lblQualitySource = new Chummer.LabelWithToolTip();
             this.treQualities = new System.Windows.Forms.TreeView();
             this.tlpQualityButtons = new System.Windows.Forms.TableLayoutPanel();
             this.cmdAddQuality = new System.Windows.Forms.Button();
@@ -419,7 +441,7 @@ namespace Chummer
             this.lblMetatypeSourceLabel = new System.Windows.Forms.Label();
             this.lblPossessed = new System.Windows.Forms.Label();
             this.lblMysticAdeptAssignment = new System.Windows.Forms.Label();
-            this.lblMetatypeSource = new System.Windows.Forms.Label();
+            this.lblMetatypeSource = new Chummer.LabelWithToolTip();
             this.lblMetatype = new System.Windows.Forms.Label();
             this.flpMysticAdeptMAGAdept = new System.Windows.Forms.FlowLayoutPanel();
             this.lblMysticAdeptMAGAdept = new System.Windows.Forms.Label();
@@ -436,7 +458,7 @@ namespace Chummer
             this.cmdDeleteMartialArt = new System.Windows.Forms.Button();
             this.tlpMartialArtsRight = new System.Windows.Forms.TableLayoutPanel();
             this.lblMartialArtSourceLabel = new System.Windows.Forms.Label();
-            this.lblMartialArtSource = new System.Windows.Forms.Label();
+            this.lblMartialArtSource = new Chummer.LabelWithToolTip();
             this.tabMagician = new System.Windows.Forms.TabPage();
             this.splitMagician = new System.Windows.Forms.SplitContainer();
             this.tlpMagicianTop = new System.Windows.Forms.TableLayoutPanel();
@@ -456,13 +478,13 @@ namespace Chummer
             this.lblSpellDamageLabel = new System.Windows.Forms.Label();
             this.lblSpellDamage = new System.Windows.Forms.Label();
             this.lblSpellRange = new System.Windows.Forms.Label();
-            this.lblSpellSource = new System.Windows.Forms.Label();
+            this.lblSpellSource = new Chummer.LabelWithToolTip();
             this.lblSpellSourceLabel = new System.Windows.Forms.Label();
             this.lblSpellDVLabel = new System.Windows.Forms.Label();
             this.lblSpellDuration = new System.Windows.Forms.Label();
             this.lblSpellDurationLabel = new System.Windows.Forms.Label();
             this.lblSpellDicePoolLabel = new System.Windows.Forms.Label();
-            this.lblSpellDV = new System.Windows.Forms.Label();
+            this.lblSpellDV = new Chummer.LabelWithToolTip();
             this.dpcSpellDicePool = new Chummer.UI.Shared.Components.DicePoolControl();
             this.gpbMagicianTradition = new System.Windows.Forms.GroupBox();
             this.tlpMagicianTradition = new System.Windows.Forms.TableLayoutPanel();
@@ -490,7 +512,7 @@ namespace Chummer
             this.lblMentorSpiritInformation = new System.Windows.Forms.Label();
             this.tlpMagicianMentorSpiritHeader = new System.Windows.Forms.TableLayoutPanel();
             this.lblMentorSpiritLabel = new System.Windows.Forms.Label();
-            this.lblMentorSpiritSource = new System.Windows.Forms.Label();
+            this.lblMentorSpiritSource = new Chummer.LabelWithToolTip();
             this.lblMentorSpirit = new System.Windows.Forms.Label();
             this.lblMentorSpiritSourceLabel = new System.Windows.Forms.Label();
             this.tlpMagicianButtons = new System.Windows.Forms.TableLayoutPanel();
@@ -513,14 +535,14 @@ namespace Chummer
             this.lblTargetLabel = new System.Windows.Forms.Label();
             this.lblTarget = new System.Windows.Forms.Label();
             this.lblComplexFormSourceLabel = new System.Windows.Forms.Label();
-            this.lblComplexFormSource = new System.Windows.Forms.Label();
+            this.lblComplexFormSource = new Chummer.LabelWithToolTip();
             this.lblComplexFormDicePoolLabel = new System.Windows.Forms.Label();
             this.dpcComplexFormDicePool = new Chummer.UI.Shared.Components.DicePoolControl();
             this.lblDurationLabel = new System.Windows.Forms.Label();
             this.cmdAddSustainedForm = new System.Windows.Forms.Button();
             this.lblDuration = new System.Windows.Forms.Label();
             this.lblFVLabel = new System.Windows.Forms.Label();
-            this.lblFV = new System.Windows.Forms.Label();
+            this.lblFV = new Chummer.LabelWithToolTip();
             this.gpbTechnomancerStream = new System.Windows.Forms.GroupBox();
             this.tlpTechnomancerStream = new System.Windows.Forms.TableLayoutPanel();
             this.lblStreamLabel = new System.Windows.Forms.Label();
@@ -534,7 +556,7 @@ namespace Chummer
             this.lblParagonInformation = new System.Windows.Forms.Label();
             this.tlpTechnomancerParagonHeader = new System.Windows.Forms.TableLayoutPanel();
             this.lblParagonLabel = new System.Windows.Forms.Label();
-            this.lblParagonSource = new System.Windows.Forms.Label();
+            this.lblParagonSource = new Chummer.LabelWithToolTip();
             this.lblParagon = new System.Windows.Forms.Label();
             this.lblParagonSourceLabel = new System.Windows.Forms.Label();
             this.tlpTechnomancerButtons = new System.Windows.Forms.TableLayoutPanel();
@@ -572,7 +594,7 @@ namespace Chummer
             this.lblCritterPowerNameLabel = new System.Windows.Forms.Label();
             this.lblCritterPowerPointCostLabel = new System.Windows.Forms.Label();
             this.lblCritterPowerCategoryLabel = new System.Windows.Forms.Label();
-            this.lblCritterPowerSource = new System.Windows.Forms.Label();
+            this.lblCritterPowerSource = new Chummer.LabelWithToolTip();
             this.lblCritterPowerSourceLabel = new System.Windows.Forms.Label();
             this.lblCritterPowerDuration = new System.Windows.Forms.Label();
             this.lblCritterPowerTypeLabel = new System.Windows.Forms.Label();
@@ -607,7 +629,7 @@ namespace Chummer
             this.lblGroupNotes = new System.Windows.Forms.Label();
             this.txtGroupName = new System.Windows.Forms.TextBox();
             this.chkJoinGroup = new Chummer.ColorableCheckBox();
-            this.lblMetamagicSource = new System.Windows.Forms.Label();
+            this.lblMetamagicSource = new Chummer.LabelWithToolTip();
             this.tabCyberware = new System.Windows.Forms.TabPage();
             this.tlpCyberware = new System.Windows.Forms.TableLayoutPanel();
             this.treCyberware = new System.Windows.Forms.TreeView();
@@ -639,7 +661,7 @@ namespace Chummer
             this.lblCyberlimbAGILabel = new System.Windows.Forms.Label();
             this.lblCyberwareCost = new System.Windows.Forms.Label();
             this.lblCyberwareEssenceLabel = new System.Windows.Forms.Label();
-            this.lblCyberwareSource = new System.Windows.Forms.Label();
+            this.lblCyberwareSource = new Chummer.LabelWithToolTip();
             this.lblCyberwareSourceLabel = new System.Windows.Forms.Label();
             this.lblCyberwareAvail = new System.Windows.Forms.Label();
             this.lblCyberwareAvailLabel = new System.Windows.Forms.Label();
@@ -709,7 +731,7 @@ namespace Chummer
             this.lblGearRating = new System.Windows.Forms.Label();
             this.lblGearRatingLabel = new System.Windows.Forms.Label();
             this.lblGearQtyLabel = new System.Windows.Forms.Label();
-            this.lblGearSource = new System.Windows.Forms.Label();
+            this.lblGearSource = new Chummer.LabelWithToolTip();
             this.lblGearSourceLabel = new System.Windows.Forms.Label();
             this.chkGearEquipped = new Chummer.ColorableCheckBox();
             this.flpGearQty = new System.Windows.Forms.FlowLayoutPanel();
@@ -797,7 +819,7 @@ namespace Chummer
             this.lblArmorAvail = new System.Windows.Forms.Label();
             this.lblArmorCostLabel = new System.Windows.Forms.Label();
             this.lblArmorCost = new System.Windows.Forms.Label();
-            this.lblArmorSource = new System.Windows.Forms.Label();
+            this.lblArmorSource = new Chummer.LabelWithToolTip();
             this.lblArmorCapacityLabel = new System.Windows.Forms.Label();
             this.lblArmorCapacity = new System.Windows.Forms.Label();
             this.lblArmorSourceLabel = new System.Windows.Forms.Label();
@@ -886,7 +908,7 @@ namespace Chummer
             this.cmdWeaponMoveToVehicle = new Chummer.ButtonWithToolTip();
             this.chkWeaponEquipped = new Chummer.ColorableCheckBox();
             this.chkIncludedInWeapon = new Chummer.ColorableCheckBox();
-            this.lblWeaponSource = new System.Windows.Forms.Label();
+            this.lblWeaponSource = new Chummer.LabelWithToolTip();
             this.lblWeaponSourceLabel = new System.Windows.Forms.Label();
             this.gpbWeaponsWeapon = new System.Windows.Forms.GroupBox();
             this.flpWeaponsWeapon = new System.Windows.Forms.FlowLayoutPanel();
@@ -899,7 +921,7 @@ namespace Chummer
             this.lblWeaponAP = new System.Windows.Forms.Label();
             this.lblWeaponMode = new System.Windows.Forms.Label();
             this.lblWeaponModeLabel = new System.Windows.Forms.Label();
-            this.lblWeaponRC = new System.Windows.Forms.Label();
+            this.lblWeaponRC = new Chummer.LabelWithToolTip();
             this.lblWeaponRCLabel = new System.Windows.Forms.Label();
             this.lblWeaponDicePoolLabel = new System.Windows.Forms.Label();
             this.lblWeaponAccuracyLabel = new System.Windows.Forms.Label();
@@ -1033,7 +1055,7 @@ namespace Chummer
             this.lblLifestyleMonthsLabel = new System.Windows.Forms.Label();
             this.lblLifestyleSourceLabel = new System.Windows.Forms.Label();
             this.lblLifestyleComfortsLabel = new System.Windows.Forms.Label();
-            this.lblLifestyleSource = new System.Windows.Forms.Label();
+            this.lblLifestyleSource = new Chummer.LabelWithToolTip();
             this.lblLifestyleCityLabel = new System.Windows.Forms.Label();
             this.lblLifestyleDistrictLabel = new System.Windows.Forms.Label();
             this.lblLifestyleCity = new System.Windows.Forms.Label();
@@ -1057,7 +1079,7 @@ namespace Chummer
             this.flpVehiclesCommonQuantity = new System.Windows.Forms.FlowLayoutPanel();
             this.lblVehicleGearQty = new System.Windows.Forms.Label();
             this.lblVehicleSourceLabel = new System.Windows.Forms.Label();
-            this.lblVehicleSource = new System.Windows.Forms.Label();
+            this.lblVehicleSource = new Chummer.LabelWithToolTip();
             this.flpVehiclesCommonCheckBoxes = new System.Windows.Forms.FlowLayoutPanel();
             this.chkVehicleIncludedInWeapon = new Chummer.ColorableCheckBox();
             this.lblVehicleAvailLabel = new System.Windows.Forms.Label();
@@ -1117,7 +1139,7 @@ namespace Chummer
             this.lblVehicleWeaponAmmo = new System.Windows.Forms.Label();
             this.dpcVehicleWeaponDicePool = new Chummer.UI.Shared.Components.DicePoolControl();
             this.lblVehicleWeaponRCLabel = new System.Windows.Forms.Label();
-            this.lblVehicleWeaponRC = new System.Windows.Forms.Label();
+            this.lblVehicleWeaponRC = new Chummer.LabelWithToolTip();
             this.lblVehicleWeaponReachLabel = new System.Windows.Forms.Label();
             this.tlpVehiclesWeaponRanges = new System.Windows.Forms.TableLayoutPanel();
             this.lblVehicleWeaponAlternateRangeExtreme = new System.Windows.Forms.Label();
@@ -1245,7 +1267,7 @@ namespace Chummer
             this.txtWeight = new System.Windows.Forms.TextBox();
             this.lblSkin = new System.Windows.Forms.Label();
             this.txtSkin = new System.Windows.Forms.TextBox();
-            this.lblPublicAware = new System.Windows.Forms.Label();
+            this.lblPublicAware = new Chummer.LabelWithToolTip();
             this.nudMugshotIndex = new Chummer.NumericUpDownEx();
             this.lblNumMugshots = new System.Windows.Forms.Label();
             this.lblHandedness = new System.Windows.Forms.Label();
@@ -7203,7 +7225,6 @@ namespace Chummer
             this.cboAttributeCategory.Name = "cboAttributeCategory";
             this.cboAttributeCategory.Size = new System.Drawing.Size(325, 21);
             this.cboAttributeCategory.TabIndex = 107;
-            this.cboAttributeCategory.TooltipText = "";
             this.cboAttributeCategory.SelectedIndexChanged += new System.EventHandler(this.cboAttributeCategory_SelectedIndexChanged);
             // 
             // lblMetatypeLabel
@@ -7993,7 +8014,6 @@ namespace Chummer
             this.cboTradition.Name = "cboTradition";
             this.cboTradition.Size = new System.Drawing.Size(213, 21);
             this.cboTradition.TabIndex = 99;
-            this.cboTradition.TooltipText = "";
             this.cboTradition.SelectedIndexChanged += new System.EventHandler(this.cboTradition_SelectedIndexChanged);
             // 
             // lblDrainAttributesLabel
@@ -8039,7 +8059,6 @@ namespace Chummer
             this.cboSpiritManipulation.Name = "cboSpiritManipulation";
             this.cboSpiritManipulation.Size = new System.Drawing.Size(213, 21);
             this.cboSpiritManipulation.TabIndex = 166;
-            this.cboSpiritManipulation.TooltipText = "";
             this.cboSpiritManipulation.Visible = false;
             // 
             // lblSpiritManipulation
@@ -8077,7 +8096,6 @@ namespace Chummer
             this.cboSpiritIllusion.Name = "cboSpiritIllusion";
             this.cboSpiritIllusion.Size = new System.Drawing.Size(213, 21);
             this.cboSpiritIllusion.TabIndex = 164;
-            this.cboSpiritIllusion.TooltipText = "";
             this.cboSpiritIllusion.Visible = false;
             // 
             // cboSpiritCombat
@@ -8089,7 +8107,6 @@ namespace Chummer
             this.cboSpiritCombat.Name = "cboSpiritCombat";
             this.cboSpiritCombat.Size = new System.Drawing.Size(213, 21);
             this.cboSpiritCombat.TabIndex = 158;
-            this.cboSpiritCombat.TooltipText = "";
             this.cboSpiritCombat.Visible = false;
             // 
             // lblSpiritIllusion
@@ -8114,7 +8131,6 @@ namespace Chummer
             this.cboSpiritHealth.Name = "cboSpiritHealth";
             this.cboSpiritHealth.Size = new System.Drawing.Size(213, 21);
             this.cboSpiritHealth.TabIndex = 162;
-            this.cboSpiritHealth.TooltipText = "";
             this.cboSpiritHealth.Visible = false;
             // 
             // lblSpiritDetection
@@ -8139,7 +8155,6 @@ namespace Chummer
             this.cboSpiritDetection.Name = "cboSpiritDetection";
             this.cboSpiritDetection.Size = new System.Drawing.Size(213, 21);
             this.cboSpiritDetection.TabIndex = 160;
-            this.cboSpiritDetection.TooltipText = "";
             this.cboSpiritDetection.Visible = false;
             // 
             // lblSpiritHealth
@@ -8212,7 +8227,6 @@ namespace Chummer
             this.cboDrain.Name = "cboDrain";
             this.cboDrain.Size = new System.Drawing.Size(80, 21);
             this.cboDrain.TabIndex = 156;
-            this.cboDrain.TooltipText = "";
             this.cboDrain.Visible = false;
             // 
             // gpbMagicianMentorSpirit
@@ -8830,7 +8844,6 @@ namespace Chummer
             this.cboStream.Name = "cboStream";
             this.cboStream.Size = new System.Drawing.Size(150, 21);
             this.cboStream.TabIndex = 106;
-            this.cboStream.TooltipText = "";
             this.cboStream.SelectedIndexChanged += new System.EventHandler(this.cboStream_SelectedIndexChanged);
             // 
             // lblFadingAttributesLabel
@@ -10701,7 +10714,6 @@ namespace Chummer
             this.cboCyberwareAttack.Name = "cboCyberwareAttack";
             this.cboCyberwareAttack.Size = new System.Drawing.Size(115, 21);
             this.cboCyberwareAttack.TabIndex = 211;
-            this.cboCyberwareAttack.TooltipText = "";
             this.cboCyberwareAttack.SelectedIndexChanged += new System.EventHandler(this.cboCyberwareAttack_SelectedIndexChanged);
             // 
             // cboCyberwareSleaze
@@ -10713,7 +10725,6 @@ namespace Chummer
             this.cboCyberwareSleaze.Name = "cboCyberwareSleaze";
             this.cboCyberwareSleaze.Size = new System.Drawing.Size(115, 21);
             this.cboCyberwareSleaze.TabIndex = 212;
-            this.cboCyberwareSleaze.TooltipText = "";
             this.cboCyberwareSleaze.SelectedIndexChanged += new System.EventHandler(this.cboCyberwareSleaze_SelectedIndexChanged);
             // 
             // cboCyberwareDataProcessing
@@ -10725,7 +10736,6 @@ namespace Chummer
             this.cboCyberwareDataProcessing.Name = "cboCyberwareDataProcessing";
             this.cboCyberwareDataProcessing.Size = new System.Drawing.Size(115, 21);
             this.cboCyberwareDataProcessing.TabIndex = 214;
-            this.cboCyberwareDataProcessing.TooltipText = "";
             this.cboCyberwareDataProcessing.SelectedIndexChanged += new System.EventHandler(this.cboCyberwareDataProcessing_SelectedIndexChanged);
             // 
             // cboCyberwareFirewall
@@ -10737,7 +10747,6 @@ namespace Chummer
             this.cboCyberwareFirewall.Name = "cboCyberwareFirewall";
             this.cboCyberwareFirewall.Size = new System.Drawing.Size(115, 21);
             this.cboCyberwareFirewall.TabIndex = 213;
-            this.cboCyberwareFirewall.TooltipText = "";
             this.cboCyberwareFirewall.SelectedIndexChanged += new System.EventHandler(this.cboCyberwareFirewall_SelectedIndexChanged);
             // 
             // cboCyberwareOverclocker
@@ -10749,7 +10758,6 @@ namespace Chummer
             this.cboCyberwareOverclocker.Name = "cboCyberwareOverclocker";
             this.cboCyberwareOverclocker.Size = new System.Drawing.Size(115, 21);
             this.cboCyberwareOverclocker.TabIndex = 216;
-            this.cboCyberwareOverclocker.TooltipText = "";
             this.cboCyberwareOverclocker.Visible = false;
             this.cboCyberwareOverclocker.SelectedIndexChanged += new System.EventHandler(this.cboCyberwareOverclocker_SelectedIndexChanged);
             // 
@@ -12054,7 +12062,6 @@ namespace Chummer
             this.cboGearOverclocker.Name = "cboGearOverclocker";
             this.cboGearOverclocker.Size = new System.Drawing.Size(93, 21);
             this.cboGearOverclocker.TabIndex = 205;
-            this.cboGearOverclocker.TooltipText = "";
             this.cboGearOverclocker.Visible = false;
             this.cboGearOverclocker.SelectedIndexChanged += new System.EventHandler(this.cboGearOverclocker_SelectedIndexChanged);
             // 
@@ -12067,7 +12074,6 @@ namespace Chummer
             this.cboGearAttack.Name = "cboGearAttack";
             this.cboGearAttack.Size = new System.Drawing.Size(93, 21);
             this.cboGearAttack.TabIndex = 164;
-            this.cboGearAttack.TooltipText = "";
             this.cboGearAttack.SelectedIndexChanged += new System.EventHandler(this.cboGearAttack_SelectedIndexChanged);
             // 
             // cboGearSleaze
@@ -12079,7 +12085,6 @@ namespace Chummer
             this.cboGearSleaze.Name = "cboGearSleaze";
             this.cboGearSleaze.Size = new System.Drawing.Size(93, 21);
             this.cboGearSleaze.TabIndex = 165;
-            this.cboGearSleaze.TooltipText = "";
             this.cboGearSleaze.SelectedIndexChanged += new System.EventHandler(this.cboGearSleaze_SelectedIndexChanged);
             // 
             // cboGearDataProcessing
@@ -12091,7 +12096,6 @@ namespace Chummer
             this.cboGearDataProcessing.Name = "cboGearDataProcessing";
             this.cboGearDataProcessing.Size = new System.Drawing.Size(93, 21);
             this.cboGearDataProcessing.TabIndex = 167;
-            this.cboGearDataProcessing.TooltipText = "";
             this.cboGearDataProcessing.SelectedIndexChanged += new System.EventHandler(this.cboGearDataProcessing_SelectedIndexChanged);
             // 
             // cboGearFirewall
@@ -12103,7 +12107,6 @@ namespace Chummer
             this.cboGearFirewall.Name = "cboGearFirewall";
             this.cboGearFirewall.Size = new System.Drawing.Size(93, 21);
             this.cboGearFirewall.TabIndex = 166;
-            this.cboGearFirewall.TooltipText = "";
             this.cboGearFirewall.SelectedIndexChanged += new System.EventHandler(this.cboGearFirewall_SelectedIndexChanged);
             // 
             // lblGearOverclockerLabel
@@ -13411,7 +13414,6 @@ namespace Chummer
             this.cboArmorFirewall.Name = "cboArmorFirewall";
             this.cboArmorFirewall.Size = new System.Drawing.Size(93, 21);
             this.cboArmorFirewall.TabIndex = 219;
-            this.cboArmorFirewall.TooltipText = "";
             this.cboArmorFirewall.SelectedIndexChanged += new System.EventHandler(this.cboArmorFirewall_SelectedIndexChanged);
             // 
             // cboArmorOverclocker
@@ -13423,7 +13425,6 @@ namespace Chummer
             this.cboArmorOverclocker.Name = "cboArmorOverclocker";
             this.cboArmorOverclocker.Size = new System.Drawing.Size(93, 21);
             this.cboArmorOverclocker.TabIndex = 214;
-            this.cboArmorOverclocker.TooltipText = "";
             this.cboArmorOverclocker.Visible = false;
             this.cboArmorOverclocker.SelectedIndexChanged += new System.EventHandler(this.cboArmorOverclocker_SelectedIndexChanged);
             // 
@@ -13577,7 +13578,6 @@ namespace Chummer
             this.cboArmorAttack.Name = "cboArmorAttack";
             this.cboArmorAttack.Size = new System.Drawing.Size(93, 21);
             this.cboArmorAttack.TabIndex = 216;
-            this.cboArmorAttack.TooltipText = "";
             this.cboArmorAttack.SelectedIndexChanged += new System.EventHandler(this.cboArmorAttack_SelectedIndexChanged);
             // 
             // cboArmorSleaze
@@ -13589,7 +13589,6 @@ namespace Chummer
             this.cboArmorSleaze.Name = "cboArmorSleaze";
             this.cboArmorSleaze.Size = new System.Drawing.Size(93, 21);
             this.cboArmorSleaze.TabIndex = 217;
-            this.cboArmorSleaze.TooltipText = "";
             this.cboArmorSleaze.SelectedIndexChanged += new System.EventHandler(this.cboArmorSleaze_SelectedIndexChanged);
             // 
             // cboArmorDataProcessing
@@ -13601,7 +13600,6 @@ namespace Chummer
             this.cboArmorDataProcessing.Name = "cboArmorDataProcessing";
             this.cboArmorDataProcessing.Size = new System.Drawing.Size(93, 21);
             this.cboArmorDataProcessing.TabIndex = 218;
-            this.cboArmorDataProcessing.TooltipText = "";
             this.cboArmorDataProcessing.SelectedIndexChanged += new System.EventHandler(this.cboArmorDataProcessing_SelectedIndexChanged);
             // 
             // tabArmorCM
@@ -15296,7 +15294,6 @@ namespace Chummer
             this.cboWeaponAmmo.Name = "cboWeaponAmmo";
             this.cboWeaponAmmo.Size = new System.Drawing.Size(151, 21);
             this.cboWeaponAmmo.TabIndex = 106;
-            this.cboWeaponAmmo.TooltipText = "";
             this.cboWeaponAmmo.SelectedIndexChanged += new System.EventHandler(this.cboWeaponAmmo_SelectedIndexChanged);
             // 
             // lblWeaponAmmoRemainingLabel
@@ -15475,7 +15472,6 @@ namespace Chummer
             this.cboWeaponOverclocker.Name = "cboWeaponOverclocker";
             this.cboWeaponOverclocker.Size = new System.Drawing.Size(96, 21);
             this.cboWeaponOverclocker.TabIndex = 218;
-            this.cboWeaponOverclocker.TooltipText = "";
             this.cboWeaponOverclocker.Visible = false;
             this.cboWeaponOverclocker.SelectedIndexChanged += new System.EventHandler(this.cboWeaponOverclocker_SelectedIndexChanged);
             // 
@@ -15581,7 +15577,6 @@ namespace Chummer
             this.cboWeaponGearDataProcessing.Name = "cboWeaponGearDataProcessing";
             this.cboWeaponGearDataProcessing.Size = new System.Drawing.Size(96, 21);
             this.cboWeaponGearDataProcessing.TabIndex = 210;
-            this.cboWeaponGearDataProcessing.TooltipText = "";
             this.cboWeaponGearDataProcessing.SelectedIndexChanged += new System.EventHandler(this.cboWeaponGearDataProcessing_SelectedIndexChanged);
             // 
             // lblWeaponAttackLabel
@@ -15617,7 +15612,6 @@ namespace Chummer
             this.cboWeaponGearAttack.Name = "cboWeaponGearAttack";
             this.cboWeaponGearAttack.Size = new System.Drawing.Size(96, 21);
             this.cboWeaponGearAttack.TabIndex = 207;
-            this.cboWeaponGearAttack.TooltipText = "";
             this.cboWeaponGearAttack.SelectedIndexChanged += new System.EventHandler(this.cboWeaponGearAttack_SelectedIndexChanged);
             // 
             // cboWeaponGearSleaze
@@ -15629,7 +15623,6 @@ namespace Chummer
             this.cboWeaponGearSleaze.Name = "cboWeaponGearSleaze";
             this.cboWeaponGearSleaze.Size = new System.Drawing.Size(96, 21);
             this.cboWeaponGearSleaze.TabIndex = 208;
-            this.cboWeaponGearSleaze.TooltipText = "";
             this.cboWeaponGearSleaze.SelectedIndexChanged += new System.EventHandler(this.cboWeaponGearSleaze_SelectedIndexChanged);
             // 
             // lblWeaponSleazeLabel
@@ -15653,7 +15646,6 @@ namespace Chummer
             this.cboWeaponGearFirewall.Name = "cboWeaponGearFirewall";
             this.cboWeaponGearFirewall.Size = new System.Drawing.Size(96, 21);
             this.cboWeaponGearFirewall.TabIndex = 209;
-            this.cboWeaponGearFirewall.TooltipText = "";
             this.cboWeaponGearFirewall.SelectedIndexChanged += new System.EventHandler(this.cboWeaponGearFirewall_SelectedIndexChanged);
             // 
             // lblWeaponDeviceRatingLabel
@@ -18538,7 +18530,6 @@ namespace Chummer
             this.cboVehicleWeaponAmmo.Name = "cboVehicleWeaponAmmo";
             this.cboVehicleWeaponAmmo.Size = new System.Drawing.Size(151, 21);
             this.cboVehicleWeaponAmmo.TabIndex = 114;
-            this.cboVehicleWeaponAmmo.TooltipText = "";
             this.cboVehicleWeaponAmmo.SelectedIndexChanged += new System.EventHandler(this.cboVehicleWeaponAmmo_SelectedIndexChanged);
             // 
             // lblFiringModeLabel
@@ -18562,7 +18553,6 @@ namespace Chummer
             this.cboVehicleWeaponFiringMode.Name = "cboVehicleWeaponFiringMode";
             this.cboVehicleWeaponFiringMode.Size = new System.Drawing.Size(151, 21);
             this.cboVehicleWeaponFiringMode.TabIndex = 248;
-            this.cboVehicleWeaponFiringMode.TooltipText = "";
             this.cboVehicleWeaponFiringMode.SelectedIndexChanged += new System.EventHandler(this.cboVehicleWeaponFiringMode_SelectedIndexChanged);
             // 
             // flpVehiclesWeaponCareerButtons
@@ -18695,7 +18685,6 @@ namespace Chummer
             this.cboVehicleDataProcessing.Name = "cboVehicleDataProcessing";
             this.cboVehicleDataProcessing.Size = new System.Drawing.Size(96, 21);
             this.cboVehicleDataProcessing.TabIndex = 206;
-            this.cboVehicleDataProcessing.TooltipText = "";
             this.cboVehicleDataProcessing.Visible = false;
             this.cboVehicleDataProcessing.SelectedIndexChanged += new System.EventHandler(this.cboVehicleDataProcessing_SelectedIndexChanged);
             // 
@@ -18708,7 +18697,6 @@ namespace Chummer
             this.cboVehicleFirewall.Name = "cboVehicleFirewall";
             this.cboVehicleFirewall.Size = new System.Drawing.Size(96, 21);
             this.cboVehicleFirewall.TabIndex = 205;
-            this.cboVehicleFirewall.TooltipText = "";
             this.cboVehicleFirewall.Visible = false;
             this.cboVehicleFirewall.SelectedIndexChanged += new System.EventHandler(this.cboVehicleFirewall_SelectedIndexChanged);
             // 
@@ -18745,7 +18733,6 @@ namespace Chummer
             this.cboVehicleSleaze.Name = "cboVehicleSleaze";
             this.cboVehicleSleaze.Size = new System.Drawing.Size(96, 21);
             this.cboVehicleSleaze.TabIndex = 204;
-            this.cboVehicleSleaze.TooltipText = "";
             this.cboVehicleSleaze.Visible = false;
             this.cboVehicleSleaze.SelectedIndexChanged += new System.EventHandler(this.cboVehicleSleaze_SelectedIndexChanged);
             // 
@@ -18781,7 +18768,6 @@ namespace Chummer
             this.cboVehicleAttack.Name = "cboVehicleAttack";
             this.cboVehicleAttack.Size = new System.Drawing.Size(96, 21);
             this.cboVehicleAttack.TabIndex = 203;
-            this.cboVehicleAttack.TooltipText = "";
             this.cboVehicleAttack.Visible = false;
             this.cboVehicleAttack.SelectedIndexChanged += new System.EventHandler(this.cboVehicleAttack_SelectedIndexChanged);
             // 
@@ -20248,7 +20234,6 @@ namespace Chummer
             this.cboPrimaryArm.Name = "cboPrimaryArm";
             this.cboPrimaryArm.Size = new System.Drawing.Size(145, 21);
             this.cboPrimaryArm.TabIndex = 95;
-            this.cboPrimaryArm.TooltipText = "";
             this.cboPrimaryArm.SelectedIndexChanged += new System.EventHandler(this.cboPrimaryArm_SelectedIndexChanged);
             // 
             // lblGender
@@ -22690,6 +22675,7 @@ namespace Chummer
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Chummer - Career Mode";
             this.Activated += new System.EventHandler(this.CharacterCareer_Activated);
+            this.Deactivate += new System.EventHandler(this.CharacterCareer_Deactivate);
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.CharacterCareer_FormClosing);
             this.Load += new System.EventHandler(this.CharacterCareer_Load);
             this.StatusStrip.ResumeLayout(false);
@@ -23194,14 +23180,14 @@ namespace Chummer
         private System.Windows.Forms.TabControl tabInfo;
         private System.Windows.Forms.TabPage tabOtherInfo;
         private System.Windows.Forms.Label lblESSMax;
-        private System.Windows.Forms.Label lblESS;
+        private LabelWithToolTip lblESS;
         private LabelWithToolTip lblArmor;
         private LabelWithToolTip lblCMStun;
         private LabelWithToolTip lblCMPhysical;
-        private System.Windows.Forms.Label lblCMStunLabel;
-        private System.Windows.Forms.Label lblCMPhysicalLabel;
+        private LabelWithToolTip lblCMStunLabel;
+        private LabelWithToolTip lblCMPhysicalLabel;
         private System.Windows.Forms.Label lblRemainingNuyen;
-        private System.Windows.Forms.Label lblRemainingNuyenLabel;
+        private LabelWithToolTip lblRemainingNuyenLabel;
         private System.Windows.Forms.MenuStrip mnuCreateMenu;
         private System.Windows.Forms.ToolStripMenuItem mnuCreateFile;
         private System.Windows.Forms.ContextMenuStrip cmsCyberware;
@@ -23231,31 +23217,31 @@ namespace Chummer
         private System.Windows.Forms.ContextMenuStrip cmdVehicleAmmoExpense;
         private System.Windows.Forms.ContextMenuStrip cmsLifestyle;
         private System.Windows.Forms.Label lblCMPenalty;
-        private System.Windows.Forms.Label lblCMPenaltyLabel;
+        private LabelWithToolTip lblCMPenaltyLabel;
         private System.Windows.Forms.TabPage tabConditionMonitor;
         private System.Windows.Forms.ContextMenuStrip cmsComplexForm;
         private ButtonWithToolTip cmdEdgeGained;
         private ButtonWithToolTip cmdEdgeSpent;
         private System.Windows.Forms.ContextMenuStrip cmsGearButton;
         private System.Windows.Forms.Label lblCareerKarma;
-        private System.Windows.Forms.Label lblCareerKarmaLabel;
+        private LabelWithToolTip lblCareerKarmaLabel;
         private System.Windows.Forms.Label lblMovement;
-        private System.Windows.Forms.Label lblMovementLabel;
+        private LabelWithToolTip lblMovementLabel;
         private System.Windows.Forms.ContextMenuStrip cmsUndoKarmaExpense;
         private System.Windows.Forms.ContextMenuStrip cmsUndoNuyenExpense;
         private LabelWithToolTip lblMemory;
-        private System.Windows.Forms.Label lblMemoryLabel;
+        private LabelWithToolTip lblMemoryLabel;
         private LabelWithToolTip lblLiftCarry;
-        private System.Windows.Forms.Label lblLiftCarryLabel;
+        private LabelWithToolTip lblLiftCarryLabel;
         private LabelWithToolTip lblJudgeIntentions;
-        private System.Windows.Forms.Label lblJudgeIntentionsLabel;
+        private LabelWithToolTip lblJudgeIntentionsLabel;
         private LabelWithToolTip lblComposure;
-        private System.Windows.Forms.Label lblComposureLabel;
+        private LabelWithToolTip lblComposureLabel;
         private System.Windows.Forms.ContextMenuStrip cmsArmorGear;
         private LabelWithToolTip lblCMDamageResistancePool;
-        private System.Windows.Forms.Label lblCMDamageResistancePoolLabel;
+        private LabelWithToolTip lblCMDamageResistancePoolLabel;
         private LabelWithToolTip lblCMArmor;
-        private System.Windows.Forms.Label lblCMArmorLabel;
+        private LabelWithToolTip lblCMArmorLabel;
         private System.Windows.Forms.ContextMenuStrip cmsArmorMod;
         private System.Windows.Forms.ContextMenuStrip cmsQuality;
         private System.Windows.Forms.ContextMenuStrip cmsSpell;
@@ -23266,9 +23252,9 @@ namespace Chummer
         private System.Windows.Forms.ContextMenuStrip cmsGearPlugin;
         private System.Windows.Forms.ToolStripMenuItem mnuCreateSpecial;
         private System.Windows.Forms.Label lblFly;
-        private System.Windows.Forms.Label lblFlyLabel;
+        private LabelWithToolTip lblFlyLabel;
         private System.Windows.Forms.Label lblSwim;
-        private System.Windows.Forms.Label lblSwimLabel;
+        private LabelWithToolTip lblSwimLabel;
         private System.Windows.Forms.SplitContainer splitMain;
         private System.Windows.Forms.ContextMenuStrip cmsBioware;
         private System.Windows.Forms.ContextMenuStrip cmsAdvancedLifestyle;
@@ -23290,7 +23276,7 @@ namespace Chummer
         private System.Windows.Forms.ContextMenuStrip cmsVehicleWeaponAccessory;
         private System.Windows.Forms.ContextMenuStrip cmsVehicleWeaponAccessoryGear;
         private System.Windows.Forms.ContextMenuStrip cmsWeaponLocation;
-        private System.Windows.Forms.Label lblArmorLabel;
+        private LabelWithToolTip lblArmorLabel;
         private LabelWithToolTip lblRiggingINI;
         private System.Windows.Forms.Label lblRiggingINILabel;
         private LabelWithToolTip lblMatrixINIHot;
@@ -23300,9 +23286,9 @@ namespace Chummer
         private LabelWithToolTip lblAstralINI;
         private LabelWithToolTip lblMatrixINI;
         private LabelWithToolTip lblINI;
-        private System.Windows.Forms.Label lblAstralINILabel;
-        private System.Windows.Forms.Label lblMatrixINILabel;
-        private System.Windows.Forms.Label lblINILabel;
+        private LabelWithToolTip lblAstralINILabel;
+        private LabelWithToolTip lblMatrixINILabel;
+        private LabelWithToolTip lblINILabel;
         private System.Windows.Forms.ContextMenuStrip cmsInitiationNotes;
         private System.Windows.Forms.ContextMenuStrip cmsTechnique;
         private System.Windows.Forms.TabPage tabDefenses;
@@ -23354,9 +23340,9 @@ namespace Chummer
         private System.Windows.Forms.Label lblPossessed;
         private System.Windows.Forms.TextBox txtAlias;
         private System.Windows.Forms.Label lblAlias;
-        private System.Windows.Forms.Label lblMetatypeSource;
+        private LabelWithToolTip lblMetatypeSource;
         private System.Windows.Forms.Label lblMetatypeSourceLabel;
-        private System.Windows.Forms.Label lblQualitySource;
+        private LabelWithToolTip lblQualitySource;
         private System.Windows.Forms.Label lblMysticAdeptAssignment;
         private System.Windows.Forms.Label lblMysticAdeptMAGAdept;
         private System.Windows.Forms.Label lblMetatype;
@@ -23367,7 +23353,7 @@ namespace Chummer
         private System.Windows.Forms.TabPage tabLimits;
         private System.Windows.Forms.TabPage tabMartialArts;
         private SplitButton cmdAddMartialArt;
-        private System.Windows.Forms.Label lblMartialArtSource;
+        private LabelWithToolTip lblMartialArtSource;
         private System.Windows.Forms.Label lblMartialArtSourceLabel;
         private System.Windows.Forms.TreeView treMartialArts;
         private System.Windows.Forms.Button cmdDeleteMartialArt;
@@ -23394,11 +23380,11 @@ namespace Chummer
         private System.Windows.Forms.Label lblDrainAttributes;
         private System.Windows.Forms.Label lblDrainAttributesLabel;
         private System.Windows.Forms.Label lblTraditionLabel;
-        private System.Windows.Forms.Label lblSpellSource;
+        private LabelWithToolTip lblSpellSource;
         private System.Windows.Forms.Label lblSpellSourceLabel;
         private System.Windows.Forms.Label lblSpellType;
         private System.Windows.Forms.Label lblSpellTypeLabel;
-        private System.Windows.Forms.Label lblSpellDV;
+        private LabelWithToolTip lblSpellDV;
         private System.Windows.Forms.Label lblSpellDVLabel;
         private System.Windows.Forms.Label lblSpellDuration;
         private System.Windows.Forms.Label lblSpellDurationLabel;
@@ -23417,13 +23403,13 @@ namespace Chummer
         private SplitButton cmdAddSpell;
         private System.Windows.Forms.TabPage tabAdept;
         private System.Windows.Forms.TabPage tabTechnomancer;
-        private System.Windows.Forms.Label lblFV;
+        private LabelWithToolTip lblFV;
         private System.Windows.Forms.Label lblFVLabel;
         private System.Windows.Forms.Label lblDuration;
         private System.Windows.Forms.Label lblDurationLabel;
         private System.Windows.Forms.Label lblTarget;
         private System.Windows.Forms.Label lblTargetLabel;
-        private System.Windows.Forms.Label lblComplexFormSource;
+        private LabelWithToolTip lblComplexFormSource;
         private System.Windows.Forms.Label lblComplexFormSourceLabel;
         private Chummer.ElasticComboBox cboStream;
         private System.Windows.Forms.Label lblFadingAttributes;
@@ -23442,7 +23428,7 @@ namespace Chummer
         private System.Windows.Forms.Label lblCritterPowerPointsLabel;
         private System.Windows.Forms.Button cmdDeleteCritterPower;
         private System.Windows.Forms.Button cmdAddCritterPower;
-        private System.Windows.Forms.Label lblCritterPowerSource;
+        private LabelWithToolTip lblCritterPowerSource;
         private System.Windows.Forms.Label lblCritterPowerSourceLabel;
         private System.Windows.Forms.Label lblCritterPowerDuration;
         private System.Windows.Forms.Label lblCritterPowerDurationLabel;
@@ -23474,7 +23460,7 @@ namespace Chummer
         private System.Windows.Forms.TextBox txtGroupName;
         private System.Windows.Forms.Label lblGroupNotes;
         private System.Windows.Forms.Label lblGroupName;
-        private System.Windows.Forms.Label lblMetamagicSource;
+        private LabelWithToolTip lblMetamagicSource;
         private System.Windows.Forms.Label lblMetamagicSourceLabel;
         private System.Windows.Forms.TreeView treMetamagic;
         private System.Windows.Forms.Button cmdDeleteMetamagic;
@@ -23528,7 +23514,7 @@ namespace Chummer
         private System.Windows.Forms.Label lblCyberwareESSLabel;
         private System.Windows.Forms.Label lblCyberwareRating;
         private System.Windows.Forms.Label lblCyberwareGrade;
-        private System.Windows.Forms.Label lblCyberwareSource;
+        private LabelWithToolTip lblCyberwareSource;
         private System.Windows.Forms.Label lblCyberwareSourceLabel;
         private System.Windows.Forms.Button cmdAddBioware;
         private System.Windows.Forms.Label lblCyberwareRatingLabel;
@@ -23659,7 +23645,7 @@ namespace Chummer
         private System.Windows.Forms.Label lblVehicleWeaponDamageLabel;
         private System.Windows.Forms.Label lblVehicleWeaponDamage;
         private System.Windows.Forms.Label lblVehicleRating;
-        private System.Windows.Forms.Label lblVehicleSource;
+        private LabelWithToolTip lblVehicleSource;
         private System.Windows.Forms.Label lblVehicleSourceLabel;
         private System.Windows.Forms.Label lblVehicleSlots;
         private System.Windows.Forms.Label lblVehicleSlotsLabel;
@@ -23707,11 +23693,11 @@ namespace Chummer
         private System.Windows.Forms.TextBox txtAge;
         private System.Windows.Forms.TextBox txtGender;
         private Chummer.NumericUpDownEx nudPublicAware;
-        private System.Windows.Forms.Label lblPublicAware;
+        private LabelWithToolTip lblPublicAware;
         private Chummer.NumericUpDownEx nudNotoriety;
-        private System.Windows.Forms.Label lblNotoriety;
+        private LabelWithToolTip lblNotoriety;
         private Chummer.NumericUpDownEx nudStreetCred;
-        private System.Windows.Forms.Label lblStreetCred;
+        private LabelWithToolTip lblStreetCred;
         private System.Windows.Forms.Label lblPlayerName;
         private System.Windows.Forms.Button cmdDeleteMugshot;
         private System.Windows.Forms.Button cmdAddMugshot;
@@ -23762,7 +23748,7 @@ namespace Chummer
         private System.Windows.Forms.Label lblNumMugshots;
         private Chummer.NumericUpDownEx nudMugshotIndex;
         private Chummer.ColorableCheckBox chkIsMainMugshot;
-        private System.Windows.Forms.Label lblTraditionSource;
+        private LabelWithToolTip lblTraditionSource;
         private System.Windows.Forms.Label lblTraditionSourceLabel;
         private PowersTabUserControl tabPowerUc;
         private FlowLayoutPanel pnlAttributes;
@@ -23812,7 +23798,7 @@ namespace Chummer
         private Label lblArmorCapacityLabel;
         private Label lblArmorRating;
         private Label lblArmorRatingLabel;
-        private Label lblArmorSource;
+        private LabelWithToolTip lblArmorSource;
         private Label lblArmorSourceLabel;
         private Label lblArmorCost;
         private Label lblArmorCostLabel;
@@ -23892,7 +23878,7 @@ namespace Chummer
         private Label lblWeaponAmmoRemainingLabel;
         private Label lblWeaponSlots;
         private Label lblWeaponSlotsLabel;
-        private Label lblWeaponSource;
+        private LabelWithToolTip lblWeaponSource;
         private Label lblWeaponSourceLabel;
         private Label lblWeaponAmmo;
         private Label lblWeaponAmmoLabel;
@@ -23913,7 +23899,7 @@ namespace Chummer
         private Label lblWeaponCostLabel;
         private Label lblWeaponRCLabel;
         private Label lblWeaponAvail;
-        private Label lblWeaponRC;
+        private LabelWithToolTip lblWeaponRC;
         private Label lblWeaponAvailLabel;
         private ButtonWithToolTip cmdWeaponMoveToVehicle;
         private ButtonWithToolTip cmdWeaponBuyAmmo;
@@ -23933,7 +23919,7 @@ namespace Chummer
         private Label lblLifestyleMonthsLabel;
         private Label lblLifestyleComfortsLabel;
         private Label lblLifestyleSourceLabel;
-        private Label lblLifestyleSource;
+        private LabelWithToolTip lblLifestyleSource;
         private SplitButton cmdAddLifestyle;
         private TreeView treLifestyles;
         private Button cmdDeleteLifestyle;
@@ -24114,7 +24100,7 @@ namespace Chummer
         private System.Windows.Forms.TableLayoutPanel tlpMagicianTradition;
         private GroupBox gpbMagicianMentorSpirit;
         private System.Windows.Forms.TableLayoutPanel tlpMagicianMentorSpirit;
-        private Label lblMentorSpiritSource;
+        private LabelWithToolTip lblMentorSpiritSource;
         private Label lblMentorSpiritSourceLabel;
         private FlowLayoutPanel flpTechnomancer;
         private GroupBox gpbTechnomancerComplexForm;
@@ -24125,7 +24111,7 @@ namespace Chummer
         private GroupBox gpbTechnomancerParagon;
         private System.Windows.Forms.TableLayoutPanel tlpTechnomancerParagon;
         private Label lblParagonSourceLabel;
-        private Label lblParagonSource;
+        private LabelWithToolTip lblParagonSource;
         private UI.Charts.ExpenseChart chtKarma;
         private UI.Charts.ExpenseChart chtNuyen;
         private System.Windows.Forms.TableLayoutPanel tlpPhysicalCMBoxes;
@@ -24184,7 +24170,7 @@ namespace Chummer
         private Label lblGearRating;
         private Label lblGearRatingLabel;
         private Label lblGearQtyLabel;
-        private Label lblGearSource;
+        private LabelWithToolTip lblGearSource;
         private Label lblGearSourceLabel;
         private FlowLayoutPanel flpGearQty;
         private Label lblGearQty;
@@ -24496,7 +24482,7 @@ namespace Chummer
         private TabPage tabConcept;
         private TabPage tabCharacterNotes;
         private FlowLayoutPanel flpMysticAdeptMAGAdept;
-        private Label lblLiftCarryLimitsLabel;
+        private LabelWithToolTip lblLiftCarryLimitsLabel;
         private LabelWithToolTip lblLiftCarryLimits;
         private ToolStripStatusLabel tslCarriedWeightLabel;
         private ToolStripStatusLabel tslCarriedWeight;
@@ -24509,7 +24495,7 @@ namespace Chummer
         private ColorableCheckBox chkHideLoadedAmmo;
         private Label lblVehicleWeaponReach;
         private Label lblVehicleWeaponRCLabel;
-        private Label lblVehicleWeaponRC;
+        private LabelWithToolTip lblVehicleWeaponRC;
         private Label lblVehicleWeaponReachLabel;
         private DpiFriendlyToolStripMenuItem tsCyberwareReapplyImprovements;
         private DpiFriendlyToolStripMenuItem tsArmorReapplyImprovements;

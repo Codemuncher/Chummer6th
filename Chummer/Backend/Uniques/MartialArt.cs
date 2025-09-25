@@ -207,7 +207,7 @@ namespace Chummer
                 objXmlArtNode.TryGetStringFieldQuickly("notesColor", ref sNotesColor);
                 _colNotes = ColorTranslator.FromHtml(sNotesColor);
 
-                _blnIsQuality = objXmlArtNode["isquality"]?.InnerText == bool.TrueString;
+                _blnIsQuality = objXmlArtNode["isquality"]?.InnerTextIsTrueString() == true;
 
                 if (objXmlArtNode["bonus"] != null)
                 {
@@ -258,7 +258,7 @@ namespace Chummer
                 objXmlArtNode.TryGetStringFieldQuickly("notesColor", ref sNotesColor);
                 _colNotes = ColorTranslator.FromHtml(sNotesColor);
 
-                _blnIsQuality = objXmlArtNode["isquality"]?.InnerText == bool.TrueString;
+                _blnIsQuality = objXmlArtNode["isquality"]?.InnerTextIsTrueString() == true;
 
                 if (objXmlArtNode["bonus"] != null)
                 {
@@ -1123,7 +1123,7 @@ namespace Chummer
                                 objExpense.Create(intKarmaCost * -1,
                                     await LanguageManager.GetStringAsync(
                                         "String_ExpenseLearnMartialArt", token: token).ConfigureAwait(false)
-                                    + ' '
+                                    + " "
                                     + await objMartialArt.GetCurrentDisplayNameShortAsync(token)
                                         .ConfigureAwait(false),
                                     ExpenseType.Karma,

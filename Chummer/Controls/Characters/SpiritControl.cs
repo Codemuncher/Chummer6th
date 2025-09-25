@@ -51,10 +51,9 @@ namespace Chummer
             _objMyToken = objMyToken;
             InitializeComponent();
 
-            Disposed += (sender, args) => UnbindSpiritControl();
-
             this.UpdateLightDarkMode(objMyToken);
             this.TranslateWinForm(token: objMyToken);
+            this.UpdateParentForToolTipControls();
             foreach (ToolStripItem tssItem in cmsSpirit.Items)
             {
                 tssItem.UpdateLightDarkMode(objMyToken);
@@ -196,7 +195,7 @@ namespace Chummer
                 objCharacter.PropertyChangedAsync -= RebuildSpiritListOnTraditionChange;
 
             foreach (Control objControl in Controls)
-                objControl.DataBindings.Clear();
+                objControl.ResetBindings();
         }
 
         private async void cmdDelete_Click(object sender, EventArgs e)
@@ -773,8 +772,8 @@ namespace Chummer
                             strFileName += ".chum5";
                         await objCharacter.SetFileNameAsync(strFileName, token).ConfigureAwait(false);
 
-                        await objCharacter.CreateAsync(objXmlMetatype["category"]?.InnerText,
-                            objXmlMetatype["id"]?.InnerText,
+                        await objCharacter.CreateAsync(objXmlMetatype["category"]?.InnerTextViaPool(),
+                            objXmlMetatype["id"]?.InnerTextViaPool(),
                             string.Empty, objXmlMetatype, intForce, token: token).ConfigureAwait(false);
                         await objCharacter.SetMetatypeBPAsync(0, token).ConfigureAwait(false);
                         using (ThreadSafeForm<LoadingBar> frmLoadingBar =

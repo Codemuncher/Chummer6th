@@ -17,11 +17,11 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using System.ComponentModel;
 using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer.UI.Table
 {
@@ -33,8 +33,6 @@ namespace Chummer.UI.Table
         {
             ContentField = content;
             InitializeComponent();
-            if (content != null)
-                Disposed += (sender, args) => content.Dispose();
             Alignment = Alignment.Left;
         }
 
@@ -42,6 +40,9 @@ namespace Chummer.UI.Table
         /// Alignment of the content
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Alignment of the content
+        /// </summary>
         public Alignment Alignment { get; set; }
 
         public object Value { get; private set; }

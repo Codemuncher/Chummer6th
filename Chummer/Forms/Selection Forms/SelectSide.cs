@@ -19,8 +19,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -35,6 +35,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private void cmdOK_Click(object sender, EventArgs e)
@@ -47,7 +48,7 @@ namespace Chummer
         private async void SelectSide_Load(object sender, EventArgs e)
         {
             // Create a list for the sides.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSides))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSides))
             {
                 lstSides.Add(new ListItem("Left", await LanguageManager.GetStringAsync("String_Improvement_SideLeft").ConfigureAwait(false)));
                 lstSides.Add(new ListItem("Right", await LanguageManager.GetStringAsync("String_Improvement_SideRight").ConfigureAwait(false)));
@@ -65,6 +66,12 @@ namespace Chummer
 
         // Description to show in the window.
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        // Description to show in the window.
         public string Description
         {
             set => lblDescription.Text = value;

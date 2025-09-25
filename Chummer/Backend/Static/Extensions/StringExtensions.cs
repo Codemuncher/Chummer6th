@@ -41,6 +41,2264 @@ namespace Chummer
             return string.Equals(strInput, Utils.GuidEmptyString, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// Removes all potentially identifiable information from a string containing a directory path.
+        /// </summary>
+        public static string AnonymizePath(this string strPath)
+        {
+            string strAppDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string strUserProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return strPath
+                .Replace(Utils.GetStartupPath, "[Chummer Path]")
+                .Replace(Utils.GetEscapedStartupPath, "[Chummer Path]")
+                .Replace(strAppDataPath, "[Application Data]")
+                .Replace(strAppDataPath.Replace("\\", "\\\\").Replace("\\\\\\\\", "\\\\"), "[Application Data]")
+                .Replace(strUserProfilePath, "[User Profile]")
+                .Replace(strUserProfilePath.Replace("\\", "\\\\").Replace("\\\\\\\\", "\\\\"), "[User Profile]");
+        }
+
+        public static char[] ToPooledCharArray(this string strInput, out int intLength)
+        {
+            intLength = strInput.Length;
+            char[] achrReturn = ArrayPool<char>.Shared.Rent(intLength);
+            try
+            {
+                if (intLength > 0)
+                {
+                    int intMemoryLength = intLength * sizeof(char);
+                    unsafe
+                    {
+                        fixed (char* smem = strInput)
+                        fixed (char* dmem = achrReturn)
+                        {
+                            Buffer.MemoryCopy((byte*)smem, (byte*)dmem, intMemoryLength, intMemoryLength);
+                        }
+                    }
+                }
+
+                return achrReturn;
+            }
+            catch
+            {
+                ArrayPool<char>.Shared.Return(achrReturn);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static string ConcatFast(params string[] lstStrings)
+        {
+            return ConcatFast(Array.AsReadOnly(lstStrings));
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static string ConcatFast(IReadOnlyCollection<string> lstStrings)
+        {
+            int intStringsCount = lstStrings.Count;
+            // Handle cases where we can rely on the internal Concat methods that do not need allocations and can make use of faster string construction
+            switch (intStringsCount)
+            {
+                case 0:
+                    return string.Empty;
+                case 1:
+                    return lstStrings.ElementAtBetter(0);
+                case 2:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                        {
+                            if (objEnumerator.MoveNext())
+                            {
+                                str1 = objEnumerator.Current;
+                                if (objEnumerator.MoveNext())
+                                {
+                                    str2 = objEnumerator.Current;
+                                }
+                            }
+                            return string.Concat(str1, str2);
+                        }
+                    }
+                case 3:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        string str3 = string.Empty;
+                        using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                        {
+                            if (objEnumerator.MoveNext())
+                            {
+                                str1 = objEnumerator.Current;
+                                if (objEnumerator.MoveNext())
+                                {
+                                    str2 = objEnumerator.Current;
+                                    if (objEnumerator.MoveNext())
+                                    {
+                                        str3 = objEnumerator.Current;
+                                    }
+                                }
+                            }
+                            return string.Concat(str1, str2, str3);
+                        }
+                    }
+                case 4:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        string str3 = string.Empty;
+                        string str4 = string.Empty;
+                        using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                        {
+                            if (objEnumerator.MoveNext())
+                            {
+                                str1 = objEnumerator.Current;
+                                if (objEnumerator.MoveNext())
+                                {
+                                    str2 = objEnumerator.Current;
+                                    if (objEnumerator.MoveNext())
+                                    {
+                                        str3 = objEnumerator.Current;
+                                        if (objEnumerator.MoveNext())
+                                        {
+                                            str4 = objEnumerator.Current;
+                                        }
+                                    }
+                                }
+                            }
+                            return string.Concat(str1, str2, str3, str4);
+                        }
+                    }
+            }
+            int intTotalLength = 0;
+            using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+            {
+                while (objEnumerator.MoveNext())
+                {
+                    string strLoop = objEnumerator.Current;
+                    if (!string.IsNullOrEmpty(strLoop) && (intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                        return string.Concat(lstStrings);
+                }
+                objEnumerator.Reset();
+                // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                unsafe
+                {
+                    char* achrNewChars = stackalloc char[intTotalLength];
+                    // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                    int intCurrent = 0;
+                    while (objEnumerator.MoveNext())
+                    {
+                        string strLoop = objEnumerator.Current;
+                        int intLoopLength = strLoop?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            fixed (char* src = strLoop)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                        }
+                    }
+
+                    // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                    return new string(achrNewChars, 0, intCurrent);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(IEnumerable{string})"> that is faster for shorter strings because it uses stackalloc, but is potentially slower if the string ends up being larger than our stackalloc limit.
+        /// </summary>
+        public static string ConcatFast(IEnumerable<string> lstStrings)
+        {
+            using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+            {
+                // Handle trivial cases first
+                if (!objEnumerator.MoveNext())
+                    return string.Empty;
+                string str1 = objEnumerator.Current;
+                if (!objEnumerator.MoveNext())
+                    return str1;
+                // Handle cases where we can rely on the faster string.Concat methods that work off of a fixed number of string parameters
+                string str2 = objEnumerator.Current;
+                string str3 = string.Empty;
+                string str4 = string.Empty;
+                if (objEnumerator.MoveNext())
+                {
+                    str3 = objEnumerator.Current;
+                    if (objEnumerator.MoveNext())
+                    {
+                        str4 = objEnumerator.Current;
+                        if (!objEnumerator.MoveNext())
+                            return string.Concat(str1, str2, str3, str4);
+                    }
+                    else
+                        return string.Concat(str1, str2, str3);
+                }
+                else
+                    return string.Concat(str1, str2);
+                string strFirstPart = string.Empty;
+                string strSecondPart = string.Empty;
+                string strLoop = objEnumerator.Current;
+                int intLoopLength = (str1?.Length ?? 0) + (str2?.Length ?? 0) + (str3?.Length ?? 0) + (str4?.Length ?? 0) + (strLoop?.Length ?? 0);
+                if (intLoopLength > Utils.MaxStackLimit16BitTypes)
+                {
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                    {
+                        sbdReturn.EnsureCapacity(intLoopLength);
+                        sbdReturn.Append(str1).Append(str2).Append(str3).Append(str4).Append(objEnumerator.Current);
+                        while (objEnumerator.MoveNext())
+                            sbdReturn.Append(objEnumerator.Current);
+                        return sbdReturn.ToString();
+                    }
+                }
+                // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                unsafe
+                {
+                    // We don't know the exact length we'll need, so allocate the maximum size we're allowed on the stack
+                    char* achrNewChars = stackalloc char[Utils.MaxStackLimit16BitTypes];
+                    // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                    int intCurrent = 0;
+                    intLoopLength = str1?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        fixed (char* src = str1)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = str2?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        fixed (char* src = str2)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = str3?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        fixed (char* src = str3)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = str4?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        fixed (char* src = str4)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = strLoop?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        if (intCurrent + intLoopLength > Utils.MaxStackLimit16BitTypes)
+                        {
+                            strFirstPart = new string(achrNewChars, 0, intCurrent);
+                            strSecondPart = strLoop;
+                        }
+                        else
+                        {
+                            fixed (char* src = strLoop)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                        }
+                    }
+                    if (string.IsNullOrEmpty(strFirstPart))
+                    {
+                        while (objEnumerator.MoveNext())
+                        {
+                            strLoop = objEnumerator.Current;
+                            intLoopLength = strLoop?.Length ?? 0;
+                            if (intLoopLength > 0)
+                            {
+                                if (intCurrent + intLoopLength > Utils.MaxStackLimit16BitTypes)
+                                {
+                                    strFirstPart = new string(achrNewChars, 0, intCurrent);
+                                    strSecondPart = strLoop;
+                                    break; // We want to exit out of the score where we did our stackalloc to free it up
+                                }
+                                fixed (char* src = strLoop)
+                                {
+                                    Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                }
+                                intCurrent += intLoopLength;
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(strFirstPart))
+                        {
+                            // ... then we create a new string from the new CharArray
+                            return new string(achrNewChars, 0, intCurrent);
+                        }
+                    }
+                }
+                // Backup for if our string ended up being too long
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                {
+                    sbdReturn.EnsureCapacity(strFirstPart.Length + strSecondPart.Length);
+                    sbdReturn.Append(strFirstPart).Append(strSecondPart);
+                    while (objEnumerator.MoveNext())
+                        sbdReturn.Append(objEnumerator.Current);
+                    return sbdReturn.ToString();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static Task<string> ConcatFastAsync(IAsyncReadOnlyCollection<string> lstStrings, CancellationToken token = default)
+        {
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled<string>(token);
+            int intStringsCount = lstStrings.Count;
+            // Handle cases where we can rely on the internal Concat methods that do not need allocations and can make use of faster string construction
+            switch (intStringsCount)
+            {
+                case 0:
+                    return Task.FromResult(string.Empty);
+                case 1:
+                    return lstStrings.ElementAtBetterAsync(0, token);
+                case 2:
+                    {
+                        return Inner2();
+                        async Task<string> Inner2()
+                        {
+                            string str1 = string.Empty;
+                            string str2 = string.Empty;
+                            IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                            try
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (objEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    str1 = objEnumerator.Current;
+                                    if (objEnumerator.MoveNext())
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        str2 = objEnumerator.Current;
+                                    }
+                                }
+                                token.ThrowIfCancellationRequested();
+                                return string.Concat(str1, str2);
+                            }
+                            finally
+                            {
+                                if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                                    await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                                else if (objEnumerator is IDisposable objDispose)
+                                    objDispose.Dispose();
+                            }
+                        }
+                    }
+                case 3:
+                    {
+                        return Inner3();
+                        async Task<string> Inner3()
+                        {
+                            string str1 = string.Empty;
+                            string str2 = string.Empty;
+                            string str3 = string.Empty;
+                            IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                            try
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (objEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    str1 = objEnumerator.Current;
+                                    if (objEnumerator.MoveNext())
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        str2 = objEnumerator.Current;
+                                        if (objEnumerator.MoveNext())
+                                        {
+                                            token.ThrowIfCancellationRequested();
+                                            str3 = objEnumerator.Current;
+                                        }
+                                    }
+                                }
+                                token.ThrowIfCancellationRequested();
+                                return string.Concat(str1, str2, str3);
+                            }
+                            finally
+                            {
+                                if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                                    await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                                else if (objEnumerator is IDisposable objDispose)
+                                    objDispose.Dispose();
+                            }
+                        }
+                    }
+                case 4:
+                    {
+                        return Inner4();
+                        async Task<string> Inner4()
+                        {
+                            string str1 = string.Empty;
+                            string str2 = string.Empty;
+                            string str3 = string.Empty;
+                            string str4 = string.Empty;
+                            IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                            try
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (objEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    str1 = objEnumerator.Current;
+                                    if (objEnumerator.MoveNext())
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        str2 = objEnumerator.Current;
+                                        if (objEnumerator.MoveNext())
+                                        {
+                                            token.ThrowIfCancellationRequested();
+                                            str3 = objEnumerator.Current;
+                                            if (objEnumerator.MoveNext())
+                                            {
+                                                token.ThrowIfCancellationRequested();
+                                                str4 = objEnumerator.Current;
+                                            }
+                                        }
+                                    }
+                                }
+                                token.ThrowIfCancellationRequested();
+                                return string.Concat(str1, str2, str3, str4);
+                            }
+                            finally
+                            {
+                                if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                                    await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                                else if (objEnumerator is IDisposable objDispose)
+                                    objDispose.Dispose();
+                            }
+                        }
+                    }
+            }
+            return Inner();
+            async Task<string> Inner()
+            {
+                int intTotalLength = 0;
+                IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    while (objEnumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        string strLoop = objEnumerator.Current;
+                        if (!string.IsNullOrEmpty(strLoop) && (intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                            return string.Concat(lstStrings);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    objEnumerator.Reset();
+                    token.ThrowIfCancellationRequested();
+                    // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                    unsafe
+                    {
+                        char* achrNewChars = stackalloc char[intTotalLength];
+                        // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                        int intCurrent = 0;
+                        while (objEnumerator.MoveNext())
+                        {
+                            token.ThrowIfCancellationRequested();
+                            string strLoop = objEnumerator.Current;
+                            int intLoopLength = strLoop?.Length ?? 0;
+                            if (intLoopLength > 0)
+                            {
+                                fixed (char* src = strLoop)
+                                {
+                                    Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                }
+                                intCurrent += intLoopLength;
+                            }
+                        }
+
+                        // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                        return new string(achrNewChars, 0, intCurrent);
+                    }
+                }
+                finally
+                {
+                    if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                        await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                    else if (objEnumerator is IDisposable objDispose)
+                        objDispose.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Async version of <see cref="string.Concat(IEnumerable{string})"> that is faster for shorter strings because it uses stackalloc, but is potentially slower if the string ends up being larger than our stackalloc limit.
+        /// </summary>
+        public static async Task<string> ConcatFastAsync(IAsyncEnumerable<string> lstStrings, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                // Handle trivial cases first
+                if (!objEnumerator.MoveNext())
+                    return string.Empty;
+                token.ThrowIfCancellationRequested();
+                string str1 = objEnumerator.Current;
+                if (!objEnumerator.MoveNext())
+                    return str1;
+                token.ThrowIfCancellationRequested();
+                // Handle cases where we can rely on the faster string.Concat methods that work off of a fixed number of string parameters
+                string str2 = objEnumerator.Current;
+                string str3 = string.Empty;
+                string str4 = string.Empty;
+                if (objEnumerator.MoveNext())
+                {
+                    token.ThrowIfCancellationRequested();
+                    str3 = objEnumerator.Current;
+                    if (objEnumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        str4 = objEnumerator.Current;
+                        if (objEnumerator.MoveNext())
+                            token.ThrowIfCancellationRequested();
+                        else
+                        {
+                            token.ThrowIfCancellationRequested();
+                            return string.Concat(str1, str2, str3, str4);
+                        }
+                    }
+                    else
+                    {
+                        token.ThrowIfCancellationRequested();
+                        return string.Concat(str1, str2, str3);
+                    }
+                }
+                else
+                {
+                    token.ThrowIfCancellationRequested();
+                    return string.Concat(str1, str2);
+                }
+                string strFirstPart = string.Empty;
+                string strSecondPart = string.Empty;
+                token.ThrowIfCancellationRequested();
+                string strLoop = objEnumerator.Current;
+                int intLoopLength = (str1?.Length ?? 0) + (str2?.Length ?? 0) + (str3?.Length ?? 0) + (str4?.Length ?? 0) + (strLoop?.Length ?? 0);
+                if (intLoopLength > Utils.MaxStackLimit16BitTypes)
+                {
+                    token.ThrowIfCancellationRequested();
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.EnsureCapacity(intLoopLength);
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(str1);
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(str2);
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(str3);
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(str4);
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(objEnumerator.Current);
+                        token.ThrowIfCancellationRequested();
+                        while (objEnumerator.MoveNext())
+                        {
+                            token.ThrowIfCancellationRequested();
+                            sbdReturn.Append(objEnumerator.Current);
+                        }
+                        token.ThrowIfCancellationRequested();
+                        return sbdReturn.ToString();
+                    }
+                }
+                // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                unsafe
+                {
+                    // We don't know the exact length we'll need, so allocate the maximum size we're allowed on the stack
+                    char* achrNewChars = stackalloc char[Utils.MaxStackLimit16BitTypes];
+                    // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                    int intCurrent = 0;
+                    intLoopLength = str1?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        fixed (char* src = str1)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        token.ThrowIfCancellationRequested();
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = str2?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        fixed (char* src = str2)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        token.ThrowIfCancellationRequested();
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = str3?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        fixed (char* src = str3)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        token.ThrowIfCancellationRequested();
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = str4?.Length ?? 0;
+                    if (intLoopLength > 0)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        fixed (char* src = str4)
+                        {
+                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                        }
+                        token.ThrowIfCancellationRequested();
+                        intCurrent += intLoopLength;
+                    }
+                    intLoopLength = strLoop?.Length ?? 0;
+                    token.ThrowIfCancellationRequested();
+                    if (intLoopLength > 0)
+                    {
+                        if (intCurrent + intLoopLength > Utils.MaxStackLimit16BitTypes)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            strFirstPart = new string(achrNewChars, 0, intCurrent);
+                            token.ThrowIfCancellationRequested();
+                            strSecondPart = strLoop;
+                        }
+                        else
+                        {
+                            token.ThrowIfCancellationRequested();
+                            fixed (char* src = strLoop)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            token.ThrowIfCancellationRequested();
+                            intCurrent += intLoopLength;
+                        }
+                    }
+                    if (string.IsNullOrEmpty(strFirstPart))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        while (objEnumerator.MoveNext())
+                        {
+                            token.ThrowIfCancellationRequested();
+                            strLoop = objEnumerator.Current;
+                            intLoopLength = strLoop?.Length ?? 0;
+                            if (intLoopLength > 0)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (intCurrent + intLoopLength > Utils.MaxStackLimit16BitTypes)
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    strFirstPart = new string(achrNewChars, 0, intCurrent);
+                                    strSecondPart = strLoop;
+                                    break; // We want to exit out of the score where we did our stackalloc to free it up
+                                }
+                                token.ThrowIfCancellationRequested();
+                                fixed (char* src = strLoop)
+                                {
+                                    Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                }
+                                token.ThrowIfCancellationRequested();
+                                intCurrent += intLoopLength;
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(strFirstPart))
+                        {
+                            token.ThrowIfCancellationRequested();
+                            // ... then we create a new string from the new CharArray
+                            return new string(achrNewChars, 0, intCurrent);
+                        }
+                    }
+                }
+                token.ThrowIfCancellationRequested();
+                // Backup for if our string ended up being too long
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                {
+                    token.ThrowIfCancellationRequested();
+                    sbdReturn.EnsureCapacity(strFirstPart.Length + strSecondPart.Length);
+                    token.ThrowIfCancellationRequested();
+                    sbdReturn.Append(strFirstPart);
+                    token.ThrowIfCancellationRequested();
+                    sbdReturn.Append(strSecondPart);
+                    token.ThrowIfCancellationRequested();
+                    while (objEnumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(objEnumerator.Current);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    return sbdReturn.ToString();
+                }
+            }
+            finally
+            {
+                if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                    await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                else if (objEnumerator is IDisposable objDispose)
+                    objDispose.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static string ConcatFast(string[] lstStrings, int startIndex, int count)
+        {
+            return ConcatFast(Array.AsReadOnly(lstStrings));
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static string ConcatFast(IReadOnlyCollection<string> lstStrings, int startIndex, int count)
+        {
+            if (count <= 0)
+                return string.Empty;
+            // Handle cases where we can rely on the internal Concat methods that do not need allocations and can make use of faster string construction
+            switch (count)
+            {
+                case 1:
+                    return lstStrings.ElementAtBetter(startIndex);
+                case 2:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                        {
+                            for (int i = 0; i < startIndex; ++i)
+                            {
+                                if (!objEnumerator.MoveNext())
+                                    return string.Concat(str1, str2);
+                            }
+                            if (objEnumerator.MoveNext())
+                            {
+                                str1 = objEnumerator.Current;
+                                if (objEnumerator.MoveNext())
+                                {
+                                    str2 = objEnumerator.Current;
+                                }
+                            }
+                            return string.Concat(str1, str2);
+                        }
+                    }
+                case 3:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        string str3 = string.Empty;
+                        using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                        {
+                            for (int i = 0; i < startIndex; ++i)
+                            {
+                                if (!objEnumerator.MoveNext())
+                                    return string.Concat(str1, str2, str3);
+                            }
+                            if (objEnumerator.MoveNext())
+                            {
+                                str1 = objEnumerator.Current;
+                                if (objEnumerator.MoveNext())
+                                {
+                                    str2 = objEnumerator.Current;
+                                    if (objEnumerator.MoveNext())
+                                    {
+                                        str3 = objEnumerator.Current;
+                                    }
+                                }
+                            }
+                            return string.Concat(str1, str2, str3);
+                        }
+                    }
+                case 4:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        string str3 = string.Empty;
+                        string str4 = string.Empty;
+                        using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                        {
+                            for (int i = 0; i < startIndex; ++i)
+                            {
+                                if (!objEnumerator.MoveNext())
+                                    return string.Concat(str1, str2, str3, str4);
+                            }
+                            if (objEnumerator.MoveNext())
+                            {
+                                str1 = objEnumerator.Current;
+                                if (objEnumerator.MoveNext())
+                                {
+                                    str2 = objEnumerator.Current;
+                                    if (objEnumerator.MoveNext())
+                                    {
+                                        str3 = objEnumerator.Current;
+                                        if (objEnumerator.MoveNext())
+                                        {
+                                            str4 = objEnumerator.Current;
+                                        }
+                                    }
+                                }
+                            }
+                            return string.Concat(str1, str2, str3, str4);
+                        }
+                    }
+            }
+            int intFinalIndex = startIndex + count;
+            if (intFinalIndex >= lstStrings.Count)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            int intTotalLength = 0;
+            using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+            {
+                int intIndex = 0;
+                while (objEnumerator.MoveNext())
+                {
+                    if (intIndex++ < startIndex)
+                        continue;
+                    string strLoop = objEnumerator.Current;
+                    if (!string.IsNullOrEmpty(strLoop) && (intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                        return string.Concat(lstStrings);
+                    if (intIndex == intFinalIndex)
+                        break;
+                }
+                objEnumerator.Reset();
+                intIndex = 0;
+                // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                unsafe
+                {
+                    char* achrNewChars = stackalloc char[intTotalLength];
+                    // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                    int intCurrent = 0;
+                    while (objEnumerator.MoveNext())
+                    {
+                        if (intIndex++ < startIndex)
+                            continue;
+                        string strLoop = objEnumerator.Current;
+                        int intLoopLength = strLoop?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            fixed (char* src = strLoop)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                        }
+                        if (intIndex == intFinalIndex)
+                            break;
+                    }
+
+                    // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                    return new string(achrNewChars, 0, intCurrent);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static async Task<string> ConcatFastAsync(IAsyncReadOnlyCollection<string> lstStrings, int startIndex, int count, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            if (count <= 0)
+                return string.Empty;
+            // Handle cases where we can rely on the internal Concat methods that do not need allocations and can make use of faster string construction
+            switch (count)
+            {
+                case 1:
+                    return await lstStrings.ElementAtBetterAsync(startIndex, token).ConfigureAwait(false);
+                case 2:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        IEnumerator<string> objLoopEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            for (int i = 0; i < startIndex; ++i)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (!objLoopEnumerator.MoveNext())
+                                    return string.Concat(str1, str2);
+                            }
+                            token.ThrowIfCancellationRequested();
+                            if (objLoopEnumerator.MoveNext())
+                            {
+                                token.ThrowIfCancellationRequested();
+                                str1 = objLoopEnumerator.Current;
+                                if (objLoopEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    str2 = objLoopEnumerator.Current;
+                                }
+                            }
+                            token.ThrowIfCancellationRequested();
+                            return string.Concat(str1, str2);
+                        }
+                        finally
+                        {
+                            if (objLoopEnumerator is IAsyncDisposable objDisposeAsync)
+                                await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                            else if (objLoopEnumerator is IDisposable objDispose)
+                                objDispose.Dispose();
+                        }
+                    }
+                case 3:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        string str3 = string.Empty;
+                        IEnumerator<string> objLoopEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            for (int i = 0; i < startIndex; ++i)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (!objLoopEnumerator.MoveNext())
+                                    return string.Concat(str1, str2, str3);
+                            }
+                            token.ThrowIfCancellationRequested();
+                            if (objLoopEnumerator.MoveNext())
+                            {
+                                token.ThrowIfCancellationRequested();
+                                str1 = objLoopEnumerator.Current;
+                                if (objLoopEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    str2 = objLoopEnumerator.Current;
+                                    if (objLoopEnumerator.MoveNext())
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        str3 = objLoopEnumerator.Current;
+                                    }
+                                }
+                            }
+                            token.ThrowIfCancellationRequested();
+                            return string.Concat(str1, str2, str3);
+                        }
+                        finally
+                        {
+                            if (objLoopEnumerator is IAsyncDisposable objDisposeAsync)
+                                await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                            else if (objLoopEnumerator is IDisposable objDispose)
+                                objDispose.Dispose();
+                        }
+                    }
+                case 4:
+                    {
+                        string str1 = string.Empty;
+                        string str2 = string.Empty;
+                        string str3 = string.Empty;
+                        string str4 = string.Empty;
+                        IEnumerator<string> objLoopEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                        try
+                        {
+                            token.ThrowIfCancellationRequested();
+                            for (int i = 0; i < startIndex; ++i)
+                            {
+                                token.ThrowIfCancellationRequested();
+                                if (!objLoopEnumerator.MoveNext())
+                                    return string.Concat(str1, str2, str3, str4);
+                            }
+                            if (objLoopEnumerator.MoveNext())
+                            {
+                                token.ThrowIfCancellationRequested();
+                                str1 = objLoopEnumerator.Current;
+                                if (objLoopEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    str2 = objLoopEnumerator.Current;
+                                    if (objLoopEnumerator.MoveNext())
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        str3 = objLoopEnumerator.Current;
+                                        if (objLoopEnumerator.MoveNext())
+                                        {
+                                            token.ThrowIfCancellationRequested();
+                                            str4 = objLoopEnumerator.Current;
+                                        }
+                                    }
+                                }
+                            }
+                            token.ThrowIfCancellationRequested();
+                            return string.Concat(str1, str2, str3, str4);
+                        }
+                        finally
+                        {
+                            if (objLoopEnumerator is IAsyncDisposable objDisposeAsync)
+                                await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                            else if (objLoopEnumerator is IDisposable objDispose)
+                                objDispose.Dispose();
+                        }
+                    }
+            }
+            int intFinalIndex = startIndex + count;
+            if (intFinalIndex >= lstStrings.Count)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            int intTotalLength = 0;
+            IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                int intIndex = 0;
+                while (objEnumerator.MoveNext())
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (intIndex++ < startIndex)
+                        continue;
+                    string strLoop = objEnumerator.Current;
+                    if (!string.IsNullOrEmpty(strLoop) && (intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                        return string.Concat(lstStrings);
+                    if (intIndex == intFinalIndex)
+                        break;
+                }
+                token.ThrowIfCancellationRequested();
+                objEnumerator.Reset();
+                token.ThrowIfCancellationRequested();
+                intIndex = 0;
+                // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                unsafe
+                {
+                    char* achrNewChars = stackalloc char[intTotalLength];
+                    // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                    int intCurrent = 0;
+                    while (objEnumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        if (intIndex++ < startIndex)
+                            continue;
+                        string strLoop = objEnumerator.Current;
+                        int intLoopLength = strLoop?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            fixed (char* src = strLoop)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                        }
+                        if (intIndex == intFinalIndex)
+                            break;
+                    }
+
+                    // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                    return new string(achrNewChars, 0, intCurrent);
+                }
+            }
+            finally
+            {
+                if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                    await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                else if (objEnumerator is IDisposable objDispose)
+                    objDispose.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but it is slower than the Concat methods that take a fixed number of strings as their argument.
+        /// </summary>
+        public static string ConcatFast(this string strArg0, string strArg1, string strArg2, string strArg3, string strArg4)
+        {
+            int intTotalLength = (strArg0?.Length ?? 0) + (strArg1?.Length ?? 0) + (strArg2?.Length ?? 0) + (strArg3?.Length ?? 0);
+            if (intTotalLength > Utils.MaxStackLimit16BitTypes)
+                return string.Concat(string.Concat(strArg0, strArg1, strArg2, strArg3), strArg4);
+            intTotalLength += (strArg4?.Length ?? 0);
+            if (intTotalLength > Utils.MaxStackLimit16BitTypes)
+                return string.Concat(string.Concat(strArg0, strArg1, strArg2, strArg3), strArg4);
+            // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+            unsafe
+            {
+                char* achrNewChars = stackalloc char[intTotalLength];
+                // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                int intCurrent = 0;
+                int intLoopLength = strArg0?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg0)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent = intLoopLength;
+                }
+                intLoopLength = strArg1?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg1)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg2?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg2)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg3?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg3)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg4?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg4)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+
+                // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                return new string(achrNewChars, 0, intCurrent);
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but it is slower than the Concat methods that take a fixed number of strings as their argument.
+        /// </summary>
+        public static string ConcatFast(this string strArg0, string strArg1, string strArg2, string strArg3, string strArg4, string strArg5)
+        {
+            int intTotalLength = (strArg0?.Length ?? 0) + (strArg1?.Length ?? 0) + (strArg2?.Length ?? 0) + (strArg3?.Length ?? 0);
+            if (intTotalLength > Utils.MaxStackLimit16BitTypes)
+                return string.Concat(string.Concat(strArg0, strArg1, strArg2, strArg3), strArg4, strArg5);
+            intTotalLength += (strArg4?.Length ?? 0) + (strArg5?.Length ?? 0);
+            if (intTotalLength > Utils.MaxStackLimit16BitTypes)
+                return string.Concat(string.Concat(strArg0, strArg1, strArg2, strArg3), strArg4, strArg5);
+            // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+            unsafe
+            {
+                char* achrNewChars = stackalloc char[intTotalLength];
+                // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                int intCurrent = 0;
+                int intLoopLength = strArg0?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg0)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent = intLoopLength;
+                }
+                intLoopLength = strArg1?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg1)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg2?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg2)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg3?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg3)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg4?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg4)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg5?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg5)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+
+                // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                return new string(achrNewChars, 0, intCurrent);
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Concat(string[])"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but it is slower than the Concat methods that take a fixed number of strings as their argument.
+        /// </summary>
+        public static string ConcatFast(this string strArg0, string strArg1, string strArg2, string strArg3, string strArg4, string strArg5, string strArg6)
+        {
+            int intTotalLength = (strArg0?.Length ?? 0) + (strArg1?.Length ?? 0) + (strArg2?.Length ?? 0) + (strArg3?.Length ?? 0);
+            if (intTotalLength > Utils.MaxStackLimit16BitTypes)
+                return string.Concat(string.Concat(strArg0, strArg1, strArg2, strArg3), strArg4, strArg5, strArg6);
+            intTotalLength += (strArg4?.Length ?? 0) + (strArg5?.Length ?? 0) + (strArg6?.Length ?? 0);
+            if (intTotalLength > Utils.MaxStackLimit16BitTypes)
+                return string.Concat(string.Concat(strArg0, strArg1, strArg2, strArg3), strArg4, strArg5, strArg6);
+            // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+            unsafe
+            {
+                char* achrNewChars = stackalloc char[intTotalLength];
+                // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                int intCurrent = 0;
+                int intLoopLength = strArg0?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg0)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent = intLoopLength;
+                }
+                intLoopLength = strArg1?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg1)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg2?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg2)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg3?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg3)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg4?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg4)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg5?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg5)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+                intLoopLength = strArg6?.Length ?? 0;
+                if (intLoopLength > 0)
+                {
+                    fixed (char* src = strArg6)
+                    {
+                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                    }
+                    intCurrent += intLoopLength;
+                }
+
+                // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                return new string(achrNewChars, 0, intCurrent);
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Join(string, IEnumerable{string})"> that is faster for shorter strings because it uses stackalloc instead of <see cref="StringBuilder">, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static string JoinFast(string strSeparator, IReadOnlyCollection<string> lstStrings)
+        {
+            int intStringsCount = lstStrings.Count;
+            // Handle trivial cases first
+            switch (intStringsCount)
+            {
+                case 0:
+                    return string.Empty;
+                case 1:
+                    return lstStrings.ElementAtBetter(0);
+                case 2:
+                    using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                    {
+                        objEnumerator.MoveNext();
+                        string str1 = objEnumerator.Current;
+                        objEnumerator.MoveNext();
+                        if (string.IsNullOrEmpty(str1))
+                        {
+                            return objEnumerator.Current;
+                        }
+                        else
+                        {
+                            string str2 = objEnumerator.Current;
+                            return string.IsNullOrEmpty(str2) ? str1 : string.Concat(str1, strSeparator, str2);
+                        }
+                    }
+            }
+            int intSeparatorLength = strSeparator.Length;
+            if (intSeparatorLength == 0)
+                return ConcatFast(lstStrings);
+            int intTotalLength = (intStringsCount - 1) * intSeparatorLength;
+            using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+            {
+                while (objEnumerator.MoveNext())
+                {
+                    string strLoop = objEnumerator.Current;
+                    if ((intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                        return string.Join(strSeparator, lstStrings);
+                }
+                objEnumerator.Reset();
+                if (objEnumerator.MoveNext())
+                {
+                    // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                    unsafe
+                    {
+                        char* achrNewChars = stackalloc char[intTotalLength];
+                        // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                        int intCurrent = 0;
+                        int intSeparatorByteLength = intSeparatorLength * sizeof(char);
+
+                        fixed (char* sep = strSeparator)
+                        {
+                            string strLoop = objEnumerator.Current;
+                            int intLoopLength = strLoop?.Length ?? 0;
+                            if (intLoopLength > 0)
+                            {
+                                fixed (char* src = strLoop)
+                                {
+                                    Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                }
+                                intCurrent = intLoopLength;
+                            }
+                            else
+                            {
+                                while (objEnumerator.MoveNext())
+                                {
+                                    strLoop = objEnumerator.Current;
+                                    intLoopLength = strLoop?.Length ?? 0;
+                                    if (intLoopLength > 0)
+                                    {
+                                        fixed (char* src = strLoop)
+                                        {
+                                            Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                        }
+                                        intCurrent = intLoopLength;
+                                        break;
+                                    }
+                                }
+                            }
+                            while (objEnumerator.MoveNext())
+                            {
+                                strLoop = objEnumerator.Current;
+                                intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                    intCurrent += intSeparatorLength;
+                                    fixed (char* src = strLoop)
+                                    {
+                                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                    }
+                                    intCurrent += intLoopLength;
+                                }
+                            }
+                        }
+                        // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                        return new string(achrNewChars, 0, intCurrent);
+                    }
+                }
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Join(string, IEnumerable{string})"> that is faster for shorter strings (including for string arrays because they have an unnecessary heap allocation) because it uses stackalloc, but is potentially slower if the string ends up being larger than our stackalloc limit.
+        /// </summary>
+        public static string JoinFast(string strSeparator, IEnumerable<string> lstStrings)
+        {
+            int intSeparatorLength = strSeparator.Length;
+            if (intSeparatorLength == 0)
+                return ConcatFast(lstStrings);
+            using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+            {
+                // Handle trivial cases first
+                if (!objEnumerator.MoveNext())
+                    return string.Empty;
+                string str1 = objEnumerator.Current;
+                if (!objEnumerator.MoveNext())
+                    return str1;
+                // Handle cases where we can rely on the internal Concat methods that do not need allocations and can make use of faster string construction
+                string str2 = objEnumerator.Current;
+                if (!objEnumerator.MoveNext())
+                {
+                    if (string.IsNullOrEmpty(str1))
+                        return str2;
+                    else
+                        return string.IsNullOrEmpty(str2) ? str1 : string.Concat(str1, strSeparator, str2);
+                }
+                string strLoop = objEnumerator.Current;
+                int intLoopLength = str1?.Length ?? 0;
+                if (!string.IsNullOrEmpty(str2))
+                {
+                    if (intLoopLength > 0)
+                        intLoopLength += intSeparatorLength;
+                    intLoopLength += str2.Length;
+                }
+                if (!string.IsNullOrEmpty(strLoop))
+                {
+                    if (intLoopLength > 0)
+                        intLoopLength += intSeparatorLength;
+                    intLoopLength += strLoop.Length;
+                }
+                if (intLoopLength > Utils.MaxStackLimit16BitTypes)
+                {
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                    {
+                        sbdReturn.EnsureCapacity(intLoopLength);
+                        sbdReturn.Append(str1);
+                        if (!string.IsNullOrEmpty(str2))
+                        {
+                            if (sbdReturn.Length > 0)
+                                sbdReturn.Append(strSeparator);
+                            sbdReturn.Append(str2);
+                        }
+                        if (!string.IsNullOrEmpty(strLoop))
+                        {
+                            if (sbdReturn.Length > 0)
+                                sbdReturn.Append(strSeparator);
+                            sbdReturn.Append(strLoop);
+                        }
+                        while (objEnumerator.MoveNext())
+                        {
+                            strLoop = objEnumerator.Current;
+                            if (!string.IsNullOrEmpty(strLoop))
+                                sbdReturn.Append(strSeparator).Append(objEnumerator.Current);
+                        }
+                        return sbdReturn.ToString();
+                    }
+                }
+
+                string strFirstPart = string.Empty;
+                string strSecondPart = string.Empty;
+                // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                unsafe
+                {
+                    char* achrNewChars = stackalloc char[Utils.MaxStackLimit16BitTypes];
+                    // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                    int intCurrent = 0;
+                    int intSeparatorByteLength = intSeparatorLength * sizeof(char);
+                    fixed (char* sep = strSeparator)
+                    {
+                        intLoopLength = str1?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            fixed (char* src = str1)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, Utils.MaxStackLimit16BitTypes * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent = intLoopLength;
+                        }
+                        intLoopLength = str2?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            if (intCurrent > 0)
+                            {
+                                Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                intCurrent += intSeparatorLength;
+                            }
+                            fixed (char* src = str2)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                        }
+                        intLoopLength = strLoop?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            if (intCurrent > 0)
+                            {
+                                Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                intCurrent += intSeparatorLength;
+                            }
+                            fixed (char* src = strLoop)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                        }
+                        else
+                        {
+                            while (objEnumerator.MoveNext())
+                            {
+                                strLoop = objEnumerator.Current;
+                                intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    if (intCurrent + intLoopLength + intSeparatorLength > Utils.MaxStackLimit16BitTypes)
+                                    {
+                                        strFirstPart = new string(achrNewChars, 0, intCurrent);
+                                        strSecondPart = strSeparator + strLoop;
+                                    }
+                                    else
+                                    {
+                                        if (intCurrent > 0)
+                                        {
+                                            Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                            intCurrent += intSeparatorLength;
+                                        }
+                                        fixed (char* src = strLoop)
+                                        {
+                                            Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, Utils.MaxStackLimit16BitTypes * sizeof(char), intLoopLength * sizeof(char));
+                                        }
+                                        intCurrent = intLoopLength;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        if (string.IsNullOrEmpty(strFirstPart))
+                        {
+                            while (objEnumerator.MoveNext())
+                            {
+                                strLoop = objEnumerator.Current;
+                                intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    if (intCurrent + intLoopLength + intSeparatorLength > Utils.MaxStackLimit16BitTypes)
+                                    {
+                                        strFirstPart = new string(achrNewChars, 0, intCurrent);
+                                        strSecondPart = strSeparator + strLoop;
+                                        break; // We want to exit out of the score where we did our stackalloc to free it up
+                                    }
+                                    Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                    intCurrent += intSeparatorLength;
+                                    fixed (char* src = strLoop)
+                                    {
+                                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                    }
+                                    intCurrent += intLoopLength;
+                                }
+                            }
+                        }
+                    }
+                    if (string.IsNullOrEmpty(strFirstPart))
+                    {
+                        // ... then we create a new string from the new CharArray
+                        return new string(achrNewChars, 0, intCurrent);
+                    }
+                }
+
+                // Backup for if our string ended up being too long
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                {
+                    sbdReturn.EnsureCapacity(strFirstPart.Length + strSecondPart.Length);
+                    sbdReturn.Append(strFirstPart).Append(strSecondPart);
+                    while (objEnumerator.MoveNext())
+                        sbdReturn.Append(strSeparator).Append(objEnumerator.Current);
+                    return sbdReturn.ToString();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Async version of <see cref="string.Join(string, IEnumerable{string})"> that is faster for shorter strings because it uses stackalloc instead of <see cref="StringBuilder">, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static Task<string> JoinFastAsync(string strSeparator, IAsyncReadOnlyCollection<string> lstStrings, CancellationToken token = default)
+        {
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled<string>(token);
+            int intStringsCount = lstStrings.Count;
+            // Handle trivial cases first
+            switch (intStringsCount)
+            {
+                case 0:
+                    return Task.FromResult(string.Empty);
+                case 1:
+                    return lstStrings.ElementAtBetterAsync(0, token);
+                case 2:
+                    return Inner2();
+                    async Task<string> Inner2()
+                    {
+                        IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                        try
+                        {
+                            objEnumerator.MoveNext();
+                            string str1 = objEnumerator.Current;
+                            objEnumerator.MoveNext();
+                            if (string.IsNullOrEmpty(str1))
+                            {
+                                return objEnumerator.Current;
+                            }
+                            else
+                            {
+                                string str2 = objEnumerator.Current;
+                                return string.IsNullOrEmpty(str2) ? str1 : string.Concat(str1, strSeparator, str2);
+                            }
+                        }
+                        finally
+                        {
+                            if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                                await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                            else if (objEnumerator is IDisposable objDispose)
+                                objDispose.Dispose();
+                        }
+                    }
+            }
+            return Inner();
+            async Task<string> Inner()
+            {
+                int intSeparatorLength = strSeparator.Length;
+                if (intSeparatorLength == 0)
+                    return await ConcatFastAsync(lstStrings, token).ConfigureAwait(false);
+                int intTotalLength = (intStringsCount - 1) * intSeparatorLength;
+                IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                try
+                {
+                    while (objEnumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        string strLoop = objEnumerator.Current;
+                        if ((intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                            return string.Join(strSeparator, lstStrings);
+                    }
+                    objEnumerator.Reset();
+                    token.ThrowIfCancellationRequested();
+                    if (objEnumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                        unsafe
+                        {
+                            char* achrNewChars = stackalloc char[intTotalLength];
+                            // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                            int intCurrent = 0;
+                            int intSeparatorByteLength = intSeparatorLength * sizeof(char);
+
+                            fixed (char* sep = strSeparator)
+                            {
+                                string strLoop = objEnumerator.Current;
+                                int intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    fixed (char* src = strLoop)
+                                    {
+                                        Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                    }
+                                    intCurrent = intLoopLength;
+                                }
+                                else
+                                {
+                                    while (objEnumerator.MoveNext())
+                                    {
+                                        token.ThrowIfCancellationRequested();
+                                        strLoop = objEnumerator.Current;
+                                        intLoopLength = strLoop?.Length ?? 0;
+                                        if (intLoopLength > 0)
+                                        {
+                                            fixed (char* src = strLoop)
+                                            {
+                                                Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                            }
+                                            intCurrent = intLoopLength;
+                                            break;
+                                        }
+                                    }
+                                }
+                                while (objEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    strLoop = objEnumerator.Current;
+                                    intLoopLength = strLoop?.Length ?? 0;
+                                    if (intLoopLength > 0)
+                                    {
+                                        Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                        intCurrent += intSeparatorLength;
+                                        fixed (char* src = strLoop)
+                                        {
+                                            Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                        }
+                                        intCurrent += intLoopLength;
+                                    }
+                                }
+                            }
+                            // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                            return new string(achrNewChars, 0, intCurrent);
+                        }
+                    }
+                }
+                finally
+                {
+                    if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                        await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                    else if (objEnumerator is IDisposable objDispose)
+                        objDispose.Dispose();
+                }
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Async version of <see cref="string.Join(string, IEnumerable{string})"> that is faster for shorter strings because it uses stackalloc instead of <see cref="StringBuilder">, but needs to enumerate over the input strings twice and so needs a collection as an input.
+        /// </summary>
+        public static async Task<string> JoinFastAsync(string strSeparator, IAsyncEnumerable<string> lstStrings, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            int intSeparatorLength = strSeparator.Length;
+            if (intSeparatorLength == 0)
+                return await ConcatFastAsync(lstStrings, token).ConfigureAwait(false);
+            IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                // Handle trivial cases first
+                if (!objEnumerator.MoveNext())
+                    return string.Empty;
+                token.ThrowIfCancellationRequested();
+                string str1 = objEnumerator.Current;
+                if (!objEnumerator.MoveNext())
+                    return str1;
+                token.ThrowIfCancellationRequested();
+                // Handle cases where we can rely on the internal Concat methods that do not need allocations and can make use of faster string construction
+                string str2 = objEnumerator.Current;
+                if (!objEnumerator.MoveNext())
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (string.IsNullOrEmpty(str1))
+                        return str2;
+                    else
+                        return string.IsNullOrEmpty(str2) ? str1 : string.Concat(str1, strSeparator, str2);
+                }
+                token.ThrowIfCancellationRequested();
+                string strLoop = objEnumerator.Current;
+                int intLoopLength = str1?.Length ?? 0;
+                if (!string.IsNullOrEmpty(str2))
+                {
+                    if (intLoopLength > 0)
+                        intLoopLength += intSeparatorLength;
+                    intLoopLength += str2.Length;
+                }
+                token.ThrowIfCancellationRequested();
+                if (!string.IsNullOrEmpty(strLoop))
+                {
+                    if (intLoopLength > 0)
+                        intLoopLength += intSeparatorLength;
+                    intLoopLength += strLoop.Length;
+                }
+                token.ThrowIfCancellationRequested();
+                if (intLoopLength > Utils.MaxStackLimit16BitTypes)
+                {
+                    token.ThrowIfCancellationRequested();
+                    using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.EnsureCapacity(intLoopLength);
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(str1);
+                        token.ThrowIfCancellationRequested();
+                        if (!string.IsNullOrEmpty(str2))
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (sbdReturn.Length > 0)
+                                sbdReturn.Append(strSeparator);
+                            sbdReturn.Append(str2);
+                        }
+                        if (!string.IsNullOrEmpty(strLoop))
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (sbdReturn.Length > 0)
+                                sbdReturn.Append(strSeparator);
+                            sbdReturn.Append(strLoop);
+                        }
+                        while (objEnumerator.MoveNext())
+                        {
+                            token.ThrowIfCancellationRequested();
+                            strLoop = objEnumerator.Current;
+                            if (!string.IsNullOrEmpty(strLoop))
+                                sbdReturn.Append(strSeparator).Append(objEnumerator.Current);
+                        }
+                        token.ThrowIfCancellationRequested();
+                        return sbdReturn.ToString();
+                    }
+                }
+
+                string strFirstPart = string.Empty;
+                string strSecondPart = string.Empty;
+                token.ThrowIfCancellationRequested();
+                // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                unsafe
+                {
+                    char* achrNewChars = stackalloc char[Utils.MaxStackLimit16BitTypes];
+                    // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                    int intCurrent = 0;
+                    int intSeparatorByteLength = intSeparatorLength * sizeof(char);
+                    fixed (char* sep = strSeparator)
+                    {
+                        intLoopLength = str1?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            fixed (char* src = str1)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, Utils.MaxStackLimit16BitTypes * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent = intLoopLength;
+                            token.ThrowIfCancellationRequested();
+                        }
+                        intLoopLength = str2?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (intCurrent > 0)
+                            {
+                                Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                intCurrent += intSeparatorLength;
+                            }
+                            token.ThrowIfCancellationRequested();
+                            fixed (char* src = str2)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                            token.ThrowIfCancellationRequested();
+                        }
+                        intLoopLength = strLoop?.Length ?? 0;
+                        if (intLoopLength > 0)
+                        {
+                            token.ThrowIfCancellationRequested();
+                            if (intCurrent > 0)
+                            {
+                                Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                intCurrent += intSeparatorLength;
+                            }
+                            token.ThrowIfCancellationRequested();
+                            fixed (char* src = strLoop)
+                            {
+                                Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                            }
+                            intCurrent += intLoopLength;
+                            token.ThrowIfCancellationRequested();
+                        }
+                        else
+                        {
+                            while (objEnumerator.MoveNext())
+                            {
+                                token.ThrowIfCancellationRequested();
+                                strLoop = objEnumerator.Current;
+                                intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    if (intCurrent + intLoopLength + intSeparatorLength > Utils.MaxStackLimit16BitTypes)
+                                    {
+                                        strFirstPart = new string(achrNewChars, 0, intCurrent);
+                                        strSecondPart = strSeparator + strLoop;
+                                    }
+                                    else
+                                    {
+                                        if (intCurrent > 0)
+                                        {
+                                            Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                            intCurrent += intSeparatorLength;
+                                        }
+                                        fixed (char* src = strLoop)
+                                        {
+                                            Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, Utils.MaxStackLimit16BitTypes * sizeof(char), intLoopLength * sizeof(char));
+                                        }
+                                        intCurrent = intLoopLength;
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        if (string.IsNullOrEmpty(strFirstPart))
+                        {
+                            while (objEnumerator.MoveNext())
+                            {
+                                token.ThrowIfCancellationRequested();
+                                strLoop = objEnumerator.Current;
+                                intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    if (intCurrent + intLoopLength + intSeparatorLength > Utils.MaxStackLimit16BitTypes)
+                                    {
+                                        strFirstPart = new string(achrNewChars, 0, intCurrent);
+                                        strSecondPart = strSeparator + strLoop;
+                                        break; // We want to exit out of the score where we did our stackalloc to free it up
+                                    }
+                                    token.ThrowIfCancellationRequested();
+                                    Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                    intCurrent += intSeparatorLength;
+                                    token.ThrowIfCancellationRequested();
+                                    fixed (char* src = strLoop)
+                                    {
+                                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (Utils.MaxStackLimit16BitTypes - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                    }
+                                    intCurrent += intLoopLength;
+                                    token.ThrowIfCancellationRequested();
+                                }
+                            }
+                        }
+                    }
+                    if (string.IsNullOrEmpty(strFirstPart))
+                    {
+                        token.ThrowIfCancellationRequested();
+                        // ... then we create a new string from the new CharArray
+                        return new string(achrNewChars, 0, intCurrent);
+                    }
+                }
+
+                token.ThrowIfCancellationRequested();
+                // Backup for if our string ended up being too long
+                using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
+                {
+                    token.ThrowIfCancellationRequested();
+                    sbdReturn.EnsureCapacity(strFirstPart.Length + strSecondPart.Length);
+                    token.ThrowIfCancellationRequested();
+                    sbdReturn.Append(strFirstPart);
+                    token.ThrowIfCancellationRequested();
+                    sbdReturn.Append(strSecondPart);
+                    token.ThrowIfCancellationRequested();
+                    while (objEnumerator.MoveNext())
+                    {
+                        token.ThrowIfCancellationRequested();
+                        sbdReturn.Append(strSeparator).Append(objEnumerator.Current);
+                    }
+                    token.ThrowIfCancellationRequested();
+                    return sbdReturn.ToString();
+                }
+            }
+            finally
+            {
+                if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                    await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                else if (objEnumerator is IDisposable objDispose)
+                    objDispose.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Join(string, string[], int, int)"> that is faster for non-arrays because it does not need to transform the collection to an array first.
+        /// </summary>
+        public static string JoinFast(string strSeparator, IReadOnlyCollection<string> lstStrings, int startIndex, int count)
+        {
+            // Handle trivial cases first
+            switch (count)
+            {
+                case 0:
+                    return string.Empty;
+                case 1:
+                    return lstStrings.ElementAtBetter(startIndex);
+                case 2:
+                    using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+                    {
+                        for (int i = 0; i < startIndex; ++i)
+                        {
+                            if (!objEnumerator.MoveNext())
+                                throw new ArgumentOutOfRangeException(nameof(count));
+                        }
+                        objEnumerator.MoveNext();
+                        string str1 = objEnumerator.Current;
+                        objEnumerator.MoveNext();
+                        if (string.IsNullOrEmpty(str1))
+                        {
+                            return objEnumerator.Current;
+                        }
+                        else
+                        {
+                            string str2 = objEnumerator.Current;
+                            return string.IsNullOrEmpty(str2) ? str1 : string.Concat(str1, strSeparator, str2);
+                        }
+                    }
+            }
+            int intFinalIndex = startIndex + count;
+            if (intFinalIndex >= lstStrings.Count)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            int intSeparatorLength = strSeparator.Length;
+            if (intSeparatorLength == 0)
+                return ConcatFast(lstStrings, startIndex, count);
+            int intTotalLength = (count - 1) * intSeparatorLength;
+            using (IEnumerator<string> objEnumerator = lstStrings.GetEnumerator())
+            {
+                int intIndex = 0;
+                while (objEnumerator.MoveNext())
+                {
+                    if (intIndex++ < startIndex)
+                        continue;
+                    string strLoop = objEnumerator.Current;
+                    if ((intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                        return string.Join(strSeparator, lstStrings);
+                    if (intIndex == intFinalIndex)
+                        break;
+                }
+                intIndex = 0;
+                objEnumerator.Reset();
+                if (startIndex > 0)
+                {
+                    while (objEnumerator.MoveNext())
+                    {
+                        if (++intIndex == startIndex)
+                            break;
+                    }
+                }
+                if (objEnumerator.MoveNext())
+                {
+                    // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                    unsafe
+                    {
+                        char* achrNewChars = stackalloc char[intTotalLength];
+                        // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                        int intCurrent = 0;
+                        int intSeparatorByteLength = intSeparatorLength * sizeof(char);
+
+                        fixed (char* sep = strSeparator)
+                        {
+                            string strLoop = objEnumerator.Current;
+                            int intLoopLength = strLoop?.Length ?? 0;
+                            if (intLoopLength > 0)
+                            {
+                                fixed (char* src = strLoop)
+                                {
+                                    Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                }
+                                intCurrent = intLoopLength;
+                            }
+                            else
+                            {
+                                while (objEnumerator.MoveNext())
+                                {
+                                    strLoop = objEnumerator.Current;
+                                    intLoopLength = strLoop?.Length ?? 0;
+                                    if (intLoopLength > 0)
+                                    {
+                                        fixed (char* src = strLoop)
+                                        {
+                                            Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                        }
+                                        intCurrent = intLoopLength;
+                                        break;
+                                    }
+                                }
+                            }
+                            while (objEnumerator.MoveNext())
+                            {
+                                strLoop = objEnumerator.Current;
+                                intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                    intCurrent += intSeparatorLength;
+                                    fixed (char* src = strLoop)
+                                    {
+                                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                    }
+                                    intCurrent += intLoopLength;
+                                }
+                                if (++intIndex == intFinalIndex)
+                                    break;
+                            }
+                        }
+                        // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                        return new string(achrNewChars, 0, intCurrent);
+                    }
+                }
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Join(string, string[], int, int)"> that is faster for non-arrays because it does not need to transform the collection to an array first.
+        /// </summary>
+        public static async Task<string> JoinFastAsync(string strSeparator, IAsyncReadOnlyCollection<string> lstStrings, int startIndex, int count, CancellationToken token = default)
+        {
+            token.ThrowIfCancellationRequested();
+            // Handle trivial cases first
+            switch (count)
+            {
+                case 0:
+                    return string.Empty;
+                case 1:
+                    return await lstStrings.ElementAtBetterAsync(startIndex, token).ConfigureAwait(false);
+                case 2:
+                    IEnumerator<string> objLoopEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+                    try
+                    {
+                        for (int i = 0; i < startIndex; ++i)
+                        {
+                            if (!objLoopEnumerator.MoveNext())
+                                throw new ArgumentOutOfRangeException(nameof(count));
+                        }
+                        objLoopEnumerator.MoveNext();
+                        string str1 = objLoopEnumerator.Current;
+                        objLoopEnumerator.MoveNext();
+                        if (string.IsNullOrEmpty(str1))
+                        {
+                            return objLoopEnumerator.Current;
+                        }
+                        else
+                        {
+                            string str2 = objLoopEnumerator.Current;
+                            return string.IsNullOrEmpty(str2) ? str1 : string.Concat(str1, strSeparator, str2);
+                        }
+                    }
+                    finally
+                    {
+                        if (objLoopEnumerator is IAsyncDisposable objDisposeAsync)
+                            await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                        else if (objLoopEnumerator is IDisposable objDispose)
+                            objDispose.Dispose();
+                    }
+            }
+            int intFinalIndex = startIndex + count;
+            if (intFinalIndex >= lstStrings.Count)
+                throw new ArgumentOutOfRangeException(nameof(count));
+            int intSeparatorLength = strSeparator.Length;
+            if (intSeparatorLength == 0)
+                return await ConcatFastAsync(lstStrings, startIndex, count, token).ConfigureAwait(false);
+            int intTotalLength = (count - 1) * intSeparatorLength;
+            IEnumerator<string> objEnumerator = await lstStrings.GetEnumeratorAsync(token).ConfigureAwait(false);
+            try
+            {
+                int intIndex = 0;
+                while (objEnumerator.MoveNext())
+                {
+                    if (intIndex++ < startIndex)
+                        continue;
+                    token.ThrowIfCancellationRequested();
+                    string strLoop = objEnumerator.Current;
+                    if ((intTotalLength += strLoop.Length) > Utils.MaxStackLimit16BitTypes)
+                        return string.Join(strSeparator, lstStrings);
+                    if (intIndex == intFinalIndex)
+                        break;
+                }
+                objEnumerator.Reset();
+                intIndex = 0;
+                if (startIndex > 0)
+                {
+                    while (objEnumerator.MoveNext())
+                    {
+                        if (++intIndex == startIndex)
+                            break;
+                    }
+                }
+                token.ThrowIfCancellationRequested();
+                if (objEnumerator.MoveNext())
+                {
+                    token.ThrowIfCancellationRequested();
+                    // Stackalloc is faster than a heap-allocated array, but string constructor requires use of unsafe context because there are no overloads for Span<char>
+                    unsafe
+                    {
+                        char* achrNewChars = stackalloc char[intTotalLength];
+                        // What we're doing here is copying the string-as-CharArray via memory blocks into a new CharArray
+                        int intCurrent = 0;
+                        int intSeparatorByteLength = intSeparatorLength * sizeof(char);
+
+                        fixed (char* sep = strSeparator)
+                        {
+                            string strLoop = objEnumerator.Current;
+                            int intLoopLength = strLoop?.Length ?? 0;
+                            if (intLoopLength > 0)
+                            {
+                                fixed (char* src = strLoop)
+                                {
+                                    Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                }
+                                intCurrent = intLoopLength;
+                            }
+                            else
+                            {
+                                while (objEnumerator.MoveNext())
+                                {
+                                    token.ThrowIfCancellationRequested();
+                                    strLoop = objEnumerator.Current;
+                                    intLoopLength = strLoop?.Length ?? 0;
+                                    if (intLoopLength > 0)
+                                    {
+                                        fixed (char* src = strLoop)
+                                        {
+                                            Buffer.MemoryCopy((byte*)src, (byte*)achrNewChars, intTotalLength * sizeof(char), intLoopLength * sizeof(char));
+                                        }
+                                        intCurrent = intLoopLength;
+                                        break;
+                                    }
+                                    if (++intIndex == intFinalIndex)
+                                        break;
+                                }
+                            }
+                            while (objEnumerator.MoveNext())
+                            {
+                                token.ThrowIfCancellationRequested();
+                                strLoop = objEnumerator.Current;
+                                intLoopLength = strLoop?.Length ?? 0;
+                                if (intLoopLength > 0)
+                                {
+                                    Buffer.MemoryCopy((byte*)sep, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intSeparatorByteLength);
+                                    intCurrent += intSeparatorLength;
+                                    fixed (char* src = strLoop)
+                                    {
+                                        Buffer.MemoryCopy((byte*)src, (byte*)(achrNewChars + intCurrent), (intTotalLength - intCurrent) * sizeof(char), intLoopLength * sizeof(char));
+                                    }
+                                    intCurrent += intLoopLength;
+                                }
+                                if (++intIndex == intFinalIndex)
+                                    break;
+                            }
+                        }
+                        // ... then we create a new string from the new CharArray (using intCurrent just in case)
+                        return new string(achrNewChars, 0, intCurrent);
+                    }
+                }
+            }
+            finally
+            {
+                if (objEnumerator is IAsyncDisposable objDisposeAsync)
+                    await objDisposeAsync.DisposeAsync().ConfigureAwait(false);
+                else if (objEnumerator is IDisposable objDispose)
+                    objDispose.Dispose();
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Async version of <see cref="string.Join(string, IEnumerable{string})"/>, but on an enumerable of string tasks instead of an enumerable of strings.
+        /// </summary>
         public static async Task<string> JoinAsync(string strSeparator, IEnumerable<Task<string>> lstStringTasks,
                                                    CancellationToken token = default)
         {
@@ -64,7 +2322,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Identical to string::Replace(), but the comparison for equality is custom-defined instead of always being case-sensitive Ordinal
+        /// Identical to <see cref="string.Replace(string, string)"/>, but the comparison for equality is custom-defined instead of always being case-sensitive Ordinal
         /// </summary>
         /// <param name="strInput">String on which to operate</param>
         /// <param name="strOldValue">Substring to replace</param>
@@ -108,7 +2366,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Method to quickly remove all instances of a char from a string (much faster than using Replace() with an empty string)
+        /// Method to quickly remove all instances of a char from a string (much faster than using <see cref="string.Replace(string, string)"/> with an empty string)
         /// </summary>
         /// <param name="strInput">String on which to operate</param>
         /// <param name="chrToDelete">Character to remove</param>
@@ -120,7 +2378,7 @@ namespace Chummer
             int intLength = strInput.Length;
             if (intLength == 0)
                 return strInput;
-            if (intLength > GlobalSettings.MaxStackLimit)
+            if (intLength > Utils.MaxStackLimit16BitTypes)
             {
                 string strReturn;
                 using (new FetchSafelyFromArrayPool<char>(ArrayPool<char>.Shared, intLength, out char[] achrNewChars))
@@ -160,7 +2418,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Method to quickly remove all instances of all chars in an array from a string (much faster than using a series of Replace() with an empty string)
+        /// Method to quickly remove all instances of all chars in an array from a string (much faster than using a series of <see cref="string.Replace(string, string)"/> with an empty string)
         /// </summary>
         /// <param name="strInput">String on which to operate</param>
         /// <param name="achrToDelete">Array of characters to remove</param>
@@ -175,7 +2433,7 @@ namespace Chummer
             int intLength = strInput.Length;
             if (intLength == 0)
                 return strInput;
-            if (intLength > GlobalSettings.MaxStackLimit)
+            if (intLength > Utils.MaxStackLimit16BitTypes)
             {
                 string strReturn;
                 using (new FetchSafelyFromArrayPool<char>(ArrayPool<char>.Shared, intLength, out char[] achrNewChars))
@@ -235,7 +2493,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Method to quickly remove all instances of a substring from a string (should be faster than using Replace() with an empty string)
+        /// Method to quickly remove all instances of a substring from a string (should be faster than using <see cref="string.Replace(string, string)"/> with an empty string)
         /// </summary>
         /// <param name="strInput">String on which to operate</param>
         /// <param name="strSubstringToDelete">Substring to remove</param>
@@ -301,7 +2559,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for string::IndexOfAny that uses params in its argument for the char array.
+        /// Syntactic sugar for <see cref="string.IndexOfAny(char[])"/> that uses params in its argument for the char array.
         /// </summary>
         /// <param name="strHaystack">String to search.</param>
         /// <param name="anyOf">Array of characters to match with IndexOfAny</param>
@@ -429,7 +2687,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for string::LastIndexOfAny that uses params in its argument for the char array.
+        /// Syntactic sugar for <see cref="string.LastIndexOfAny(char[])"/> that uses params in its argument for the char array.
         /// </summary>
         /// <param name="strHaystack">String to search.</param>
         /// <param name="anyOf">Array of characters to match with LastIndexOfAny</param>
@@ -562,7 +2820,20 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for string::Split that uses one separator char in its argument in addition to StringSplitOptions.
+        /// Syntactic sugar for <see cref="string.Split(char[])"> that uses one separator char in its argument.
+        /// </summary>
+        /// <param name="strInput">String to search.</param>
+        /// <param name="chrSeparator">Separator to use.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string[] Split(this string strInput, char chrSeparator)
+        {
+            if (strInput == null)
+                throw new ArgumentNullException(nameof(strInput));
+            return strInput.Split(new[] { chrSeparator });
+        }
+
+        /// <summary>
+        /// Syntactic sugar for <see cref="string.Split(char[], StringSplitOptions)"> that uses one separator char in its argument.
         /// </summary>
         /// <param name="strInput">String to search.</param>
         /// <param name="chrSeparator">Separator to use.</param>
@@ -576,7 +2847,35 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for string::Split that uses one separator string in its argument in addition to StringSplitOptions.
+        /// Syntactic sugar for <see cref="string.Split(char[], int)"> that uses one separator char in its argument.
+        /// </summary>
+        /// <param name="strInput">String to search.</param>
+        /// <param name="intCount">The maximum number of substrings to return.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string[] Split(this string strInput, char chrSeparator, int intCount)
+        {
+            if (strInput == null)
+                throw new ArgumentNullException(nameof(strInput));
+            return strInput.Split(new[] { chrSeparator }, intCount);
+        }
+
+        /// <summary>
+        /// Syntactic sugar for <see cref="string.Split(char[], int, StringSplitOptions)"> that uses one separator char in its argument.
+        /// </summary>
+        /// <param name="strInput">String to search.</param>
+        /// <param name="chrSeparator">Separator to use.</param>
+        /// <param name="intCount">The maximum number of substrings to return.</param>
+        /// <param name="eSplitOptions">String split options.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string[] Split(this string strInput, char chrSeparator, int intCount, StringSplitOptions eSplitOptions)
+        {
+            if (strInput == null)
+                throw new ArgumentNullException(nameof(strInput));
+            return strInput.Split(new[] { chrSeparator }, intCount, eSplitOptions);
+        }
+
+        /// <summary>
+        /// Syntactic sugar for <see cref="string.Split(string[], StringSplitOptions)"/> that uses one separator string in its argument.
         /// </summary>
         /// <param name="strInput">String to search.</param>
         /// <param name="strSeparator">Separator to use.</param>
@@ -587,6 +2886,21 @@ namespace Chummer
             if (strInput == null)
                 throw new ArgumentNullException(nameof(strInput));
             return strInput.Split(new[] { strSeparator }, eSplitOptions);
+        }
+
+        /// <summary>
+        /// Syntactic sugar for <see cref="string.Split(string[], int, StringSplitOptions)"/> that uses one separator string in its argument.
+        /// </summary>
+        /// <param name="strInput">String to search.</param>
+        /// <param name="strSeparator">Separator to use.</param>
+        /// <param name="intCount">The maximum number of substrings to return.</param>
+        /// <param name="eSplitOptions">String split options.</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string[] Split(this string strInput, string strSeparator, int intCount, StringSplitOptions eSplitOptions)
+        {
+            if (strInput == null)
+                throw new ArgumentNullException(nameof(strInput));
+            return strInput.Split(new[] { strSeparator }, intCount, eSplitOptions);
         }
 
         /// <summary>
@@ -647,7 +2961,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of string::Split()
+        /// Version of <see cref="StringExtensions.Split(string, char, StringSplitOptions)"> that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of <see cref="string.Split"/>.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="chrSplit">Character to use for splitting.</param>
@@ -678,7 +2992,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of string::Split()
+        /// Version of <see cref="StringExtensions.Split(string, char, int, StringSplitOptions)"> that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of <see cref="string.Split"/>.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="chrSplit">Character to use for splitting.</param>
@@ -714,7 +3028,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of string::Split()
+        /// Version of <see cref="StringExtensions.Split(string, string, StringSplitOptions)"> that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of <see cref="string.Split"/>.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="strSplit">String to use for splitting.</param>
@@ -753,7 +3067,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of string::Split()
+        /// Version of <see cref="StringExtensions.Split(string, string, int, StringSplitOptions)"> that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of <see cref="string.Split"/>.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="strSplit">String to use for splitting.</param>
@@ -797,21 +3111,34 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of string::Split()
+        /// Version of <see cref="string.Split(char[])"> that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of <see cref="string.Split"/>.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="achrSplit">Characters to use for splitting.</param>
         /// <returns>Enumerable containing substrings of <paramref name="strInput"/> split based on <paramref name="achrSplit"/></returns>
         public static IEnumerable<string> SplitNoAlloc(this string strInput, params char[] achrSplit)
         {
+            return SplitNoAlloc(strInput, StringSplitOptions.None, achrSplit);
+        }
+
+        /// <summary>
+        /// Version of <see cref="string.Split(char[], StringSplitOptions)"> that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of <see cref="string.Split"/>.
+        /// </summary>
+        /// <param name="strInput">Input textblock.</param>
+        /// <param name="achrSplit">Characters to use for splitting.</param>
+        /// <returns>Enumerable containing substrings of <paramref name="strInput"/> split based on <paramref name="achrSplit"/></returns>
+        public static IEnumerable<string> SplitNoAlloc(this string strInput, StringSplitOptions eSplitOptions, params char[] achrSplit)
+        {
             if (string.IsNullOrEmpty(strInput))
             {
-                yield return string.Empty;
+                if (eSplitOptions != StringSplitOptions.RemoveEmptyEntries)
+                    yield return string.Empty;
                 yield break;
             }
             if (achrSplit.Length == 0)
             {
-                yield return strInput;
+                if (eSplitOptions != StringSplitOptions.RemoveEmptyEntries)
+                    yield return strInput;
                 yield break;
             }
             int intLoopLength;
@@ -821,13 +3148,19 @@ namespace Chummer
                 if (intLoopLength < 0)
                     intLoopLength = strInput.Length;
                 intLoopLength -= intStart;
-                yield return intLoopLength != 0 ? strInput.Substring(intStart, intLoopLength) : string.Empty;
+                if (intLoopLength == 0)
+                {
+                    if (eSplitOptions != StringSplitOptions.RemoveEmptyEntries)
+                        yield return string.Empty;
+                }
+                else
+                    yield return strInput.Substring(intStart, intLoopLength);
             }
         }
 
         /// <summary>
-        /// Version of string::Split() that guarantees that the returned string will be of a specific size, padding with string.Empty when needed.
-        /// Slightly faster than built-in versions of string:Split() because fewer allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
+        /// Version of <see cref="StringExtensions.Split(string, char, int, StringSplitOptions)"> that guarantees that the returned string will be of a specific size, padding with <see cref="string.Empty"> when needed.
+        /// Slightly faster than built-in versions of <see cref="string.Split"> because fewer allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="intSize">Size of the array to return.</param>
@@ -868,8 +3201,8 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that guarantees that the returned string will be of a specific size, padding with string.Empty when needed.
-        /// Slightly faster than built-in versions of string:Split() because fewer allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
+        /// Version of <see cref="StringExtensions.Split(string, string, int, StringSplitOptions)"> that guarantees that the returned string will be of a specific size, padding with <see cref="string.Empty"> when needed.
+        /// Slightly faster than built-in versions of <see cref="string.Split"> because fewer allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="intSize">Size of the array to return.</param>
@@ -913,8 +3246,8 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that guarantees that the returned string will be of a specific size, padding with string.Empty when needed.
-        /// Slightly faster than built-in versions of string:Split() because fewer allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
+        /// Version of <see cref="string.Split(char[], int)"> that guarantees that the returned string will be of a specific size, padding with <see cref="string.Empty"> when needed.
+        /// Slightly faster than built-in versions of <see cref="string.Split"> because fewer allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="intSize">Size of the array to return.</param>
@@ -951,9 +3284,9 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that returns an array from ArrayPool.Shared instead of allocating it, and only splits to a specific array size, padding with string.Empty when necessary.
-        /// Slightly faster than built-in versions of string:Split() because no allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
-        /// Remember to return the result to ArrayPool.Shared when finished with it!
+        /// Version of <see cref="string.Split(char[], int, StringSplitOptions)"> that returns an array from <see cref="ArrayPool{string}.Shared"/> instead of allocating it, and only splits to a specific array size, padding with <see cref="string.Empty"> when necessary.
+        /// Slightly faster than built-in versions of <see cref="string.Split"> because no allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
+        /// Remember to return the result to <see cref="ArrayPool{string}.Shared"/> when finished with it!
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="intSize">Size of the array to return.</param>
@@ -1004,9 +3337,9 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that returns an array from ArrayPool.Shared instead of allocating it, and only splits to a specific array size, padding with string.Empty when necessary.
-        /// Slightly faster than built-in versions of string:Split() because no allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
-        /// Remember to return the result to ArrayPool.Shared when finished with it!
+        /// Version of <see cref="StringExtensions.Split(string, string, int, StringSplitOptions)"> that returns an array from <see cref="ArrayPool{string}.Shared"/> instead of allocating it, and only splits to a specific array size, padding with <see cref="string.Empty"> when necessary.
+        /// Slightly faster than built-in versions of <see cref="string.Split"> because no allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
+        /// Remember to return the result to <see cref="ArrayPool{string}.Shared"/> when finished with it!
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="intSize">Size of the array to return.</param>
@@ -1060,9 +3393,9 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that returns an array from ArrayPool.Shared instead of allocating it, and only splits to a specific array size, padding with string.Empty when necessary.
-        /// Slightly faster than built-in versions of string:Split() because no allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
-        /// Remember to return the result to ArrayPool.Shared when finished with it!
+        /// Version of <see cref="string.Split(char[], int)"> that returns an array from <see cref="ArrayPool{string}.Shared"/> instead of allocating it, and only splits to a specific array size, padding with <see cref="string.Empty"> when necessary.
+        /// Slightly faster than built-in versions of <see cref="string.Split"> because no allocations are needed and there is no need to search ahead for how many elements should be in the returned array.
+        /// Remember to return the result to <see cref="ArrayPool{string}.Shared"/> when finished with it!
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="intSize">Size of the array to return.</param>
@@ -1109,13 +3442,13 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
+        /// Version of <see cref="StringExtensions.Split(string, char, StringSplitOptions)"> that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="arrayLength">Length of the returned array. Needs to be stored and handled separately because we cannot guarantee that a pooled array will not be longer than necessary for the split.</param>
         /// <param name="chrSplit">Character to use for splitting.</param>
         /// <param name="eSplitOptions">Optional argument that can be used to skip over empty entries.</param>
-        /// <returns>String array rented from ArrayPool{string}.Shared containing substrings of <paramref name="strInput"/> split based on <paramref name="chrSplit"/></returns>
+        /// <returns>String array rented from <see cref="ArrayPool{string}.Shared"/> containing substrings of <paramref name="strInput"/> split based on <paramref name="chrSplit"/></returns>
         public static string[] SplitToPooledArray(this string strInput, out int arrayLength, char chrSplit,
                                                        StringSplitOptions eSplitOptions = StringSplitOptions.None)
         {
@@ -1170,14 +3503,14 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
+        /// Version of <see cref="StringExtensions.Split(string, char, int, StringSplitOptions)"> that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="arrayLength">Length of the returned array. Needs to be stored and handled separately because we cannot guarantee that a pooled array will not be longer than necessary for the split.</param>
         /// <param name="chrSplit">Character to use for splitting.</param>
         /// <param name="intCount">The maximum number of substrings to return.</param>
         /// <param name="eSplitOptions">Optional argument that can be used to skip over empty entries.</param>
-        /// <returns>String array rented from ArrayPool{string}.Shared containing substrings of <paramref name="strInput"/> split based on <paramref name="chrSplit"/></returns>
+        /// <returns>String array rented from <see cref="ArrayPool{string}.Shared"/> containing substrings of <paramref name="strInput"/> split based on <paramref name="chrSplit"/></returns>
         public static string[] SplitToPooledArray(this string strInput, out int arrayLength, char chrSplit, int intCount,
                                                        StringSplitOptions eSplitOptions = StringSplitOptions.None)
         {
@@ -1238,14 +3571,14 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
+        /// Version of <see cref="StringExtensions.Split(string, string, StringSplitOptions)"> that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="arrayLength">Length of the returned array. Needs to be stored and handled separately because we cannot guarantee that a pooled array will not be longer than necessary for the split.</param>
         /// <param name="strSplit">String to use for splitting.</param>
         /// <param name="eSplitOptions">Optional argument that can be used to skip over empty entries.</param>
         /// <param name="eComparison">Comparison to use when searching for the next instance of <paramref name="strSplit"/>.</param>
-        /// <returns>String array rented from ArrayPool{string}.Shared containing substrings of <paramref name="strInput"/> split based on <paramref name="strSplit"/></returns>
+        /// <returns>String array rented from <see cref="ArrayPool{string}.Shared"/> containing substrings of <paramref name="strInput"/> split based on <paramref name="strSplit"/></returns>
         public static string[] SplitToPooledArray(this string strInput, out int arrayLength, string strSplit,
                                                        StringSplitOptions eSplitOptions = StringSplitOptions.None, StringComparison eComparison = StringComparison.Ordinal)
         {
@@ -1307,7 +3640,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
+        /// Version of <see cref="StringExtensions.Split(string, string, int, StringSplitOptions)"> that returns a pooled string array, reducing overall allocations at the cost of needing to pay attention to disposal
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="arrayLength">Length of the returned array. Needs to be stored and handled separately because we cannot guarantee that a pooled array will not be longer than necessary for the split.</param>
@@ -1315,7 +3648,7 @@ namespace Chummer
         /// <param name="intCount">The maximum number of substrings to return.</param>
         /// <param name="eSplitOptions">Optional argument that can be used to skip over empty entries.</param>
         /// <param name="eComparison">Comparison to use when searching for the next instance of <paramref name="strSplit"/>.</param>
-        /// <returns>String array rented from ArrayPool{string}.Shared containing substrings of <paramref name="strInput"/> split based on <paramref name="strSplit"/></returns>
+        /// <returns>String array rented from <see cref="ArrayPool{string}.Shared"/> containing substrings of <paramref name="strInput"/> split based on <paramref name="strSplit"/></returns>
         public static string[] SplitToPooledArray(this string strInput, out int arrayLength, string strSplit, int intCount,
                                                        StringSplitOptions eSplitOptions = StringSplitOptions.None, StringComparison eComparison = StringComparison.Ordinal)
         {
@@ -1384,12 +3717,12 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of string::Split() that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of string::Split()
+        /// Version of <see cref="string.Split(char[])"> that avoids allocations where possible, thus making it lighter on memory (and also on CPU because allocations take time) than all versions of <see cref="string.Split"/>.
         /// </summary>
         /// <param name="strInput">Input textblock.</param>
         /// <param name="arrayLength">Length of the returned array. Needs to be stored and handled separately because we cannot guarantee that a pooled array will not be longer than necessary for the split.</param>
         /// <param name="achrSplit">Characters to use for splitting.</param>
-        /// <returns>String array rented from ArrayPool{string}.Shared containing substrings of <paramref name="strInput"/> split based on <paramref name="achrSplit"/></returns>
+        /// <returns>String array rented from <see cref="ArrayPool{string}.Shared"/> containing substrings of <paramref name="strInput"/> split based on <paramref name="achrSplit"/></returns>
         public static string[] SplitToPooledArray(this string strInput, out int arrayLength, params char[] achrSplit)
         {
             arrayLength = 0;
@@ -1444,7 +3777,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Special version of SplitNoAlloc that is meant for processing command-line arguments (where we are supposed to ignore spaces inside of quotation mark blocks)
+        /// Special version of <see cref="StringExtensions.SplitNoAlloc(string, char, StringSplitOptions)"> that is meant for processing command-line arguments (where we are supposed to ignore spaces inside of quotation mark blocks)
         /// </summary>
         /// <param name="strInput">String to process.</param>
         /// <returns>Enumerable containing substrings of <paramref name="strInput"/> split by whitespace</returns>
@@ -1487,7 +3820,7 @@ namespace Chummer
         /// Normalizes whitespace for a given textblock, removing extra spaces and trimming the string.
         /// </summary>
         /// <param name="strInput">Input textblock</param>
-        /// <param name="funcIsWhiteSpace">Custom function with which to check if a character should count as whitespace. If null, defaults to char::IsWhiteSpace && !char::IsControl.</param>
+        /// <param name="funcIsWhiteSpace">Custom function with which to check if a character should count as whitespace. If null, defaults to <see cref="char.IsWhiteSpace(char)"/> && !<see cref="char.IsControl(char)(char)"/>.</param>
         /// <returns>New string with any chars that return true from <paramref name="funcIsWhiteSpace"/> replaced with the first whitespace in a sequence and any excess whitespace removed.</returns>
         public static string NormalizeWhiteSpace(this string strInput, Func<char, bool> funcIsWhiteSpace = null)
         {
@@ -1498,7 +3831,7 @@ namespace Chummer
                 return strInput;
             if (funcIsWhiteSpace == null)
                 funcIsWhiteSpace = x => char.IsWhiteSpace(x) && !char.IsControl(x);
-            if (intLength > GlobalSettings.MaxStackLimit)
+            if (intLength > Utils.MaxStackLimit16BitTypes)
             {
                 string strReturn;
                 using (new FetchSafelyFromArrayPool<char>(ArrayPool<char>.Shared, intLength, out char[] achrNewChars))
@@ -1988,14 +4321,14 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Like string::Replace(), but meant for if the new value would be expensive to calculate. Actually slower than string::Replace() if the new value is something simple.
+        /// Like <see cref="string.Replace(string, string)"/>, but meant for if the new value would be expensive to calculate. Actually slower than <see cref="string.Replace(string, string)"/> if the new value is something simple.
         /// If the string does not contain any instances of the pattern to replace, then the expensive method to generate a replacement is not run.
         /// </summary>
         /// <param name="strInput">Base string in which the replacing takes place.</param>
         /// <param name="strOldValue">Pattern for which to check and which to replace.</param>
         /// <param name="funcNewValueFactory">Function to generate the string that replaces the pattern in the base string.</param>
         /// <param name="eStringComparison">The StringComparison to use for finding and replacing items.</param>
-        /// <returns>The result of a string::Replace() method if a replacement is made, the original string otherwise.</returns>
+        /// <returns>The result of <see cref="string.Replace(string, string)"/> if a replacement is made, the original string otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string CheapReplace(this string strInput, string strOldValue, Func<string> funcNewValueFactory,
                                           StringComparison eStringComparison = StringComparison.Ordinal)
@@ -2015,7 +4348,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Like string::Replace(), but meant for if the new value would be expensive to calculate. Actually slower than string::Replace() if the new value is something simple.
+        /// Like <see cref="string.Replace(string, string)"/>, but meant for if the new value would be expensive to calculate. Actually slower than <see cref="string.Replace(string, string)"/> if the new value is something simple.
         /// This is the async version that can be run in case a value is really expensive to get.
         /// If the string does not contain any instances of the pattern to replace, then the expensive method to generate a replacement is not run.
         /// </summary>
@@ -2024,7 +4357,7 @@ namespace Chummer
         /// <param name="funcNewValueFactory">Function to generate the string that replaces the pattern in the base string.</param>
         /// <param name="eStringComparison">The StringComparison to use for finding and replacing items.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>The result of a string::Replace() method if a replacement is made, the original string otherwise.</returns>
+        /// <returns>The result of <see cref="string.Replace(string, string)"/> if a replacement is made, the original string otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<string> CheapReplaceAsync(this string strInput, string strOldValue,
                                                            Func<string> funcNewValueFactory,
@@ -2076,7 +4409,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Like string::Replace(), but meant for if the new value would be expensive to calculate. Actually slower than string::Replace() if the new value is something simple.
+        /// Like <see cref="string.Replace(string, string)"/>, but meant for if the new value would be expensive to calculate. Actually slower than <see cref="string.Replace(string, string)"/> if the new value is something simple.
         /// This is the async version that can be run in case a value is really expensive to get.
         /// If the string does not contain any instances of the pattern to replace, then the expensive method to generate a replacement is not run.
         /// </summary>
@@ -2085,7 +4418,7 @@ namespace Chummer
         /// <param name="funcNewValueFactory">Function to generate the string that replaces the pattern in the base string.</param>
         /// <param name="eStringComparison">The StringComparison to use for finding and replacing items.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>The result of a string::Replace() method if a replacement is made, the original string otherwise.</returns>
+        /// <returns>The result of <see cref="string.Replace(string, string)"/> if a replacement is made, the original string otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<string> CheapReplaceAsync(this ValueTask<string> strInputTask, string strOldValue,
                                                            Func<string> funcNewValueFactory,
@@ -2099,7 +4432,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Like string::Replace(), but meant for if the new value would be expensive to calculate. Actually slower than string::Replace() if the new value is something simple.
+        /// Like <see cref="string.Replace(string, string)"/>, but meant for if the new value would be expensive to calculate. Actually slower than <see cref="string.Replace(string, string)"/> if the new value is something simple.
         /// This is the async version that can be run in case a value is really expensive to get.
         /// If the string does not contain any instances of the pattern to replace, then the expensive method to generate a replacement is not run.
         /// </summary>
@@ -2108,7 +4441,7 @@ namespace Chummer
         /// <param name="funcNewValueFactory">Function to generate the string that replaces the pattern in the base string.</param>
         /// <param name="eStringComparison">The StringComparison to use for finding and replacing items.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>The result of a string::Replace() method if a replacement is made, the original string otherwise.</returns>
+        /// <returns>The result of <see cref="string.Replace(string, string)"/> if a replacement is made, the original string otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<string> CheapReplaceAsync(this Task<string> strInputTask, string strOldValue,
                                                            Func<string> funcNewValueFactory,
@@ -2122,7 +4455,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Like string::Replace(), but meant for if the new value would be expensive to calculate. Actually slower than string::Replace() if the new value is something simple.
+        /// Like <see cref="string.Replace(string, string)"/>, but meant for if the new value would be expensive to calculate. Actually slower than <see cref="string.Replace(string, string)"/> if the new value is something simple.
         /// This is the async version that can be run in case a value is really expensive to get.
         /// If the string does not contain any instances of the pattern to replace, then the expensive method to generate a replacement is not run.
         /// </summary>
@@ -2131,7 +4464,7 @@ namespace Chummer
         /// <param name="funcNewValueFactory">Function to generate the string that replaces the pattern in the base string.</param>
         /// <param name="eStringComparison">The StringComparison to use for finding and replacing items.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>The result of a string::Replace() method if a replacement is made, the original string otherwise.</returns>
+        /// <returns>The result of <see cref="string.Replace(string, string)"/> if a replacement is made, the original string otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<string> CheapReplaceAsync(this string strInput, string strOldValue,
                                                            Func<Task<string>> funcNewValueFactory,
@@ -2165,7 +4498,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Like string::Replace(), but meant for if the new value would be expensive to calculate. Actually slower than string::Replace() if the new value is something simple.
+        /// Like <see cref="string.Replace(string, string)"/>, but meant for if the new value would be expensive to calculate. Actually slower than <see cref="string.Replace(string, string)"/> if the new value is something simple.
         /// This is the async version that can be run in case a value is really expensive to get.
         /// If the string does not contain any instances of the pattern to replace, then the expensive method to generate a replacement is not run.
         /// </summary>
@@ -2174,7 +4507,7 @@ namespace Chummer
         /// <param name="funcNewValueFactory">Function to generate the string that replaces the pattern in the base string.</param>
         /// <param name="eStringComparison">The StringComparison to use for finding and replacing items.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>The result of a string::Replace() method if a replacement is made, the original string otherwise.</returns>
+        /// <returns>The result of <see cref="string.Replace(string, string)"/> if a replacement is made, the original string otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<string> CheapReplaceAsync(this ValueTask<string> strInputTask, string strOldValue,
                                                            Func<Task<string>> funcNewValueFactory,
@@ -2188,7 +4521,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Like string::Replace(), but meant for if the new value would be expensive to calculate. Actually slower than string::Replace() if the new value is something simple.
+        /// Like <see cref="string.Replace(string, string)"/>, but meant for if the new value would be expensive to calculate. Actually slower than <see cref="string.Replace(string, string)"/> if the new value is something simple.
         /// This is the async version that can be run in case a value is really expensive to get.
         /// If the string does not contain any instances of the pattern to replace, then the expensive method to generate a replacement is not run.
         /// </summary>
@@ -2197,7 +4530,7 @@ namespace Chummer
         /// <param name="funcNewValueFactory">Function to generate the string that replaces the pattern in the base string.</param>
         /// <param name="eStringComparison">The StringComparison to use for finding and replacing items.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>The result of a string::Replace() method if a replacement is made, the original string otherwise.</returns>
+        /// <returns>The result of <see cref="string.Replace(string, string)"/> if a replacement is made, the original string otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static async Task<string> CheapReplaceAsync(this Task<string> strInputTask, string strOldValue,
                                                            Func<Task<string>> funcNewValueFactory,
@@ -2384,11 +4717,14 @@ namespace Chummer
                 // Two-step process so that newlines normalized in earlier iterations of the loop are not re-detected by later iterations
                 // Yes, this will replace null characters with newlines as well, too bad, we shouldn't have null characters in our strings anyway
                 foreach (string strSequence in astrLineEndingStrings)
-                    sbdReturn.Replace(strSequence, "\u0000");
-                sbdReturn.Replace("\u0000", Environment.NewLine);
+                    sbdReturn.Replace(strSequence, s_strNullsToUseAsPlaceholder);
+                sbdReturn.Replace(s_strNullsToUseAsPlaceholder, Environment.NewLine);
                 return sbdReturn.ToString();
             }
         }
+
+        // Use a placeholder length that matches the length of our new line string to reduce the amount of allocations needed in StringBuilder
+        private static readonly string s_strNullsToUseAsPlaceholder = Environment.NewLine.Length == 2 ? "\u0000\u0000" : "\u0000";
 
         /// <summary>
         /// Clean a string for usage inside an XPath filter, also surrounding it with quotation marks in an appropriate way.
@@ -2401,7 +4737,7 @@ namespace Chummer
             int intQuotePos = strSearch.IndexOf('"');
             if (intQuotePos == -1)
             {
-                return '\"' + strSearch + '\"';
+                return "\"" + strSearch + "\"";
             }
 
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
@@ -2577,7 +4913,7 @@ namespace Chummer
                 return Task.FromCanceled<string>(token);
             if (string.IsNullOrEmpty(strInput))
                 return Task.FromResult(string.Empty);
-            return Task.Run(() =>
+            return TaskExtensions.RunWithoutEC(() =>
             {
                 string strInputTrimmed = strInput.TrimStart();
                 string strReturn = strInputTrimmed.StartsWith("{/rtf1", StringComparison.Ordinal)
@@ -2604,7 +4940,7 @@ namespace Chummer
                 return Task.FromCanceled<string>(token);
             if (string.IsNullOrEmpty(strInput))
                 return Task.FromResult(string.Empty);
-            return Task.Run(() =>
+            return TaskExtensions.RunWithoutEC(() =>
             {
                 string strReturn = strInput.IsRtf()
                     ? Rtf.ToHtml(strInput)
@@ -2656,7 +4992,7 @@ namespace Chummer
                 Color objDarkModeColor = ColorManager.GenerateDarkModeColor(objExistingColor);
                 dicColorReplacements.Add(objColorEntry.Value, "\\red" + objDarkModeColor.R.ToString(GlobalSettings.InvariantCultureInfo)
                     + "\\green" + objDarkModeColor.G.ToString(GlobalSettings.InvariantCultureInfo)
-                    + "\\blue" + objDarkModeColor.B.ToString(GlobalSettings.InvariantCultureInfo) + ';');
+                    + "\\blue" + objDarkModeColor.B.ToString(GlobalSettings.InvariantCultureInfo) + ";");
             }
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdInputColorTable))
             {
@@ -2712,7 +5048,7 @@ namespace Chummer
                 Color objInvertedColor = ColorManager.GenerateInverseDarkModeColor(objDarkModeColor);
                 dicColorReplacements.Add(objColorEntry.Value, "\\red" + objInvertedColor.R.ToString(GlobalSettings.InvariantCultureInfo)
                     + "\\green" + objInvertedColor.G.ToString(GlobalSettings.InvariantCultureInfo)
-                    + "\\blue" + objInvertedColor.B.ToString(GlobalSettings.InvariantCultureInfo) + ';');
+                    + "\\blue" + objInvertedColor.B.ToString(GlobalSettings.InvariantCultureInfo) + ";");
             }
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdInputColorTable))
             {
@@ -3274,14 +5610,11 @@ namespace Chummer
             return strInput;
         }
 
+        // Treat as ReadOnlyCollection please, they are only not that because key string methods cannot use a ReadOnlyCollection as their argument
         private static readonly char[] s_achrWhiteSpaceAndQuotes = new[] { ' ', '\u00a0', '\u0085', '\t', '\n', '\v', '\f', '\r', '\"' };
-
         private static readonly char[] s_achrParentheses = new[] { '(', ')' };
-
         private static readonly char[] s_achrOpenParenthesesComma = new[] { '(', ',' };
-
         private static readonly char[] s_achrClosedParenthesesComma = new[] { ')', ',' };
-
         private static readonly char[] s_achrXmlInvalidUnicodeChars = new[]
         {
             '\u0000',
@@ -3569,12 +5902,12 @@ namespace Chummer
 
         /// <summary>
         /// Converts the specified string, which encodes binary data as base-64 digits, to an equivalent 8-bit unsigned integer array.
-        /// Nearly identical to Convert.FromBase64String(), but the byte array that's returned is from a shared ArrayPool instead of newly allocated.
+        /// Nearly identical to <see cref="Convert.FromBase64String(string)"/>, but the byte array that's returned is from <see cref="ArrayPool{byte}.Shared"/> instead of newly allocated.
         /// </summary>
         /// <param name="s">The string to convert.</param>
         /// <param name="arrayLength">Actual length of the array used. Important because ArrayPool array can be larger than the lengths requested</param>
         /// <param name="token">Cancellation token to listen to, if any.</param>
-        /// <returns>A rented array (from ArrayPool.Shared) of 8-bit unsigned integers that is equivalent to s.</returns>
+        /// <returns>A rented array (from <see cref="ArrayPool{byte}.Shared"/>) of 8-bit unsigned integers that is equivalent to s.</returns>
         /// <exception cref="ArgumentNullException">s is null.</exception>
         /// <exception cref="FormatException">The length of s, ignoring white-space characters, is not zero or a multiple of 4. -or-The format of s is invalid. s contains a non-base-64 character, more than two padding characters, or a non-white space-character among the padding characters.</exception>
         public static byte[] ToBase64PooledByteArray(this string s, out int arrayLength, CancellationToken token = default)
@@ -3835,8 +6168,8 @@ namespace Chummer
 
         /// <summary>
         /// Reads the specified string that encodes binary data as base-64 digits into a stream directly.
-        /// Much more memory-efficient version of Convert.FromBase64String() if the byte array would just be immediately fed into a stream anyway.
-        /// However, much slower than using Convert.FromBase64String() or ToBase64PooledByteArray() because of unusable optimizations around writing to streams in unsafe code.
+        /// Much more memory-efficient version of <see cref="Convert.FromBase64String(string)"/> if the byte array would just be immediately fed into a stream anyway.
+        /// However, much slower than using <see cref="Convert.FromBase64String(string)"/> or <see cref="ToBase64PooledByteArray(string, out int, CancellationToken)"/> because of unusable optimizations around writing to streams in unsafe code.
         /// </summary>
         /// <param name="s">The string to convert and feed into <paramref name="stream"/>.</param>
         /// <param name="stream">Stream to hold the byte array of the base-64 decoded version of <paramref name="s"/>.</param>

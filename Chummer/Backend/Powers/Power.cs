@@ -76,17 +76,17 @@ namespace Chummer
             // Create the GUID for the new Power.
             _guiID = Guid.NewGuid();
             CharacterObject = objCharacter ?? throw new ArgumentNullException(nameof(objCharacter));
+            _objCharacterSettings = objCharacter.Settings;
             LockObject = objCharacter.LockObject;
             Enhancements = new TaggedObservableCollection<Enhancement>(LockObject);
             _objCachedFreeLevelsLock = new AsyncFriendlyReaderWriterLock(LockObject, true);
             _objCachedPowerPointsLock = new AsyncFriendlyReaderWriterLock(LockObject, true);
             _objCachedTotalRatingLock = new AsyncFriendlyReaderWriterLock(LockObject, true);
-            objCharacter.PropertyChangedAsync += OnCharacterChanged;
-            CharacterSettings objSettings = objCharacter.Settings;
-            if (objSettings?.IsDisposed == false)
+            objCharacter.MultiplePropertiesChangedAsync += OnCharacterChanged;
+            if (_objCharacterSettings?.IsDisposed == false)
             {
-                objSettings.MultiplePropertiesChangedAsync += OnCharacterSettingsChanged;
-                MAGAttributeObject = objSettings.MysAdeptSecondMAGAttribute && objCharacter.IsMysticAdept
+                _objCharacterSettings.MultiplePropertiesChangedAsync += OnCharacterSettingsPropertyChanged;
+                MAGAttributeObject = _objCharacterSettings.MysAdeptSecondMAGAttribute && objCharacter.IsMysticAdept
                     ? objCharacter.MAGAdept
                     : objCharacter.MAG;
             }
@@ -161,12 +161,12 @@ namespace Chummer
                                              _decFreePoints.ToString(GlobalSettings.InvariantCultureInfo));
                 objWriter.WriteElementString("source", _strSource);
                 objWriter.WriteElementString("page", _strPage);
-                if (Bonus != null)
-                    objWriter.WriteRaw("<bonus>" + Bonus.InnerXml + "</bonus>");
+                if (!Bonus.IsNullOrInnerTextIsEmpty())
+                    objWriter.WriteRaw("<bonus>" + Bonus.InnerXmlViaPool() + "</bonus>");
                 else
                     objWriter.WriteElementString("bonus", string.Empty);
                 if (_nodAdeptWayRequirements != null)
-                    objWriter.WriteRaw("<adeptwayrequires>" + _nodAdeptWayRequirements.InnerXml
+                    objWriter.WriteRaw("<adeptwayrequires>" + _nodAdeptWayRequirements.InnerXmlViaPool()
                                                             + "</adeptwayrequires>");
                 else
                     objWriter.WriteElementString("adeptwayrequires", string.Empty);
@@ -506,9 +506,9 @@ namespace Chummer
                 }
 
                 if (blnSync)
-                    Extra = objNode["extra"]?.InnerText ?? string.Empty;
+                    Extra = objNode["extra"]?.InnerTextViaPool(token) ?? string.Empty;
                 else
-                    await SetExtraAsync(objNode["extra"]?.InnerText ?? string.Empty, token).ConfigureAwait(false);
+                    await SetExtraAsync(objNode["extra"]?.InnerTextViaPool(token) ?? string.Empty, token).ConfigureAwait(false);
                 if (!objNode.TryGetStringFieldQuickly("pointsperlevel", ref _strPointsPerLevel))
                     _strPointsPerLevel = "0";
                 if (!objNode.TryGetStringFieldQuickly("action", ref _strAction))
@@ -781,6 +781,8 @@ namespace Chummer
         /// The Character object being used by the Power.
         /// </summary>
         public Character CharacterObject { get; }
+
+        private CharacterSettings _objCharacterSettings;
 
         private CharacterAttrib _objMAGAttribute;
 
@@ -1233,8 +1235,8 @@ namespace Chummer
                 if (!string.IsNullOrEmpty(Extra))
                 {
                     // Attempt to retrieve the CharacterAttribute name.
-                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + '('
-                        + CharacterObject.TranslateExtra(Extra, strLanguage) + ')';
+                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + "("
+                        + CharacterObject.TranslateExtra(Extra, strLanguage) + ")";
                 }
 
                 return strReturn;
@@ -1257,8 +1259,8 @@ namespace Chummer
                     // Attempt to retrieve the CharacterAttribute name.
                     strReturn
                         += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token)
-                                                .ConfigureAwait(false) + '(' + await CharacterObject
-                            .TranslateExtraAsync(strExtra, strLanguage, token: token).ConfigureAwait(false) + ')';
+                                                .ConfigureAwait(false) + "(" + await CharacterObject
+                            .TranslateExtraAsync(strExtra, strLanguage, token: token).ConfigureAwait(false) + ")";
                 }
 
                 return strReturn;
@@ -2121,18 +2123,18 @@ namespace Chummer
                                 sbdModifier.Append('(').AppendFormat(
                                     GlobalSettings.CultureInfo,
                                     LanguageManager.GetString("Tip_Power_Capped"),
-                                    LanguageManager.GetString("String_Level") + strSpace + '(' +
-                                    intRating.ToString(GlobalSettings.CultureInfo) + ')' +
-                                    strSpace + (intFreeLevels > 0 ? '-' : '+') + strSpace +
+                                    LanguageManager.GetString("String_Level") + strSpace + "(" +
+                                    intRating.ToString(GlobalSettings.CultureInfo) + ")" +
+                                    strSpace + (intFreeLevels > 0 ? "-" : "+") + strSpace +
                                     LanguageManager.GetString("Checkbox_Contact_Free") + strSpace +
-                                    '(' + intFreeLevels.ToString(GlobalSettings.CultureInfo) + ')',
+                                    "(" + intFreeLevels.ToString(GlobalSettings.CultureInfo) + ")",
                                     intMaximumLevels).Append(')');
                             }
                             else
                             {
                                 sbdModifier.Append('[').Append(LanguageManager.GetString("String_Level")).Append(strSpace).Append('(')
                                     .Append(intRating.ToString(GlobalSettings.CultureInfo)).Append(')')
-                                    .Append(strSpace).Append(intFreeLevels > 0 ? '-' : '+').Append(strSpace)
+                                    .Append(strSpace).Append(intFreeLevels > 0 ? "-" : "+").Append(strSpace)
                                     .Append(LanguageManager.GetString("Checkbox_Contact_Free")).Append(strSpace).Append('(')
                                     .Append(intFreeLevels.ToString(GlobalSettings.CultureInfo)).Append(")]");
                             }
@@ -2148,7 +2150,7 @@ namespace Chummer
                             .Append(decPointsPerLevel.ToString(GlobalSettings.CultureInfo)).Append(')');
                         if (decFreePoints != 0 && intFreeLevels * decPointsPerLevel < decFreePoints)
                         {
-                            sbdModifier.Append(strSpace).Append(decFreePoints > 0 ? '-' : '+').Append(strSpace)
+                            sbdModifier.Append(strSpace).Append(decFreePoints > 0 ? "-" : "+").Append(strSpace)
                                 .Append(LanguageManager.GetString("Tab_Improvements")).Append(strSpace).Append('(')
                                 .Append(Math.Abs(decFreePoints).ToString(GlobalSettings.CultureInfo)).Append(')');
                         }
@@ -2156,7 +2158,7 @@ namespace Chummer
                         decimal decDiscount = Discount;
                         if (decDiscount != 0)
                         {
-                            sbdModifier.Append(strSpace).Append(decDiscount > 0 ? '-' : '+').Append(strSpace)
+                            sbdModifier.Append(strSpace).Append(decDiscount > 0 ? "-" : "+").Append(strSpace)
                                 .Append(LanguageManager.GetString("Checkbox_Power_AdeptWay")).Append(strSpace)
                                 .Append('(')
                                 .Append(Math.Abs(decDiscount).ToString(GlobalSettings.CultureInfo)).Append(')');
@@ -2229,12 +2231,12 @@ namespace Chummer
                                 await LanguageManager.GetStringAsync("Tip_Power_Capped", token: token)
                                     .ConfigureAwait(false),
                                 await LanguageManager.GetStringAsync("String_Level", token: token)
-                                    .ConfigureAwait(false) + strSpace + '(' +
-                                intRating.ToString(GlobalSettings.CultureInfo) + ')' +
-                                strSpace + (intFreeLevels > 0 ? '-' : '+') + strSpace +
+                                    .ConfigureAwait(false) + strSpace + "(" +
+                                intRating.ToString(GlobalSettings.CultureInfo) + ")" +
+                                strSpace + (intFreeLevels > 0 ? "-" : "+") + strSpace +
                                 await LanguageManager.GetStringAsync("Checkbox_Contact_Free", token: token)
                                     .ConfigureAwait(false) + strSpace +
-                                '(' + intFreeLevels.ToString(GlobalSettings.CultureInfo) + ')',
+                                "(" + intFreeLevels.ToString(GlobalSettings.CultureInfo) + ")",
                                 intMaximumLevels).Append(')');
                         }
                         else
@@ -2243,7 +2245,7 @@ namespace Chummer
                                 .Append(await LanguageManager.GetStringAsync("String_Level", token: token)
                                     .ConfigureAwait(false)).Append(strSpace).Append('(')
                                 .Append(intRating.ToString(GlobalSettings.CultureInfo)).Append(')')
-                                .Append(strSpace).Append(intFreeLevels > 0 ? '-' : '+').Append(strSpace)
+                                .Append(strSpace).Append(intFreeLevels > 0 ? "-" : "+").Append(strSpace)
                                 .Append(await LanguageManager.GetStringAsync("Checkbox_Contact_Free", token: token)
                                     .ConfigureAwait(false)).Append(strSpace).Append('(')
                                 .Append(intFreeLevels.ToString(GlobalSettings.CultureInfo)).Append(")]");
@@ -2262,7 +2264,7 @@ namespace Chummer
                         .Append(decPointsPerLevel.ToString(GlobalSettings.CultureInfo)).Append(')');
                     if (decFreePoints != 0 && intFreeLevels * decPointsPerLevel < decFreePoints)
                     {
-                        sbdModifier.Append(strSpace).Append(decFreePoints > 0 ? '-' : '+').Append(strSpace)
+                        sbdModifier.Append(strSpace).Append(decFreePoints > 0 ? "-" : "+").Append(strSpace)
                             .Append(await LanguageManager.GetStringAsync("Tab_Improvements", token: token)
                                 .ConfigureAwait(false)).Append(strSpace).Append('(')
                             .Append(Math.Abs(decFreePoints).ToString(GlobalSettings.CultureInfo)).Append(')');
@@ -2271,7 +2273,7 @@ namespace Chummer
                     decimal decDiscount = await GetDiscountAsync(token).ConfigureAwait(false);
                     if (decDiscount != 0)
                     {
-                        sbdModifier.Append(strSpace).Append(decDiscount > 0 ? '-' : '+').Append(strSpace)
+                        sbdModifier.Append(strSpace).Append(decDiscount > 0 ? "-" : "+").Append(strSpace)
                             .Append(await LanguageManager.GetStringAsync("Checkbox_Power_AdeptWay", token: token)
                                 .ConfigureAwait(false)).Append(strSpace)
                             .Append('(')
@@ -2945,7 +2947,7 @@ namespace Chummer
 
                     if (BoostedSkill != null)
                     {
-                        intReturn = CharacterObject.Settings.IncreasedImprovedAbilityMultiplier
+                        intReturn = _objCharacterSettings.IncreasedImprovedAbilityMultiplier
                             // +1 at the end so that division of 2 always rounds up, and integer division by 2 is significantly less expensive than decimal/double division
                             ? Math.Min(intReturn, _intCachedLearnedRating + _intCachedLearnedRating.DivAwayFromZero(2))
                             : Math.Min(intReturn, _intCachedLearnedRating.DivAwayFromZero(2));
@@ -2975,7 +2977,7 @@ namespace Chummer
 
                 if (await GetBoostedSkillAsync(token).ConfigureAwait(false) != null)
                 {
-                    intReturn = await (await CharacterObject.GetSettingsAsync(token).ConfigureAwait(false))
+                    intReturn = await _objCharacterSettings
                         .GetIncreasedImprovedAbilityMultiplierAsync(token).ConfigureAwait(false)
                         // +1 at the end so that division of 2 always rounds up, and integer division by 2 is significantly less expensive than decimal/double division
                         ? Math.Min(intReturn, _intCachedLearnedRating + _intCachedLearnedRating.DivAwayFromZero(2))
@@ -3233,7 +3235,7 @@ namespace Chummer
                         // If the Bonus contains "Rating", remove the existing Improvements and create new ones.
                         if (setNamesOfChangedProperties.Contains(nameof(TotalRating)))
                         {
-                            if (Bonus?.InnerXml.Contains("Rating") == true)
+                            if (Bonus?.InnerXmlContentContains("Rating") == true)
                             {
                                 bool blnRefreshImprovements = true;
                                 int intTotalRating;
@@ -3404,7 +3406,7 @@ namespace Chummer
                         if (setNamesOfChangedProperties.Contains(nameof(TotalRating)))
                         {
                             XmlNode xmlBonus = await GetBonusAsync(token).ConfigureAwait(false);
-                            if (xmlBonus?.InnerXml.Contains("Rating") == true)
+                            if (xmlBonus?.InnerXmlContentContains("Rating", token) == true)
                             {
                                 bool blnRefreshImprovements = true;
                                 int intTotalRating;
@@ -3494,13 +3496,13 @@ namespace Chummer
                     if (_setPropertyChangedAsync.Count > 0)
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties.Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                                lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
                         await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
@@ -3594,27 +3596,60 @@ namespace Chummer
             }
         }
 
-        private async Task OnCharacterChanged(object sender, PropertyChangedEventArgs e, CancellationToken token = default)
+        private async Task OnCharacterChanged(object sender, MultiplePropertiesChangedEventArgs e, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            if (e.PropertyName == nameof(Character.IsMysticAdept))
+            if (e.PropertyNames.Contains(nameof(Character.Settings)))
+            {
+                IAsyncDisposable objLocker2 = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
+                try
+                {
+                    token.ThrowIfCancellationRequested();
+                    CharacterSettings objNewSettings = await CharacterObject.GetSettingsAsync(token).ConfigureAwait(false);
+                    CharacterSettings objOldSettings = Interlocked.Exchange(ref _objCharacterSettings, objNewSettings);
+                    if (!ReferenceEquals(objNewSettings, objOldSettings))
+                    {
+                        if (objOldSettings?.IsDisposed == false)
+                            objOldSettings.MultiplePropertiesChangedAsync -= OnCharacterSettingsPropertyChanged;
+                        if (objNewSettings?.IsDisposed == false)
+                        {
+                            objNewSettings.MultiplePropertiesChangedAsync += OnCharacterSettingsPropertyChanged;
+                            if (!await objNewSettings.HasIdenticalSettingsAsync(objOldSettings, token).ConfigureAwait(false))
+                            {
+                                MultiplePropertiesChangedEventArgs e2 = new MultiplePropertiesChangedEventArgs(await objNewSettings.GetDifferingPropertyNamesAsync(objOldSettings, token).ConfigureAwait(false));
+                                await OnCharacterSettingsPropertyChanged(this, e2, token).ConfigureAwait(false);
+                            }
+                        }
+                        else
+                        {
+                            MultiplePropertiesChangedEventArgs e2 = new MultiplePropertiesChangedEventArgs(await objOldSettings.GetDifferingPropertyNamesAsync(objNewSettings, token).ConfigureAwait(false));
+                            await OnCharacterSettingsPropertyChanged(this, e2, token).ConfigureAwait(false);
+                        }
+                    }
+                }
+                finally
+                {
+                    await objLocker2.DisposeAsync().ConfigureAwait(false);
+                }
+            }
+            if (e.PropertyNames.Contains(nameof(Character.IsMysticAdept)))
             {
                 await SetMAGAttributeObjectAsync(
-                    await (await CharacterObject.GetSettingsAsync(token).ConfigureAwait(false)).GetMysAdeptSecondMAGAttributeAsync(token).ConfigureAwait(false)
+                    await _objCharacterSettings.GetMysAdeptSecondMAGAttributeAsync(token).ConfigureAwait(false)
                     && await CharacterObject.GetIsMysticAdeptAsync(token).ConfigureAwait(false)
                         ? await CharacterObject.GetAttributeAsync("MAGAdept", token: token).ConfigureAwait(false)
                         : await CharacterObject.GetAttributeAsync("MAG", token: token).ConfigureAwait(false), token).ConfigureAwait(false);
             }
         }
 
-        private async Task OnCharacterSettingsChanged(object sender, MultiplePropertiesChangedEventArgs e, CancellationToken token = default)
+        private async Task OnCharacterSettingsPropertyChanged(object sender, MultiplePropertiesChangedEventArgs e, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             if (e.PropertyNames.Contains(nameof(CharacterSettings.MysAdeptSecondMAGAttribute))
                 || e.PropertyNames.Contains(nameof(CharacterSettings.IncreasedImprovedAbilityMultiplier)))
             {
                 await SetMAGAttributeObjectAsync(
-                        await (await CharacterObject.GetSettingsAsync(token).ConfigureAwait(false)).GetMysAdeptSecondMAGAttributeAsync(token).ConfigureAwait(false)
+                        await _objCharacterSettings.GetMysAdeptSecondMAGAttributeAsync(token).ConfigureAwait(false)
                         && await CharacterObject.GetIsMysticAdeptAsync(token).ConfigureAwait(false)
                             ? await CharacterObject.GetAttributeAsync("MAGAdept", token: token).ConfigureAwait(false)
                             : await CharacterObject.GetAttributeAsync("MAG", token: token).ConfigureAwait(false), token)
@@ -3749,30 +3784,28 @@ namespace Chummer
             using (LockObject.EnterWriteLock())
             {
                 Character objCharacter = CharacterObject;
-                if (objCharacter != null)
+                if (objCharacter?.IsDisposed == false)
                 {
-                    if (!objCharacter.IsDisposed)
+                    try
                     {
-                        try
-                        {
-                            objCharacter.PropertyChangedAsync -= OnCharacterChanged;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // swallow this
-                        }
+                        objCharacter.MultiplePropertiesChangedAsync -= OnCharacterChanged;
                     }
-                    CharacterSettings objSettings = objCharacter.Settings;
-                    if (objSettings?.IsDisposed == false)
+                    catch (ObjectDisposedException)
                     {
-                        try
-                        {
-                            objSettings.MultiplePropertiesChangedAsync -= OnCharacterSettingsChanged;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // swallow this
-                        }
+                        // swallow this
+                    }
+                }
+
+                CharacterSettings objSettings = Interlocked.Exchange(ref _objCharacterSettings, null);
+                if (objSettings?.IsDisposed == false)
+                {
+                    try
+                    {
+                        objSettings.MultiplePropertiesChangedAsync -= OnCharacterSettingsPropertyChanged;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // swallow this
                     }
                 }
 
@@ -3782,6 +3815,11 @@ namespace Chummer
                 _objCachedFreeLevelsLock.Dispose();
                 _objCachedPowerPointsLock.Dispose();
                 Enhancements.Dispose();
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
         }
 
@@ -3794,30 +3832,28 @@ namespace Chummer
             try
             {
                 Character objCharacter = CharacterObject;
-                if (objCharacter != null)
+                if (objCharacter?.IsDisposed == false)
                 {
-                    if (!objCharacter.IsDisposed)
+                    try
                     {
-                        try
-                        {
-                            objCharacter.PropertyChangedAsync -= OnCharacterChanged;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // swallow this
-                        }
+                        objCharacter.MultiplePropertiesChangedAsync -= OnCharacterChanged;
                     }
-                    CharacterSettings objSettings = await objCharacter.GetSettingsAsync().ConfigureAwait(false);
-                    if (objSettings?.IsDisposed == false)
+                    catch (ObjectDisposedException)
                     {
-                        try
-                        {
-                            objSettings.MultiplePropertiesChangedAsync -= OnCharacterSettingsChanged;
-                        }
-                        catch (ObjectDisposedException)
-                        {
-                            // swallow this
-                        }
+                        // swallow this
+                    }
+                }
+
+                CharacterSettings objSettings = Interlocked.Exchange(ref _objCharacterSettings, null);
+                if (objSettings?.IsDisposed == false)
+                {
+                    try
+                    {
+                        objSettings.MultiplePropertiesChangedAsync -= OnCharacterSettingsPropertyChanged;
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // swallow this
                     }
                 }
 
@@ -3827,6 +3863,11 @@ namespace Chummer
                 await _objCachedFreeLevelsLock.DisposeAsync().ConfigureAwait(false);
                 await _objCachedPowerPointsLock.DisposeAsync().ConfigureAwait(false);
                 await Enhancements.DisposeAsync().ConfigureAwait(false);
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
             finally
             {

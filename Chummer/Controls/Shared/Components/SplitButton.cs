@@ -21,16 +21,15 @@ using System;
 using System.ComponentModel;
 using System.Drawing;
 using System.Threading;
+using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
-using DevWinUI;
-
 
 //Get the latest version of SplitButton at: http://wyday.com/splitbutton/
 
 namespace Chummer
 {
-    public class SplitButton : Button
+    public class SplitButton : ButtonWithToolTip
     {
         private PushButtonState _state;
 
@@ -44,7 +43,7 @@ namespace Chummer
         private bool _isSplitMenuVisible;
 
         private ContextMenuStrip m_SplitMenuStrip;
-       // private ContextMenu m_SplitMenu;
+        private ContextMenuStrip m_SplitMenu;
 
         private TextFormatFlags _textFormatFlags = TextFormatFlags.Default;
 
@@ -68,23 +67,23 @@ namespace Chummer
         //[DefaultValue(null)]
         //public ContextMenuStrip SplitMenu
         //{
-        //    get => m_SplitMenuStrip;
+        //    get => m_SplitMenu;
         //    set
         //    {
-        //        ContextMenuStrip objOldValue = Interlocked.Exchange(ref m_SplitMenuStrip, value);
+        //        ContextMenuStrip objOldValue = Interlocked.Exchange(ref m_SplitMenu, value);
         //        if (objOldValue == value)
         //            return;
         //        //remove the event handlers for the old SplitMenu
         //        if (objOldValue != null)
         //        {
-        //            objOldValue.Popup -= SplitMenu_Popup;
+        //            objOldValue.Opening -= SplitMenu_Popup;
         //        }
 
         //        //add the event handlers for the new SplitMenu
         //        if (value != null)
         //        {
         //            ShowSplit = true;
-        //            value.Popup += SplitMenu_Popup;
+        //            value.Opening += SplitMenu_Popup;
         //        }
         //        else
         //            ShowSplit = false;
@@ -172,48 +171,48 @@ namespace Chummer
             }
         }
 
-        //protected override void OnKeyDown(KeyEventArgs kevent)
-        //{
-        //    if (ShowSplit && !Disposing && !IsDisposed)
-        //    {
-        //        switch (kevent.KeyCode)
-        //        {
-        //            case Keys.Down when !_isSplitMenuVisible:
-        //                ShowContextMenuStrip();
-        //                break;
+        protected override void OnKeyDown(KeyEventArgs kevent)
+        {
+            if (ShowSplit && !Disposing && !IsDisposed)
+            {
+                switch (kevent.KeyCode)
+                {
+                    case Keys.Down when !_isSplitMenuVisible:
+                        ShowContextMenuStrip();
+                        break;
 
-        //            case Keys.Space when kevent.Modifiers == Keys.None:
-        //                State = PushButtonState.Pressed;
-        //                break;
-        //        }
-        //    }
+                    case Keys.Space when kevent.Modifiers == Keys.None:
+                        State = PushButtonState.Pressed;
+                        break;
+                }
+            }
 
-        //    base.OnKeyDown(kevent);
-        //}
+            base.OnKeyDown(kevent);
+        }
 
-        //protected override void OnKeyUp(KeyEventArgs kevent)
-        //{
-        //    if (!Disposing && !IsDisposed)
-        //    {
-        //        switch (kevent.KeyCode)
-        //        {
-        //            case Keys.Space:
-        //                {
-        //                    if (MouseButtons == MouseButtons.None)
-        //                    {
-        //                        State = PushButtonState.Normal;
-        //                    }
+        protected override void OnKeyUp(KeyEventArgs kevent)
+        {
+            if (!Disposing && !IsDisposed)
+            {
+                switch (kevent.KeyCode)
+                {
+                    case Keys.Space:
+                        {
+                            if (MouseButtons == MouseButtons.None)
+                            {
+                                State = PushButtonState.Normal;
+                            }
 
-        //                    break;
-        //                }
-        //            case Keys.Apps when MouseButtons == MouseButtons.None && !_isSplitMenuVisible:
-        //                ShowContextMenuStrip();
-        //                break;
-        //        }
-        //    }
+                            break;
+                        }
+                    case Keys.Apps when MouseButtons == MouseButtons.None && !_isSplitMenuVisible:
+                        ShowContextMenuStrip();
+                        break;
+                }
+            }
 
-        //    base.OnKeyUp(kevent);
-        //}
+            base.OnKeyUp(kevent);
+        }
 
         protected override void OnEnabledChanged(EventArgs e)
         {
@@ -828,26 +827,26 @@ namespace Chummer
 
         #endregion Button Layout Calculations
 
-        //private void ShowContextMenuStrip()
-        //{
-        //    if (Interlocked.CompareExchange(ref _intSkipNextOpen, 0, 1) == 1)
-        //    {
-        //        // we were called because we're closing the context menu strip
-        //        // when clicking the dropdown button.
-        //        return;
-        //    }
+        private void ShowContextMenuStrip()
+        {
+            if (Interlocked.CompareExchange(ref _intSkipNextOpen, 0, 1) == 1)
+            {
+                // we were called because we're closing the context menu strip
+                // when clicking the dropdown button.
+                return;
+            }
 
-        //    State = PushButtonState.Pressed;
+            State = PushButtonState.Pressed;
 
-        //    if (m_SplitMenu != null)
-        //    {
-        //        m_SplitMenu.Show(this, new Point(0, Height));
-        //    }
-        //    else
-        //    {
-        //        m_SplitMenuStrip?.Show(this, new Point(0, Height), ToolStripDropDownDirection.BelowRight);
-        //    }
-        //}
+            if (m_SplitMenu != null)
+            {
+                m_SplitMenu.Show(this, new Point(0, Height));
+            }
+            else
+            {
+                m_SplitMenuStrip?.Show(this, new Point(0, Height), ToolStripDropDownDirection.BelowRight);
+            }
+        }
 
         private void SplitMenuStrip_Opening(object sender, CancelEventArgs e)
         {

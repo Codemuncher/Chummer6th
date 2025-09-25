@@ -61,30 +61,6 @@ namespace Chummer
             _objGenericToken = _objGenericCancellationTokenSource.Token;
             _lstMods = new ThreadSafeList<VehicleMod>(1);
             _setBlackMarketMaps = Utils.StringHashSetPool.Get();
-            Disposed += (sender, args) =>
-            {
-                Utils.StringHashSetPool.Return(ref _setBlackMarketMaps);
-                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objUpdateInfoCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objRefreshComboBoxesCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                objOldCancellationTokenSource = Interlocked.Exchange(ref _objAddModCancellationTokenSource, null);
-                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
-                {
-                    objOldCancellationTokenSource.Cancel(false);
-                    objOldCancellationTokenSource.Dispose();
-                }
-                _objGenericCancellationTokenSource.Dispose();
-                _lstMods.Dispose();
-            };
             _objVehicle = objVehicle;
             _objMount = objWeaponMount;
             _blnAllowEditOptions = objWeaponMount == null;
@@ -96,6 +72,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void CreateWeaponMount_Load(object sender, EventArgs e)
@@ -301,7 +278,7 @@ namespace Chummer
                 XmlElement xmlForbiddenNode = xmlSelectedMount["forbidden"];
                 if (xmlForbiddenNode != null)
                 {
-                    string strStringToCheck = xmlSelectedControl["name"]?.InnerText;
+                    string strStringToCheck = xmlSelectedControl["name"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strStringToCheck))
                     {
                         using (XmlNodeList xmlControlNodeList = xmlForbiddenNode.SelectNodes("control"))
@@ -310,14 +287,14 @@ namespace Chummer
                             {
                                 foreach (XmlNode xmlLoopNode in xmlControlNodeList)
                                 {
-                                    if (xmlLoopNode.InnerText == strStringToCheck)
+                                    if (xmlLoopNode.InnerTextViaPool() == strStringToCheck)
                                         return;
                                 }
                             }
                         }
                     }
 
-                    strStringToCheck = xmlSelectedFlexibility["name"]?.InnerText;
+                    strStringToCheck = xmlSelectedFlexibility["name"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strStringToCheck))
                     {
                         using (XmlNodeList xmlFlexibilityNodeList = xmlForbiddenNode.SelectNodes("flexibility"))
@@ -326,14 +303,14 @@ namespace Chummer
                             {
                                 foreach (XmlNode xmlLoopNode in xmlFlexibilityNodeList)
                                 {
-                                    if (xmlLoopNode.InnerText == strStringToCheck)
+                                    if (xmlLoopNode.InnerTextViaPool() == strStringToCheck)
                                         return;
                                 }
                             }
                         }
                     }
 
-                    strStringToCheck = xmlSelectedVisibility["name"]?.InnerText;
+                    strStringToCheck = xmlSelectedVisibility["name"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strStringToCheck))
                     {
                         using (XmlNodeList xmlVisibilityNodeList = xmlForbiddenNode.SelectNodes("visibility"))
@@ -342,7 +319,7 @@ namespace Chummer
                             {
                                 foreach (XmlNode xmlLoopNode in xmlVisibilityNodeList)
                                 {
-                                    if (xmlLoopNode.InnerText == strStringToCheck)
+                                    if (xmlLoopNode.InnerTextViaPool() == strStringToCheck)
                                         return;
                                 }
                             }
@@ -353,7 +330,7 @@ namespace Chummer
                 if (xmlRequiredNode != null)
                 {
                     bool blnRequirementsMet = true;
-                    string strStringToCheck = xmlSelectedControl["name"]?.InnerText;
+                    string strStringToCheck = xmlSelectedControl["name"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strStringToCheck))
                     {
                         using (XmlNodeList xmlControlNodeList = xmlRequiredNode.SelectNodes("control"))
@@ -363,7 +340,7 @@ namespace Chummer
                                 foreach (XmlNode xmlLoopNode in xmlControlNodeList)
                                 {
                                     blnRequirementsMet = false;
-                                    if (xmlLoopNode.InnerText == strStringToCheck)
+                                    if (xmlLoopNode.InnerTextViaPool() == strStringToCheck)
                                     {
                                         blnRequirementsMet = true;
                                         break;
@@ -375,7 +352,7 @@ namespace Chummer
                     if (!blnRequirementsMet)
                         return;
 
-                    strStringToCheck = xmlSelectedFlexibility["name"]?.InnerText;
+                    strStringToCheck = xmlSelectedFlexibility["name"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strStringToCheck))
                     {
                         using (XmlNodeList xmlFlexibilityNodeList = xmlRequiredNode.SelectNodes("flexibility"))
@@ -385,7 +362,7 @@ namespace Chummer
                                 foreach (XmlNode xmlLoopNode in xmlFlexibilityNodeList)
                                 {
                                     blnRequirementsMet = false;
-                                    if (xmlLoopNode.InnerText == strStringToCheck)
+                                    if (xmlLoopNode.InnerTextViaPool() == strStringToCheck)
                                     {
                                         blnRequirementsMet = true;
                                         break;
@@ -397,7 +374,7 @@ namespace Chummer
                     if (!blnRequirementsMet)
                         return;
 
-                    strStringToCheck = xmlSelectedVisibility["name"]?.InnerText;
+                    strStringToCheck = xmlSelectedVisibility["name"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strStringToCheck))
                     {
                         using (XmlNodeList xmlVisibilityNodeList = xmlRequiredNode.SelectNodes("visibility"))
@@ -407,7 +384,7 @@ namespace Chummer
                                 foreach (XmlNode xmlLoopNode in xmlVisibilityNodeList)
                                 {
                                     blnRequirementsMet = false;
-                                    if (xmlLoopNode.InnerText == strStringToCheck)
+                                    if (xmlLoopNode.InnerTextViaPool() == strStringToCheck)
                                     {
                                         blnRequirementsMet = true;
                                         break;
@@ -841,7 +818,7 @@ namespace Chummer
                     if (xmlLoopNode.TryGetInt32FieldQuickly("slots", ref intLoopSlots))
                         intSlots += intLoopSlots;
 
-                    string strLoopAvail = xmlLoopNode["avail"]?.InnerText ?? string.Empty;
+                    string strLoopAvail = xmlLoopNode["avail"]?.InnerTextViaPool() ?? string.Empty;
                     char chrLoopAvailSuffix = strLoopAvail.Length > 0 ? strLoopAvail[strLoopAvail.Length - 1] : ' ';
                     switch (chrLoopAvailSuffix)
                     {
@@ -913,7 +890,7 @@ namespace Chummer
                       ?? xmlSelectedMount.SelectSingleNodeAndCacheExpression("page", token)?.Value
                       ?? await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                 SourceString objSourceString = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language, GlobalSettings.CultureInfo, _objCharacter, token).ConfigureAwait(false);
-                await objSourceString.SetControlAsync(lblSource, token).ConfigureAwait(false);
+                await objSourceString.SetControlAsync(lblSource, this, token).ConfigureAwait(false);
                 string strLoop5 = await lblCost.DoThreadSafeFuncAsync(x => x.Text, token).ConfigureAwait(false);
                 await lblCostLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strLoop5), token).ConfigureAwait(false);
                 string strLoop6 = await lblSlots.DoThreadSafeFuncAsync(x => x.Text, token).ConfigureAwait(false);
@@ -962,7 +939,7 @@ namespace Chummer
                         if (string.IsNullOrEmpty(strSelectedId))
                             continue;
                         XmlNode xmlLoopNode = _xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strSelectedId);
-                        if (xmlLoopNode != null && int.TryParse(xmlLoopNode["slots"]?.InnerText, NumberStyles.Integer,
+                        if (xmlLoopNode != null && int.TryParse(xmlLoopNode["slots"]?.InnerTextViaPool(), NumberStyles.Integer,
                                 GlobalSettings.InvariantCultureInfo, out int intDummy))
                         {
                             intSlots += intDummy;

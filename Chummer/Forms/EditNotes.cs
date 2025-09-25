@@ -52,7 +52,6 @@ namespace Chummer
         {
             _objMyToken = objMyToken;
             InitializeComponent();
-            Disposed += (sender, args) => dlgColor?.Dispose();
             this.UpdateLightDarkMode(objMyToken);
             this.TranslateWinForm(token: objMyToken);
             txtNotes.Text = _strNotes = strOldNotes.NormalizeLineEndings();
@@ -138,12 +137,13 @@ namespace Chummer
         {
             try
             {
-                _colNotes = dlgColor
-                    .Color; //Selected color is always how it is shown in light mode, use the stored one for it.
+                Color objShowColor = ColorManager.GenerateCurrentModeColor(_colNotes);
+                await this.DoThreadSafeAsync(() => dlgColor.Color = objShowColor, _objMyToken).ConfigureAwait(false);
                 if (await this.DoThreadSafeFuncAsync(x => dlgColor.ShowDialog(x), token: _objMyToken)
                               .ConfigureAwait(false) != DialogResult.OK)
                     return;
-                _colNotes = ColorManager.GenerateModeIndependentColor(dlgColor.Color);
+                // Stored color is always how it looks in light mode
+                _colNotes = ColorManager.GenerateModeIndependentColor(await this.DoThreadSafeFuncAsync(() => dlgColor.Color, _objMyToken).ConfigureAwait(false));
                 await UpdateColorRepresentation(_objMyToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)

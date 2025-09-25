@@ -128,8 +128,8 @@ namespace Chummer
                     string strSelectedValue = ImprovementManager.GetSelectedValue(_objCharacter);
                     if (!string.IsNullOrEmpty(strSelectedValue))
                     {
-                        _strName += LanguageManager.GetString("String_Space", token: token) + '(' +
-                                    strSelectedValue + ')';
+                        _strName += LanguageManager.GetString("String_Space", token: token) + "(" +
+                                    strSelectedValue + ")";
                         _objCachedMyXmlNode = null;
                         _objCachedMyXPathNode = null;
                     }
@@ -143,10 +143,10 @@ namespace Chummer
             /*
             if (string.IsNullOrEmpty(_strNotes))
             {
-                _strNotes = CommonFunctions.GetTextFromPdf(_strSource + ' ' + _strPage, _strName);
+                _strNotes = CommonFunctions.GetTextFromPdf(_strSource + " " + _strPage, _strName);
                 if (string.IsNullOrEmpty(_strNotes))
                 {
-                    _strNotes = CommonFunctions.GetTextFromPdf(Source + ' ' + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
+                    _strNotes = CommonFunctions.GetTextFromPdf(Source + " " + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
                 }
             }
             */
@@ -222,8 +222,8 @@ namespace Chummer
                     {
                         _strName +=
                             await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) +
-                            '(' +
-                            strSelectedValue + ')';
+                            "(" +
+                            strSelectedValue + ")";
                         _objCachedMyXmlNode = null;
                         _objCachedMyXPathNode = null;
                     }
@@ -237,10 +237,10 @@ namespace Chummer
             /*
             if (string.IsNullOrEmpty(_strNotes))
             {
-                _strNotes = CommonFunctions.GetTextFromPdf(_strSource + ' ' + _strPage, _strName);
+                _strNotes = CommonFunctions.GetTextFromPdf(_strSource + " " + _strPage, _strName);
                 if (string.IsNullOrEmpty(_strNotes))
                 {
-                    _strNotes = CommonFunctions.GetTextFromPdf(Source + ' ' + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
+                    _strNotes = CommonFunctions.GetTextFromPdf(Source + " " + DisplayPage(GlobalSettings.Language), CurrentDisplayName);
                 }
             }
             */
@@ -286,7 +286,7 @@ namespace Chummer
             objWriter.WriteElementString("page", _strPage);
             objWriter.WriteElementString("grade", _intGrade.ToString(GlobalSettings.InvariantCultureInfo));
             if (_nodBonus != null)
-                objWriter.WriteRaw(_nodBonus.OuterXml);
+                objWriter.WriteRaw(_nodBonus.OuterXmlViaPool());
             else
                 objWriter.WriteElementString("bonus", string.Empty);
             objWriter.WriteElementString("improvementsource", _eImprovementSource.ToString());
@@ -336,7 +336,7 @@ namespace Chummer
 
             _nodBonus = objNode["bonus"];
             if (objNode["improvementsource"] != null)
-                SourceType = Improvement.ConvertToImprovementSource(objNode["improvementsource"].InnerText);
+                SourceType = Improvement.ConvertToImprovementSource(objNode["improvementsource"].InnerTextViaPool(token));
 
             objNode.TryGetMultiLineStringFieldQuickly("notes", ref _strNotes);
 

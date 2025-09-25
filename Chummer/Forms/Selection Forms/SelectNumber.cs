@@ -18,8 +18,8 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -34,6 +34,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             nudNumber.DecimalPlaces = intDecimalPlaces;
         }
 
@@ -63,6 +64,14 @@ namespace Chummer
         /// Value that was entered in the dialogue.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Value that was entered in the dialogue.
+        /// </summary>
         public decimal SelectedValue
         {
             get => _decReturnValue;
@@ -73,6 +82,7 @@ namespace Chummer
         /// Minimum number.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
         public decimal Minimum
         {
             set => nudNumber.Minimum = value;
@@ -82,6 +92,7 @@ namespace Chummer
         /// Maximum number.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
         public decimal Maximum
         {
             set => nudNumber.Maximum = value;

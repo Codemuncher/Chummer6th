@@ -47,10 +47,10 @@ namespace Chummer
         /// </summary>
         private async void OpenFile(object sender, EventArgs e)
         {
-            string strFilter = await LanguageManager.GetStringAsync("DialogFilter_Chummer").ConfigureAwait(false) + '|'
+            string strFilter = await LanguageManager.GetStringAsync("DialogFilter_Chummer").ConfigureAwait(false) + "|"
                 +
-                await LanguageManager.GetStringAsync("DialogFilter_Chum5").ConfigureAwait(false) + '|' +
-                await LanguageManager.GetStringAsync("DialogFilter_Chum5lz").ConfigureAwait(false) + '|' +
+                await LanguageManager.GetStringAsync("DialogFilter_Chum5").ConfigureAwait(false) + "|" +
+                await LanguageManager.GetStringAsync("DialogFilter_Chum5lz").ConfigureAwait(false) + "|" +
                 await LanguageManager.GetStringAsync("DialogFilter_All").ConfigureAwait(false);
             string strFileName = string.Empty;
             DialogResult eResult = await this.DoThreadSafeFuncAsync(x =>
@@ -151,7 +151,7 @@ namespace Chummer
                 int intInitRoll = intInitPasses;
                 for (int j = 0; j < intInitPasses; ++j)
                 {
-                    intInitRoll += await GlobalSettings.RandomGenerator.NextD6ModuloBiasRemovedAsync().ConfigureAwait(false);
+                    intInitRoll += await Utils.GlobalRandom.NextD6ModuloBiasRemovedAsync().ConfigureAwait(false);
                 }
                 _character.InitRoll = intInitRoll + _character.InitialInit;
             }

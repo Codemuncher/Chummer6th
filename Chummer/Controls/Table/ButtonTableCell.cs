@@ -18,31 +18,32 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer.UI.Table
 {
     public partial class ButtonTableCell<T> : TableCell where T : class
     {
-        private readonly Control _button;
+        private readonly ButtonBase _button;
         private readonly CancellationToken _objMyToken;
 
-        public ButtonTableCell(Control button, CancellationToken objMyToken = default) : base(button)
+        public ButtonTableCell(ButtonBase button, CancellationToken objMyToken = default) : base(button)
         {
             _objMyToken = objMyToken;
             InitializeComponent();
             _button = button ?? throw new ArgumentNullException(nameof(button));
+            ContentField = _button;
             button.Click += OnButtonClick;
-            Disposed += (sender, args) => _objUpdateSemaphore.Dispose();
             SuspendLayout();
             try
             {
                 Controls.Add(button);
                 this.UpdateLightDarkMode(objMyToken);
                 this.TranslateWinForm(token: objMyToken);
+                this.UpdateParentForToolTipControls();
                 button.PerformLayout();
             }
             finally

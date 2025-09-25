@@ -142,19 +142,16 @@ namespace Chummer
                         using (CancellationTokenTaskSource<string> objCancellationTokenTaskSource
                                = new CancellationTokenTaskSource<string>(token))
                         {
-                            //await Task.WhenAny(Task.Factory.FromAsync(funcNewValueFactory.BeginInvoke,
-                            //                                          x => strFactoryResult
-                            //                                              = funcNewValueFactory.EndInvoke(x),
-                            //                                          null), objCancellationTokenTaskSource.Task).ConfigureAwait(false);
-                            Task<string> tskReplaceTask = Task.Run(funcNewValueFactory, token);
-                            await Task.WhenAny(tskReplaceTask, objCancellationTokenTaskSource.Task).ConfigureAwait(false);
-                            strFactoryResult = tskReplaceTask.IsCompleted ? tskReplaceTask.Result : string.Empty;
+                            await Task.WhenAny(Task.Factory.FromAsync(funcNewValueFactory.BeginInvoke,
+                                                                      x => strFactoryResult
+                                                                          = funcNewValueFactory.EndInvoke(x),
+                                                                      null), objCancellationTokenTaskSource.Task).ConfigureAwait(false);
                         }
                         token.ThrowIfCancellationRequested();
                         sbdInput.Replace(strOldValue, strFactoryResult);
                     }
                 }
-                else if (strOriginal.Contains(strOldValue, eStringComparison))
+                else if (strOriginal.IndexOf(strOldValue, eStringComparison) != -1)
                 {
                     token.ThrowIfCancellationRequested();
                     string strFactoryResult = string.Empty;
@@ -750,6 +747,42 @@ namespace Chummer
                 sbdInput.Append(await aobjValues[i].ConfigureAwait(false));
             }
             return sbdInput;
+        }
+
+        /// <summary>
+        /// Version of StringBuilder.ToString() that returns a trimmed version of the string.
+        /// Faster than doing .ToString().Trim() because it takes advantage of StringBuilder internals that can modify string contents quickly without needing to allocate new strings.
+        /// </summary>
+        /// <param name="sbdInput">StringBuilder containing the string to be trimmed and returned.</param>
+        /// <returns>The trimmed version of the string inside of <paramref name="sbdInput"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string ToTrimmedString([NotNull] this StringBuilder sbdInput)
+        {
+            int intLength = sbdInput.Length;
+            if (intLength == 0)
+                return sbdInput.ToString();
+
+            int intIndex;
+            for (intIndex = intLength - 1; intIndex >= 0; --intIndex)
+            {
+                if (!char.IsWhiteSpace(sbdInput[intIndex]))
+                    break;
+            }
+
+            ++intIndex;
+            if (intIndex < intLength)
+                sbdInput.Length = intLength = intIndex;
+
+            if (intLength == 0)
+                return sbdInput.ToString();
+
+            for (intIndex = 0; intIndex < intLength; ++intIndex)
+            {
+                if (!char.IsWhiteSpace(sbdInput[intIndex]))
+                    return sbdInput.ToString(intIndex, intLength - intIndex);
+            }
+
+            return sbdInput.ToString();
         }
     }
 }

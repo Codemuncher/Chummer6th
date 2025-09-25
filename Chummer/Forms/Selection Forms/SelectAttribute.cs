@@ -39,6 +39,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private void cmdOK_Click(object sender, EventArgs e)
@@ -51,7 +52,7 @@ namespace Chummer
 
         private async void SelectAttribute_Load(object sender, EventArgs e)
         {
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstAttributes))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstAttributes))
             {
                 // Build the list of Attributes.
                 foreach (string strAbbrev in _lstAttributeAbbrevs)
@@ -98,6 +99,9 @@ namespace Chummer
         /// Description to display on the form.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description to display on the form.
+        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;

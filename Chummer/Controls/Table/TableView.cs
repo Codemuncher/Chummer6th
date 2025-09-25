@@ -44,13 +44,15 @@ namespace Chummer.UI.Table
 
             public override bool Layout(object container, LayoutEventArgs layoutEventArgs)
             {
+                if (_table.IsDisposed || _table.Disposing || _table._intDisposingAll > 1)
+                    return false;
                 using (CursorWait.New(_table))
                 {
                     _table.SuspendLayout();
                     try
                     {
                         int intCount = _table._columns.Count;
-                        int[] aintSharedWidths = intCount > GlobalSettings.MaxStackLimit
+                        int[] aintSharedWidths = intCount > Utils.MaxStackLimit32BitTypes
                             ? ArrayPool<int>.Shared.Rent(intCount)
                             : null;
                         try
@@ -209,19 +211,26 @@ namespace Chummer.UI.Table
             }
         }
 
-        private sealed class ColumnHolder
+        private sealed class ColumnHolder : IDisposable
         {
             public readonly HeaderCell header;
-            public readonly IList<TableCell> cells;
+            public readonly List<TableCell> cells;
 
-            public ColumnHolder(HeaderCell header, IList<TableCell> cells)
+            public ColumnHolder(HeaderCell header, List<TableCell> cells)
             {
                 this.header = header;
                 this.cells = cells;
             }
+
+            public void Dispose()
+            {
+                foreach (TableCell cell in cells)
+                    cell.Dispose();
+                header.Dispose();
+            }
         }
 
-        private readonly Func<T, CancellationToken, Task<bool>> _funcDefaultFilter;
+        private Func<T, CancellationToken, Task<bool>> _funcDefaultFilter;
         private TableColumn<T> _sortColumn;
         private ThreadSafeBindingList<T> _lstItems;
         private readonly AsyncFriendlyReaderWriterLock _objItemsLocker = new AsyncFriendlyReaderWriterLock();
@@ -235,6 +244,7 @@ namespace Chummer.UI.Table
         private SortOrder _eSortType = SortOrder.None;
         private object _objSortPausedSender;
         private readonly int _intSelectedIndex = -1;
+        private CancellationTokenSource _objSortPausedTokenSource;
 
         public TableView()
         {
@@ -242,7 +252,6 @@ namespace Chummer.UI.Table
             _funcDefaultFilter = (x, t) => Task.FromResult(true);
             _funcFilter = _funcDefaultFilter;
             InitializeComponent();
-            Disposed += (sender, args) => DisposeAll();
         }
 
         private async Task ItemPropertyChanged(int intIndex, T objItem, string strProperty, CancellationToken token = default)
@@ -286,6 +295,7 @@ namespace Chummer.UI.Table
 
         public void PauseSort(object objSender)
         {
+            _objSortPausedTokenSource?.Cancel(false);
             _objSortPausedSender = objSender;
         }
 
@@ -314,23 +324,30 @@ namespace Chummer.UI.Table
             token.ThrowIfCancellationRequested();
             if (_objSortPausedSender != null)
                 return;
-            if (_eSortType == SortOrder.None || _sortColumn == null)
+            CancellationTokenSource objNewPausedSource = new CancellationTokenSource();
+            Interlocked.Exchange(ref _objSortPausedTokenSource, objNewPausedSource)?.Dispose();
+            using (CancellationTokenSource objJoinedSource = CancellationTokenSource.CreateLinkedTokenSource(token, objNewPausedSource.Token))
             {
-                // sort by index
-                _lstPermutation.Sort();
-            }
-            else
-            {
-                Func<T, T, CancellationToken, Task<int>> comparison = _sortColumn.CreateSorter();
-
-                _lstPermutation.Sort((i1, i2) => Utils.SafelyRunSynchronously(
-                                         async () => await comparison(
-                                                 await Items.GetValueAtAsync(i1, token).ConfigureAwait(false),
-                                                 await Items.GetValueAtAsync(i2, token).ConfigureAwait(false), token)
-                                             .ConfigureAwait(false), token));
-                if (_eSortType == SortOrder.Descending)
+                CancellationToken objJoinedToken = objJoinedSource.Token;
+                if (_eSortType == SortOrder.None || _sortColumn == null)
                 {
-                    _lstPermutation.Reverse();
+                    // sort by index
+                    _lstPermutation.Sort();
+                }
+                else
+                {
+                    Func<T, T, CancellationToken, Task<int>> comparison = _sortColumn.CreateSorter();
+                    objJoinedToken.ThrowIfCancellationRequested();
+                    _lstPermutation.Sort((i1, i2) => Utils.SafelyRunSynchronously(
+                                             async () => await comparison(
+                                                     await Items.GetValueAtAsync(i1, objJoinedToken).ConfigureAwait(false),
+                                                     await Items.GetValueAtAsync(i2, objJoinedToken).ConfigureAwait(false), objJoinedToken)
+                                                 .ConfigureAwait(false), objJoinedToken));
+                    objJoinedToken.ThrowIfCancellationRequested();
+                    if (_eSortType == SortOrder.Descending)
+                    {
+                        _lstPermutation.Reverse();
+                    }
                 }
             }
             if (blnPerformLayout)
@@ -344,22 +361,29 @@ namespace Chummer.UI.Table
             token.ThrowIfCancellationRequested();
             if (_objSortPausedSender != null)
                 return;
-            if (_eSortType == SortOrder.None || _sortColumn == null)
+            CancellationTokenSource objNewPausedSource = new CancellationTokenSource();
+            Interlocked.Exchange(ref _objSortPausedTokenSource, objNewPausedSource)?.Dispose();
+            using (CancellationTokenSource objJoinedSource = CancellationTokenSource.CreateLinkedTokenSource(token, objNewPausedSource.Token))
             {
-                // sort by index
-                _lstPermutation.Sort();
-            }
-            else
-            {
-                Func<T, T, CancellationToken, Task<int>> comparison = _sortColumn.CreateSorter();
-
-                await _lstPermutation.SortAsync(async (i1, i2) => await comparison(
-                        await Items.GetValueAtAsync(i1, token).ConfigureAwait(false),
-                        await Items.GetValueAtAsync(i2, token).ConfigureAwait(false), token)
-                    .ConfigureAwait(false), token: token).ConfigureAwait(false);
-                if (_eSortType == SortOrder.Descending)
+                CancellationToken objJoinedToken = objJoinedSource.Token;
+                if (_eSortType == SortOrder.None || _sortColumn == null)
                 {
-                    _lstPermutation.Reverse();
+                    // sort by index
+                    _lstPermutation.Sort();
+                }
+                else
+                {
+                    Func<T, T, CancellationToken, Task<int>> comparison = _sortColumn.CreateSorter();
+                    objJoinedToken.ThrowIfCancellationRequested();
+                    await _lstPermutation.SortAsync(async (i1, i2) => await comparison(
+                            await Items.GetValueAtAsync(i1, objJoinedToken).ConfigureAwait(false),
+                            await Items.GetValueAtAsync(i2, objJoinedToken).ConfigureAwait(false), objJoinedToken)
+                        .ConfigureAwait(false), token: objJoinedToken).ConfigureAwait(false);
+                    objJoinedToken.ThrowIfCancellationRequested();
+                    if (_eSortType == SortOrder.Descending)
+                    {
+                        _lstPermutation.Reverse();
+                    }
                 }
             }
             if (blnPerformLayout)
@@ -386,7 +410,7 @@ namespace Chummer.UI.Table
         {
             for (int i = 0; i < _columns.Count; i++)
             {
-                IList<TableCell> cells = _lstCells[i].cells;
+                List<TableCell> cells = _lstCells[i].cells;
                 if (index >= cells.Count)
                     continue;
                 TableColumn<T> column = _columns[i];
@@ -397,9 +421,18 @@ namespace Chummer.UI.Table
 
         private async Task<TableCell> CreateCell(T item, TableColumn<T> column, CancellationToken token = default)
         {
+            token.ThrowIfCancellationRequested();
             TableCell cell = await this.DoThreadSafeFuncAsync(column.CreateCell, token: token).ConfigureAwait(false);
-            await UpdateCell(column, cell, item, token).ConfigureAwait(false);
-            return cell;
+            try
+            {
+                await UpdateCell(column, cell, item, token).ConfigureAwait(false);
+                return cell;
+            }
+            catch
+            {
+                cell.Dispose();
+                throw;
+            }
         }
 
         private async Task CreateCellsForColumn(int insertIndex, TableColumn<T> column, CancellationToken token = default)
@@ -410,95 +443,130 @@ namespace Chummer.UI.Table
                 await this.DoThreadSafeAsync(x => x.SuspendLayout(), token).ConfigureAwait(false);
                 try
                 {
-                    List<TableCell> cells;
-                    if (Items != null)
+                    List<TableCell> cells = null;
+                    try
                     {
-                        cells = new List<TableCell>(await Items.GetCountAsync(token).ConfigureAwait(false));
-                        int i = 0;
-                        await Items.ForEachAsync(async item =>
+                        if (Items != null)
                         {
-                            TableCell cell = await CreateCell(item, column, token).ConfigureAwait(false);
-                            cells.Add(cell);
-                            if (await Filter(item, token).ConfigureAwait(false))
+                            cells = new List<TableCell>(await Items.GetCountAsync(token).ConfigureAwait(false));
+                            int i = 0;
+                            await Items.ForEachAsync(async item =>
                             {
-                                TableRow row = _lstRowCells[i++];
-                                await row.DoThreadSafeAsync(x =>
+                                TableCell cell = await CreateCell(item, column, token).ConfigureAwait(false);
+                                try
                                 {
-                                    x.SuspendLayout();
-                                    try
-                                    {
-                                        x.Controls.Add(cell);
-                                    }
-                                    finally
-                                    {
-                                        x.ResumeLayout(false);
-                                    }
-                                }, token).ConfigureAwait(false);
-                            }
-                        }, token: token).ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        cells = new List<TableCell>(1);
-                    }
-
-                    HeaderCell header = await this.DoThreadSafeFuncAsync(() => new HeaderCell
-                    {
-                        Text = column.Text,
-                        TextTag = column.Tag
-                    }, token: token).ConfigureAwait(false);
-                    if (column.Sorter != null)
-                    {
-                        header.HeaderClick += SortOnClick;
-                        header.Sortable = true;
-
-                        async void SortOnClick(object sender, EventArgs evt)
-                        {
-                            if (_sortColumn == column)
-                            {
-                                // cycle through states if column remains the same
-                                switch (_eSortType)
-                                {
-                                    case SortOrder.None:
-                                        _eSortType = SortOrder.Ascending;
-                                        break;
-
-                                    case SortOrder.Ascending:
-                                        _eSortType = SortOrder.Descending;
-                                        break;
-
-                                    case SortOrder.Descending:
-                                        _eSortType = SortOrder.None;
-                                        break;
+                                    cells.Add(cell);
                                 }
-                            }
-                            else
-                            {
-                                if (_sortColumn != null)
+                                catch
                                 {
-                                    // reset old column sort arrow
-                                    for (int i = 0; i < _columns.Count; i++)
+                                    cell.Dispose();
+                                    throw;
+                                }
+                                if (await Filter(item, token).ConfigureAwait(false))
+                                {
+                                    TableRow row = _lstRowCells[i++];
+                                    await row.DoThreadSafeAsync(x =>
                                     {
-                                        if (_columns[i] == _sortColumn)
+                                        x.SuspendLayout();
+                                        try
                                         {
-                                            _lstCells[i].header.SortType = SortOrder.None;
-                                            break;
+                                            x.Controls.Add(cell);
+                                        }
+                                        finally
+                                        {
+                                            x.ResumeLayout(false);
+                                        }
+                                    }, token).ConfigureAwait(false);
+                                }
+                            }, token: token).ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            cells = new List<TableCell>(1);
+                        }
+
+                        HeaderCell header = await this.DoThreadSafeFuncAsync(() => new HeaderCell
+                        {
+                            Text = column.Text,
+                            TextTag = column.Tag
+                        }, token: token).ConfigureAwait(false);
+                        try
+                        {
+                            if (column.Sorter != null)
+                            {
+                                header.HeaderClick += SortOnClick;
+                                header.Sortable = true;
+
+                                async void SortOnClick(object sender, EventArgs evt)
+                                {
+                                    if (_sortColumn == column)
+                                    {
+                                        // cycle through states if column remains the same
+                                        switch (_eSortType)
+                                        {
+                                            case SortOrder.None:
+                                                _eSortType = SortOrder.Ascending;
+                                                break;
+
+                                            case SortOrder.Ascending:
+                                                _eSortType = SortOrder.Descending;
+                                                break;
+
+                                            case SortOrder.Descending:
+                                                _eSortType = SortOrder.None;
+                                                break;
                                         }
                                     }
-                                }
+                                    else
+                                    {
+                                        if (_sortColumn != null)
+                                        {
+                                            // reset old column sort arrow
+                                            for (int i = 0; i < _columns.Count; i++)
+                                            {
+                                                if (_columns[i] == _sortColumn)
+                                                {
+                                                    _lstCells[i].header.SortType = SortOrder.None;
+                                                    break;
+                                                }
+                                            }
+                                        }
 
-                                _sortColumn = column;
-                                _eSortType = SortOrder.Ascending;
+                                        _sortColumn = column;
+                                        _eSortType = SortOrder.Ascending;
+                                    }
+
+                                    header.SortType = _eSortType;
+                                    try
+                                    {
+                                        // ReSharper disable once MethodSupportsCancellation
+                                        await SortAsync(token: CancellationToken.None).ConfigureAwait(false);
+                                    }
+                                    catch (OperationCanceledException)
+                                    {
+                                        //swallow this
+                                    }
+                                }
                             }
 
-                            header.SortType = _eSortType;
-                            // ReSharper disable once MethodSupportsCancellation
-                            await SortAsync(token: CancellationToken.None).ConfigureAwait(false);
+                            await this.DoThreadSafeAsync(x => x.Controls.Add(header), token).ConfigureAwait(false);
+                            _lstCells.Insert(insertIndex, new ColumnHolder(header, cells));
+                        }
+                        catch
+                        {
+                            header.Dispose();
+                            throw;
                         }
                     }
-
-                    await this.DoThreadSafeAsync(x => x.Controls.Add(header), token).ConfigureAwait(false);
-                    _lstCells.Insert(insertIndex, new ColumnHolder(header, cells));
+                    catch
+                    {
+                        if (cells != null)
+                        {
+                            foreach (TableCell cell in cells)
+                                cell.Dispose();
+                        }
+                        throw;
+                    }
                 }
                 finally
                 {
@@ -523,15 +591,42 @@ namespace Chummer.UI.Table
             }
         }
 
+        private int _intDisposingAll = 0;
+
         private void DisposeAll()
         {
+            if (Interlocked.CompareExchange(ref _intDisposingAll, 1, 0) > 0)
+                return;
+            CancellationTokenSource objOld = Interlocked.Exchange(ref _objSortPausedTokenSource, null);
+            if (objOld != null)
+            {
+                objOld.Cancel(false);
+                objOld.Dispose();
+            }
             _objItemsLocker.Dispose();
-            _lstPermutation.Clear();
-            foreach (TableCell cell in _lstCells.SelectMany(col => col.cells))
-                cell.Dispose();
+            ThreadSafeBindingList<T> lstItems = Interlocked.Exchange(ref _lstItems, null);
+            if (lstItems != null)
+            {
+                try
+                {
+                    lstItems.ListChangedAsync -= ItemsChanged;
+                }
+                catch (ObjectDisposedException)
+                {
+                    //swallow this
+                }
+            }
+            foreach (ColumnHolder objColumnHolder in _lstCells)
+                objColumnHolder.Dispose();
             foreach (TableColumn<T> objColumn in Columns)
                 objColumn.Dispose();
-            Controls.Clear();
+            Columns.Dispose();
+            foreach (TableRow objRow in _lstRowCells)
+                objRow.Dispose();
+            // to help the GC
+            _lstPermutation.Clear();
+            _funcDefaultFilter = null;
+            _funcFilter = null;
         }
 
         private async Task DoFilter(bool performLayout = true, CancellationToken token = default)
@@ -630,7 +725,14 @@ namespace Chummer.UI.Table
                                     }
 
                                     await UpdateRow(e.NewIndex, item, token).ConfigureAwait(false);
-                                    await SortAsync(false, token).ConfigureAwait(false);
+                                    try
+                                    {
+                                        await SortAsync(false, token).ConfigureAwait(false);
+                                    }
+                                    catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                                    {
+                                        //swallow this
+                                    }
                                 }
                                 finally
                                 {
@@ -654,52 +756,86 @@ namespace Chummer.UI.Table
                     {
                         T item = await Items.GetValueAtAsync(e.NewIndex, token).ConfigureAwait(false);
                         Control[] lstToAdd = new Control[_columns.Count];
-                        for (int i = 0; i < _columns.Count; i++)
-                        {
-                            TableColumn<T> column = _columns[i];
-                            IList<TableCell> cells = _lstCells[i].cells;
-                            TableCell newCell = await CreateCell(item, column, token).ConfigureAwait(false);
-                            cells.Insert(e.NewIndex, newCell);
-                            lstToAdd[i] = newCell;
-                        }
-
-                        TableRow row = await this.DoThreadSafeFuncAsync(x => x.CreateRow(), token: token).ConfigureAwait(false);
-                        _lstRowCells.Insert(e.NewIndex, row);
-                        CursorWait objCursorWait = await CursorWait.NewAsync(this, token: token).ConfigureAwait(false);
                         try
                         {
-                            await this.DoThreadSafeAsync(x => x.SuspendLayout(), token: token).ConfigureAwait(false);
+                            for (int i = 0; i < _columns.Count; i++)
+                            {
+                                TableColumn<T> column = _columns[i];
+                                List<TableCell> cells = _lstCells[i].cells;
+                                TableCell newCell = await CreateCell(item, column, token).ConfigureAwait(false);
+                                try
+                                {
+                                    cells.Insert(e.NewIndex, newCell);
+                                    lstToAdd[i] = newCell;
+                                }
+                                catch
+                                {
+                                    newCell.Dispose();
+                                    throw;
+                                }
+                            }
+
+                            TableRow row = await this.DoThreadSafeFuncAsync(x => x.CreateRow(), token: token).ConfigureAwait(false);
                             try
                             {
-                                if (await Filter(item, token).ConfigureAwait(false))
+                                _lstRowCells.Insert(e.NewIndex, row);
+                            }
+                            catch
+                            {
+                                row.Dispose();
+                                throw;
+                            }
+                            CursorWait objCursorWait = await CursorWait.NewAsync(this, token: token).ConfigureAwait(false);
+                            try
+                            {
+                                await this.DoThreadSafeAsync(x => x.SuspendLayout(), token: token).ConfigureAwait(false);
+                                try
                                 {
-                                    await this.DoThreadSafeAsync(x => x.Controls.Add(row), token: token).ConfigureAwait(false);
-                                }
+                                    if (await Filter(item, token).ConfigureAwait(false))
+                                    {
+                                        await this.DoThreadSafeAsync(x => x.Controls.Add(row), token: token).ConfigureAwait(false);
+                                    }
 
-                                await row.DoThreadSafeAsync(x =>
-                                {
-                                    x.SuspendLayout();
+                                    await row.DoThreadSafeAsync(x =>
+                                    {
+                                        x.SuspendLayout();
+                                        try
+                                        {
+                                            x.Controls.AddRange(lstToAdd);
+                                        }
+                                        finally
+                                        {
+                                            x.ResumeLayout(false);
+                                        }
+                                    }, token: token).ConfigureAwait(false);
+
+                                    _lstPermutation.Add(_lstPermutation.Count);
                                     try
                                     {
-                                        x.Controls.AddRange(lstToAdd);
+                                        await SortAsync(false, token).ConfigureAwait(false);
                                     }
-                                    finally
+                                    catch (OperationCanceledException) when (!token.IsCancellationRequested)
                                     {
-                                        x.ResumeLayout(false);
+                                        //swallow this
                                     }
-                                }, token: token).ConfigureAwait(false);
-
-                                _lstPermutation.Add(_lstPermutation.Count);
-                                await SortAsync(false, token).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    await this.DoThreadSafeAsync(x => x.RestartLayout(true), token: token).ConfigureAwait(false);
+                                }
                             }
                             finally
                             {
-                                await this.DoThreadSafeAsync(x => x.RestartLayout(true), token: token).ConfigureAwait(false);
+                                await objCursorWait.DisposeAsync().ConfigureAwait(false);
                             }
                         }
-                        finally
+                        catch
                         {
-                            await objCursorWait.DisposeAsync().ConfigureAwait(false);
+                            foreach (Control objLoop in lstToAdd)
+                            {
+                                objLoop?.Dispose();
+                            }
+                            throw;
                         }
 
                         break;
@@ -708,8 +844,10 @@ namespace Chummer.UI.Table
                     {
                         for (int i = 0; i < _columns.Count; i++)
                         {
-                            IList<TableCell> cells = _lstCells[i].cells;
+                            List<TableCell> cells = _lstCells[i].cells;
+                            TableCell objToRemove = cells[e.NewIndex];
                             cells.RemoveAt(e.NewIndex);
+                            objToRemove.Dispose();
                         }
 
                         CursorWait objCursorWait = await CursorWait.NewAsync(this, token: token).ConfigureAwait(false);
@@ -725,13 +863,19 @@ namespace Chummer.UI.Table
                                     {
                                         x.Controls.Remove(row);
                                     }
-
                                     row.Dispose();
                                 }, token: token).ConfigureAwait(false);
 
                                 _lstRowCells.RemoveAt(e.NewIndex);
                                 _lstPermutation.Remove(_lstPermutation.Count - 1);
-                                await SortAsync(false, token).ConfigureAwait(false);
+                                try
+                                {
+                                    await SortAsync(false, token).ConfigureAwait(false);
+                                }
+                                catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                                {
+                                    //swallow this
+                                }
                             }
                             finally
                             {
@@ -747,7 +891,7 @@ namespace Chummer.UI.Table
                     }
                 case ListChangedType.ItemMoved:
                     {
-                        foreach (IList<TableCell> cells in _lstCells.Select(x => x.cells))
+                        foreach (List<TableCell> cells in _lstCells.Select(x => x.cells))
                         {
                             TableCell cell = cells[e.OldIndex];
                             cells.RemoveAt(e.OldIndex);
@@ -786,7 +930,14 @@ namespace Chummer.UI.Table
                             }
                         }
 
-                        await SortAsync(token: token).ConfigureAwait(false);
+                        try
+                        {
+                            await SortAsync(token: token).ConfigureAwait(false);
+                        }
+                        catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                        {
+                            //swallow this
+                        }
                         break;
                     }
             }
@@ -796,6 +947,9 @@ namespace Chummer.UI.Table
         /// The list of items displayed in the table.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// The list of items displayed in the table.
+        /// </summary>
         public ThreadSafeBindingList<T> Items
         {
             get
@@ -846,22 +1000,32 @@ namespace Chummer.UI.Table
                                     for (int i = 0; i < _columns.Count; i++)
                                     {
                                         TableColumn<T> column = _columns[i];
-                                        IList<TableCell> cells = _lstCells[i].cells;
+                                        List<TableCell> cells = _lstCells[i].cells;
                                         for (int j = intOldCount; j < intNewCount; j++)
                                         {
-                                            int j1 = j;
+                                            T objLoop = value[j];
                                             TableCell cell
-                                                = Utils.SafelyRunSynchronously(() => CreateCell(value[j1], column));
-                                            cells.Add(cell);
-                                            _lstRowCells[j1].Controls.Add(cell);
+                                                = Utils.SafelyRunSynchronously(() => CreateCell(objLoop, column));
+                                            try
+                                            {
+                                                cells.Add(cell);
+                                            }
+                                            catch
+                                            {
+                                                cell.Dispose();
+                                                throw;
+                                            }
+                                            _lstRowCells[j].Controls.Add(cell);
                                         }
                                     }
                                 }
                                 else
                                 {
                                     intLimit = intNewCount;
-                                    foreach (IList<TableCell> cells in _lstCells.Select(x => x.cells))
+                                    foreach (List<TableCell> cells in _lstCells.Select(x => x.cells))
                                     {
+                                        for (int j = intNewCount; j < intOldCount - intNewCount; ++j)
+                                            cells[j].Dispose();
                                         cells.RemoveRange(intNewCount, intOldCount - intNewCount);
                                     }
 
@@ -892,8 +1056,14 @@ namespace Chummer.UI.Table
                                         Utils.SafelyRunSynchronously(() => UpdateRow(i1, value[i1]));
                                     }
                                 }
-
-                                Sort(false);
+                                try
+                                {
+                                    Sort(false);
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    //swallow this
+                                }
                                 Utils.SafelyRunSynchronously(() => DoFilter());
                             }
                             finally
@@ -967,12 +1137,20 @@ namespace Chummer.UI.Table
                                 for (int i = 0; i < _columns.Count; i++)
                                 {
                                     TableColumn<T> column = _columns[i];
-                                    IList<TableCell> cells = _lstCells[i].cells;
+                                    List<TableCell> cells = _lstCells[i].cells;
                                     for (int j = intOldCount; j < intNewCount; j++)
                                     {
                                         TableCell cell =
                                             await CreateCell(value[j], column, token).ConfigureAwait(false);
-                                        cells.Add(cell);
+                                        try
+                                        {
+                                            cells.Add(cell);
+                                        }
+                                        catch
+                                        {
+                                            cell.Dispose();
+                                            throw;
+                                        }
                                         await _lstRowCells[j].DoThreadSafeAsync(x => x.Controls.Add(cell), token: token)
                                             .ConfigureAwait(false);
                                     }
@@ -981,8 +1159,10 @@ namespace Chummer.UI.Table
                             else
                             {
                                 intLimit = intNewCount;
-                                foreach (IList<TableCell> cells in _lstCells.Select(x => x.cells))
+                                foreach (List<TableCell> cells in _lstCells.Select(x => x.cells))
                                 {
+                                    for (int j = intNewCount; j < intOldCount - intNewCount; ++j)
+                                        cells[j].Dispose();
                                     cells.RemoveRange(intNewCount, intOldCount - intNewCount, token: token);
                                 }
 
@@ -1015,8 +1195,15 @@ namespace Chummer.UI.Table
                                 }
                             }
 
-                            await SortAsync(false, token).ConfigureAwait(false);
-                            await DoFilter(token: token).ConfigureAwait(false);
+                            try
+                            {
+                                await SortAsync(false, token).ConfigureAwait(false);
+                                await DoFilter(token: token).ConfigureAwait(false);
+                            }
+                            catch (OperationCanceledException) when (!token.IsCancellationRequested)
+                            {
+                                //swallow this
+                            }
                         }
                         finally
                         {
@@ -1055,7 +1242,15 @@ namespace Chummer.UI.Table
 
         public TableColumnCollection<T> Columns => _columns;
 
-        public override LayoutEngine LayoutEngine => _layoutEngine = _layoutEngine ?? new TableLayoutEngine(this);
+        public override LayoutEngine LayoutEngine
+        {
+            get
+            {
+                if (IsDisposed || Disposing || _intDisposingAll > 1)
+                    return base.LayoutEngine;
+                return _layoutEngine = _layoutEngine ?? new TableLayoutEngine(this);
+            }
+        }
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public SortOrder SortOrder
@@ -1064,7 +1259,16 @@ namespace Chummer.UI.Table
             set
             {
                 if (InterlockedExtensions.Exchange(ref _eSortType, value) != value)
-                    Sort();
+                {
+                    try
+                    {
+                        Sort();
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        //swallow this
+                    }
+                }
             }
         }
 

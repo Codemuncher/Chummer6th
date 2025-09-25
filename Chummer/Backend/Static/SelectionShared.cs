@@ -149,7 +149,7 @@ namespace Chummer
                                     LanguageManager.GetString("Message_SelectGeneric_ChargenRestriction", token: token),
                                     strLocalName),
                                 // ReSharper disable once MethodHasAsyncOverload
-                                string.Format(LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
+                                string.Format(GlobalSettings.CultureInfo, LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
                                 MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
@@ -159,7 +159,7 @@ namespace Chummer
                                     await LanguageManager.GetStringAsync("Message_SelectGeneric_ChargenRestriction", token: token)
                                         .ConfigureAwait(false),
                                     strLocalName),
-                                string.Format(await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
+                                string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
                                     .ConfigureAwait(false), strLocalName),
                                 MessageBoxButtons.OK, MessageBoxIcon.Information, token: token).ConfigureAwait(false);
                         }
@@ -184,7 +184,7 @@ namespace Chummer
                                     LanguageManager.GetString("Message_SelectGeneric_CareerOnlyRestriction", token: token),
                                     strLocalName),
                                 // ReSharper disable once MethodHasAsyncOverload
-                                string.Format(LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
+                                string.Format(GlobalSettings.CultureInfo, LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
                                 MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
@@ -194,7 +194,7 @@ namespace Chummer
                                     await LanguageManager.GetStringAsync("Message_SelectGeneric_CareerOnlyRestriction", token: token)
                                         .ConfigureAwait(false),
                                     strLocalName),
-                                string.Format(await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
+                                string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
                                     .ConfigureAwait(false), strLocalName),
                                 MessageBoxButtons.OK, MessageBoxIcon.Information, token: token).ConfigureAwait(false);
                         }
@@ -217,7 +217,7 @@ namespace Chummer
                                     LanguageManager.GetString("Message_SelectGeneric_PriorityRestriction", token: token),
                                     strLocalName),
                                 // ReSharper disable once MethodHasAsyncOverload
-                                string.Format(LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
+                                string.Format(GlobalSettings.CultureInfo, LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
                                 MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                         else
@@ -227,7 +227,7 @@ namespace Chummer
                                     await LanguageManager.GetStringAsync("Message_SelectGeneric_PriorityRestriction", token: token)
                                         .ConfigureAwait(false),
                                     strLocalName),
-                                string.Format(await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
+                                string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
                                     .ConfigureAwait(false), strLocalName),
                                 MessageBoxButtons.OK, MessageBoxIcon.Information, token: token).ConfigureAwait(false);
                         }
@@ -281,7 +281,7 @@ namespace Chummer
                                     foreach (string strLimb in Character.LimbStrings)
                                     {
                                         // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                                        sbdLimitString.CheapReplace(strLimitString, '{' + strLimb + '}',
+                                        sbdLimitString.CheapReplace(strLimitString, "{" + strLimb + "}",
                                                                     () => (string.IsNullOrEmpty(strLocation)
                                                                             ? objCharacter.LimbCount(strLimb)
                                                                             : objCharacter.LimbCount(strLimb) / 2)
@@ -295,7 +295,7 @@ namespace Chummer
                                 {
                                     foreach (string strLimb in Character.LimbStrings)
                                     {
-                                        await sbdLimitString.CheapReplaceAsync(strLimitString, '{' + strLimb + '}',
+                                        await sbdLimitString.CheapReplaceAsync(strLimitString, "{" + strLimb + "}",
                                                                                () => (string.IsNullOrEmpty(strLocation)
                                                                                        ? objCharacter.LimbCount(strLimb)
                                                                                        : objCharacter.LimbCount(strLimb) / 2)
@@ -542,7 +542,7 @@ namespace Chummer
                                         LanguageManager.GetString("Message_SelectGeneric_Limit", token: token),
                                         strLocalName, intLimit == 0 ? 1 : intLimit),
                                     // ReSharper disable once MethodHasAsyncOverload
-                                    string.Format(LanguageManager.GetString("MessageTitle_SelectGeneric_Limit", token: token), strLocalName),
+                                    string.Format(GlobalSettings.CultureInfo, LanguageManager.GetString("MessageTitle_SelectGeneric_Limit", token: token), strLocalName),
                                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                             }
                             else
@@ -552,7 +552,7 @@ namespace Chummer
                                         await LanguageManager.GetStringAsync("Message_SelectGeneric_Limit", token: token)
                                             .ConfigureAwait(false),
                                         strLocalName, intLimit == 0 ? 1 : intLimit),
-                                    string.Format(await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Limit", token: token)
+                                    string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Limit", token: token)
                                         .ConfigureAwait(false), strLocalName),
                                     MessageBoxButtons.OK, MessageBoxIcon.Information, token: token).ConfigureAwait(false);
                             }
@@ -592,7 +592,7 @@ namespace Chummer
                                             LanguageManager.GetString("Message_SelectGeneric_Restriction", token: token),
                                             strLocalName) + strName,
                                         // ReSharper disable once MethodHasAsyncOverload
-                                        string.Format(LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
+                                        string.Format(GlobalSettings.CultureInfo, LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
                                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                                 }
                                 else
@@ -602,7 +602,7 @@ namespace Chummer
                                             await LanguageManager.GetStringAsync("Message_SelectGeneric_Restriction", token: token)
                                                 .ConfigureAwait(false),
                                             strLocalName) + strName,
-                                        string.Format(await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
+                                        string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
                                             .ConfigureAwait(false), strLocalName),
                                         MessageBoxButtons.OK, MessageBoxIcon.Information, token: token).ConfigureAwait(false);
                                 }
@@ -735,9 +735,9 @@ namespace Chummer
                                     string.Format(GlobalSettings.CultureInfo,
                                         // ReSharper disable once MethodHasAsyncOverload
                                         LanguageManager.GetString("Message_SelectGeneric_Restriction", token: token),
-                                        strLocalName) + sbdRequirement,
+                                        strLocalName) + sbdRequirement.ToString(),
                                     // ReSharper disable once MethodHasAsyncOverload
-                                    string.Format(LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
+                                    string.Format(GlobalSettings.CultureInfo, LanguageManager.GetString("MessageTitle_SelectGeneric_Restriction", token: token), strLocalName),
                                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                             }
                             else
@@ -746,8 +746,8 @@ namespace Chummer
                                     string.Format(GlobalSettings.CultureInfo,
                                         await LanguageManager.GetStringAsync("Message_SelectGeneric_Restriction", token: token)
                                             .ConfigureAwait(false),
-                                        strLocalName) + sbdRequirement,
-                                    string.Format(await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
+                                        strLocalName) + sbdRequirement.ToString(),
+                                    string.Format(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("MessageTitle_SelectGeneric_Restriction", token: token)
                                         .ConfigureAwait(false), strLocalName),
                                     MessageBoxButtons.OK, MessageBoxIcon.Information, token: token).ConfigureAwait(false);
                             }
@@ -761,7 +761,7 @@ namespace Chummer
             return true;
         }
 
-        private static async Task<Tuple<bool, string>> TestNodeRequirementsAsync(this XPathNavigator xmlNode,
+        private static async Task<ValueTuple<bool, string>> TestNodeRequirementsAsync(this XPathNavigator xmlNode,
             bool blnSync, Character objCharacter,
             object objParent, string strIgnoreQuality = "",
             bool blnShowMessage = true, CancellationToken token = default)
@@ -769,7 +769,7 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (xmlNode == null || objCharacter == null)
             {
-                return new Tuple<bool, string>(false, string.Empty);
+                return new ValueTuple<bool, string>(false, string.Empty);
             }
 
             string strName = string.Empty;
@@ -800,10 +800,10 @@ namespace Chummer
 
                             if (xmlNode.SelectSingleNodeAndCacheExpression("natural", token) != null)
                             {
-                                return new Tuple<bool, string>((objAttribute?.Value ?? 0) >= intTargetValue, strName);
+                                return new ValueTuple<bool, string>((objAttribute?.Value ?? 0) >= intTargetValue, strName);
                             }
 
-                            return new Tuple<bool, string>((objAttribute?.TotalValue ?? 0) >= intTargetValue, strName);
+                            return new ValueTuple<bool, string>((objAttribute?.TotalValue ?? 0) >= intTargetValue, strName);
                             // ReSharper restore MethodHasAsyncOverload
                         }
                         else
@@ -823,13 +823,13 @@ namespace Chummer
 
                             if (xmlNode.SelectSingleNodeAndCacheExpression("natural", token) != null)
                             {
-                                return new Tuple<bool, string>(
+                                return new ValueTuple<bool, string>(
                                     (objAttribute != null
                                         ? await objAttribute.GetValueAsync(token).ConfigureAwait(false)
                                         : 0) >= intTargetValue, strName);
                             }
 
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 (objAttribute != null
                                     ? await objAttribute.GetTotalValueAsync(token).ConfigureAwait(false)
                                     : 0) >= intTargetValue, strName);
@@ -862,13 +862,13 @@ namespace Chummer
                                         strSpace, strValue, intNodeVal);
                                 (bool blnIsSuccess, object objProcess)
                                     = CommonFunctions.EvaluateInvariantXPath(strValue, token);
-                                return new Tuple<bool, string>(
+                                return new ValueTuple<bool, string>(
                                     (blnIsSuccess ? ((double)objProcess).StandardRound() : 0) >= intNodeVal, strName);
                             }
                             else if (blnShowMessage)
                                 strName = string.Format(GlobalSettings.CultureInfo, "{0}\t{2}{1}{3}", Environment.NewLine,
                                     strSpace, decValue, intNodeVal);
-                            return new Tuple<bool, string>(decValue >= intNodeVal, strName);
+                            return new ValueTuple<bool, string>(decValue >= intNodeVal, strName);
                             // ReSharper restore MethodHasAsyncOverload
                         }
                         else
@@ -900,34 +900,34 @@ namespace Chummer
                                 }
                                 (bool blnIsSuccess, object objProcess)
                                         = await CommonFunctions.EvaluateInvariantXPathAsync(strValue, token).ConfigureAwait(false);
-                                return new Tuple<bool, string>(
+                                return new ValueTuple<bool, string>(
                                     (blnIsSuccess ? ((double)objProcess).StandardRound() : 0) >= intNodeVal, strName);
                             }
                             else if (blnShowMessage)
                                 strName = string.Format(GlobalSettings.CultureInfo, "{0}\t{2}{1}{3}", Environment.NewLine,
                                     strSpace, decValue, intNodeVal);
-                            return new Tuple<bool, string>(decValue >= intNodeVal, strName);
+                            return new ValueTuple<bool, string>(decValue >= intNodeVal, strName);
                         }
                     }
                 case "careerkarma":
                     {
                         // Check Career Karma requirement.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + string.Format(
+                            strName = Environment.NewLine + "\t" + string.Format(
                                 GlobalSettings.CultureInfo, blnSync
                                     // ReSharper disable once MethodHasAsyncOverload
                                     ? LanguageManager.GetString("Message_SelectQuality_RequireKarma", token: token)
                                     : await LanguageManager.GetStringAsync("Message_SelectQuality_RequireKarma",
                                         token: token).ConfigureAwait(false),
                                 strNodeInnerText);
-                        return new Tuple<bool, string>((blnSync
+                        return new ValueTuple<bool, string>((blnSync
                             ? objCharacter.CareerKarma
                             : await objCharacter.GetCareerKarmaAsync(token).ConfigureAwait(false)) >= xmlNode.ValueAsInt, strName);
                     }
                 case "chargenonly":
                     {
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -935,7 +935,7 @@ namespace Chummer
                                                               : await LanguageManager.GetStringAsync(
                                                                   "Message_SelectGeneric_ChargenRestriction",
                                                                   token: token).ConfigureAwait(false));
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             !(blnSync
                                 ? objCharacter.Created
                                 : await objCharacter.GetCreatedAsync(token).ConfigureAwait(false)), strName);
@@ -943,7 +943,7 @@ namespace Chummer
                 case "careeronly":
                     {
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -952,7 +952,7 @@ namespace Chummer
                                                               : await LanguageManager.GetStringAsync(
                                                                   "Message_SelectGeneric_CareerOnlyRestriction",
                                                                   token: token).ConfigureAwait(false));
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             blnSync
                                 ? objCharacter.Created
                                 : await objCharacter.GetCreatedAsync(token).ConfigureAwait(false), strName);
@@ -979,7 +979,7 @@ namespace Chummer
                                     strName = blnSync
                                         ? objCritterPower.CurrentDisplayName
                                         : await objCritterPower.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                                return new Tuple<bool, string>(true, strName);
+                                return new ValueTuple<bool, string>(true, strName);
                             }
                         }
 
@@ -994,7 +994,7 @@ namespace Chummer
                                 = objLoopDoc.TryGetNodeByNameOrId("/chummer/powers/power", strNodeInnerText);
                             string strTranslate =
                                 objLoopNode?.SelectSingleNodeAndCacheExpression("translate", token)?.Value ?? string.Empty;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -1002,17 +1002,17 @@ namespace Chummer
                                                                         .SelectSingleNodeAndCacheExpression(
                                                                             "name", token)?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
                                                                   "Tab_Critter",
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
-                                                                  "Tab_Critter", token: token).ConfigureAwait(false)) + ')';
+                                                                  "Tab_Critter", token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "bioware":
                     {
@@ -1030,7 +1030,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/biowares/bioware[name = " + strNodeInnerText.CleanXPath()
                                           + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "Label_Bioware",
@@ -1054,7 +1054,7 @@ namespace Chummer
                         if (blnSync)
                         {
                             if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                                return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(
+                                return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(
                                                                    x => x.Children, objCyberware =>
                                                                        (objCyberware.Name == strNodeInnerText
                                                                         || objCyberware.SourceIDString
@@ -1064,7 +1064,7 @@ namespace Chummer
                                                                        && string.IsNullOrEmpty(
                                                                            objCyberware.PlugsIntoModularMount))
                                                                >= intCount, strName);
-                            return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
+                            return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
                                                                (objCyberware.Name == strNodeInnerText
                                                                 || objCyberware.SourceIDString
                                                                 == strNodeInnerText)
@@ -1077,7 +1077,7 @@ namespace Chummer
                         }
 
                         if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                     x => x.GetChildrenAsync(token), async objCyberware =>
                                         (objCyberware.Name == strNodeInnerText
@@ -1089,7 +1089,7 @@ namespace Chummer
                                             await objCyberware.GetPlugsIntoModularMountAsync(token).ConfigureAwait(false)),
                                     token).ConfigureAwait(false)
                                 >= intCount, strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                 x => x.GetChildrenAsync(token), async objCyberware =>
                                     (objCyberware.Name == strNodeInnerText
@@ -1119,7 +1119,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/cyberwares/cyberware[name = "
                                                         + strNodeInnerText.CleanXPath() + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString("Label_Cyberware", token: token)
                                           : await LanguageManager.GetStringAsync("Label_Cyberware", token: token)
@@ -1137,7 +1137,7 @@ namespace Chummer
                         if (xmlNode.GetAttribute("sameparent", string.Empty) == bool.TrueString)
                         {
                             if (objParent is Cyberware objCyberware)
-                                return new Tuple<bool, string>(blnSync
+                                return new ValueTuple<bool, string>(blnSync
                                         // ReSharper disable once MethodHasAsyncOverload
                                         ? objCyberware.Children.Any(
                                             mod => mod.Name == strNodeInnerText
@@ -1154,7 +1154,7 @@ namespace Chummer
                                                                      .OrdinalIgnoreCase), token)
                                             .ConfigureAwait(false)
                                     , strName);
-                            return new Tuple<bool, string>(false, strName);
+                            return new ValueTuple<bool, string>(false, strName);
                         }
 
                         string strWareNodeSelectAttribute
@@ -1163,7 +1163,7 @@ namespace Chummer
                         if (blnSync)
                         {
                             if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                                return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(
+                                return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(
                                                                    x => x.Children, objCyberware =>
                                                                        (objCyberware.Name == strNodeInnerText
                                                                         || objCyberware.SourceIDString
@@ -1173,7 +1173,7 @@ namespace Chummer
                                                                        && string.IsNullOrEmpty(
                                                                            objCyberware.PlugsIntoModularMount))
                                                                >= intCount, strName);
-                            return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
+                            return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
                                                                (objCyberware.Name == strNodeInnerText
                                                                 || objCyberware.SourceIDString
                                                                 == strNodeInnerText)
@@ -1186,7 +1186,7 @@ namespace Chummer
                         }
 
                         if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                     x => x.GetChildrenAsync(token), async objCyberware =>
                                         (objCyberware.Name == strNodeInnerText
@@ -1198,7 +1198,7 @@ namespace Chummer
                                             await objCyberware.GetPlugsIntoModularMountAsync(token).ConfigureAwait(false)),
                                     token).ConfigureAwait(false)
                                 >= intCount, strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                 x => x.GetChildrenAsync(token), async objCyberware =>
                                     (objCyberware.Name == strNodeInnerText
@@ -1225,7 +1225,7 @@ namespace Chummer
                                 .SelectSingleNode(
                                     "/chummer/categories/category[. = " + strNodeInnerText.CleanXPath() + "]/translate")
                                 ?.Value;
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "Label_Bioware",
@@ -1241,7 +1241,7 @@ namespace Chummer
                         if (xmlNode.GetAttribute("sameparent", string.Empty) == bool.TrueString)
                         {
                             if (objParent is Cyberware objCyberware)
-                                return new Tuple<bool, string>(blnSync
+                                return new ValueTuple<bool, string>(blnSync
                                     // ReSharper disable once MethodHasAsyncOverload
                                     ? objCyberware.Children.Any(
                                         mod => mod.Category == strNodeInnerText, token)
@@ -1249,7 +1249,7 @@ namespace Chummer
                                         .AnyAsync(mod => mod.Category == strNodeInnerText,
                                             token)
                                         .ConfigureAwait(false), strName);
-                            return new Tuple<bool, string>(false, strName);
+                            return new ValueTuple<bool, string>(false, strName);
                         }
 
                         string strWareNodeSelectAttribute
@@ -1258,7 +1258,7 @@ namespace Chummer
                         if (blnSync)
                         {
                             if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                                return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(
+                                return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(
                                         x => x.Children, objCyberware =>
                                             objCyberware.Category == strNodeInnerText &&
                                             objCyberware.SourceType
@@ -1266,7 +1266,7 @@ namespace Chummer
                                             && string.IsNullOrEmpty(
                                                 objCyberware.PlugsIntoModularMount)) >= intCount,
                                     strName);
-                            return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
+                            return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
                                                                objCyberware.Category == strNodeInnerText &&
                                                                objCyberware.SourceType
                                                                == Improvement.ImprovementSource.Bioware
@@ -1277,7 +1277,7 @@ namespace Chummer
                         }
 
                         if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                     x => x.GetChildrenAsync(token), async objCyberware =>
                                         objCyberware.Category == strNodeInnerText &&
@@ -1287,7 +1287,7 @@ namespace Chummer
                                             await objCyberware.GetPlugsIntoModularMountAsync(token).ConfigureAwait(false)),
                                     token).ConfigureAwait(false) >= intCount,
                                 strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                 x => x.GetChildrenAsync(token), async objCyberware =>
                                     objCyberware.Category == strNodeInnerText &&
@@ -1310,7 +1310,7 @@ namespace Chummer
                                 : await objCharacter.LoadDataXPathAsync("cyberware.xml", token: token)
                                     .ConfigureAwait(false)).SelectSingleNode(
                                 "/chummer/categories/category[. = " + strNodeInnerText.CleanXPath() + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "Label_Cyberware",
@@ -1326,14 +1326,14 @@ namespace Chummer
                         if (xmlNode.GetAttribute("sameparent", string.Empty) == bool.TrueString)
                         {
                             if (objParent is Cyberware objCyberware)
-                                return new Tuple<bool, string>(
+                                return new ValueTuple<bool, string>(
                                     blnSync
                                         // ReSharper disable once MethodHasAsyncOverload
                                         ? objCyberware.Children.Any(mod => mod.Category == strNodeInnerText, token)
                                         : await (await objCyberware.GetChildrenAsync(token).ConfigureAwait(false))
                                             .AnyAsync(mod => mod.Category == strNodeInnerText, token)
                                             .ConfigureAwait(false), strName);
-                            return new Tuple<bool, string>(false, strName);
+                            return new ValueTuple<bool, string>(false, strName);
                         }
 
                         string strWareNodeSelectAttribute
@@ -1342,7 +1342,7 @@ namespace Chummer
                         if (blnSync)
                         {
                             if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                                return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(
+                                return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(
                                         x => x.Children, objCyberware =>
                                             objCyberware.Category == strNodeInnerText &&
                                             objCyberware.SourceType
@@ -1350,7 +1350,7 @@ namespace Chummer
                                             && string.IsNullOrEmpty(
                                                 objCyberware.PlugsIntoModularMount)) >= intCount,
                                     strName);
-                            return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
+                            return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
                                                                objCyberware.Category == strNodeInnerText &&
                                                                objCyberware.SourceType
                                                                == Improvement.ImprovementSource.Cyberware
@@ -1361,7 +1361,7 @@ namespace Chummer
                         }
 
                         if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                     x => x.GetChildrenAsync(token), async objCyberware =>
                                         objCyberware.Category == strNodeInnerText &&
@@ -1371,7 +1371,7 @@ namespace Chummer
                                             await objCyberware.GetPlugsIntoModularMountAsync(token).ConfigureAwait(false)),
                                     token).ConfigureAwait(false) >= intCount,
                                 strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                 x => x.GetChildrenAsync(token), async objCyberware =>
                                     objCyberware.Category == strNodeInnerText &&
@@ -1398,7 +1398,7 @@ namespace Chummer
                                     "/chummer/biowares/bioware[name = "
                                     + strNodeInnerText.CleanXPath() + "]/translate")
                                 ?.Value;
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "Label_Bioware",
@@ -1417,7 +1417,7 @@ namespace Chummer
                         if (blnSync)
                         {
                             if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                                return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(
+                                return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(
                                                                    x => x.Children, objCyberware =>
                                                                        objCyberware.Name.Contains(strNodeInnerText) &&
                                                                        objCyberware.SourceType
@@ -1425,7 +1425,7 @@ namespace Chummer
                                                                        && string.IsNullOrEmpty(
                                                                            objCyberware.PlugsIntoModularMount))
                                                                >= intCount, strName);
-                            return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
+                            return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
                                                                objCyberware.Name.Contains(strNodeInnerText) &&
                                                                objCyberware.SourceType
                                                                == Improvement.ImprovementSource.Bioware
@@ -1436,7 +1436,7 @@ namespace Chummer
                         }
 
                         if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                     x => x.GetChildrenAsync(token), async objCyberware =>
                                         objCyberware.Name.Contains(strNodeInnerText) &&
@@ -1446,7 +1446,7 @@ namespace Chummer
                                             await objCyberware.GetPlugsIntoModularMountAsync(token).ConfigureAwait(false)),
                                     token).ConfigureAwait(false)
                                 >= intCount, strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                 x => x.GetChildrenAsync(token), async objCyberware =>
                                     objCyberware.Name.Contains(strNodeInnerText) &&
@@ -1473,7 +1473,7 @@ namespace Chummer
                                     "/chummer/cyberwares/cyberware[name = "
                                     + strNodeInnerText.CleanXPath() + "]/translate")
                                 ?.Value;
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "Label_Cyberware",
@@ -1492,7 +1492,7 @@ namespace Chummer
                         if (blnSync)
                         {
                             if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                                return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(
+                                return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(
                                                                    x => x.Children, objCyberware =>
                                                                        objCyberware.Name.Contains(strNodeInnerText) &&
                                                                        objCyberware.SourceType
@@ -1500,7 +1500,7 @@ namespace Chummer
                                                                        && string.IsNullOrEmpty(
                                                                            objCyberware.PlugsIntoModularMount))
                                                                >= intCount, strName);
-                            return new Tuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
+                            return new ValueTuple<bool, string>(objCharacter.Cyberware.DeepCount(x => x.Children, objCyberware =>
                                                                objCyberware.Name.Contains(strNodeInnerText) &&
                                                                objCyberware.SourceType
                                                                == Improvement.ImprovementSource.Cyberware
@@ -1511,7 +1511,7 @@ namespace Chummer
                         }
 
                         if (string.IsNullOrEmpty(strWareNodeSelectAttribute))
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                     x => x.GetChildrenAsync(token), async objCyberware =>
                                         objCyberware.Name.Contains(strNodeInnerText) &&
@@ -1521,7 +1521,7 @@ namespace Chummer
                                             await objCyberware.GetPlugsIntoModularMountAsync(token).ConfigureAwait(false)),
                                     token).ConfigureAwait(false)
                                 >= intCount, strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetCyberwareAsync(token).ConfigureAwait(false)).DeepCountAsync(
                                 x => x.GetChildrenAsync(token), async objCyberware =>
                                     objCyberware.Name.Contains(strNodeInnerText) &&
@@ -1536,7 +1536,7 @@ namespace Chummer
                     {
                         // Damage Resistance must be a particular value.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString(
                                     "String_DamageResistance",
@@ -1554,12 +1554,12 @@ namespace Chummer
                               + (await ImprovementManager.ValueOfAsync(objCharacter,
                                   Improvement.ImprovementType.DamageResistance,
                                   token: token).ConfigureAwait(false)).StandardRound();
-                        return new Tuple<bool, string>(intDR >= xmlNode.ValueAsInt, strName);
+                        return new ValueTuple<bool, string>(intDR >= xmlNode.ValueAsInt, strName);
                     }
                 case "depenabled":
                     // Character must be an AI.
                     if (blnShowMessage)
-                        strName = Environment.NewLine + '\t' + string.Format(GlobalSettings.CultureInfo, blnSync
+                        strName = Environment.NewLine + "\t" + string.Format(GlobalSettings.CultureInfo, blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString(
                                     "Message_SelectGeneric_HaveAttributeEnabled",
@@ -1575,7 +1575,7 @@ namespace Chummer
                                 : await LanguageManager.GetStringAsync(
                                     "String_AttributeDEPLong",
                                     token: token).ConfigureAwait(false));
-                    return new Tuple<bool, string>(
+                    return new ValueTuple<bool, string>(
                         blnSync
                             ? objCharacter.DEPEnabled
                             : await objCharacter.GetDEPEnabledAsync(token).ConfigureAwait(false), strName);
@@ -1610,7 +1610,7 @@ namespace Chummer
                             {
                                 // Essence must be less than the value.
                                 if (blnShowMessage)
-                                    strName = Environment.NewLine + '\t' +
+                                    strName = Environment.NewLine + "\t" +
                                               string.Format(GlobalSettings.CultureInfo, blnSync
                                                       // ReSharper disable once MethodHasAsyncOverload
                                                       ? LanguageManager.GetString(
@@ -1622,12 +1622,12 @@ namespace Chummer
                                                   strEssNodeGradeAttributeText,
                                                   decGrade.ToString(GlobalSettings.CultureInfo));
                                 decimal.TryParse(strNodeInnerText.TrimStart('-'), System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decThreshold1);
-                                return new Tuple<bool, string>(decGrade < decThreshold1, strName);
+                                return new ValueTuple<bool, string>(decGrade < decThreshold1, strName);
                             }
 
                             // Essence must be equal to or greater than the value.
                             if (blnShowMessage)
-                                strName = Environment.NewLine + '\t' +
+                                strName = Environment.NewLine + "\t" +
                                           string.Format(GlobalSettings.CultureInfo, blnSync
                                                   // ReSharper disable once MethodHasAsyncOverload
                                                   ? LanguageManager.GetString(
@@ -1638,7 +1638,7 @@ namespace Chummer
                                                       token: token).ConfigureAwait(false), strNodeInnerText,
                                               strEssNodeGradeAttributeText, decGrade.ToString(GlobalSettings.CultureInfo));
                             decimal.TryParse(strNodeInnerText, System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decThreshold2);
-                            return new Tuple<bool, string>(decGrade >= decThreshold2, strName);
+                            return new ValueTuple<bool, string>(decGrade >= decThreshold2, strName);
                         }
 
                         decimal decEssence = blnSync
@@ -1651,7 +1651,7 @@ namespace Chummer
                         {
                             // Essence must be less than the value.
                             if (blnShowMessage)
-                                strName = Environment.NewLine + '\t' +
+                                strName = Environment.NewLine + "\t" +
                                           string.Format(GlobalSettings.CultureInfo, blnSync
                                                   // ReSharper disable once MethodHasAsyncOverload
                                                   ? LanguageManager.GetString(
@@ -1662,12 +1662,12 @@ namespace Chummer
                                                       token: token).ConfigureAwait(false), strNodeInnerText,
                                               decEssence.ToString(GlobalSettings.CultureInfo));
                             decimal.TryParse(strNodeInnerText.TrimStart('-'), System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decThreshold3);
-                            return new Tuple<bool, string>(decEssence < decThreshold3, strName);
+                            return new ValueTuple<bool, string>(decEssence < decThreshold3, strName);
                         }
 
                         // Essence must be equal to or greater than the value.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' +
+                            strName = Environment.NewLine + "\t" +
                                       string.Format(GlobalSettings.CultureInfo, blnSync
                                               // ReSharper disable once MethodHasAsyncOverload
                                               ? LanguageManager.GetString(
@@ -1678,7 +1678,7 @@ namespace Chummer
                                                   token: token).ConfigureAwait(false), strNodeInnerText,
                                           decEssence.ToString(GlobalSettings.CultureInfo));
                         decimal.TryParse(strNodeInnerText, System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decThreshold4);
-                        return new Tuple<bool, string>(decEssence >= decThreshold4, strName);
+                        return new ValueTuple<bool, string>(decEssence >= decThreshold4, strName);
                     }
                 case "echo":
                     {
@@ -1700,7 +1700,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objMetamagic.CurrentDisplayName
                                     : await objMetamagic.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (blnShowMessage)
@@ -1715,7 +1715,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/echoes/echo[name = " + strNodeInnerText.CleanXPath()
                                           + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -1725,23 +1725,23 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString("String_Echo", token: token)
                                                               : await LanguageManager
                                                                   .GetStringAsync("String_Echo", token: token)
-                                                                  .ConfigureAwait(false)) + ')';
+                                                                  .ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "setting":
                 case "gameplayoption":
                     {
                         // A particular gameplay option is required.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "String_GameplayOption",
@@ -1749,8 +1749,8 @@ namespace Chummer
                                           : await LanguageManager.GetStringAsync(
                                               "String_GameplayOption",
                                               token: token).ConfigureAwait(false))
-                                      + strSpace + '=' + strSpace + strNodeInnerText;
-                        return new Tuple<bool, string>(objCharacter.SettingsKey == strNodeInnerText, strName);
+                                      + strSpace + "=" + strSpace + strNodeInnerText;
+                        return new ValueTuple<bool, string>(objCharacter.SettingsKey == strNodeInnerText, strName);
                     }
                 case "gear":
                     {
@@ -1828,7 +1828,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objGear.CurrentDisplayNameShort
                                     : await objGear.GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (blnShowMessage)
@@ -1844,7 +1844,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/gears/gear[name = " + strNodeInnerText.CleanXPath()
                                           + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -1854,7 +1854,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -1862,10 +1862,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_Gear",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "group":
                     {
@@ -1897,15 +1897,15 @@ namespace Chummer
                                     break;
                                 if (!blnLoopResult)
                                     sbdResultName.Append(
-                                        strLoopResult.Replace(Environment.NewLine + '\t',
-                                            Environment.NewLine + '\t' + '\t'));
+                                        strLoopResult.Replace(Environment.NewLine + "\t",
+                                            Environment.NewLine + "\t\t"));
                             }
 
                             if (blnShowMessage)
                                 strName = sbdResultName.ToString();
                         }
 
-                        return new Tuple<bool, string>(blnResult, strName);
+                        return new ValueTuple<bool, string>(blnResult, strName);
                     }
                 case "grouponeof":
                     {
@@ -1936,27 +1936,27 @@ namespace Chummer
                                 if (blnResult && !blnShowMessage)
                                     break;
                                 sbdResultName.Append(
-                                    strLoopResult.Replace(Environment.NewLine + '\t',
-                                        Environment.NewLine + '\t' + '\t'));
+                                    strLoopResult.Replace(Environment.NewLine + "\t",
+                                        Environment.NewLine + "\t\t"));
                             }
 
                             if (blnShowMessage)
                                 strName = sbdResultName.ToString();
                         }
 
-                        return new Tuple<bool, string>(blnResult, strName);
+                        return new ValueTuple<bool, string>(blnResult, strName);
                     }
                 case "initiategrade":
                     {
                         // Character's initiate grade must be higher than or equal to the required value.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString("String_InitiateGrade", token: token)
                                           : await LanguageManager.GetStringAsync("String_InitiateGrade", token: token).ConfigureAwait(false))
-                                      + strSpace + '≥' + strSpace + strNodeInnerText;
+                                      + strSpace + "≥" + strSpace + strNodeInnerText;
                         int.TryParse(strNodeInnerText, System.Globalization.NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intGrade);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             (blnSync
                                 ? objCharacter.InitiateGrade
                                 : await objCharacter.GetInitiateGradeAsync(token).ConfigureAwait(false))
@@ -1979,7 +1979,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objMartialArt.CurrentDisplayName
                                     : await objMartialArt.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (blnShowMessage)
@@ -1996,7 +1996,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/martialarts/martialart[name = "
                                                         + strNodeInnerText.CleanXPath() + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -2006,7 +2006,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2014,10 +2014,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_MartialArt",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "martialtechnique":
                     {
@@ -2056,7 +2056,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objMartialArtTechnique.CurrentDisplayName
                                     : await objMartialArtTechnique.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (blnShowMessage)
@@ -2073,7 +2073,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/techniques/technique[name = "
                                                         + strNodeInnerText.CleanXPath() + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -2083,7 +2083,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2092,10 +2092,10 @@ namespace Chummer
                                                               : await LanguageManager.GetStringAsync(
                                                                   "Label_Options_MartialArtTechnique",
                                                                   token: token).ConfigureAwait(false))
-                                                          + ')';
+                                                          + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "metamagic":
                     {
@@ -2114,7 +2114,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objMetamagic.CurrentDisplayName
                                     : await objMetamagic.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (blnShowMessage)
@@ -2130,7 +2130,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/metamagics/metamagic[name = "
                                                         + strNodeInnerText.CleanXPath() + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -2140,7 +2140,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2148,10 +2148,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_Metamagic",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "metamagicart":
                 case "art":
@@ -2162,7 +2162,7 @@ namespace Chummer
                             // If we're looking for an art, return true.
                             if (xmlNode.Name == "art")
                             {
-                                return new Tuple<bool, string>(true, strName);
+                                return new ValueTuple<bool, string>(true, strName);
                             }
 
                             XPathNavigator xmlMetamagicDoc
@@ -2181,10 +2181,10 @@ namespace Chummer
                                       ?? xmlMetamagicDoc
                                           ?.SelectSingleNode("arts/art[name = " + strNodeInnerText.CleanXPath()
                                                                                 + "]/translate")?.Value;
-                                strName = Environment.NewLine + '\t'
+                                strName = Environment.NewLine + "\t"
                                                               + (!string.IsNullOrEmpty(strTranslateArt)
                                                                   ? strTranslateArt
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                               + (blnSync
                                                                   // ReSharper disable once MethodHasAsyncOverload
                                                                   ? LanguageManager.GetString(
@@ -2192,10 +2192,10 @@ namespace Chummer
                                                                       token: token)
                                                                   : await LanguageManager.GetStringAsync(
                                                                       "String_Art",
-                                                                      token: token).ConfigureAwait(false)) + ')';
+                                                                      token: token).ConfigureAwait(false)) + ")";
                             }
 
-                            if (xmlMetamagicDoc == null) return new Tuple<bool, string>(true, strName);
+                            if (xmlMetamagicDoc == null) return new ValueTuple<bool, string>(true, strName);
                             string strNodeInnerTextCleaned = strNodeInnerText.CleanXPath();
                             // Loop through the data file for each metamagic to find the Required and Forbidden nodes.
                             foreach (Metamagic objMetamagic in objCharacter.Metamagics)
@@ -2205,13 +2205,13 @@ namespace Chummer
                                     ? objMetamagic.GetNodeXPath(token)
                                     : await objMetamagic.GetNodeXPathAsync(token).ConfigureAwait(false);
                                 if (xmlMetamagicNode?.SelectSingleNode(
-                                        "forbidden/art[. = " + strNodeInnerTextCleaned + ']') != null)
+                                        "forbidden/art[. = " + strNodeInnerTextCleaned + "]") != null)
                                 {
-                                    return new Tuple<bool, string>(false, strName);
+                                    return new ValueTuple<bool, string>(false, strName);
                                 }
                             }
 
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         Art objArt = blnSync
@@ -2228,7 +2228,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objArt.CurrentDisplayName
                                     : await objArt.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         // In some cases, we want to proxy metamagics for arts. If we haven't found a match yet, check it here.
@@ -2248,12 +2248,12 @@ namespace Chummer
                                     strName = blnSync
                                         ? objMetamagic.CurrentDisplayName
                                         : await objMetamagic.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                                return new Tuple<bool, string>(true, strName);
+                                return new ValueTuple<bool, string>(true, strName);
                             }
                         }
 
                         if (!blnShowMessage)
-                            return new Tuple<bool, string>(false, strName);
+                            return new ValueTuple<bool, string>(false, strName);
                         XPathNavigator objLoopDoc = blnSync
                             // ReSharper disable once MethodHasAsyncOverload
                             ? objCharacter.LoadDataXPath("metamagic.xml", token: token)
@@ -2264,7 +2264,7 @@ namespace Chummer
                               ?? objLoopDoc
                                   .SelectSingleNode("/chummer/arts/art[name = " + strNodeInnerText.CleanXPath()
                                                                                 + "]/translate")?.Value;
-                        strName = Environment.NewLine + '\t'
+                        strName = Environment.NewLine + "\t"
                                                       + (!string.IsNullOrEmpty(strTranslate)
                                                           ? strTranslate
                                                           : strNodeInnerText.IsGuid()
@@ -2273,7 +2273,7 @@ namespace Chummer
                                                                         "/chummer/arts/art[id = "
                                                                         + strNodeInnerText.CleanXPath() + "]/name")?.Value
                                                                 ?? strNodeInnerText
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                       + (blnSync
                                                           // ReSharper disable once MethodHasAsyncOverload
                                                           ? LanguageManager.GetString(
@@ -2281,14 +2281,14 @@ namespace Chummer
                                                               token: token)
                                                           : await LanguageManager.GetStringAsync(
                                                               "String_Art",
-                                                              token: token).ConfigureAwait(false)) + ')';
-                        return new Tuple<bool, string>(false, strName);
+                                                              token: token).ConfigureAwait(false)) + ")";
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "magenabled":
                     {
                         // Character must be Awakened.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + string.Format(GlobalSettings.CultureInfo, blnSync
+                            strName = Environment.NewLine + "\t" + string.Format(GlobalSettings.CultureInfo, blnSync
                                     // ReSharper disable once MethodHasAsyncOverload
                                     ? LanguageManager.GetString(
                                         "Message_SelectGeneric_HaveAttributeEnabled",
@@ -2304,7 +2304,7 @@ namespace Chummer
                                     : await LanguageManager.GetStringAsync(
                                         "String_AttributeMAGLong",
                                         token: token).ConfigureAwait(false));
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             blnSync
                                 ? objCharacter.MAGEnabled
                                 : await objCharacter.GetMAGEnabledAsync(token).ConfigureAwait(false), strName);
@@ -2333,7 +2333,7 @@ namespace Chummer
                                 strTranslate = objLoopDoc.SelectSingleNode(strXPathFilter)?.Value;
                             }
 
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -2342,7 +2342,7 @@ namespace Chummer
                                                                           "/chummer/metatypes/metatype[id = "
                                                                           + strNodeInnerText.CleanXPath()
                                                                           + "]/name")?.Value ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2350,10 +2350,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_Metatype",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(strNodeInnerText == objCharacter.Metatype
+                        return new ValueTuple<bool, string>(strNodeInnerText == objCharacter.Metatype
                                                        || strNodeInnerText == objCharacter.MetatypeGuid.ToString("D",
                                                            GlobalSettings.InvariantCultureInfo), strName);
                     }
@@ -2380,10 +2380,10 @@ namespace Chummer
                                 strTranslate = objLoopDoc.SelectSingleNode(strXPathFilter)?.Value;
                             }
 
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2391,10 +2391,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_MetatypeCategory",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(strNodeInnerText == objCharacter.MetatypeCategory, strName);
+                        return new ValueTuple<bool, string>(strNodeInnerText == objCharacter.MetatypeCategory, strName);
                     }
                 case "metavariant":
                     {
@@ -2420,7 +2420,7 @@ namespace Chummer
                                 strTranslate = objLoopDoc.SelectSingleNode(strXPathFilter)?.Value;
                             }
 
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -2429,7 +2429,7 @@ namespace Chummer
                                                                           "/chummer/metatypes/metatype/metavariants/metavariant[id = "
                                                                           + strNodeInnerText.CleanXPath()
                                                                           + "]/name")?.Value ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2437,10 +2437,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_Metavariant",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(strNodeInnerText == objCharacter.Metavariant
+                        return new ValueTuple<bool, string>(strNodeInnerText == objCharacter.Metavariant
                                                        || strNodeInnerText == objCharacter.MetavariantGuid.ToString("D",
                                                            GlobalSettings.InvariantCultureInfo), strName);
                     }
@@ -2448,7 +2448,7 @@ namespace Chummer
                     {
                         // Character's nuyen must be higher than or equal to the required value.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "String_Nuyen",
@@ -2456,8 +2456,8 @@ namespace Chummer
                                           : await LanguageManager.GetStringAsync(
                                               "String_Nuyen",
                                               token: token).ConfigureAwait(false)) + strSpace
-                                      + '≥' + strSpace + strNodeInnerText;
-                        return new Tuple<bool, string>(
+                                      + "≥" + strSpace + strNodeInnerText;
+                        return new ValueTuple<bool, string>(
                             (blnSync
                                 ? objCharacter.Nuyen
                                 : await objCharacter.GetNuyenAsync(token).ConfigureAwait(false)) >= xmlNode.ValueAsInt,
@@ -2466,7 +2466,7 @@ namespace Chummer
                 case "onlyprioritygiven":
                     {
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2475,7 +2475,7 @@ namespace Chummer
                                                               : await LanguageManager.GetStringAsync(
                                                                   "Message_SelectGeneric_PriorityRestriction",
                                                                   token: token).ConfigureAwait(false));
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             blnSync
                                 ? objCharacter.EffectiveBuildMethodUsesPriorityTables
                                 : await objCharacter.GetEffectiveBuildMethodUsesPriorityTablesAsync(token)
@@ -2547,7 +2547,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objPower.CurrentDisplayName
                                     : await objPower.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (blnShowMessage)
@@ -2562,7 +2562,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/powers/power[name = " + strNodeInnerText.CleanXPath()
                                           + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -2572,7 +2572,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2580,10 +2580,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "Tab_Adept",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "program":
                     {
@@ -2599,7 +2599,7 @@ namespace Chummer
                                 token).ConfigureAwait(false);
                         // Character needs a specific Program.
                         if (!blnShowMessage)
-                            return new Tuple<bool, string>(blnResult, strName);
+                            return new ValueTuple<bool, string>(blnResult, strName);
                         XPathNavigator objLoopDoc = blnSync
                             // ReSharper disable once MethodHasAsyncOverload
                             ? objCharacter.LoadDataXPath("programs.xml", token: token)
@@ -2610,7 +2610,7 @@ namespace Chummer
                               ?? objLoopDoc
                                   .SelectSingleNode("/chummer/programs/program[name = " + strNodeInnerText.CleanXPath()
                                       + "]/translate")?.Value;
-                        strName = Environment.NewLine + '\t'
+                        strName = Environment.NewLine + "\t"
                                                       + (!string.IsNullOrEmpty(strTranslate)
                                                           ? strTranslate
                                                           : strNodeInnerText.IsGuid()
@@ -2619,7 +2619,7 @@ namespace Chummer
                                                                         "/chummer/programs/program[id = "
                                                                         + strNodeInnerText.CleanXPath() + "]/name")?.Value
                                                                 ?? strNodeInnerText
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                       + (blnSync
                                                           // ReSharper disable once MethodHasAsyncOverload
                                                           ? LanguageManager.GetString(
@@ -2627,8 +2627,8 @@ namespace Chummer
                                                               token: token)
                                                           : await LanguageManager.GetStringAsync(
                                                               "String_Program",
-                                                              token: token).ConfigureAwait(false)) + ')';
-                        return new Tuple<bool, string>(blnResult, strName);
+                                                              token: token).ConfigureAwait(false)) + ")";
+                        return new ValueTuple<bool, string>(blnResult, strName);
                     }
                 case "characterquality":
                 case "quality":
@@ -2665,11 +2665,11 @@ namespace Chummer
                                 strName = blnSync
                                     ? objQuality.CurrentDisplayName
                                     : await objQuality.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (!blnShowMessage)
-                            return new Tuple<bool, string>(false, strName);
+                            return new ValueTuple<bool, string>(false, strName);
                         XPathNavigator objLoopDoc = blnSync
                             // ReSharper disable once MethodHasAsyncOverload
                             ? objCharacter.LoadDataXPath("qualities.xml", token: token)
@@ -2680,7 +2680,7 @@ namespace Chummer
                               ?? objLoopDoc
                                   .SelectSingleNode("/chummer/qualities/quality[name = " + strNodeInnerText.CleanXPath()
                                       + "]/translate")?.Value;
-                        strName = Environment.NewLine + '\t'
+                        strName = Environment.NewLine + "\t"
                                                       + (!string.IsNullOrEmpty(strTranslate)
                                                           ? strTranslate
                                                           : strNodeInnerText.IsGuid()
@@ -2689,7 +2689,7 @@ namespace Chummer
                                                                         "/chummer/qualities/quality[id = "
                                                                         + strNodeInnerText.CleanXPath() + "]/name")?.Value
                                                                 ?? strNodeInnerText
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                       + (blnSync
                                                           // ReSharper disable once MethodHasAsyncOverload
                                                           ? LanguageManager.GetString(
@@ -2697,8 +2697,8 @@ namespace Chummer
                                                               token: token)
                                                           : await LanguageManager.GetStringAsync(
                                                               "String_Quality",
-                                                              token: token).ConfigureAwait(false)) + ')';
-                        return new Tuple<bool, string>(false, strName);
+                                                              token: token).ConfigureAwait(false)) + ")";
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "lifestylequality":
                     {
@@ -2783,11 +2783,11 @@ namespace Chummer
                                 strName = blnSync
                                     ? objQuality.CurrentDisplayName
                                     : await objQuality.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (!blnShowMessage)
-                            return new Tuple<bool, string>(false, strName);
+                            return new ValueTuple<bool, string>(false, strName);
                         XPathNavigator objLoopDoc = blnSync
                             // ReSharper disable once MethodHasAsyncOverload
                             ? objCharacter.LoadDataXPath("lifestyles.xml", token: token)
@@ -2798,7 +2798,7 @@ namespace Chummer
                               ?? objLoopDoc
                                   .SelectSingleNode("/chummer/qualities/quality[name = " + strNodeInnerText.CleanXPath()
                                       + "]/translate")?.Value;
-                        strName = Environment.NewLine + '\t'
+                        strName = Environment.NewLine + "\t"
                                                       + (!string.IsNullOrEmpty(strTranslate)
                                                           ? strTranslate
                                                           : strNodeInnerText.IsGuid()
@@ -2807,7 +2807,7 @@ namespace Chummer
                                                                         "/chummer/qualities/quality[id = "
                                                                         + strNodeInnerText.CleanXPath() + "]/name")?.Value
                                                                 ?? strNodeInnerText
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                       + (blnSync
                                                           // ReSharper disable once MethodHasAsyncOverload
                                                           ? LanguageManager.GetString(
@@ -2815,8 +2815,8 @@ namespace Chummer
                                                               token: token)
                                                           : await LanguageManager.GetStringAsync(
                                                               "String_Quality",
-                                                              token: token).ConfigureAwait(false)) + ')';
-                        return new Tuple<bool, string>(false, strName);
+                                                              token: token).ConfigureAwait(false)) + ")";
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "lifestyle":
                     {
@@ -2835,7 +2835,7 @@ namespace Chummer
                                       .SelectSingleNode("/chummer/lifestyles/lifestyle[name = "
                                                         + strNodeInnerText.CleanXPath()
                                                         + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -2845,7 +2845,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -2853,10 +2853,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_Lifestyle",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(objParent is Lifestyle objLifestyle
+                        return new ValueTuple<bool, string>(objParent is Lifestyle objLifestyle
                             ? (blnSync
                                 ? objLifestyle.BaseLifestyle
                                 : await objLifestyle.GetBaseLifestyleAsync(token).ConfigureAwait(false)) == strNodeInnerText
@@ -2875,7 +2875,7 @@ namespace Chummer
                 case "resenabled":
                     // Character must be Emerged.
                     if (blnShowMessage)
-                        strName = Environment.NewLine + '\t' + string.Format(GlobalSettings.CultureInfo, blnSync
+                        strName = Environment.NewLine + "\t" + string.Format(GlobalSettings.CultureInfo, blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString(
                                     "Message_SelectGeneric_HaveAttributeEnabled",
@@ -2891,7 +2891,7 @@ namespace Chummer
                                 : await LanguageManager.GetStringAsync(
                                     "String_AttributeRESLong",
                                     token: token).ConfigureAwait(false));
-                    return new Tuple<bool, string>(
+                    return new ValueTuple<bool, string>(
                         blnSync
                             ? objCharacter.RESEnabled
                             : await objCharacter.GetRESEnabledAsync(token).ConfigureAwait(false), strName);
@@ -2966,7 +2966,7 @@ namespace Chummer
                                                     token: token).ConfigureAwait(false)).Count
                                         == 0)
                                     {
-                                        strName += strSpace + '(' + strSpec + ')';
+                                        strName += strSpace + "(" + strSpec + ")";
                                     }
 
                                     if (!string.IsNullOrEmpty(strValue))
@@ -2975,7 +2975,7 @@ namespace Chummer
                                     }
                                 }
 
-                                return new Tuple<bool, string>(true, strName);
+                                return new ValueTuple<bool, string>(true, strName);
                             }
                         }
                         else
@@ -3000,10 +3000,10 @@ namespace Chummer
                                 if (objSkill == null && !string.IsNullOrEmpty(strSpec))
                                     objSkill = blnSync
                                         // ReSharper disable once MethodHasAsyncOverload
-                                        ? objSkillsSection.GetActiveSkill(strNodeName + strSpace + '(' + strSpec + ')',
+                                        ? objSkillsSection.GetActiveSkill(strNodeName + strSpace + "(" + strSpec + ")",
                                             token)
                                         : await objSkillsSection.GetActiveSkillAsync(
-                                            strNodeName + strSpace + '(' + strSpec + ')', token).ConfigureAwait(false);
+                                            strNodeName + strSpace + "(" + strSpec + ")", token).ConfigureAwait(false);
                             }
 
                             if (objSkill != null)
@@ -3038,7 +3038,7 @@ namespace Chummer
                                                         token: token).ConfigureAwait(false)).Count
                                             == 0)
                                         {
-                                            strName += strSpace + '(' + strSpec + ')';
+                                            strName += strSpace + "(" + strSpec + ")";
                                         }
 
                                         if (!string.IsNullOrEmpty(strValue))
@@ -3047,7 +3047,7 @@ namespace Chummer
                                         }
                                     }
 
-                                    return new Tuple<bool, string>(true, strName);
+                                    return new ValueTuple<bool, string>(true, strName);
                                 }
                             }
                         }
@@ -3081,13 +3081,13 @@ namespace Chummer
                                       ?? xmlSkillDoc
                                           .SelectSingleNode("/chummer/knowledgeskills/skill[id = " + strSkillId.CleanXPath()
                                               + "]/name")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strSkillName);
                             if (!string.IsNullOrEmpty(strSpec))
                             {
-                                strName += strSpace + '(' + strSpec + ')';
+                                strName += strSpace + "(" + strSpec + ")";
                             }
 
                             if (!string.IsNullOrEmpty(strValue))
@@ -3095,17 +3095,17 @@ namespace Chummer
                                 strName += strSpace + strValue;
                             }
 
-                            strName += strSpace + '(' + (blnSync
+                            strName += strSpace + "(" + (blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString(
                                     "Tab_Skills",
                                     token: token)
                                 : await LanguageManager.GetStringAsync(
                                     "Tab_Skills",
-                                    token: token).ConfigureAwait(false)) + ')';
+                                    token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "skilltotal":
                     {
@@ -3211,24 +3211,24 @@ namespace Chummer
                             }
 
                             if (!blnShowMessage)
-                                return new Tuple<bool, string>(
+                                return new ValueTuple<bool, string>(
                                     intTotal >= (xmlNode.SelectSingleNodeAndCacheExpression("val", token)?.ValueAsInt ?? 0),
                                     strName);
                             if (sbdOutput.Length > 0)
                                 sbdOutput.Length -= 2;
-                            strName = sbdOutput + strSpace + '(' + (blnSync
+                            strName = sbdOutput.ToString() + strSpace + "(" + (blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString(
                                     "String_ExpenseSkill",
                                     token: token)
                                 : await LanguageManager.GetStringAsync(
                                     "String_ExpenseSkill",
-                                    token: token).ConfigureAwait(false)) + ')';
+                                    token: token).ConfigureAwait(false)) + ")";
                         }
 
                         int intTarget = xmlNode.SelectSingleNodeAndCacheExpression("val", token)
                             ?.ValueAsInt ?? 0;
-                        return new Tuple<bool, string>(intTotal >= intTarget, strName);
+                        return new ValueTuple<bool, string>(intTotal >= intTarget, strName);
                     }
                 case "skillgrouptotal":
                     {
@@ -3295,7 +3295,7 @@ namespace Chummer
                             {
                                 if (sbdOutput.Length > 0)
                                     sbdOutput.Length -= 2;
-                                strName = sbdOutput + strSpace + '('
+                                strName = sbdOutput.ToString() + strSpace + "("
                                           + (blnSync
                                               // ReSharper disable once MethodHasAsyncOverload
                                               ? LanguageManager.GetString(
@@ -3303,12 +3303,12 @@ namespace Chummer
                                                   token: token)
                                               : await LanguageManager.GetStringAsync(
                                                   "String_ExpenseSkillGroup",
-                                                  token: token).ConfigureAwait(false)) + ')';
+                                                  token: token).ConfigureAwait(false)) + ")";
                             }
                         }
 
                         int intTarget = xmlNode.SelectSingleNodeAndCacheExpression("val", token)?.ValueAsInt ?? 0;
-                        return new Tuple<bool, string>(intTotal >= intTarget, strName);
+                        return new ValueTuple<bool, string>(intTotal >= intTarget, strName);
                     }
                 case "specialmodificationlimit":
                     {
@@ -3324,7 +3324,7 @@ namespace Chummer
                         }
                         else
                         {
-                            List<Weapon> lstWeapons = new List<Weapon>();
+                            List<Weapon> lstWeapons = new List<Weapon>(2 * await (await objCharacter.GetWeaponsAsync(token)).GetCountAsync(token).ConfigureAwait(false));
                             foreach (Weapon objWeapon in await (await objCharacter.GetWeaponsAsync(token)
                                          .ConfigureAwait(false)).GetAllDescendantsAsync(
                                          x => x.UnderbarrelWeapons, token).ConfigureAwait(false))
@@ -3356,7 +3356,7 @@ namespace Chummer
 
                         if (blnShowMessage)
                         {
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -3365,10 +3365,10 @@ namespace Chummer
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_SpecialModificationLimit",
                                                                   token: token).ConfigureAwait(false))
-                                                          + strSpace + '≥' + strSpace + strNodeInnerText;
+                                                          + strSpace + "≥" + strSpace + strNodeInnerText;
                         }
 
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             intMods + xmlNode.ValueAsInt <= (blnSync ? objCharacter.SpecialModificationLimit : await objCharacter.GetSpecialModificationLimitAsync(token).ConfigureAwait(false)), strName);
                     }
                 case "spell":
@@ -3386,7 +3386,7 @@ namespace Chummer
                                 strName = blnSync
                                     ? objSpell.CurrentDisplayName
                                     : await objSpell.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         }
 
                         if (blnShowMessage)
@@ -3402,7 +3402,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/spells/spell[name = " + strNodeInnerText.CleanXPath()
                                           + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -3412,7 +3412,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -3420,10 +3420,10 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_DescSpell",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
-                        return new Tuple<bool, string>(false, strName);
+                        return new ValueTuple<bool, string>(false, strName);
                     }
                 case "spellcategory":
                     {
@@ -3439,10 +3439,10 @@ namespace Chummer
                                 .SelectSingleNode(
                                     "/chummer/categories/category[. = "
                                     + strNodeName.CleanXPath() + "]/@translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -3450,16 +3450,16 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_SpellCategory",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
                         int intTarget = xmlNode.SelectSingleNodeAndCacheExpression("count", token)?.ValueAsInt ?? 0;
                         if (blnSync)
                             // ReSharper disable once MethodHasAsyncOverload
-                            return new Tuple<bool, string>(
+                            return new ValueTuple<bool, string>(
                                 objCharacter.Spells.Count(objSpell => objSpell.Category == strNodeName, token) >= intTarget,
                                 strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetSpellsAsync(token).ConfigureAwait(false))
                                 .CountAsync(objSpell => objSpell.Category == strNodeName, token).ConfigureAwait(false) >=
                             intTarget, strName);
@@ -3469,7 +3469,7 @@ namespace Chummer
                         int intCount = xmlNode.SelectSingleNodeAndCacheExpression("count", token)?.ValueAsInt ?? 0;
                         // Check for a specified amount of a particular Spell Descriptor.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "Label_Descriptors",
@@ -3477,15 +3477,15 @@ namespace Chummer
                                           : await LanguageManager.GetStringAsync(
                                               "Label_Descriptors",
                                               token: token).ConfigureAwait(false)) + strSpace
-                                      + '≥' + strSpace + intCount.ToString(GlobalSettings.CultureInfo);
+                                      + "≥" + strSpace + intCount.ToString(GlobalSettings.CultureInfo);
                         if (blnSync)
                             // ReSharper disable once MethodHasAsyncOverload
-                            return new Tuple<bool, string>(objCharacter.Spells.Count(
+                            return new ValueTuple<bool, string>(objCharacter.Spells.Count(
                                                                objSpell => objSpell.Descriptors.Contains(strNodeName),
                                                                token)
                                                            // ReSharper disable once MethodHasAsyncOverload
                                                            >= intCount, strName);
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             await (await objCharacter.GetSpellsAsync(token).ConfigureAwait(false)).CountAsync(
                                 objSpell => objSpell.Descriptors.Contains(strNodeName), token).ConfigureAwait(false)
                             >= intCount, strName);
@@ -3494,7 +3494,7 @@ namespace Chummer
                     {
                         // Street Cred must be higher than Notoriety.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "String_StreetCred",
@@ -3502,7 +3502,7 @@ namespace Chummer
                                           : await LanguageManager.GetStringAsync(
                                               "String_StreetCred",
                                               token: token).ConfigureAwait(false)) + strSpace
-                                      + '≥' + strSpace + (blnSync
+                                      + "≥" + strSpace + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "String_Notoriety",
@@ -3510,7 +3510,7 @@ namespace Chummer
                                           : await LanguageManager.GetStringAsync(
                                               "String_Notoriety",
                                               token: token).ConfigureAwait(false));
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             blnSync
                                 ? objCharacter.StreetCred >= objCharacter.Notoriety
                                 : await objCharacter.GetStreetCredAsync(token).ConfigureAwait(false) >=
@@ -3520,7 +3520,7 @@ namespace Chummer
                     {
                         // Character's initiate grade must be higher than or equal to the required value.
                         if (blnShowMessage)
-                            strName = Environment.NewLine + '\t' + (blnSync
+                            strName = Environment.NewLine + "\t" + (blnSync
                                           // ReSharper disable once MethodHasAsyncOverload
                                           ? LanguageManager.GetString(
                                               "String_SubmersionGrade",
@@ -3528,8 +3528,8 @@ namespace Chummer
                                           : await LanguageManager.GetStringAsync(
                                               "String_SubmersionGrade",
                                               token: token).ConfigureAwait(false))
-                                      + strSpace + '≥' + strSpace + strNodeInnerText;
-                        return new Tuple<bool, string>(
+                                      + strSpace + "≥" + strSpace + strNodeInnerText;
+                        return new ValueTuple<bool, string>(
                             (blnSync
                                 ? objCharacter.SubmersionGrade
                                 : await objCharacter.GetSubmersionGradeAsync(token).ConfigureAwait(false))
@@ -3551,7 +3551,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/traditions/tradition[name = "
                                                         + strNodeInnerText.CleanXPath() + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -3561,7 +3561,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -3569,14 +3569,14 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_Tradition",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
                         Backend.Uniques.Tradition objTradition = blnSync
                             ? objCharacter.MagicTradition
                             : await objCharacter.GetMagicTraditionAsync(token).ConfigureAwait(false);
 
-                        return new Tuple<bool, string>(objTradition.Name == strNodeInnerText
+                        return new ValueTuple<bool, string>(objTradition.Name == strNodeInnerText
                                                        || string.Equals(objTradition.SourceIDString, strNodeInnerText,
                                                            StringComparison.OrdinalIgnoreCase), strName);
                     }
@@ -3597,7 +3597,7 @@ namespace Chummer
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/powers/power[name = " + strNodeInnerText.CleanXPath()
                                           + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -3607,7 +3607,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -3615,7 +3615,7 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_Tradition",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
                         Backend.Uniques.Tradition objTradition = blnSync
@@ -3623,9 +3623,9 @@ namespace Chummer
                             : await objCharacter.GetMagicTraditionAsync(token).ConfigureAwait(false);
 
                         if (objTradition.SpiritForm == strNodeInnerText)
-                            return new Tuple<bool, string>(true, strName);
+                            return new ValueTuple<bool, string>(true, strName);
                         if (!strNodeInnerText.IsGuid())
-                            return new Tuple<bool, string>(false, strName);
+                            return new ValueTuple<bool, string>(false, strName);
                         objLoopDoc = blnSync
                             // ReSharper disable once MethodHasAsyncOverload
                             ? objCharacter.LoadDataXPath("critterpowers.xml", token: token)
@@ -3635,7 +3635,7 @@ namespace Chummer
                             .SelectSingleNode(
                                 "/chummer/powers/power[id = " + strNodeInnerText.CleanXPath()
                                                               + "]/name")?.Value;
-                        return new Tuple<bool, string>(objTradition.SpiritForm == strEnglishName, strName);
+                        return new ValueTuple<bool, string>(objTradition.SpiritForm == strEnglishName, strName);
                     }
                 case "weapon":
                     {
@@ -3650,7 +3650,7 @@ namespace Chummer
                                          StringComparison.OrdinalIgnoreCase), token).ConfigureAwait(false);
                         // Character needs a specific Weapon.
                         if (!blnShowMessage)
-                            return new Tuple<bool, string>(blnReturn, strName);
+                            return new ValueTuple<bool, string>(blnReturn, strName);
                         XPathNavigator objLoopDoc = blnSync
                             // ReSharper disable once MethodHasAsyncOverload
                             ? objCharacter.LoadDataXPath("weapons.xml", token: token)
@@ -3661,7 +3661,7 @@ namespace Chummer
                               ?? objLoopDoc
                                   .SelectSingleNode("/chummer/weapons/weapon[name = " + strNodeInnerText.CleanXPath()
                                       + "]/translate")?.Value;
-                        strName = Environment.NewLine + '\t'
+                        strName = Environment.NewLine + "\t"
                                                       + (!string.IsNullOrEmpty(strTranslate)
                                                           ? strTranslate
                                                           : strNodeInnerText.IsGuid()
@@ -3670,7 +3670,7 @@ namespace Chummer
                                                                         "/chummer/weapons/weapon[id = "
                                                                         + strNodeInnerText.CleanXPath() + "]/name")?.Value
                                                                 ?? strNodeInnerText
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                       + (blnSync
                                                           // ReSharper disable once MethodHasAsyncOverload
                                                           ? LanguageManager.GetString(
@@ -3678,8 +3678,8 @@ namespace Chummer
                                                               token: token)
                                                           : await LanguageManager.GetStringAsync(
                                                               "String_Weapon",
-                                                              token: token).ConfigureAwait(false)) + ')';
-                        return new Tuple<bool, string>(blnReturn, strName);
+                                                              token: token).ConfigureAwait(false)) + ")";
+                        return new ValueTuple<bool, string>(blnReturn, strName);
                     }
                 case "accessory" when objParent is Weapon objWeapon:
                     {
@@ -3696,7 +3696,7 @@ namespace Chummer
                                         StringComparison.OrdinalIgnoreCase),
                                 token).ConfigureAwait(false);
                         if (!blnShowMessage)
-                            return new Tuple<bool, string>(blnReturn, strName);
+                            return new ValueTuple<bool, string>(blnReturn, strName);
                         XPathNavigator objLoopDoc = blnSync
                             // ReSharper disable once MethodHasAsyncOverload
                             ? objCharacter.LoadDataXPath("weapons.xml", token: token)
@@ -3707,7 +3707,7 @@ namespace Chummer
                               ?? objLoopDoc
                                   .SelectSingleNode("/chummer/accessories/accessory[name = " + strNodeInnerText.CleanXPath()
                                       + "]/translate")?.Value;
-                        strName = Environment.NewLine + '\t'
+                        strName = Environment.NewLine + "\t"
                                                       + (!string.IsNullOrEmpty(strTranslate)
                                                           ? strTranslate
                                                           : strNodeInnerText.IsGuid()
@@ -3716,7 +3716,7 @@ namespace Chummer
                                                                         "/chummer/accessories/accessory[id = "
                                                                         + strNodeInnerText.CleanXPath() + "]/name")?.Value
                                                                 ?? strNodeInnerText
-                                                              : strNodeInnerText) + strSpace + '('
+                                                              : strNodeInnerText) + strSpace + "("
                                                       + (blnSync
                                                           // ReSharper disable once MethodHasAsyncOverload
                                                           ? LanguageManager.GetString(
@@ -3724,12 +3724,12 @@ namespace Chummer
                                                               token: token)
                                                           : await LanguageManager.GetStringAsync(
                                                               "String_WeaponAccessory",
-                                                              token: token).ConfigureAwait(false)) + ')';
-                        return new Tuple<bool, string>(blnReturn, strName);
+                                                              token: token).ConfigureAwait(false)) + ")";
+                        return new ValueTuple<bool, string>(blnReturn, strName);
                     }
                 case "weapondetails" when objParent is Weapon objWeapon:
                     {
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             blnSync
                                 // ReSharper disable MethodHasAsyncOverload
                                 ? objWeapon.GetNodeXPath(token).ProcessFilterOperationNode(xmlNode, false, token)
@@ -3753,7 +3753,7 @@ namespace Chummer
                                       .SelectSingleNode("/chummer/armormods/armormod[name = " +
                                                         strNodeInnerText.CleanXPath()
                                                         + "]/translate")?.Value;
-                            strName = Environment.NewLine + '\t'
+                            strName = Environment.NewLine + "\t"
                                                           + (!string.IsNullOrEmpty(strTranslate)
                                                               ? strTranslate
                                                               : strNodeInnerText.IsGuid()
@@ -3763,7 +3763,7 @@ namespace Chummer
                                                                             + strNodeInnerText.CleanXPath() + "]/name")
                                                                         ?.Value
                                                                     ?? strNodeInnerText
-                                                                  : strNodeInnerText) + strSpace + '('
+                                                                  : strNodeInnerText) + strSpace + "("
                                                           + (blnSync
                                                               // ReSharper disable once MethodHasAsyncOverload
                                                               ? LanguageManager.GetString(
@@ -3771,12 +3771,12 @@ namespace Chummer
                                                                   token: token)
                                                               : await LanguageManager.GetStringAsync(
                                                                   "String_ArmorMod",
-                                                                  token: token).ConfigureAwait(false)) + ')';
+                                                                  token: token).ConfigureAwait(false)) + ")";
                         }
 
                         if (xmlNode.GetAttribute("sameparent", string.Empty) == bool.TrueString)
                         {
-                            return new Tuple<bool, string>(objParent is Armor objArmor && (blnSync
+                            return new ValueTuple<bool, string>(objParent is Armor objArmor && (blnSync
                                     // ReSharper disable once MethodHasAsyncOverload
                                     ? objArmor.ArmorMods.Any(
                                         x => x.Name == strNodeInnerText
@@ -3789,7 +3789,7 @@ namespace Chummer
                                 strName);
                         }
 
-                        return new Tuple<bool, string>(
+                        return new ValueTuple<bool, string>(
                             blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? objCharacter.Armor.Any(
@@ -3809,7 +3809,7 @@ namespace Chummer
 
             if (blnShowMessage)
                 strName = strNodeInnerText;
-            return new Tuple<bool, string>(false, strName);
+            return new ValueTuple<bool, string>(false, strName);
         }
 
         /// <summary>
@@ -3859,7 +3859,7 @@ namespace Chummer
                         intHighestAvailNode = Math.Max(intHighestAvailNode, intTmp);
                     }
                 }
-                objAvailNode = objXmlGear.SelectSingleNode("avail" + intHighestAvailNode);
+                objAvailNode = objXmlGear.SelectSingleNode("avail" + intHighestAvailNode.ToString(GlobalSettings.InvariantCultureInfo));
                 for (int i = intRating; i <= intHighestAvailNode; ++i)
                 {
                     token.ThrowIfCancellationRequested();
@@ -3940,7 +3940,7 @@ namespace Chummer
                         intHighestAvailNode = Math.Max(intHighestAvailNode, intTmp);
                     }
                 }
-                objAvailNode = objXmlGear.SelectSingleNode("avail" + intHighestAvailNode);
+                objAvailNode = objXmlGear.SelectSingleNode("avail" + intHighestAvailNode.ToString(GlobalSettings.InvariantCultureInfo));
                 for (int i = intRating; i <= intHighestAvailNode; ++i)
                 {
                     XPathNavigator objLoopNode = objXmlGear.SelectSingleNode("avail" + i.ToString(GlobalSettings.InvariantCultureInfo));

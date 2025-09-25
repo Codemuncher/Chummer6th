@@ -19,10 +19,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -41,12 +41,13 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = XmlManager.LoadXPath("skills.xml", objCharacter?.Settings.EnabledCustomDataDirectoryPaths);
         }
 
         private async void SelectSkillGroup_Load(object sender, EventArgs e)
         {
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGroups))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGroups))
             {
                 if (string.IsNullOrEmpty(_strForceValue))
                 {
@@ -56,7 +57,7 @@ namespace Chummer
                     {
                         if (!string.IsNullOrEmpty(_strExcludeCategory))
                         {
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdExclude))
                             {
                                 string strExclude = string.Empty;
@@ -126,6 +127,8 @@ namespace Chummer
 
         // Description to show in the window.
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        // Description to show in the window.
         public string Description
         {
             set => lblDescription.Text = value;
@@ -135,6 +138,9 @@ namespace Chummer
         /// Force a specific SkillGroup to be selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Force a specific SkillGroup to be selected.
+        /// </summary>
         public string OnlyGroup
         {
             set => _strForceValue = value;
@@ -144,6 +150,9 @@ namespace Chummer
         /// Only Skills not in the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills not in the selected Category should be in the list.
+        /// </summary>
         public string ExcludeCategory
         {
             set => _strExcludeCategory = value;

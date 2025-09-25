@@ -17,12 +17,9 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Skills;
-using Microsoft.IO;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -31,6 +28,9 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+using Chummer.Backend.Skills;
+using Microsoft.IO;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -52,6 +52,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _strCustomGroup = strCustomGroup;
             _objImprovementsDocumentImprovementsNode = objCharacter.LoadDataXPath("improvements.xml").SelectSingleNode("/chummer/improvements");
         }
@@ -738,109 +739,112 @@ namespace Chummer
                                            .DoThreadSafeFuncAsync(x => x.SelectedValue.ToString(), token: token)
                                            .ConfigureAwait(false);
 
-            XmlDocument objBonusXml = new XmlDocument { XmlResolver = null };
-            using (RecyclableMemoryStream objStream = new RecyclableMemoryStream(Utils.MemoryStreamManager))
+            string strGuid;
+            using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool, out XmlDocument objBonusXml))
             {
-                using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                using (RecyclableMemoryStream objStream = new RecyclableMemoryStream(Utils.MemoryStreamManager))
                 {
-                    // Build the XML for the Improvement.
-                    XPathNavigator objFetchNode = _objImprovementsDocumentImprovementsNode.TryGetNodeByNameOrId("improvement", strSelectedType, blnIdIsGuid: false);
-                    if (objFetchNode == null)
-                        return;
-                    string strInternal = objFetchNode.SelectSingleNodeAndCacheExpression("internal", token)?.Value;
-                    if (string.IsNullOrEmpty(strInternal))
-                        return;
-                    await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
-                    // <bonus>
-                    XmlElementWriteHelper objBonusNode = await objWriter.StartElementAsync("bonus", token: token).ConfigureAwait(false);
-                    try
+                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
                     {
-                        // <whatever element>
-                        XmlElementWriteHelper objInternalNode = await objWriter.StartElementAsync(strInternal, token: token).ConfigureAwait(false);
+                        // Build the XML for the Improvement.
+                        XPathNavigator objFetchNode = _objImprovementsDocumentImprovementsNode.TryGetNodeByNameOrId("improvement", strSelectedType, blnIdIsGuid: false);
+                        if (objFetchNode == null)
+                            return;
+                        string strInternal = objFetchNode.SelectSingleNodeAndCacheExpression("internal", token)?.Value;
+                        if (string.IsNullOrEmpty(strInternal))
+                            return;
+                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+                        // <bonus>
+                        XmlElementWriteHelper objBonusNode = await objWriter.StartElementAsync("bonus", token: token).ConfigureAwait(false);
                         try
                         {
-                            // Retrieve the XML data from the document and replace the values as necessary.
-                            foreach (XPathNavigator xmlAttribute in objFetchNode.SelectAndCacheExpression("xml/@*", token))
+                            // <whatever element>
+                            XmlElementWriteHelper objInternalNode = await objWriter.StartElementAsync(strInternal, token: token).ConfigureAwait(false);
+                            try
                             {
-                                await objWriter.WriteAttributeStringAsync(
-                                    xmlAttribute.LocalName, xmlAttribute.Value, token: token).ConfigureAwait(false);
+                                // Retrieve the XML data from the document and replace the values as necessary.
+                                foreach (XPathNavigator xmlAttribute in objFetchNode.SelectAndCacheExpression("xml/@*", token))
+                                {
+                                    await objWriter.WriteAttributeStringAsync(
+                                        xmlAttribute.LocalName, xmlAttribute.Value, token: token).ConfigureAwait(false);
+                                }
+
+                                // ReSharper disable once PossibleNullReferenceException
+                                string strXml
+                                    = await objFetchNode.SelectSingleNodeAndCacheExpression("xml", token).Value
+                                        .CheapReplaceAsync("{val}",
+                                                           () => nudVal.DoThreadSafeFuncAsync(
+                                                               x => x.Value.ToString(
+                                                                   GlobalSettings.InvariantCultureInfo), token: token),
+                                                           token: token)
+                                        .CheapReplaceAsync("{min}",
+                                                           () => nudMin.DoThreadSafeFuncAsync(
+                                                               x => x.Value.ToString(
+                                                                   GlobalSettings.InvariantCultureInfo), token: token),
+                                                           token: token)
+                                        .CheapReplaceAsync("{max}",
+                                                           () => nudMax.DoThreadSafeFuncAsync(
+                                                               x => x.Value.ToString(
+                                                                   GlobalSettings.InvariantCultureInfo), token: token),
+                                                           token: token)
+                                        .CheapReplaceAsync("{aug}",
+                                                           () => nudAug.DoThreadSafeFuncAsync(
+                                                               x => x.Value.ToString(
+                                                                   GlobalSettings.InvariantCultureInfo), token: token),
+                                                           token: token)
+                                        .CheapReplaceAsync("{free}",
+                                                           () =>
+                                                               chkFree.DoThreadSafeFuncAsync(
+                                                                   x => x.Checked.ToString(
+                                                                       GlobalSettings
+                                                                           .InvariantCultureInfo), token: token),
+                                                           token: token)
+                                        .CheapReplaceAsync("{select}",
+                                                           () => txtSelect
+                                                               .DoThreadSafeFuncAsync(
+                                                                   x => x.Text, token: token), token: token)
+                                        .CheapReplaceAsync(
+                                            "{applytorating}",
+                                            async () =>
+                                                await chkApplyToRating
+                                                      .DoThreadSafeFuncAsync(x => x.Checked, token: token)
+                                                      .ConfigureAwait(false)
+                                                    ? "<applytorating>True</applytorating>"
+                                                    : string.Empty, token: token).ConfigureAwait(false);
+                                await objWriter.WriteRawAsync(strXml).ConfigureAwait(false);
+
+                                // Write the rest of the document.
                             }
-
-                            // ReSharper disable once PossibleNullReferenceException
-                            string strXml
-                                = await objFetchNode.SelectSingleNodeAndCacheExpression("xml", token).Value
-                                    .CheapReplaceAsync("{val}",
-                                                       () => nudVal.DoThreadSafeFuncAsync(
-                                                           x => x.Value.ToString(
-                                                               GlobalSettings.InvariantCultureInfo), token: token),
-                                                       token: token)
-                                    .CheapReplaceAsync("{min}",
-                                                       () => nudMin.DoThreadSafeFuncAsync(
-                                                           x => x.Value.ToString(
-                                                               GlobalSettings.InvariantCultureInfo), token: token),
-                                                       token: token)
-                                    .CheapReplaceAsync("{max}",
-                                                       () => nudMax.DoThreadSafeFuncAsync(
-                                                           x => x.Value.ToString(
-                                                               GlobalSettings.InvariantCultureInfo), token: token),
-                                                       token: token)
-                                    .CheapReplaceAsync("{aug}",
-                                                       () => nudAug.DoThreadSafeFuncAsync(
-                                                           x => x.Value.ToString(
-                                                               GlobalSettings.InvariantCultureInfo), token: token),
-                                                       token: token)
-                                    .CheapReplaceAsync("{free}",
-                                                       () =>
-                                                           chkFree.DoThreadSafeFuncAsync(
-                                                               x => x.Checked.ToString(
-                                                                   GlobalSettings
-                                                                       .InvariantCultureInfo), token: token),
-                                                       token: token)
-                                    .CheapReplaceAsync("{select}",
-                                                       () => txtSelect
-                                                           .DoThreadSafeFuncAsync(
-                                                               x => x.Text, token: token), token: token)
-                                    .CheapReplaceAsync(
-                                        "{applytorating}",
-                                        async () =>
-                                            await chkApplyToRating
-                                                  .DoThreadSafeFuncAsync(x => x.Checked, token: token)
-                                                  .ConfigureAwait(false)
-                                                ? "<applytorating>True</applytorating>"
-                                                : string.Empty, token: token).ConfigureAwait(false);
-                            await objWriter.WriteRawAsync(strXml).ConfigureAwait(false);
-
-                            // Write the rest of the document.
+                            finally
+                            {
+                                // </whatever element>
+                                await objInternalNode.DisposeAsync().ConfigureAwait(false);
+                            }
                         }
                         finally
                         {
-                            // </whatever element>
-                            await objInternalNode.DisposeAsync().ConfigureAwait(false);
+                            // </bonus>
+                            await objBonusNode.DisposeAsync().ConfigureAwait(false);
                         }
+                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                        await objWriter.FlushAsync().ConfigureAwait(false);
                     }
-                    finally
-                    {
-                        // </bonus>
-                        await objBonusNode.DisposeAsync().ConfigureAwait(false);
-                    }
-                    await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                    await objWriter.FlushAsync().ConfigureAwait(false);
+
+                    objStream.Position = 0;
+
+                    // Read it back in as an XmlDocument.
+                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
+                    using (XmlReader objXmlReader = XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                        objBonusXml.Load(objXmlReader);
                 }
 
-                objStream.Position = 0;
+                // Pluck out the bonus information.
+                XmlNode objNode = objBonusXml.SelectSingleNode("/bonus");
 
-                // Read it back in as an XmlDocument.
-                using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                using (XmlReader objXmlReader = XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                    objBonusXml.Load(objXmlReader);
+                // Pass it to the Improvement Manager so that it can be added to the character.
+                strGuid = Guid.NewGuid().ToString("D", GlobalSettings.InvariantCultureInfo);
+                await ImprovementManager.CreateImprovementsAsync(_objCharacter, Improvement.ImprovementSource.Custom, strGuid, objNode, strFriendlyName: strName, token: token).ConfigureAwait(false);
             }
-
-            // Pluck out the bonus information.
-            XmlNode objNode = objBonusXml.SelectSingleNode("/bonus");
-
-            // Pass it to the Improvement Manager so that it can be added to the character.
-            string strGuid = Guid.NewGuid().ToString("D", GlobalSettings.InvariantCultureInfo);
-            await ImprovementManager.CreateImprovementsAsync(_objCharacter, Improvement.ImprovementSource.Custom, strGuid, objNode, strFriendlyName: strName, token: token).ConfigureAwait(false);
 
             // If an Improvement was passed in, remove it from the character.
             string strNotes = string.Empty;
@@ -986,6 +990,9 @@ namespace Chummer
         /// Set Improvement object to edit.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Set Improvement object to edit.
+        /// </summary>
         public Improvement EditImprovementObject { get; set; }
 
         #endregion Properties
