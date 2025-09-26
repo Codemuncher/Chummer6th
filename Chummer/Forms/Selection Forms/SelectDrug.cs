@@ -17,8 +17,10 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -26,8 +28,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using Chummer.Backend.Equipment;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -156,7 +156,7 @@ namespace Chummer
                 if (xmlGrade != null)
                 {
                     decimal.TryParse(xmlGrade.SelectSingleNodeAndCacheExpression("cost", token)?.Value,
-                            System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decCostMultiplier);
+                            NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decCostMultiplier);
                     _intAvailModifier
                         = xmlGrade.SelectSingleNodeAndCacheExpression("avail", token)?.ValueAsInt ?? 0;
 
@@ -228,7 +228,7 @@ namespace Chummer
                     if (xmlRatingNode != null)
                     {
                         string strMinRating = xmlDrug.SelectSingleNodeAndCacheExpression("minrating")?.Value;
-                        int intMinRating = 1;
+                        int intMinRating;
                         // Not a simple integer, so we need to start mucking around with strings
                         if (strMinRating.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                         {
@@ -244,7 +244,7 @@ namespace Chummer
                         await nudRating.DoThreadSafeAsync(x => x.Minimum = intMinRating).ConfigureAwait(false);
 
                         string strMaxRating = xmlRatingNode.Value;
-                        int intMaxRating = 0;
+                        int intMaxRating;
                         // Not a simple integer, so we need to start mucking around with strings
                         if (strMaxRating.DoesNeedXPathProcessingToBeConvertedToNumber(out decValue))
                         {
@@ -542,9 +542,6 @@ namespace Chummer
         /// Manually set the Grade of the piece of Drug.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Manually set the Grade of the piece of Drug.
-        /// </summary>
         public Grade SetGrade
         {
             set => _objForcedGrade = value;
@@ -579,9 +576,6 @@ namespace Chummer
         /// Parent vehicle that the cyberlimb will be attached to.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Parent vehicle that the cyberlimb will be attached to.
-        /// </summary>
         public Vehicle ParentVehicle { get; set; }
 
         public decimal Markup => _decMarkup;
@@ -590,18 +584,12 @@ namespace Chummer
         /// Parent Drug that the current selection will be added to.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Parent Drug that the current selection will be added to.
-        /// </summary>
         public Drug DrugParent { get; set; }
 
         /// <summary>
         /// Default text string to filter by.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Default text string to filter by.
-        /// </summary>
         public string DefaultSearchText { get; set; }
 
         #endregion Properties
@@ -844,7 +832,7 @@ namespace Chummer
                     sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
 
                 if (sbdFilter.Length > 0)
-                    strFilter = "[" + sbdFilter.ToString() + "]";
+                    strFilter = "[" + sbdFilter.Append(']').ToString();
             }
 
             int intOverLimit = 0;

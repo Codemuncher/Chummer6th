@@ -245,6 +245,7 @@ namespace Chummer
         /// Load the Program from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -265,6 +266,7 @@ namespace Chummer
             _objCachedMyXPathNode = null;
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
             {
+                // ReSharper disable once MethodHasAsyncOverload
                 (blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID);
             }
 
@@ -273,6 +275,7 @@ namespace Chummer
             objNode.TryGetStringFieldQuickly("requiresprogram", ref _strRequiresProgram);
             // Legacy fix for weird, old way of storing this value
             if (_strRequiresProgram == "None"
+                // ReSharper disable once MethodHasAsyncOverload
                 || _strRequiresProgram == (blnSync ? LanguageManager.GetString("String_None", token: token) : await LanguageManager.GetStringAsync("String_None", token: token).ConfigureAwait(false)))
                 _strRequiresProgram = string.Empty;
             objNode.TryGetStringFieldQuickly("source", ref _strSource);
@@ -387,7 +390,7 @@ namespace Chummer
                 string strExtra = Extra;
                 if (!strLanguage.Equals(GlobalSettings.DefaultLanguage, StringComparison.OrdinalIgnoreCase))
                     strExtra = _objCharacter.TranslateExtra(Extra, strLanguage);
-                strReturn += LanguageManager.GetString("String_Space", strLanguage) + '(' + strExtra + ')';
+                strReturn += LanguageManager.GetString("String_Space", strLanguage) + "(" + strExtra + ")";
             }
             return strReturn;
         }
@@ -410,7 +413,7 @@ namespace Chummer
                 string strExtra = Extra;
                 if (!strLanguage.Equals(GlobalSettings.DefaultLanguage, StringComparison.OrdinalIgnoreCase))
                     strExtra = await _objCharacter.TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false);
-                strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + '(' + strExtra + ')';
+                strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + "(" + strExtra + ")";
             }
             return strReturn;
         }

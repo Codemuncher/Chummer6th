@@ -534,6 +534,7 @@ namespace Chummer
                     // We don't actually have such a file
                     Utils.BreakIfDebug();
                     return blnSync
+                        // ReSharper disable once MethodHasAsyncOverload
                         ? XPathNavigatorExtensions.GetEmptyDocumentNavigator(token)
                         : await XPathNavigatorExtensions.GetEmptyDocumentNavigatorAsync(token).ConfigureAwait(false);
                 }
@@ -2271,7 +2272,7 @@ namespace Chummer
                     }
 
                     if (sbdFilter.Length > 0)
-                        strFilter = "[" + sbdFilter.ToString() + "]";
+                        strFilter = "[" + sbdFilter.Append(']').ToString();
                 }
 
                 token.ThrowIfCancellationRequested();
@@ -2281,7 +2282,7 @@ namespace Chummer
                 if (objAddIfNotFound != null)
                 {
                     blnAddIfNotFoundAttributePresent = true;
-                    blnAddIfNotFound = objAddIfNotFound.InnerTextIsTrueString() == true;
+                    blnAddIfNotFound = objAddIfNotFound.InnerTextIsTrueString();
                 }
 
                 token.ThrowIfCancellationRequested();

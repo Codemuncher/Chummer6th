@@ -569,6 +569,7 @@ namespace Chummer.Backend.Equipment
                             catch
                             {
                                 if (blnSync)
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objGearWeapon.DeleteWeapon();
                                 else
                                     await objGearWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -886,8 +887,7 @@ namespace Chummer.Backend.Equipment
             bool blnAddChildImprovements = xmlChildNameAttributes?["addimprovements"]?.InnerTextViaPool() != bool.FalseString &&
                                            blnAddImprovements;
             string strChildQty = xmlChildNameAttributes?["qty"]?.InnerTextViaPool();
-            decimal decChildQty;
-            if (string.IsNullOrEmpty(strChildQty) || !decimal.TryParse(strChildQty, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decChildQty))
+            if (string.IsNullOrEmpty(strChildQty) || !decimal.TryParse(strChildQty, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decChildQty))
                 decChildQty = 1.0m;
 
             List<Weapon> lstChildWeapons = new List<Weapon>(1);
@@ -1104,8 +1104,7 @@ namespace Chummer.Backend.Equipment
             bool blnAddChildImprovements = xmlChildNameAttributes?["addimprovements"]?.InnerTextViaPool(token) != bool.FalseString &&
                                            blnAddImprovements;
             string strChildQty = xmlChildNameAttributes?["qty"]?.InnerTextViaPool(token);
-            decimal decChildQty;
-            if (string.IsNullOrEmpty(strChildQty) || !decimal.TryParse(strChildQty, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decChildQty))
+            if (string.IsNullOrEmpty(strChildQty) || !decimal.TryParse(strChildQty, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decChildQty))
                 decChildQty = 1.0m;
 
             List<Weapon> lstChildWeapons = new List<Weapon>(1);
@@ -1449,6 +1448,7 @@ namespace Chummer.Backend.Equipment
         /// Copy a piece of Gear.
         /// </summary>
         /// <param name="objGear">Gear object to copy.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public async Task CopyAsync(Gear objGear, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -1660,6 +1660,7 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
         /// <param name="blnCopy">Whether we are loading a copy of an existing gear.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, bool blnCopy = false, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, blnCopy, token);
@@ -1787,12 +1788,15 @@ namespace Chummer.Backend.Equipment
                             Gear objGear = new Gear(_objCharacter);
                             try
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objGear.Load(nodChild, blnCopy);
                                 objGear.Parent = this;
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 _lstChildren.Add(objGear);
                             }
                             catch
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objGear.DeleteGear();
                                 throw;
                             }
@@ -1824,6 +1828,7 @@ namespace Chummer.Backend.Equipment
             {
                 if (blnSync)
                 {
+                    // ReSharper disable once MethodHasAsyncOverload
                     XmlNode objNuyenNode = _objCharacter.LoadData("gear.xml", token: token)
                         .SelectSingleNode("/chummer/gears/gear[contains(name, \"Nuyen\") and category = \"Currency\"]");
                     if (objNuyenNode != null)
@@ -1834,12 +1839,15 @@ namespace Chummer.Backend.Equipment
                             Gear objNuyenGear = new Gear(_objCharacter);
                             try
                             {
+                                // ReSharper disable once MethodHasAsyncOverload
                                 objNuyenGear.Create(objNuyenNode, 0, new List<Weapon>(1), token: token);
                                 objNuyenGear.Quantity = intMyRating;
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 _lstChildren.Add(objNuyenGear);
                             }
                             catch
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objNuyenGear.DeleteGear();
                                 throw;
                             }
@@ -1906,6 +1914,7 @@ namespace Chummer.Backend.Equipment
                                 location.Name == strLocation);
                     }
 
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     _objLocation?.Children.Add(this);
                 }
                 else
@@ -1944,11 +1953,13 @@ namespace Chummer.Backend.Equipment
             {
                 if (blnSync)
                 {
+                    // ReSharper disable once MethodHasAsyncOverload
                     XmlNode gear = _objCharacter.LoadData("gear.xml", token: token)
                         .TryGetNodeByNameOrId("/chummer/gears/gear", _strName);
                     if (gear != null)
                     {
                         Equipped = false;
+                        // ReSharper disable once MethodHasAsyncOverload
                         ImprovementManager.RemoveImprovements(_objCharacter, Improvement.ImprovementSource.Gear,
                             InternalId, token);
                         Bonus = gear["bonus"];
@@ -1989,6 +2000,7 @@ namespace Chummer.Backend.Equipment
                                 ImprovementManager.SetForcedValue(Extra, _objCharacter);
                             if (blnSync)
                             {
+                                // ReSharper disable once MethodHasAsyncOverload
                                 if (Bonus != null && ImprovementManager.CreateImprovements(_objCharacter, Improvement.ImprovementSource.Gear,
                                         InternalId, Bonus, Rating, CurrentDisplayNameShort, token: token))
                                 {
@@ -1997,6 +2009,7 @@ namespace Chummer.Backend.Equipment
 
                                 if (WirelessOn && WirelessBonus != null)
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverload
                                     ImprovementManager.CreateImprovements(_objCharacter, Improvement.ImprovementSource.Gear,
                                         InternalId, WirelessBonus, Rating, CurrentDisplayNameShort, token: token);
                                 }
@@ -2030,6 +2043,7 @@ namespace Chummer.Backend.Equipment
                             {
                                 if (!string.IsNullOrEmpty(objFociGear.Extra))
                                     ImprovementManager.SetForcedValue(objFociGear.Extra, _objCharacter);
+                                // ReSharper disable once MethodHasAsyncOverload
                                 if (objFociGear.Bonus != null && ImprovementManager.CreateImprovements(_objCharacter,
                                         Improvement.ImprovementSource.StackedFocus, objStack.InternalId,
                                         objFociGear.Bonus, objFociGear.Rating,
@@ -2040,6 +2054,7 @@ namespace Chummer.Backend.Equipment
 
                                 if (objFociGear.WirelessOn && objFociGear.WirelessBonus != null)
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverload
                                     ImprovementManager.CreateImprovements(_objCharacter,
                                                                           Improvement.ImprovementSource.StackedFocus,
                                                                           objStack.InternalId,
@@ -2084,6 +2099,7 @@ namespace Chummer.Backend.Equipment
                 if (!Equipped)
                 {
                     if (blnSync)
+                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                         ChangeEquippedStatus(false);
                     else
                         await ChangeEquippedStatusAsync(false, token: token).ConfigureAwait(false);
@@ -2093,6 +2109,7 @@ namespace Chummer.Backend.Equipment
             {
                 if (blnSync)
                 {
+                    // ReSharper disable once MethodHasAsyncOverload
                     if (!_objCharacter.Improvements.Any(x => x.ImproveSource == Improvement.ImprovementSource.Gear && x.SourceName == InternalId, token))
                     {
                         // If this is a Focus which is not bonded, don't do anything.
@@ -2106,6 +2123,7 @@ namespace Chummer.Backend.Equipment
                             {
                                 if (!string.IsNullOrEmpty(Extra))
                                     ImprovementManager.SetForcedValue(Extra, _objCharacter);
+                                // ReSharper disable once MethodHasAsyncOverload
                                 if (Bonus != null && ImprovementManager.CreateImprovements(_objCharacter, Improvement.ImprovementSource.Gear,
                                         InternalId, Bonus, Rating, CurrentDisplayNameShort, token: token))
                                 {
@@ -2113,7 +2131,7 @@ namespace Chummer.Backend.Equipment
                                 }
 
                                 if (WirelessOn && WirelessBonus != null)
-                                {
+                                {// ReSharper disable once MethodHasAsyncOverload
                                     ImprovementManager.CreateImprovements(_objCharacter, Improvement.ImprovementSource.Gear,
                                         InternalId, WirelessBonus, Rating, CurrentDisplayNameShort, token: token);
                                 }
@@ -2130,6 +2148,7 @@ namespace Chummer.Backend.Equipment
                                 {
                                     if (!string.IsNullOrEmpty(objFociGear.Extra))
                                         ImprovementManager.SetForcedValue(objFociGear.Extra, _objCharacter);
+                                    // ReSharper disable once MethodHasAsyncOverload
                                     if (objFociGear.Bonus != null && ImprovementManager.CreateImprovements(_objCharacter,
                                             Improvement.ImprovementSource
                                                        .StackedFocus, objStack.InternalId,
@@ -2141,6 +2160,7 @@ namespace Chummer.Backend.Equipment
 
                                     if (objFociGear.WirelessOn && objFociGear.WirelessBonus != null)
                                     {
+                                        // ReSharper disable once MethodHasAsyncOverload
                                         ImprovementManager.CreateImprovements(_objCharacter,
                                                                               Improvement.ImprovementSource.StackedFocus,
                                                                               objStack.InternalId,
@@ -2151,6 +2171,7 @@ namespace Chummer.Backend.Equipment
                             }
                         }
 
+                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                         ChangeEquippedStatus(false);
                     }
                 }
@@ -2245,9 +2266,11 @@ namespace Chummer.Backend.Equipment
             if (blnSync)
             {
                 if (objNode.TryGetBoolFieldQuickly("active", ref blnIsActive) && blnIsActive)
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     this.SetActiveCommlink(_objCharacter, true);
                 if (blnCopy)
                 {
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     this.SetHomeNode(_objCharacter, false);
                 }
                 else
@@ -2255,6 +2278,7 @@ namespace Chummer.Backend.Equipment
                     bool blnIsHomeNode = false;
                     if (objNode.TryGetBoolFieldQuickly("homenode", ref blnIsHomeNode) && blnIsHomeNode)
                     {
+                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                         this.SetHomeNode(_objCharacter, true);
                     }
                 }
@@ -2321,6 +2345,7 @@ namespace Chummer.Backend.Equipment
                         {
                             Gear objLoopChild = Children[i];
                             if (objLoopChild.ParentID == InternalId && objLoopChild.CanFormPersona == "Parent")
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 Children.RemoveAt(i);
                         }
                     }

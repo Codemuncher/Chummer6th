@@ -29,7 +29,6 @@ using System.Xml.XPath;
 using Chummer.Backend.Attributes;
 using Chummer.Backend.Equipment;
 using Chummer.Backend.Skills;
-using Chummer.Backend.Uniques;
 
 namespace Chummer
 {
@@ -268,7 +267,7 @@ namespace Chummer
 
                 if (strLimitString != bool.FalseString)
                 {
-                    int intLimit = 1;
+                    int intLimit;
                     if (strLimitString.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
                     {
                         if (strLimitString.HasValuesNeedingReplacementForXPathProcessing())
@@ -304,9 +303,10 @@ namespace Chummer
                                                                                        GlobalSettings.InvariantCultureInfo),
                                                                                token: token).ConfigureAwait(false);
                                     }
+
                                     await objCharacter
-                                           .ProcessAttributesInXPathAsync(
-                                               sbdLimitString, strLimitString, token: token).ConfigureAwait(false);
+                                        .ProcessAttributesInXPathAsync(
+                                            sbdLimitString, strLimitString, token: token).ConfigureAwait(false);
                                 }
                                 strLimitString = sbdLimitString.ToString();
                             }
@@ -314,9 +314,9 @@ namespace Chummer
                         if (blnSync)
                         {
                             (bool blnIsSuccess, object objProcess)
+                                // ReSharper disable once MethodHasAsyncOverload
                                 = CommonFunctions.EvaluateInvariantXPath(strLimitString, token);
                             intLimit = blnIsSuccess ? ((double)objProcess).StandardRound() : 1;
-                            // ReSharper restore MethodHasAsyncOverload
                         }
                         else
                         {
@@ -2542,6 +2542,7 @@ namespace Chummer
                                         .ConfigureAwait(false);
                             }
                         }
+
                         if (objPower != null)
                         {
                             if (blnShowMessage)
@@ -2556,10 +2557,12 @@ namespace Chummer
                             XPathNavigator objLoopDoc = blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? objCharacter.LoadDataXPath("powers.xml", token: token)
-                                : await objCharacter.LoadDataXPathAsync("powers.xml", token: token).ConfigureAwait(false);
+                                : await objCharacter.LoadDataXPathAsync("powers.xml", token: token)
+                                    .ConfigureAwait(false);
                             string strTranslate
-                                = objLoopDoc.SelectSingleNode("/chummer/powers/power[id = " + strNodeInnerText.CleanXPath()
-                                      + "]/translate")?.Value
+                                = objLoopDoc.SelectSingleNode("/chummer/powers/power[id = " +
+                                                              strNodeInnerText.CleanXPath()
+                                                              + "]/translate")?.Value
                                   ?? objLoopDoc
                                       .SelectSingleNode("/chummer/powers/power[name = " + strNodeInnerText.CleanXPath()
                                           + "]/translate")?.Value;
@@ -3217,14 +3220,14 @@ namespace Chummer
                                     strName);
                             if (sbdOutput.Length > 0)
                                 sbdOutput.Length -= 2;
-                            strName = sbdOutput.ToString() + strSpace + "(" + (blnSync
+                            strName = sbdOutput.Append(strSpace).Append('(').Append(blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString(
                                     "String_ExpenseSkill",
                                     token: token)
                                 : await LanguageManager.GetStringAsync(
                                     "String_ExpenseSkill",
-                                    token: token).ConfigureAwait(false)) + ")";
+                                    token: token).ConfigureAwait(false)).Append(')').ToString();
                         }
 
                         int intTarget = xmlNode.SelectSingleNodeAndCacheExpression("val", token)
@@ -3296,15 +3299,14 @@ namespace Chummer
                             {
                                 if (sbdOutput.Length > 0)
                                     sbdOutput.Length -= 2;
-                                strName = sbdOutput.ToString() + strSpace + "("
-                                          + (blnSync
+                                strName = sbdOutput.Append(strSpace).Append('(').Append(blnSync
                                               // ReSharper disable once MethodHasAsyncOverload
                                               ? LanguageManager.GetString(
                                                   "String_ExpenseSkillGroup",
                                                   token: token)
                                               : await LanguageManager.GetStringAsync(
                                                   "String_ExpenseSkillGroup",
-                                                  token: token).ConfigureAwait(false)) + ")";
+                                                  token: token).ConfigureAwait(false)).Append(')').ToString();
                             }
                         }
 
@@ -3816,11 +3818,6 @@ namespace Chummer
         /// <summary>
         ///     Evaluates the availability of a given node against Availability Limits in Create Mode
         /// </summary>
-        /// <param name="objXmlGear"></param>
-        /// <param name="objCharacter"></param>
-        /// <param name="intRating"></param>
-        /// <param name="intAvailModifier"></param>
-        /// <returns></returns>
         public static bool CheckAvailRestriction(XmlNode objXmlGear, Character objCharacter, int intRating = 1, int intAvailModifier = 0, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -3834,6 +3831,7 @@ namespace Chummer
         /// <param name="objCharacter">Character that we're comparing the Availability against.</param>
         /// <param name="intRating">Effective Rating of the object.</param>
         /// <param name="intAvailModifier">Availability Modifier from other sources.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         /// <returns>Returns False if not permitted with the current gameplay restrictions. Returns True if valid.</returns>
         public static bool CheckAvailRestriction(this XPathNavigator objXmlGear, Character objCharacter, int intRating = 1, int intAvailModifier = 0, CancellationToken token = default)
         {
@@ -3989,6 +3987,7 @@ namespace Chummer
         ///     Evaluates whether a given node can be purchased.
         /// </summary>
         /// <param name="objXmlGear">XPathNavigator element to evaluate.</param>
+        /// <param name="objCharacter">Character to use for compound cost strings.</param>
         /// <param name="decMaxNuyen">Total nuyen amount that the character possesses.</param>
         /// <param name="decCostMultiplier">Multiplier of the object's cost value.</param>
         /// <param name="intRating">Effective Rating of the object.</param>
@@ -4052,6 +4051,7 @@ namespace Chummer
         ///     Evaluates whether a given node can be purchased.
         /// </summary>
         /// <param name="objXmlGear">XPathNavigator element to evaluate.</param>
+        /// <param name="objCharacter">Character to use for compound cost strings.</param>
         /// <param name="decMaxNuyen">Total nuyen amount that the character possesses.</param>
         /// <param name="decCostMultiplier">Multiplier of the object's cost value.</param>
         /// <param name="intRating">Effective Rating of the object.</param>

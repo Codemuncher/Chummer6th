@@ -267,9 +267,9 @@ namespace Chummer
                     if (xmlGrade != null)
                     {
                         decimal.TryParse(xmlGrade.SelectSingleNodeAndCacheExpression("cost", token: _objGenericToken)?.Value,
-                            System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decCostMultiplier);
+                            NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decCostMultiplier);
                         decimal.TryParse(xmlGrade.SelectSingleNodeAndCacheExpression("ess", token: _objGenericToken)?.Value,
-                            System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decESSMultiplier);
+                            NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decESSMultiplier);
                         _intAvailModifier
                             = xmlGrade.SelectSingleNodeAndCacheExpression("avail", token: _objGenericToken)?.ValueAsInt ?? 0;
                     }
@@ -373,9 +373,9 @@ namespace Chummer
                     if (xmlGrade != null)
                     {
                         decimal.TryParse(xmlGrade.SelectSingleNodeAndCacheExpression("cost", token: _objGenericToken)?.Value,
-                            System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decCostMultiplier);
+                            NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decCostMultiplier);
                         decimal.TryParse(xmlGrade.SelectSingleNodeAndCacheExpression("ess", token: _objGenericToken)?.Value,
-                            System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decESSMultiplier);
+                            NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decESSMultiplier);
                         _intAvailModifier
                             = xmlGrade.SelectSingleNodeAndCacheExpression("avail", token)
                             ?.ValueAsInt ?? 0;
@@ -886,45 +886,30 @@ namespace Chummer
         /// Essence cost multiplier from the character.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Essence cost multiplier from the character.
-        /// </summary>
         public decimal CharacterESSMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Total Essence cost multiplier from the character (stacks multiplicatively at the very last step.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Total Essence cost multiplier from the character (stacks multiplicatively at the very last step.
-        /// </summary>
         public decimal CharacterTotalESSMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Cost multiplier for Genetech.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Cost multiplier for Genetech.
-        /// </summary>
         public decimal GenetechCostMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Essence cost multiplier for Genetech.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Essence cost multiplier for Genetech.
-        /// </summary>
         public decimal GenetechEssMultiplier { get; set; } = 1.0m;
 
         /// <summary>
         /// Essence cost multiplier for Basic Bioware.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Essence cost multiplier for Basic Bioware.
-        /// </summary>
         public decimal BasicBiowareESSMultiplier { get; set; } = 1.0m;
 
         /// <summary>
@@ -941,9 +926,6 @@ namespace Chummer
         /// Set the maximum Capacity the piece of Cyberware is allowed to be.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Set the maximum Capacity the piece of Cyberware is allowed to be.
-        /// </summary>
         public decimal MaximumCapacity
         {
             get => _decMaximumCapacity;
@@ -973,9 +955,6 @@ namespace Chummer
         /// Comma-separate list of Categories to show for Subsystems.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Comma-separate list of Categories to show for Subsystems.
-        /// </summary>
         public string Subsystems
         {
             set => _strSubsystems = value;
@@ -985,9 +964,6 @@ namespace Chummer
         /// Comma-separate list of mount locations that are disallowed.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Comma-separate list of mount locations that are disallowed.
-        /// </summary>
         public string DisallowedMounts
         {
             set => _strDisallowedMounts = value;
@@ -997,9 +973,6 @@ namespace Chummer
         /// Comma-separate list of mount locations that already exist on the parent.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Comma-separate list of mount locations that already exist on the parent.
-        /// </summary>
         public string HasModularMounts
         {
             set => _strHasModularMounts = value;
@@ -1009,9 +982,6 @@ namespace Chummer
         /// Manually set the Grade of the piece of Cyberware.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Manually set the Grade of the piece of Cyberware.
-        /// </summary>
         public Grade ForcedGrade
         {
             get => _objForcedGrade;
@@ -1047,18 +1017,12 @@ namespace Chummer
         /// Parent vehicle that the cyberlimb will be attached to.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Parent vehicle that the cyberlimb will be attached to.
-        /// </summary>
         public Vehicle ParentVehicle { get; set; }
 
         /// <summary>
         /// Parent vehicle that the cyberlimb will be attached to.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Parent vehicle that the cyberlimb will be attached to.
-        /// </summary>
         public VehicleMod ParentVehicleMod { get; set; }
 
         public decimal Markup => _decMarkup;
@@ -1079,9 +1043,6 @@ namespace Chummer
         /// Default text string to filter by.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Default text string to filter by.
-        /// </summary>
         public string DefaultSearchText { get; set; }
 
         #endregion Properties
@@ -1550,7 +1511,7 @@ namespace Chummer
                     sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
 
                 if (sbdFilter.Length > 0)
-                    strFilter = "[" + sbdFilter.ToString() + "]";
+                    strFilter = "[" + sbdFilter.Append(']').ToString();
             }
 
             XPathNodeIterator xmlIterator;
@@ -1697,20 +1658,14 @@ namespace Chummer
                         if (!string.IsNullOrEmpty(strMinRating) && !int.TryParse(strMinRating, out intMinRating))
                         {
                             (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strMinRating, 1, 0, token).ConfigureAwait(false);
-                            if (blnIsSuccess)
-                                intMinRating = decValue.StandardRound();
-                            else
-                                intMinRating = 1;
+                            intMinRating = blnIsSuccess ? decValue.StandardRound() : 1;
                         }
                         string strMaxRating = xmlCyberware
                             .SelectSingleNodeAndCacheExpression("rating", token: token)?.Value ?? string.Empty;
                         if (!string.IsNullOrEmpty(strMaxRating) && !int.TryParse(strMaxRating, out intMaxRating))
                         {
                             (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strMaxRating, intMinRating, intMinRating, token).ConfigureAwait(false);
-                            if (blnIsSuccess)
-                                intMaxRating = decValue.StandardRound();
-                            else
-                                intMaxRating = 1;
+                            intMaxRating = blnIsSuccess ? decValue.StandardRound() : 1;
                         }
                         if (intMaxRating < intMinRating)
                             continue;
@@ -1793,10 +1748,7 @@ namespace Chummer
                             if (!string.IsNullOrEmpty(strEssenceExpr) && !decimal.TryParse(strEssenceExpr, out decEssenceCost))
                             {
                                 (decimal decValue, bool blnIsSuccess) = await ProcessInvariantXPathExpression(xmlCyberware, strEssenceExpr, intMinRating, intMinRating, token).ConfigureAwait(false);
-                                if (blnIsSuccess)
-                                    decEssenceCost = decValue;
-                                else
-                                    decEssenceCost = 0;
+                                decEssenceCost = blnIsSuccess ? decValue : 0;
                             }
 
                             // Apply essence discount if applicable
@@ -1871,9 +1823,6 @@ namespace Chummer
         /// Is a given piece of ware being Upgraded?
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Is a given piece of ware being Upgraded?
-        /// </summary>
         public bool Upgrading { get; set; }
 
         /// <summary>

@@ -368,6 +368,7 @@ namespace Chummer.Backend.Equipment
                                             !blnSkipSelectForms, token: token).ConfigureAwait(false))
                                 {
                                     if (blnSync)
+                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                         objGear.DeleteGear();
                                     else
                                         await objGear.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -391,6 +392,7 @@ namespace Chummer.Backend.Equipment
                             catch
                             {
                                 if (blnSync)
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objGear.DeleteGear();
                                 else
                                     await objGear.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -459,6 +461,7 @@ namespace Chummer.Backend.Equipment
                             catch
                             {
                                 if (blnSync)
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objGearWeapon.DeleteWeapon();
                                 else
                                     await objGearWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -542,6 +545,7 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
         /// <param name="blnCopy">Whether we are loading a copy of an existing armor mod.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, bool blnCopy = false, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, blnCopy, token);
@@ -623,11 +627,14 @@ namespace Chummer.Backend.Equipment
                                 Gear objGear = new Gear(_objCharacter);
                                 try
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objGear.Load(nodGear, blnCopy);
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     _lstGear.Add(objGear);
                                 }
                                 catch
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objGear.DeleteGear();
                                     throw;
                                 }
@@ -660,6 +667,7 @@ namespace Chummer.Backend.Equipment
                 ImprovementManager.SetForcedValue(Extra, _objCharacter);
             if (blnSync)
             {
+                // ReSharper disable once MethodHasAsyncOverload
                 ImprovementManager.CreateImprovements(_objCharacter, Improvement.ImprovementSource.ArmorMod, _guiID.ToString("D", GlobalSettings.InvariantCultureInfo), Bonus, Rating, CurrentDisplayNameShort, token: token);
                 string strSelectedValue = ImprovementManager.GetSelectedValue(_objCharacter);
                 if (!string.IsNullOrEmpty(strSelectedValue))
@@ -672,6 +680,7 @@ namespace Chummer.Backend.Equipment
                     _blnEquipped = true;
                     Equipped = false;
                 }
+                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                 RefreshWirelessBonuses();
             }
             else

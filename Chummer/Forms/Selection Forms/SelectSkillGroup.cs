@@ -19,10 +19,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -68,11 +68,11 @@ namespace Chummer
                                 if (sbdExclude.Length > 0)
                                 {
                                     sbdExclude.Length -= 5;
-                                    strExclude = '(' + sbdExclude.ToString() + ") and ";
+                                    strExclude = "(" + sbdExclude.Append(") and ").ToString();
                                 }
                                 if (_objXmlDocument.SelectSingleNode(
                                         "/chummer/skills/skill[" + strExclude + "skillgroup = "
-                                        + objXmlSkill.Value.CleanXPath() + ']') == null)
+                                        + objXmlSkill.Value.CleanXPath() + "]") == null)
                                     continue;
                             }
                         }
@@ -127,8 +127,6 @@ namespace Chummer
 
         // Description to show in the window.
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-
-        // Description to show in the window.
         public string Description
         {
             set => lblDescription.Text = value;
@@ -138,9 +136,6 @@ namespace Chummer
         /// Force a specific SkillGroup to be selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Force a specific SkillGroup to be selected.
-        /// </summary>
         public string OnlyGroup
         {
             set => _strForceValue = value;
@@ -150,9 +145,6 @@ namespace Chummer
         /// Only Skills not in the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only Skills not in the selected Category should be in the list.
-        /// </summary>
         public string ExcludeCategory
         {
             set => _strExcludeCategory = value;

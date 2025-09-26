@@ -195,6 +195,7 @@ namespace Chummer
         /// Load the Martial Art Technique from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -212,6 +213,7 @@ namespace Chummer
             _objCachedMyXPathNode = null;
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
             {
+                // ReSharper disable once MethodHasAsyncOverload
                 (blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID);
             }
             objNode.TryGetStringFieldQuickly("source", ref _strSource);

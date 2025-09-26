@@ -19,13 +19,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -175,18 +175,12 @@ namespace Chummer
         /// Whether we should ignore how many of a given power may be taken. Generally used when bonding Qi Foci.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Whether we should ignore how many of a given power may be taken. Generally used when bonding Qi Foci.
-        /// </summary>
         public bool IgnoreLimits { get; set; }
 
         /// <summary>
         /// Whether this window is being shown to select a power for a bonus node or to just select a power for a character traditionally
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Whether this window is being shown to select a power for a bonus node or to just select a power for a character traditionally
-        /// </summary>
         public bool ForBonus { get; set; }
 
         /// <summary>
@@ -198,9 +192,6 @@ namespace Chummer
         /// Only the provided Powers should be shown in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only the provided Powers should be shown in the list.
-        /// </summary>
         public string LimitToPowers
         {
             set => _strLimitToPowers = value;
@@ -210,9 +201,6 @@ namespace Chummer
         /// Limit the selections based on the Rating of an external source, where 1 Rating = 0.25 PP.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Limit the selections based on the Rating of an external source, where 1 Rating = 0.25 PP.
-        /// </summary>
         public int LimitToRating
         {
             set => _decLimitToRating = value * PointsPerLevel;
@@ -222,9 +210,6 @@ namespace Chummer
         /// Value of the PP per level if using LimitToRating. Defaults to 0.25.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Value of the PP per level if using LimitToRating. Defaults to 0.25.
-        /// </summary>
         public decimal PointsPerLevel { set; get; } = 0.25m;
 
         #endregion Properties
@@ -247,7 +232,7 @@ namespace Chummer
                     if (sbdFilter.Length > 0)
                     {
                         sbdFilter.Length -= 4;
-                        strFilter += " and (" + sbdFilter.ToString() + ")";
+                        strFilter += " and (" + sbdFilter.Append(')').ToString();
                     }
                 }
             }
@@ -269,7 +254,7 @@ namespace Chummer
                                 async x => x.Name == strName
                                     && await x.GetTotalRatingAsync(token).ConfigureAwait(false) > 0, token).ConfigureAwait(false)
                         //If this power has already had its rating paid for with PP, we don't care about the extrapoints cost.
-                        && decimal.TryParse(strExtraPointCost, System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decExtraCost))
+                        && decimal.TryParse(strExtraPointCost, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decExtraCost))
                     {
                         decPoints += decExtraCost;
                     }

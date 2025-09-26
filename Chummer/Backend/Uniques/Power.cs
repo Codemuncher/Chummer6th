@@ -31,7 +31,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer;
 using Chummer.Annotations;
 using Chummer.Backend.Attributes;
 using Chummer.Backend.Skills;
@@ -39,7 +38,7 @@ using Chummer.Backend.Skills;
 // ReSharper disable SpecifyACultureInStringConversionExplicitly
 
 // ReSharper disable once CheckNamespace
-namespace Chummer.Backend.Uniques
+namespace Chummer
 {
     /// <summary>
     /// An Adept Power.
@@ -612,6 +611,7 @@ namespace Chummer.Backend.Uniques
                             };
                             if (blnSync)
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objEnhancement.Load(nodEnhancement);
                                 // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 Enhancements.Add(objEnhancement);

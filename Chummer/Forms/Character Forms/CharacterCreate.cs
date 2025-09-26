@@ -2057,7 +2057,7 @@ namespace Chummer
                 }
                 finally
                 {
-                    if (objSemaphore?.IsDisposed == false)
+                    if (!objSemaphore.IsDisposed)
                         objSemaphore.Release();
                 }
             }
@@ -4460,11 +4460,11 @@ namespace Chummer
                                               "Message_ReapplyImprovementsFoundOutdatedItems_Top",
                                               token: token)
                                           .ConfigureAwait(false) +
-                                      sbdOutdatedItems.ToString() +
+                                      sbdOutdatedItems.Append(
                                       await LanguageManager.GetStringAsync(
                                               "Message_ReapplyImprovementsFoundOutdatedItems_Bottom",
                                               token: token)
-                                          .ConfigureAwait(false),
+                                          .ConfigureAwait(false)).ToString(),
                                 await LanguageManager
                                     .GetStringAsync("MessageTitle_ConfirmReapplyImprovements", token: token)
                                     .ConfigureAwait(false),
@@ -13955,7 +13955,8 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 // ------------------------------------------------------------------------------
                 // Calculate the BP used by Skill Groups.
-               
+            
+
                 token.ThrowIfCancellationRequested();
                 // ------------------------------------------------------------------------------
                 // Calculate the BP used by Active Skills.
@@ -14773,6 +14774,7 @@ namespace Chummer
             }
 
            
+          
 
             await lblSkillGroupsBP.DoThreadSafeAsync(x => x.Text = strTemp3, token).ConfigureAwait(false);
         }

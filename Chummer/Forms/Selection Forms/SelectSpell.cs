@@ -19,14 +19,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -240,9 +239,6 @@ namespace Chummer
         /// Limit the Spell list to a particular Category.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Limit the Spell list to a particular Category.
-        /// </summary>
         public string LimitCategory
         {
             set => _strLimitCategory = value;
@@ -252,9 +248,6 @@ namespace Chummer
         /// Force a particular Spell to be selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Force a particular Spell to be selected.
-        /// </summary>
         public string ForceSpellName
         {
             set => _strForceSpell = value;
@@ -363,7 +356,7 @@ namespace Chummer
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = "[" + sbdFilter.ToString() + "]";
+                            strFilter = "[" + sbdFilter.Append(']').ToString();
                     }
 
                     foreach (XPathNavigator objXmlSpell in _xmlBaseSpellDataNode.Select("spells/spell" + strFilter))

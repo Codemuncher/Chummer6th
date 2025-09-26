@@ -34,6 +34,7 @@ namespace Chummer
         /// </summary>
         /// <param name="strGuid">InternalId of the Needle to Find.</param>
         /// <param name="lstHaystack">Haystack to search.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public static T DeepFindById<T>(this IEnumerable<T> lstHaystack, string strGuid, CancellationToken token = default) where T : IHasChildren<T>, IHasInternalId
         {
             token.ThrowIfCancellationRequested();
@@ -115,8 +116,9 @@ namespace Chummer
         /// </summary>
         /// <typeparam name="T">The type for which <see cref="object.GetHashCode"/> will be called</typeparam>
         /// <param name="lstItems">The collection containing the contents</param>
+        /// <param name="intCount">Maximum number of items from <paramref name="lstItems"/> to include in the hash code.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>A HashCode that is generated based on the contents of <paramref name="lstItems"/></returns>
+        /// <returns>A HashCode that is generated based on the first <paramref name="intCount"/> contents of <paramref name="lstItems"/></returns>
         public static int GetEnsembleHashCode<T>(this IEnumerable<T> lstItems, int intCount, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -171,8 +173,9 @@ namespace Chummer
         /// </summary>
         /// <typeparam name="T">The type for which <see cref="object.GetHashCode"/> will be called</typeparam>
         /// <param name="lstItems">The collection containing the contents</param>
+        /// <param name="intCount">Maximum number of items from <paramref name="lstItems"/> to include in the hash code.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>A HashCode that is generated based on the contents of <paramref name="lstItems"/></returns>
+        /// <returns>A HashCode that is generated based on the first <paramref name="intCount"/> contents of <paramref name="lstItems"/>.</returns>
         public static int GetOrderInvariantEnsembleHashCode<T>(this IEnumerable<T> lstItems, int intCount, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -202,7 +205,7 @@ namespace Chummer
         /// <typeparam name="T">The type for which <see cref="object.GetHashCode"/> will be called</typeparam>
         /// <param name="lstItems">The collection containing the contents</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns>A HashCode that is generated based on the contents of <paramref name="lstItems"/></returns>
+        /// <returns>A HashCode that is generated based on the contents of <paramref name="lstItems"/>.</returns>
         public static int GetOrderInvariantEnsembleHashCodeParallel<T>(this IEnumerable<T> lstItems, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -272,7 +275,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for <see cref="Enumerable.Any{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> that will use <see cref="List.Exists(Predicate{T})"/> if possible.
+        /// Syntactic sugar for <see cref="Enumerable.Any{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> that will use <see cref="List{T}.Exists(Predicate{T})"/> if possible.
         /// </summary>
         public static bool Exists<T>(this IEnumerable<T> lstCollection, Predicate<T> predicate)
         {
@@ -282,7 +285,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for <see cref="Enumerable.FirstOrDefault{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> that will use <see cref="List.Find(Predicate{T})"/> if possible.
+        /// Syntactic sugar for <see cref="Enumerable.FirstOrDefault{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> that will use <see cref="List{T}.Find(Predicate{T})"/> if possible.
         /// </summary>
         public static T Find<T>(this IEnumerable<T> lstCollection, Predicate<T> predicate)
         {
@@ -292,7 +295,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for <see cref="Enumerable.LastOrDefault{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> that will use <see cref="List.FindLast(Predicate{T})"/> if possible.
+        /// Syntactic sugar for <see cref="Enumerable.LastOrDefault{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> that will use <see cref="List{T}.FindLast(Predicate{T})"/> if possible.
         /// </summary>
         public static T FindLast<T>(this IEnumerable<T> lstCollection, Predicate<T> predicate)
         {
@@ -302,7 +305,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Syntactic sugar for <see cref="Enumerable.Where{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> plus <see cref="Enumerable.ToList{TSource}(IEnumerable{TSource})"/> that will use <see cref="List.FindAll(Predicate{T})"/> if possible.
+        /// Syntactic sugar for <see cref="Enumerable.Where{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/> plus <see cref="Enumerable.ToList{TSource}(IEnumerable{TSource})"/> that will use <see cref="List{T}.FindAll(Predicate{T})"/> if possible.
         /// </summary>
         public static List<T> FindAll<T>(this IEnumerable<T> lstCollection, Predicate<T> predicate)
         {

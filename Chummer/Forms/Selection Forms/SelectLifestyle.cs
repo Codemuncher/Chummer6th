@@ -17,6 +17,8 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Enums;
+using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -26,8 +28,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Enums;
-using Chummer.Backend.Equipment;
 using Timer = System.Windows.Forms.Timer;
 
 namespace Chummer
@@ -973,9 +973,6 @@ namespace Chummer
         /// Lifestyle that was created in the dialogue.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Lifestyle that was created in the dialogue.
-        /// </summary>
         public Lifestyle SelectedLifestyle { get; set; }
 
         #endregion Properties

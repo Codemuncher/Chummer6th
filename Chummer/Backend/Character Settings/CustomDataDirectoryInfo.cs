@@ -267,6 +267,7 @@ namespace Chummer
         /// Checks if any custom data is activated, that matches name and version of the dependent upon directory
         /// </summary>
         /// <param name="objCharacterSettings"></param>
+        /// <param name="token">Cancellation token to listen to.</param>
         /// <returns>List of the names of all missing dependencies as a single string</returns>
         public string CheckDependency(CharacterSettings objCharacterSettings, CancellationToken token = default)
         {
@@ -480,6 +481,7 @@ namespace Chummer
         /// Checks if any custom data is activated, that matches name and version of the prohibited directories
         /// </summary>
         /// <param name="objCharacterSettings"></param>
+        /// <param name="token">Cancellation token to listen to.</param>
         /// <returns>List of the names of all prohibited custom data directories as a single string</returns>
         public string CheckIncompatibility(CharacterSettings objCharacterSettings, CancellationToken token = default)
         {
@@ -632,7 +634,7 @@ namespace Chummer
         /// </summary>
         /// <param name="missingDependency">The string of all missing Dependencies</param>
         /// <param name="presentIncompatibilities">The string of all incompatibilities that are active</param>
-        /// <returns></returns>
+        /// <param name="token">Cancellation token to listen to.</param>
         public static string BuildIncompatibilityDependencyString(string missingDependency = "",
                                                                   string presentIncompatibilities = "", CancellationToken token = default)
         {
@@ -823,7 +825,7 @@ namespace Chummer
                 // and Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); to throw an exception if they are called after
                 // SetProcessDPI(GlobalSettings.DpiScalingMethodSetting); in program.cs. To prevent any unexpected problems with moving those to methods to the start of
                 // the global mutex LazyCreate() handles all the offending methods and should be called, when the CharacterSettings are opened.
-                if (string.IsNullOrEmpty(_strDisplayAuthors) || _objDisplayAuthorsCulture != GlobalSettings.CultureInfo || _strDisplayAuthorsLanguage != GlobalSettings.Language)
+                if (string.IsNullOrEmpty(_strDisplayAuthors) || !ReferenceEquals(_objDisplayAuthorsCulture, GlobalSettings.CultureInfo) || _strDisplayAuthorsLanguage != GlobalSettings.Language)
                 {
                     _strDisplayAuthors = DisplayAuthors(_objDisplayAuthorsCulture = GlobalSettings.CultureInfo, _strDisplayAuthorsLanguage = GlobalSettings.Language);
                 }
@@ -840,7 +842,7 @@ namespace Chummer
             // and Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException); to throw an exception if they are called after
             // SetProcessDPI(GlobalSettings.DpiScalingMethodSetting); in program.cs. To prevent any unexpected problems with moving those to methods to the start of
             // the global mutex LazyCreate() handles all the offending methods and should be called, when the CharacterSettings are opened.
-            if (string.IsNullOrEmpty(_strDisplayAuthors) || _objDisplayAuthorsCulture != GlobalSettings.CultureInfo || _strDisplayAuthorsLanguage != GlobalSettings.Language)
+            if (string.IsNullOrEmpty(_strDisplayAuthors) || !ReferenceEquals(_objDisplayAuthorsCulture, GlobalSettings.CultureInfo) || _strDisplayAuthorsLanguage != GlobalSettings.Language)
             {
                 _strDisplayAuthors = await DisplayAuthorsAsync(_objDisplayAuthorsCulture = GlobalSettings.CultureInfo, _strDisplayAuthorsLanguage = GlobalSettings.Language, token).ConfigureAwait(false);
             }

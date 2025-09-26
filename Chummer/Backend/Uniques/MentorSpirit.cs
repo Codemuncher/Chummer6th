@@ -550,6 +550,7 @@ namespace Chummer
         /// Load the Mentor Spirit from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -597,7 +598,8 @@ namespace Chummer
                     && (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID) == false)
                 {
                     (blnSync
-                        ? _objCharacter.LoadDataXPath("qualities.xml", token: token)
+                            // ReSharper disable once MethodHasAsyncOverload
+                            ? _objCharacter.LoadDataXPath("qualities.xml", token: token)
                         : await _objCharacter.LoadDataXPathAsync("qualities.xml", token: token).ConfigureAwait(false))
                                  .TryGetNodeByNameOrId("/chummer/mentors/mentor", Name)
                                  ?.TryGetGuidFieldQuickly("id", ref _guiSourceID);

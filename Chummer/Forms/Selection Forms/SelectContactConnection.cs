@@ -179,15 +179,14 @@ namespace Chummer
         private async void cmdChangeColor_Click(object sender, EventArgs e)
         {
             Color objPreviewColor = ColorManager.GenerateCurrentModeColor(_objColor);
-            Color objSelectedColor = _objColor;
-            DialogResult eResult = await this.DoThreadSafeFuncAsync(x =>
+            (DialogResult eResult, Color objSelectedColor) = await this.DoThreadSafeFuncAsync(x =>
             {
                 using (ColorDialog dlgColor = new ColorDialog())
                 {
                     dlgColor.Color = objPreviewColor;
                     DialogResult eReturn = dlgColor.ShowDialog(x);
                     objSelectedColor = ColorManager.GenerateModeIndependentColor(dlgColor.Color);
-                    return eReturn;
+                    return new ValueTuple<DialogResult, Color>(eReturn, objSelectedColor);
                 }
             }).ConfigureAwait(false);
             if (eResult != DialogResult.OK)
@@ -232,9 +231,6 @@ namespace Chummer
         /// Area of Influence.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Area of Influence.
-        /// </summary>
         public int AreaOfInfluence
         {
             get => _intAreaOfInfluence;
@@ -245,9 +241,6 @@ namespace Chummer
         /// Magical Resources.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Magical Resources.
-        /// </summary>
         public int MagicalResources
         {
             get => _intMagicalResources;
@@ -258,9 +251,6 @@ namespace Chummer
         /// Matrix Resources.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Matrix Resources.
-        /// </summary>
         public int MatrixResources
         {
             get => _intMatrixResources;
@@ -271,9 +261,6 @@ namespace Chummer
         /// Group Name.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Group Name.
-        /// </summary>
         public string GroupName
         {
             get => _strGroupName;
@@ -284,9 +271,6 @@ namespace Chummer
         /// Contact Color.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Contact Color.
-        /// </summary>
         public Color Color
         {
             get => _objColor;
@@ -297,9 +281,6 @@ namespace Chummer
         /// Whether this is a free contact.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Whether this is a free contact.
-        /// </summary>
         public bool Free
         {
             get => _blnFree;

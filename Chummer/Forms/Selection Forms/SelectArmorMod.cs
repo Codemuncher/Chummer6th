@@ -184,18 +184,12 @@ namespace Chummer
         /// Categories that the Armor allows to be used.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Categories that the Armor allows to be used.
-        /// </summary>
         public string AllowedCategories { get; set; } = string.Empty;
 
         /// <summary>
         /// Whether the General category should be included.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Whether the General category should be included.
-        /// </summary>
         public bool ExcludeGeneralCategory { get; set; }
 
         /// <summary>
@@ -487,7 +481,7 @@ namespace Chummer
                         sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(txtSearch.Text));
 
                     if (sbdFilter.Length > 0)
-                        strFilter = "[" + sbdFilter.ToString() + "]";
+                        strFilter = "[" + sbdFilter.Append(']').ToString();
                 }
 
                 int intOverLimit = 0;

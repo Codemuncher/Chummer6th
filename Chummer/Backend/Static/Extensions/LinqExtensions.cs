@@ -29,7 +29,7 @@ namespace Chummer
     public static class LinqExtensions
     {
         /// <summary>
-        /// Version of <see cref="Enumerable.ElementAt{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IReadOnlyList{T}">.
+        /// Version of <see cref="Enumerable.ElementAt{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IReadOnlyList{T}"/>.
         /// </summary>
         public static T ElementAtBetter<T>(this IEnumerable<T> source, int index)
         {
@@ -54,7 +54,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of <see cref="Enumerable.ElementAtOrDefault{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IReadOnlyList{T}">.
+        /// Version of <see cref="Enumerable.ElementAtOrDefault{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IReadOnlyList{T}"/>.
         /// </summary>
         public static T ElementAtOrDefaultBetter<T>(this IEnumerable<T> source, int index)
         {
@@ -131,6 +131,7 @@ namespace Chummer
         /// </summary>
         /// <param name="first">First collection to compare.</param>
         /// <param name="second">Second collection to compare.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         /// <returns>True if <paramref name="first"/> and <paramref name="second"/> are of the same size and have the same contents, false otherwise.</returns>
         public static bool CollectionEqual<T>([NotNull] this IReadOnlyCollection<T> first, [NotNull] IReadOnlyCollection<T> second, CancellationToken token = default)
         {

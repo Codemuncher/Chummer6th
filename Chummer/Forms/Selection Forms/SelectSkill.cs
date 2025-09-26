@@ -17,17 +17,17 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Skills;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Skills;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -211,7 +211,7 @@ namespace Chummer
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = '[' + sbdFilter.ToString() + ']';
+                            strFilter = "[" + sbdFilter.Append(']').ToString();
                     }
 
                     objXmlSkillList = _objXmlDocument.Select("/chummer/skills/skill" + strFilter);
@@ -394,8 +394,8 @@ namespace Chummer
                     if (intCount == 1)
                     {
                         _strReturnValue = tupSelected.Item1 + " ("
-                                                            + await cboExtra.DoThreadSafeFuncAsync(x => x.SelectedValue)
-                                                                            .ConfigureAwait(false) + ')';
+                                                            + await cboExtra.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString() ?? string.Empty)
+                                                                            .ConfigureAwait(false) + ")";
                         await this.DoThreadSafeAsync(x =>
                         {
                             x.DialogResult = DialogResult.OK;
@@ -412,7 +412,7 @@ namespace Chummer
         {
             ValueTuple<string, bool> tupSelected = (ValueTuple<string, bool>)cboSkill.SelectedValue;
             if (tupSelected.Item2)
-                _strReturnValue = tupSelected.Item1 + " (" + cboExtra.SelectedValue + ')';
+                _strReturnValue = tupSelected.Item1 + " (" + (cboExtra.SelectedValue?.ToString() ?? string.Empty) + ")";
             else
                 _strReturnValue = tupSelected.Item1;
             DialogResult = DialogResult.OK;
@@ -433,14 +433,6 @@ namespace Chummer
         /// Only Skills of the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-
-        #endregion Control Events
-
-        #region Properties
-
-        /// <summary>
-        /// Only Skills of the selected Category should be in the list.
-        /// </summary>
         public string OnlyCategory
         {
             set => _strIncludeCategory = value;
@@ -450,9 +442,6 @@ namespace Chummer
         /// Only Skills from the selected Categories should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only Skills from the selected Categories should be in the list.
-        /// </summary>
         public XmlNode LimitToCategories
         {
             set
@@ -482,9 +471,6 @@ namespace Chummer
         /// Only Skills not in the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only Skills not in the selected Category should be in the list.
-        /// </summary>
         public string ExcludeCategory
         {
             set => _strExcludeCategory = value;
@@ -494,9 +480,6 @@ namespace Chummer
         /// Only Skills in the selected Skill Group should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only Skills in the selected Skill Group should be in the list.
-        /// </summary>
         public string OnlySkillGroup
         {
             set => _strIncludeSkillGroup = value;
@@ -506,9 +489,6 @@ namespace Chummer
         /// Restrict the list to only a single Skill.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Restrict the list to only a single Skill.
-        /// </summary>
         public string OnlySkill
         {
             set => _strForceSkill = value;
@@ -518,9 +498,6 @@ namespace Chummer
         /// Only Skills not in the selected Skill Group should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only Skills not in the selected Skill Group should be in the list.
-        /// </summary>
         public string ExcludeSkillGroup
         {
             set => _strExcludeSkillGroup = value;
@@ -530,9 +507,6 @@ namespace Chummer
         /// Only the provided Skills should be shown in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only the provided Skills should be shown in the list.
-        /// </summary>
         public string LimitToSkill
         {
             set => _strLimitToSkill = value;
@@ -542,9 +516,6 @@ namespace Chummer
         /// Only Skills not among the selected should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only Skills not among the selected should be in the list.
-        /// </summary>
         public string ExcludeSkill
         {
             set => _strExcludeSkill = value;
@@ -559,9 +530,6 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Description to show in the window.
-        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;
@@ -571,9 +539,6 @@ namespace Chummer
         /// Only show skills with a rating greater than or equal to this
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only show skills with a rating greater than or equal to this
-        /// </summary>
         public int MinimumRating
         {
             set => _intMinimumRating = value;
@@ -583,9 +548,6 @@ namespace Chummer
         /// Only show skills with a rating less than or equal to this
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only show skills with a rating less than or equal to this
-        /// </summary>
         public int MaximumRating
         {
             set => _intMaximumRating = value;
@@ -616,7 +578,7 @@ namespace Chummer
                     CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false);
                     XPathNodeIterator xmlWeaponList = (await _objCharacter.LoadDataXPathAsync("weapons.xml", token: token).ConfigureAwait(false))
                         .Select("/chummer/weapons/weapon[(category = "
-                                + (strSelectedCategory + 's').CleanXPath()
+                                + (strSelectedCategory + "s").CleanXPath()
                                 + " or useskill = "
                                 + strSelectedCategory.CleanXPath() + ") and ("
                                 + await objSettings.BookXPathAsync(false, token).ConfigureAwait(false) + ")]");

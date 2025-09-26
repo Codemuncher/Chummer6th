@@ -17,6 +17,8 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Uniques;
+using NLog;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -25,8 +27,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Uniques;
-using NLog;
 
 namespace Chummer
 {
@@ -219,6 +219,7 @@ namespace Chummer
         /// Load the Metamagic from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -237,6 +238,7 @@ namespace Chummer
             _objCachedMyXPathNode = null;
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
             {
+                // ReSharper disable once MethodHasAsyncOverload
                 (blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID);
             }
 

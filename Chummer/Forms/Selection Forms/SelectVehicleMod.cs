@@ -250,9 +250,6 @@ namespace Chummer
         /// The slots taken up by a weapon mount to which the vehicle mod might be being added
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// The slots taken up by a weapon mount to which the vehicle mod might be being added
-        /// </summary>
         public int WeaponMountSlots
         {
             set => _intWeaponMountSlots = value;
@@ -282,18 +279,12 @@ namespace Chummer
         /// Is the mod being added to a vehicle weapon mount?
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Is the mod being added to a vehicle weapon mount?
-        /// </summary>
         public bool VehicleMountMods { get; set; }
 
         /// <summary>
         /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
-        /// </summary>
         public decimal ParentWeaponMountOwnCost { get; set; }
 
         #endregion Properties
@@ -324,7 +315,7 @@ namespace Chummer
                     if (sbdCategoryFilter.Length > 0)
                     {
                         sbdCategoryFilter.Length -= 4;
-                        strFilter += " and (" + sbdCategoryFilter.ToString() + ")";
+                        strFilter += " and (" + sbdCategoryFilter.Append(')').ToString();
                     }
                 }
             }

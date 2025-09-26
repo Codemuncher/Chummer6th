@@ -502,7 +502,7 @@ namespace Chummer
                                     }
 
                                     if (sbdFilters.Length > 0)
-                                        strFilter = "[" + sbdFilters.ToString() + "]";
+                                        strFilter = "[" + sbdFilters.Append(']').ToString();
                                 }
                             }
 

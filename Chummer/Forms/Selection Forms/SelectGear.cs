@@ -158,7 +158,7 @@ namespace Chummer
                         }
 
                         sbdMount.Append(". = \"General\"");
-                        objXmlCategoryList = _xmlBaseGearDataNode.Select("categories/category[" + sbdMount.ToString() + "]");
+                        objXmlCategoryList = _xmlBaseGearDataNode.Select("categories/category[" + sbdMount.Append(']').ToString());
                     }
                 }
                 else
@@ -313,7 +313,7 @@ namespace Chummer
                             }, token).ConfigureAwait(false);
                             if (!string.IsNullOrEmpty(strCostFor))
                             {
-                                decimal.TryParse(strCostFor, System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decCostFor);
+                                decimal.TryParse(strCostFor, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decCostFor);
                                 await nudGearQty.DoThreadSafeAsync(x =>
                                 {
                                     x.Value = decCostFor;
@@ -597,9 +597,6 @@ namespace Chummer
         /// Only items that grant Capacity should be shown.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only items that grant Capacity should be shown.
-        /// </summary>
         public bool ShowPositiveCapacityOnly
         {
             get => _blnShowPositiveCapacityOnly;
@@ -615,9 +612,6 @@ namespace Chummer
         /// Only items that consume Capacity should be shown.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only items that consume Capacity should be shown.
-        /// </summary>
         public bool ShowNegativeCapacityOnly
         {
             get => _blnShowNegativeCapacityOnly;
@@ -633,27 +627,18 @@ namespace Chummer
         /// Only items that consume Armor Capacity should be shown.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only items that consume Armor Capacity should be shown.
-        /// </summary>
         public bool ShowArmorCapacityOnly { get; set; }
 
         /// <summary>
         /// Only items that are marked as being flechette ammo should be shown.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Only items that are marked as being flechette ammo should be shown.
-        /// </summary>
         public bool ShowFlechetteAmmoOnly { get; set; }
 
         /// <summary>
         /// Guid of Gear that was selected in the dialogue.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Guid of Gear that was selected in the dialogue.
-        /// </summary>
         public string SelectedGear
         {
             get => _strSelectedGear;
@@ -674,9 +659,6 @@ namespace Chummer
         /// Set the maximum Capacity the piece of Gear is allowed to be.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Set the maximum Capacity the piece of Gear is allowed to be.
-        /// </summary>
         public decimal MaximumCapacity
         {
             get => _decMaximumCapacity;
@@ -724,9 +706,6 @@ namespace Chummer
         /// Whether the Stack Checkbox should be shown (default true).
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Whether the Stack Checkbox should be shown (default true).
-        /// </summary>
         public bool EnableStack
         {
             set
@@ -741,9 +720,6 @@ namespace Chummer
         /// Capacity display style.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Capacity display style.
-        /// </summary>
         public CapacityStyle CapacityDisplayStyle
         {
             set => _eCapacityStyle = value;
@@ -758,18 +734,12 @@ namespace Chummer
         /// Default text string to filter by.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Default text string to filter by.
-        /// </summary>
         public string DefaultSearchText { get; set; }
 
         /// <summary>
         /// What weapon type is our gear allowed to have
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// What weapon type is our gear allowed to have
-        /// </summary>
         public string ForceItemAmmoForWeaponType { get; set; }
 
         #endregion Properties
@@ -1219,7 +1189,7 @@ namespace Chummer
                     sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
 
                 if (sbdFilter.Length > 0)
-                    strFilter = "[" + sbdFilter.ToString() + "]";
+                    strFilter = "[" + sbdFilter.Append(']').ToString();
             }
 
             int intOverLimit = 0;

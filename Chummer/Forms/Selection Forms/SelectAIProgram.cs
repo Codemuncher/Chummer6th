@@ -19,13 +19,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -190,9 +190,6 @@ namespace Chummer
         /// Program that was selected in the dialogue.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Program that was selected in the dialogue.
-        /// </summary>
         public string SelectedProgram
         {
             get => _strSelectedAIProgram;
@@ -290,7 +287,7 @@ namespace Chummer
 
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
             {
-                sbdFilter.Append('(').Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
+                sbdFilter.Append("programs/program[(").Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
                 string strCategory = await cboCategory.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token: token).ConfigureAwait(false);
                 if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"
                                                        && (GlobalSettings.SearchInCategoryOnly
@@ -319,7 +316,7 @@ namespace Chummer
                     sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false)));
 
                 // Populate the Program list.
-                await UpdateProgramList(_xmlBaseChummerNode.Select("programs/program[" + sbdFilter + ']'), token).ConfigureAwait(false);
+                await UpdateProgramList(_xmlBaseChummerNode.Select(sbdFilter.Append(']').ToString()), token).ConfigureAwait(false);
             }
         }
 
@@ -352,7 +349,7 @@ namespace Chummer
                                      ?? await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
                     // If this is a critter with Optional Programs, see if this Program is allowed.
                     if (_xmlOptionalAIProgramsNode?.SelectSingleNodeAndCacheExpression("program", token) != null
-                        && _xmlOptionalAIProgramsNode.SelectSingleNode("program[. = " + strName.CleanXPath() + ']') == null)
+                        && _xmlOptionalAIProgramsNode.SelectSingleNode("program[. = " + strName.CleanXPath() + "]") == null)
                         continue;
                     string strDisplayName = objXmlProgram.SelectSingleNodeAndCacheExpression("translate", token: token)?.Value ?? strName;
                     if (!GlobalSettings.SearchInCategoryOnly && blnHasSearch)
@@ -364,7 +361,7 @@ namespace Chummer
                                 = _lstCategory.Find(objFind => objFind.Value.ToString() == strCategory);
                             if (!string.IsNullOrEmpty(objFoundItem.Name))
                             {
-                                strDisplayName += strSpace + '[' + objFoundItem.Name + ']';
+                                strDisplayName += strSpace + "[" + objFoundItem.Name + "]";
                             }
                         }
                     }

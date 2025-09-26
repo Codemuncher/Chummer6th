@@ -2680,7 +2680,7 @@ namespace Chummer
                 }
                 finally
                 {
-                    if (objSemaphore?.IsDisposed == false)
+                    if (!objSemaphore.IsDisposed)
                         objSemaphore.Release();
                 }
             }
@@ -5312,11 +5312,11 @@ namespace Chummer
                                               "Message_ReapplyImprovementsFoundOutdatedItems_Top",
                                               token: token)
                                           .ConfigureAwait(false) +
-                                      sbdOutdatedItems.ToString() +
+                                      sbdOutdatedItems.Append(
                                       await LanguageManager.GetStringAsync(
                                               "Message_ReapplyImprovementsFoundOutdatedItems_Bottom",
                                               token: token)
-                                          .ConfigureAwait(false),
+                                          .ConfigureAwait(false)).ToString(),
                                 await LanguageManager
                                     .GetStringAsync("MessageTitle_ConfirmReapplyImprovements", token: token)
                                     .ConfigureAwait(false),
@@ -13120,31 +13120,22 @@ namespace Chummer
                 {
                     // Get the grade of the item we're undoing and make sure it's the highest grade
                     int intMaxGrade = 0;
-                    await CharacterObject.InitiationGrades.ForEachAsync(objGrade => intMaxGrade = Math.Max(intMaxGrade, objGrade.Grade), GenericToken).ConfigureAwait(false);
+                    await CharacterObject.InitiationGrades.ForEachAsync(x => intMaxGrade = Math.Max(intMaxGrade, x.Grade), GenericToken).ConfigureAwait(false);
 
-                    bool blnReturn = false;
-                    await CharacterObject.InitiationGrades.ForEachWithBreakAsync(async objGrade =>
+                    InitiationGrade objGrade = await CharacterObject.InitiationGrades
+                        .FirstOrDefaultAsync(x => x.InternalId == strUndoId, GenericToken).ConfigureAwait(false);
+                    if (objGrade.Grade < intMaxGrade)
                     {
-                        if (objGrade.InternalId != strUndoId)
-                            return true;
-                        if (objGrade.Grade < intMaxGrade)
-                        {
-                            await Program.ShowScrollableMessageBoxAsync(
-                                this,
-                                await LanguageManager.GetStringAsync("Message_UndoNotHighestGrade", token: GenericToken)
-                                    .ConfigureAwait(false),
-                                await LanguageManager
-                                    .GetStringAsync("MessageTitle_NotHighestGrade", token: GenericToken)
-                                    .ConfigureAwait(false),
-                                MessageBoxButtons.OK, MessageBoxIcon.Information).ConfigureAwait(false);
-                            blnReturn = true;
-                            return false;
-                        }
-
-                        return false;
-                    }, GenericToken).ConfigureAwait(false);
-                    if (blnReturn)
+                        await Program.ShowScrollableMessageBoxAsync(
+                            this,
+                            await LanguageManager.GetStringAsync("Message_UndoNotHighestGrade", token: GenericToken)
+                                .ConfigureAwait(false),
+                            await LanguageManager
+                                .GetStringAsync("MessageTitle_NotHighestGrade", token: GenericToken)
+                                .ConfigureAwait(false),
+                            MessageBoxButtons.OK, MessageBoxIcon.Information).ConfigureAwait(false);
                         return;
+                    }
 
                     if (await Program.ShowScrollableMessageBoxAsync(
                             this, await LanguageManager.GetStringAsync("Message_UndoExpense", token: GenericToken).ConfigureAwait(false),
@@ -14574,8 +14565,8 @@ namespace Chummer
                             if (!await objCyberware.Purchase(objXmlCyberware, Improvement.ImprovementSource.Cyberware,
                                     frmPickCyberware.MyForm.SelectedGrade,
                                     frmPickCyberware.MyForm.SelectedRating,
-                                    objVehicle, objMod.Cyberware, await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false),
-                                    objVehicle.Weapons,
+                                    objVehicle ?? objMod.Parent, objMod.Cyberware, await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false),
+                                    (objVehicle ?? objMod.Parent).Weapons,
                                     frmPickCyberware.MyForm.Markup, frmPickCyberware.MyForm.FreeCost,
                                     frmPickCyberware.MyForm.BlackMarketDiscount, true,
                                     "String_ExpensePurchaseVehicleCyberware", objCyberwareParent).ConfigureAwait(false))

@@ -170,7 +170,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Async version of <see cref="Enumerable.ElementAt{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IAsyncReadOnlyList{T}">.
+        /// Async version of <see cref="Enumerable.ElementAt{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IAsyncReadOnlyList{T}"/>.
         /// </summary>
         public static async Task<T> ElementAtBetterAsync<T>(this IAsyncEnumerable<T> source, int index, CancellationToken token = default)
         {
@@ -204,7 +204,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Async version of <see cref="Enumerable.ElementAtOrDefault{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IAsyncReadOnlyList{T}">.
+        /// Async version of <see cref="Enumerable.ElementAtOrDefault{TSource}(IEnumerable{TSource}, int)"/> that also supports <see cref="IAsyncReadOnlyList{T}"/>.
         /// </summary>
         public static async Task<T> ElementAtOrDefaultBetterAsync<T>(this IAsyncEnumerable<T> source, int index, CancellationToken token = default)
         {
@@ -273,7 +273,7 @@ namespace Chummer
                     while (objEnumerator.MoveNext())
                     {
                         token.ThrowIfCancellationRequested();
-                        result = result * 31u + (uint)objEnumerator.Current.GetHashCode();
+                        result = result * 31u + (uint)(objEnumerator.Current?.GetHashCode() ?? 0);
                     }
                 }
                 finally
@@ -311,7 +311,7 @@ namespace Chummer
                     while (objEnumerator.MoveNext())
                     {
                         token.ThrowIfCancellationRequested();
-                        result += (uint)objEnumerator.Current.GetHashCode();
+                        result += (uint)(objEnumerator.Current?.GetHashCode() ?? 0);
                     }
                 }
                 finally
@@ -356,7 +356,7 @@ namespace Chummer
                         {
                             token.ThrowIfCancellationRequested();
                             T objCurrent = objEnumerator.Current;
-                            lstTasks.Add(Task.Run(() => objCurrent.GetHashCode(), token));
+                            lstTasks.Add(Task.Run(() => objCurrent?.GetHashCode() ?? 0, token));
                             blnMoveNext = objEnumerator.MoveNext();
                         }
 

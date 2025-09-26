@@ -2444,9 +2444,9 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Save the current settings to the settings file.
+        /// Save the current settings to a stream.
         /// </summary>
-        /// <param name="strNewFileName">New file name to use. If empty, uses the existing, built-in file name.</param>
+        /// <param name="objStream">Stream to save to.</param>
         /// <param name="blnClearSourceGuid">Whether to clear SourceId after a successful save or not. Used to turn built-in options into custom ones.</param>
         /// <param name="token">Cancellation token to listen to.</param>
         public async Task<bool> SaveAsync(Stream objStream, bool blnClearSourceGuid = false,
@@ -6213,7 +6213,7 @@ namespace Chummer
                 }
 
                 if (sbdPath.Length > 0)
-                    return "(" + sbdPath.ToString() + ")";
+                    return "(" + sbdPath.Append(')').ToString();
             }
 
             // We have only the opening parentheses; return an empty string
@@ -6268,7 +6268,7 @@ namespace Chummer
                 }
 
                 if (sbdPath.Length > 0)
-                    return "(" + sbdPath.ToString() + ")";
+                    return "(" + sbdPath.Append(')').ToString();
             }
 
             // We have only the opening parentheses; return an empty string

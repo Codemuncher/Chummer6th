@@ -363,6 +363,7 @@ namespace Chummer
         /// Load the Spell from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -404,6 +405,7 @@ namespace Chummer
                 if (objNode.TryGetStringFieldQuickly("descriptors", ref _strDescriptors))
                 {
                     if (blnSync)
+                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                         UpdateHashDescriptors();
                     else
                         await UpdateHashDescriptorsAsync(token).ConfigureAwait(false);
@@ -1483,14 +1485,7 @@ namespace Chummer
                     bool blnForce = strReturn.StartsWith('F');
                     string strDv = blnForce ? strReturn.TrimStartOnce("F", true) : strReturn;
                     //Navigator can't do math on a single value, so inject a mathable value.
-                    if (string.IsNullOrEmpty(strDv))
-                    {
-                        strDv = "0";
-                    }
-                    else
-                    {
-                        strDv = strDv.TrimStart('+');
-                    }
+                    strDv = string.IsNullOrEmpty(strDv) ? "0" : strDv.TrimStart('+');
 
                     string strToAppend = string.Empty;
                     int intDrainDv = 0;
@@ -1596,14 +1591,7 @@ namespace Chummer
                 bool blnForce = strReturn.StartsWith('F');
                 string strDv = blnForce ? strReturn.TrimStartOnce("F", true) : strReturn;
                 //Navigator can't do math on a single value, so inject a mathable value.
-                if (string.IsNullOrEmpty(strDv))
-                {
-                    strDv = "0";
-                }
-                else
-                {
-                    strDv = strDv.TrimStart('+');
-                }
+                strDv = string.IsNullOrEmpty(strDv) ? "0" : strDv.TrimStart('+');
 
                 string strToAppend = string.Empty;
                 int intDrainDv = 0;
