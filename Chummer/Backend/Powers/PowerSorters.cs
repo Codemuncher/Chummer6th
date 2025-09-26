@@ -17,6 +17,7 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Uniques;
 using System;
 using System.Collections.Generic;
 

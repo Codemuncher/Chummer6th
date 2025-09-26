@@ -29,6 +29,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
 using Chummer.Backend.Equipment;
+using Chummer.Backend.Uniques;
 
 namespace Chummer
 {

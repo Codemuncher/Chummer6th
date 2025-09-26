@@ -26,7 +26,7 @@ namespace Chummer
     public static class TaskExtensions
     {
         /// <summary>
-        /// Version of Task.Run that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// Version of <see cref="Task.Run(Action)"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
         /// </summary>
         public static Task RunWithoutEC(Action func)
         {
@@ -34,7 +34,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of Task.Run that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// Version of <see cref="Task.Run(Action, CancellationToken)"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
         /// </summary>
         public static Task RunWithoutEC(Action func, CancellationToken token)
         {
@@ -44,7 +44,7 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of Task.Run that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// Version of <see cref="Task.Run{TResult}(Func{TResult})"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
         /// </summary>
         public static Task<T> RunWithoutEC<T>(Func<T> func)
         {
@@ -52,9 +52,45 @@ namespace Chummer
         }
 
         /// <summary>
-        /// Version of Task.Run that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// Version of <see cref="Task.Run{TResult}(Func{TResult}, CancellationToken)"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
         /// </summary>
         public static Task<T> RunWithoutEC<T>(Func<T> func, CancellationToken token)
+        {
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled<T>(token);
+            return Utils.RunInEmptyExecutionContext(() => Task.Run(func, token));
+        }
+
+        /// <summary>
+        /// Version of <see cref="Task.Run(Func{Task})"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// </summary>
+        public static Task RunWithoutEC(Func<Task> func)
+        {
+            return Utils.RunInEmptyExecutionContext(() => Task.Run(func));
+        }
+
+        /// <summary>
+        /// Version of <see cref="Task.Run(Func{Task}, CancellationToken)"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// </summary>
+        public static Task RunWithoutEC(Func<Task> func, CancellationToken token)
+        {
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled(token);
+            return Utils.RunInEmptyExecutionContext(() => Task.Run(func, token));
+        }
+
+        /// <summary>
+        /// Version of <see cref="Task.Run{TResult}(Func{Task{TResult}})"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// </summary>
+        public static Task<T> RunWithoutEC<T>(Func<Task<T>> func)
+        {
+            return Utils.RunInEmptyExecutionContext(() => Task.Run(func));
+        }
+
+        /// <summary>
+        /// Version of <see cref="Task.Run{TResult}(Func{Task{TResult}}, CancellationToken)"/> that runs in an empty execution context as a way to avoid leaking memory of AsyncLocals
+        /// </summary>
+        public static Task<T> RunWithoutEC<T>(Func<Task<T>> func, CancellationToken token)
         {
             if (token.IsCancellationRequested)
                 return Task.FromCanceled<T>(token);

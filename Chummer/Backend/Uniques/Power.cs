@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+using Chummer;
 using Chummer.Annotations;
 using Chummer.Backend.Attributes;
 using Chummer.Backend.Skills;
@@ -38,7 +39,7 @@ using Chummer.Backend.Skills;
 // ReSharper disable SpecifyACultureInStringConversionExplicitly
 
 // ReSharper disable once CheckNamespace
-namespace Chummer
+namespace Chummer.Backend.Uniques
 {
     /// <summary>
     /// An Adept Power.

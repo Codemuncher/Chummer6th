@@ -529,7 +529,7 @@ namespace Chummer.Backend.Equipment
                     {
                         foreach (XmlNode objXmlMount in objXmlMountList)
                         {
-                            sbdMounts.Append(objXmlMount.InnerTextViaPool()).Append('/');
+                            sbdMounts.Append(objXmlMount.InnerTextViaPool(token)).Append('/');
                         }
 
                         if (sbdMounts.Length > 0)
@@ -549,7 +549,7 @@ namespace Chummer.Backend.Equipment
                     {
                         foreach (XmlNode objXmlMount in objXmlMountList)
                         {
-                            sbdMounts.Append(objXmlMount.InnerTextViaPool()).Append('/');
+                            sbdMounts.Append(objXmlMount.InnerTextViaPool(token)).Append('/');
                         }
 
                         if (sbdMounts.Length > 0)
@@ -704,8 +704,8 @@ namespace Chummer.Backend.Equipment
             XmlElement objRangeNode = objXmlWeapon["range"];
             if (objRangeNode != null)
             {
-                _strRange = objRangeNode.InnerTextViaPoolTrimmed();
-                string strMultiply = objRangeNode.Attributes["multiply"]?.InnerTextViaPool();
+                _strRange = objRangeNode.InnerTextViaPoolTrimmed(token);
+                string strMultiply = objRangeNode.Attributes["multiply"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrEmpty(strMultiply))
                 {
                     decimal.TryParse(strMultiply, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _decRangeMultiplier);
@@ -742,7 +742,7 @@ namespace Chummer.Backend.Equipment
                     foreach (XmlNode objXmlUnderbarrel in xmlUnderbarrelsList)
                     {
                         XmlNode objXmlWeaponNode =
-                            objXmlDocument.TryGetNodeByNameOrId("/chummer/weapons/weapon", objXmlUnderbarrel.InnerTextViaPool());
+                            objXmlDocument.TryGetNodeByNameOrId("/chummer/weapons/weapon", objXmlUnderbarrel.InnerTextViaPool(token));
                         Weapon objUnderbarrelWeapon = new Weapon(_objCharacter);
                         try
                         {
@@ -827,7 +827,7 @@ namespace Chummer.Backend.Equipment
                 {
                     foreach (XmlNode objXmlWeaponAccessory in objXmlAccessoryList)
                     {
-                        string strName = objXmlWeaponAccessory["name"]?.InnerTextViaPool();
+                        string strName = objXmlWeaponAccessory["name"]?.InnerTextViaPool(token);
                         if (string.IsNullOrEmpty(strName))
                             continue;
                         XmlNode objXmlAccessory =
@@ -837,7 +837,7 @@ namespace Chummer.Backend.Equipment
                         int intAccessoryRating = 0;
                         if (objXmlWeaponAccessory["rating"] != null)
                         {
-                            int.TryParse(objXmlWeaponAccessory["rating"].InnerTextViaPool(), NumberStyles.Integer,
+                            int.TryParse(objXmlWeaponAccessory["rating"].InnerTextViaPool(token), NumberStyles.Integer,
                                 GlobalSettings.InvariantCultureInfo, out intAccessoryRating);
                         }
 
@@ -851,9 +851,9 @@ namespace Chummer.Backend.Equipment
                                     // ReSharper disable once MethodHasAsyncOverload
                                     objAccessory.Create(objXmlAccessory,
                                         objXmlWeaponAccessory.HasChildWithName("extramount")
-                                            ? new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(),
-                                                objXmlAccessory["extramount"].InnerTextViaPool())
-                                            : new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(), "None"),
+                                            ? new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(token),
+                                                objXmlAccessory["extramount"].InnerTextViaPool(token))
+                                            : new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(token), "None"),
                                         intAccessoryRating, false, blnCreateChildren, blnCreateImprovements, token);
                                 }
                                 else
@@ -867,9 +867,9 @@ namespace Chummer.Backend.Equipment
                             {
                                 await objAccessory.CreateAsync(objXmlAccessory,
                                         objXmlWeaponAccessory.HasChildWithName("extramount")
-                                            ? new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(),
-                                                objXmlAccessory["extramount"].InnerTextViaPool())
-                                            : new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(), "None"),
+                                            ? new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(token),
+                                                objXmlAccessory["extramount"].InnerTextViaPool(token))
+                                            : new ValueTuple<string, string>(objXmlAccessory["mount"].InnerTextViaPool(token), "None"),
                                         intAccessoryRating, false, blnCreateChildren, blnCreateImprovements, token)
                                     .ConfigureAwait(false);
                             }
@@ -896,42 +896,42 @@ namespace Chummer.Backend.Equipment
                                     XmlAttributeCollection objXmlAccessoryGearNameAttributes =
                                         objXmlAccessoryGearName.Attributes;
 
-                                    string strChildForceSource = objXmlAccessoryGear["source"]?.InnerTextViaPool() ?? string.Empty;
-                                    string strChildForcePage = objXmlAccessoryGear["page"]?.InnerTextViaPool() ?? string.Empty;
-                                    string strChildForceValue = objXmlAccessoryGearNameAttributes?["select"]?.InnerTextViaPool() ??
+                                    string strChildForceSource = objXmlAccessoryGear["source"]?.InnerTextViaPool(token) ?? string.Empty;
+                                    string strChildForcePage = objXmlAccessoryGear["page"]?.InnerTextViaPool(token) ?? string.Empty;
+                                    string strChildForceValue = objXmlAccessoryGearNameAttributes?["select"]?.InnerTextViaPool(token) ??
                                                                 string.Empty;
                                     bool blnChildCreateChildren =
-                                        objXmlAccessoryGearNameAttributes?["createchildren"]?.InnerTextViaPool() != bool.FalseString;
+                                        objXmlAccessoryGearNameAttributes?["createchildren"]?.InnerTextViaPool(token) != bool.FalseString;
                                     bool blnAddChildImprovements = blnCreateImprovements &&
                                                                    objXmlAccessoryGearNameAttributes?["addimprovements"]
-                                                                       ?.InnerTextViaPool() != bool.FalseString;
+                                                                       ?.InnerTextViaPool(token) != bool.FalseString;
                                     int intGearRating = 0;
                                     if (objXmlAccessoryGear["rating"] != null
-                                        && !int.TryParse(objXmlAccessoryGear["rating"].InnerTextViaPool(), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out intGearRating))
+                                        && !int.TryParse(objXmlAccessoryGear["rating"].InnerTextViaPool(token), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out intGearRating))
                                     {
                                         intGearRating = 0;
                                     }
                                     decimal decGearQty = 1;
                                     if (objXmlAccessoryGearNameAttributes?["qty"] != null
-                                        && !decimal.TryParse(objXmlAccessoryGearNameAttributes["qty"].InnerTextViaPool(), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decGearQty))
+                                        && !decimal.TryParse(objXmlAccessoryGearNameAttributes["qty"].InnerTextViaPool(token), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decGearQty))
                                     {
                                         decGearQty = 1;
                                     }
                                     string strFilter = "/chummer/gears/gear";
                                     if (objXmlAccessoryGearName != null || objXmlAccessoryGearCategory != null)
                                     {
-                                        strFilter += '[';
+                                        strFilter += "[";
                                         if (objXmlAccessoryGearName != null)
                                         {
-                                            strFilter += "name = " + objXmlAccessoryGearName.InnerTextViaPool().CleanXPath();
+                                            strFilter += "name = " + objXmlAccessoryGearName.InnerTextViaPool(token).CleanXPath();
                                             if (objXmlAccessoryGearCategory != null)
                                                 strFilter += " and category = " +
-                                                             objXmlAccessoryGearCategory.InnerTextViaPool().CleanXPath();
+                                                             objXmlAccessoryGearCategory.InnerTextViaPool(token).CleanXPath();
                                         }
                                         else
-                                            strFilter += "category = " + objXmlAccessoryGearCategory.InnerTextViaPool().CleanXPath();
+                                            strFilter += "category = " + objXmlAccessoryGearCategory.InnerTextViaPool(token).CleanXPath();
 
-                                        strFilter += ']';
+                                        strFilter += "]";
                                     }
 
                                     XmlNode objXmlGear = objXmlGearDocument.SelectSingleNode(strFilter);
@@ -968,7 +968,7 @@ namespace Chummer.Backend.Equipment
 
                                         // Change the Capacity of the child if necessary.
                                         if (objXmlAccessoryGear["capacity"] != null)
-                                            objGear.Capacity = '[' + objXmlAccessoryGear["capacity"].InnerTextViaPool() + ']';
+                                            objGear.Capacity = "[" + objXmlAccessoryGear["capacity"].InnerTextViaPool(token) + "]";
                                     }
                                     catch
                                     {
@@ -1021,7 +1021,7 @@ namespace Chummer.Backend.Equipment
             // More than one Weapon can be added, so loop through all occurrences.
             foreach (XmlNode objXmlAddWeapon in objXmlWeapon.SelectNodes("addweapon"))
             {
-                string strLoopID = objXmlAddWeapon.InnerTextViaPool();
+                string strLoopID = objXmlAddWeapon.InnerTextViaPool(token);
                 XmlNode objXmlSubWeapon =
                     objXmlDocument.TryGetNodeByNameOrId("/chummer/weapons/weapon",
                         strLoopID);
@@ -1029,7 +1029,7 @@ namespace Chummer.Backend.Equipment
                 if (objXmlSubWeapon != null)
                 {
                     int intAddWeaponRating = 0;
-                    string strRating = objXmlAddWeapon.Attributes["rating"]?.InnerTextViaPool();
+                    string strRating = objXmlAddWeapon.Attributes["rating"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strRating))
                     {
                         intAddWeaponRating = blnSync
@@ -1475,7 +1475,7 @@ namespace Chummer.Backend.Equipment
                 ? Math.Max(Math.Min(_intRating, MaxRatingValue), MinRatingValue)
                 : Math.Max(Math.Min(_intRating, await GetMaxRatingValueAsync(token).ConfigureAwait(false)), await GetMinRatingValueAsync(token).ConfigureAwait(false));
             if (objNode["firingmode"] != null)
-                _eFiringMode = ConvertToFiringMode(objNode["firingmode"].InnerTextViaPool());
+                _eFiringMode = ConvertToFiringMode(objNode["firingmode"].InnerTextViaPool(token));
             // Legacy shim
             if (Name.Contains("Osmium Mace (STR"))
             {
@@ -1514,7 +1514,7 @@ namespace Chummer.Backend.Equipment
             objNode.TryGetStringFieldQuickly("page", ref _strPage);
             objNode.TryGetStringFieldQuickly("parentid", ref _strParentID);
             if (!objNode.TryGetBoolFieldQuickly("allowaccessory", ref _blnAllowAccessory))
-                _blnAllowAccessory = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["allowaccessory"]?.InnerTextViaPool() != bool.FalseString;
+                _blnAllowAccessory = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["allowaccessory"]?.InnerTextViaPool(token) != bool.FalseString;
             objNode.TryGetStringFieldQuickly("source", ref _strSource);
             objNode.TryGetStringFieldQuickly("weaponname", ref _strWeaponName);
             objNode.TryGetBoolFieldQuickly("stolen", ref _blnStolen);
@@ -1531,7 +1531,7 @@ namespace Chummer.Backend.Equipment
 
             if (!objNode.TryGetStringFieldQuickly("alternaterange", ref _strAlternateRange))
             {
-                string strAlternateRange = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["alternaterange"]?.InnerTextViaPool();
+                string strAlternateRange = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["alternaterange"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrEmpty(strAlternateRange))
                 {
                     _strAlternateRange = strAlternateRange.Trim();
@@ -1554,7 +1554,7 @@ namespace Chummer.Backend.Equipment
 
             objNode.TryGetBoolFieldQuickly("requireammo", ref _blnRequireAmmo);
             if (!objNode.TryGetStringFieldQuickly("weapontype", ref _strWeaponType))
-                _strWeaponType = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["weapontype"]?.InnerTextViaPool()
+                _strWeaponType = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["weapontype"]?.InnerTextViaPool(token)
                                  ?? (blnSync ? _objCharacter.LoadDataXPath("weapons.xml", token: token) : await _objCharacter.LoadDataXPathAsync("weapons.xml", token: token).ConfigureAwait(false))
                                      .SelectSingleNodeAndCacheExpression(
                                          "/chummer/categories/category[. = " + Category.CleanXPath()
@@ -1883,7 +1883,7 @@ namespace Chummer.Backend.Equipment
             objNode.TryGetStringFieldQuickly("notesColor", ref sNotesColor);
             _colNotes = ColorTranslator.FromHtml(sNotesColor);
 
-            string strLocation = objNode["location"]?.InnerTextViaPool();
+            string strLocation = objNode["location"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strLocation))
             {
                 if (blnSync)
@@ -1942,7 +1942,7 @@ namespace Chummer.Backend.Equipment
                         {
                             foreach (XmlNode objXmlMount in objXmlMountList)
                             {
-                                sbdMounts.Append(objXmlMount.InnerTextViaPool()).Append('/');
+                                sbdMounts.Append(objXmlMount.InnerTextViaPool(token)).Append('/');
                             }
 
                             if (sbdMounts.Length > 0)
@@ -1966,7 +1966,7 @@ namespace Chummer.Backend.Equipment
                         {
                             foreach (XmlNode objXmlMount in objXmlMountList)
                             {
-                                sbdMounts.Append(objXmlMount.InnerTextViaPool()).Append('/');
+                                sbdMounts.Append(objXmlMount.InnerTextViaPool(token)).Append('/');
                             }
 
                             if (sbdMounts.Length > 0)
@@ -2837,8 +2837,8 @@ namespace Chummer.Backend.Equipment
             {
                 if (objCulture == null)
                     objCulture = GlobalSettings.CultureInfo;
-                strReturn += strSpace + '(' + LanguageManager.GetString(RatingLabel, strLanguage) + strSpace +
-                             intRating.ToString(objCulture) + ')';
+                strReturn += strSpace + "(" + LanguageManager.GetString(RatingLabel, strLanguage) + strSpace +
+                             intRating.ToString(objCulture) + ")";
             }
             if (!string.IsNullOrEmpty(CustomName))
                 strReturn += strSpace + "(\"" + CustomName + "\")";
@@ -2859,9 +2859,9 @@ namespace Chummer.Backend.Equipment
             {
                 if (objCulture == null)
                     objCulture = GlobalSettings.CultureInfo;
-                strReturn += strSpace + '(' +
+                strReturn += strSpace + "(" +
                              await LanguageManager.GetStringAsync(RatingLabel, strLanguage, token: token)
-                                 .ConfigureAwait(false) + strSpace + intRating.ToString(objCulture) + ')';
+                                 .ConfigureAwait(false) + strSpace + intRating.ToString(objCulture) + ")";
             }
             if (!string.IsNullOrEmpty(CustomName))
                 strReturn += strSpace + "(\"" + CustomName + "\")";
@@ -3630,7 +3630,7 @@ namespace Chummer.Backend.Equipment
                     decimal.TryParse(strFirstHalf.FastEscape('+'), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decMin);
 
                 if (decMax == decimal.MaxValue)
-                    strReturn = decMin.ToString(strFormat, GlobalSettings.CultureInfo) + strNuyen + '+';
+                    strReturn = decMin.ToString(strFormat, GlobalSettings.CultureInfo) + strNuyen + "+";
                 else
                     strReturn = decMin.ToString(strFormat, GlobalSettings.CultureInfo) + " - " +
                                 decMax.ToString(strFormat, GlobalSettings.CultureInfo) + strNuyen;
@@ -4516,7 +4516,7 @@ namespace Chummer.Backend.Equipment
             {
                 int intPos = strDamage.IndexOf('(');
                 string strSplash = strDamage.Substring(intPos, strDamage.IndexOf(')') - intPos + 1);
-                strDamageExtra += ' ' + strSplash;
+                strDamageExtra += " " + strSplash;
                 strDamage = strDamage.FastEscape(strSplash).Trim();
             }
 
@@ -4628,14 +4628,14 @@ namespace Chummer.Backend.Equipment
                     if (WirelessWeaponBonus["damagetype"] != null)
                     {
                         strDamageType = string.Empty;
-                        strDamageExtra = WirelessWeaponBonus["damagetype"].InnerTextViaPool();
+                        strDamageExtra = WirelessWeaponBonus["damagetype"].InnerTextViaPool(token);
                     }
 
                     // Adjust the Weapon's Damage.
-                    string strTemp = WirelessWeaponBonus["damage"]?.InnerTextViaPool();
+                    string strTemp = WirelessWeaponBonus["damage"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strTemp) && strTemp != "0" && strTemp != "+0" && strTemp != "-0")
                         sbdBonusDamage.Append('(').Append(strTemp.TrimStart('+')).Append(')');
-                    strTemp = WirelessWeaponBonus["damagereplace"]?.InnerTextViaPool();
+                    strTemp = WirelessWeaponBonus["damagereplace"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strTemp))
                     {
                         blnDamageReplaced = true;
@@ -4668,14 +4668,14 @@ namespace Chummer.Backend.Equipment
                             if (objAccessory.WirelessWeaponBonus["damagetype"] != null)
                             {
                                 strDamageType = string.Empty;
-                                strDamageExtra = objAccessory.WirelessWeaponBonus["damagetype"].InnerTextViaPool();
+                                strDamageExtra = objAccessory.WirelessWeaponBonus["damagetype"].InnerTextViaPool(token);
                             }
 
                             // Adjust the Weapon's Damage.
-                            string strTemp = objAccessory.WirelessWeaponBonus["damage"]?.InnerTextViaPool();
+                            string strTemp = objAccessory.WirelessWeaponBonus["damage"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strTemp) && strTemp != "0" && strTemp != "+0" && strTemp != "-0")
                                 sbdBonusDamage.Append("+(").Append(strTemp.TrimStart('+')).Append(')');
-                            strTemp = objAccessory.WirelessWeaponBonus["damagereplace"]?.InnerTextViaPool();
+                            strTemp = objAccessory.WirelessWeaponBonus["damagereplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strTemp))
                             {
                                 blnDamageReplaced = true;
@@ -4697,14 +4697,14 @@ namespace Chummer.Backend.Equipment
                             if (objGear.FlechetteWeaponBonus["damagetype"] != null)
                             {
                                 strDamageType = string.Empty;
-                                strDamageExtra = objGear.FlechetteWeaponBonus["damagetype"].InnerTextViaPool();
+                                strDamageExtra = objGear.FlechetteWeaponBonus["damagetype"].InnerTextViaPool(token);
                             }
 
                             // Adjust the Weapon's Damage.
-                            string strTemp = objGear.FlechetteWeaponBonus["damage"]?.InnerTextViaPool();
+                            string strTemp = objGear.FlechetteWeaponBonus["damage"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strTemp) && strTemp != "0" && strTemp != "+0" && strTemp != "-0")
                                 sbdBonusDamage.Append("+(").Append(strTemp.TrimStart('+')).Append(')');
-                            strTemp = objGear.FlechetteWeaponBonus["damagereplace"]?.InnerTextViaPool();
+                            strTemp = objGear.FlechetteWeaponBonus["damagereplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strTemp))
                             {
                                 blnDamageReplaced = true;
@@ -4717,14 +4717,14 @@ namespace Chummer.Backend.Equipment
                             if (objGear.WeaponBonus["damagetype"] != null)
                             {
                                 strDamageType = string.Empty;
-                                strDamageExtra = objGear.WeaponBonus["damagetype"].InnerTextViaPool();
+                                strDamageExtra = objGear.WeaponBonus["damagetype"].InnerTextViaPool(token);
                             }
 
                             // Adjust the Weapon's Damage.
-                            string strTemp = objGear.WeaponBonus["damage"]?.InnerTextViaPool();
+                            string strTemp = objGear.WeaponBonus["damage"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strTemp))
                                 sbdBonusDamage.Append("+(").Append(strTemp.TrimStart('+')).Append(')');
-                            strTemp = objGear.WeaponBonus["damagereplace"]?.InnerTextViaPool();
+                            strTemp = objGear.WeaponBonus["damagereplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strTemp))
                             {
                                 blnDamageReplaced = true;
@@ -4744,14 +4744,14 @@ namespace Chummer.Backend.Equipment
                                 if (objChild.FlechetteWeaponBonus["damagetype"] != null)
                                 {
                                     strDamageType = string.Empty;
-                                    strDamageExtra = objChild.FlechetteWeaponBonus["damagetype"].InnerTextViaPool();
+                                    strDamageExtra = objChild.FlechetteWeaponBonus["damagetype"].InnerTextViaPool(token);
                                 }
 
                                 // Adjust the Weapon's Damage.
-                                string strTemp = objGear.FlechetteWeaponBonus["damage"]?.InnerTextViaPool();
+                                string strTemp = objGear.FlechetteWeaponBonus["damage"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strTemp) && strTemp != "0" && strTemp != "+0" && strTemp != "-0")
                                     sbdBonusDamage.Append("+(").Append(strTemp.TrimStart('+')).Append(')');
-                                strTemp = objGear.FlechetteWeaponBonus["damagereplace"]?.InnerTextViaPool();
+                                strTemp = objGear.FlechetteWeaponBonus["damagereplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strTemp))
                                 {
                                     blnDamageReplaced = true;
@@ -4764,14 +4764,14 @@ namespace Chummer.Backend.Equipment
                                 if (objChild.WeaponBonus["damagetype"] != null)
                                 {
                                     strDamageType = string.Empty;
-                                    strDamageExtra = objChild.WeaponBonus["damagetype"].InnerTextViaPool();
+                                    strDamageExtra = objChild.WeaponBonus["damagetype"].InnerTextViaPool(token);
                                 }
 
                                 // Adjust the Weapon's Damage.
-                                string strTemp = objGear.WeaponBonus["damage"]?.InnerTextViaPool();
+                                string strTemp = objGear.WeaponBonus["damage"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strTemp) && strTemp != "0" && strTemp != "+0" && strTemp != "-0")
                                     sbdBonusDamage.Append("+(").Append(strTemp.TrimStart('+')).Append(')');
-                                strTemp = objGear.WeaponBonus["damagereplace"]?.InnerTextViaPool();
+                                strTemp = objGear.WeaponBonus["damagereplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strTemp))
                                 {
                                     blnDamageReplaced = true;
@@ -4904,26 +4904,26 @@ namespace Chummer.Backend.Equipment
                 = new Lazy<string>(
                     () => LanguageManager.GetString("String_DamagePhysical", strLanguage, token: token));
             return ReplaceStrings(strInput, strLanguage, token)
-                .CheapReplace("0S", () => '0' + strStun.Value)
-                .CheapReplace("1S", () => '1' + strStun.Value)
-                .CheapReplace("2S", () => '2' + strStun.Value)
-                .CheapReplace("3S", () => '3' + strStun.Value)
-                .CheapReplace("4S", () => '4' + strStun.Value)
-                .CheapReplace("5S", () => '5' + strStun.Value)
-                .CheapReplace("6S", () => '6' + strStun.Value)
-                .CheapReplace("7S", () => '7' + strStun.Value)
-                .CheapReplace("8S", () => '8' + strStun.Value)
-                .CheapReplace("9S", () => '9' + strStun.Value)
-                .CheapReplace("0P", () => '0' + strPhysical.Value)
-                .CheapReplace("1P", () => '1' + strPhysical.Value)
-                .CheapReplace("2P", () => '2' + strPhysical.Value)
-                .CheapReplace("3P", () => '3' + strPhysical.Value)
-                .CheapReplace("4P", () => '4' + strPhysical.Value)
-                .CheapReplace("5P", () => '5' + strPhysical.Value)
-                .CheapReplace("6P", () => '6' + strPhysical.Value)
-                .CheapReplace("7P", () => '7' + strPhysical.Value)
-                .CheapReplace("8P", () => '8' + strPhysical.Value)
-                .CheapReplace("9P", () => '9' + strPhysical.Value);
+                .CheapReplace("0S", () => "0" + strStun.Value)
+                .CheapReplace("1S", () => "1" + strStun.Value)
+                .CheapReplace("2S", () => "2" + strStun.Value)
+                .CheapReplace("3S", () => "3" + strStun.Value)
+                .CheapReplace("4S", () => "4" + strStun.Value)
+                .CheapReplace("5S", () => "5" + strStun.Value)
+                .CheapReplace("6S", () => "6" + strStun.Value)
+                .CheapReplace("7S", () => "7" + strStun.Value)
+                .CheapReplace("8S", () => "8" + strStun.Value)
+                .CheapReplace("9S", () => "9" + strStun.Value)
+                .CheapReplace("0P", () => "0" + strPhysical.Value)
+                .CheapReplace("1P", () => "1" + strPhysical.Value)
+                .CheapReplace("2P", () => "2" + strPhysical.Value)
+                .CheapReplace("3P", () => "3" + strPhysical.Value)
+                .CheapReplace("4P", () => "4" + strPhysical.Value)
+                .CheapReplace("5P", () => "5" + strPhysical.Value)
+                .CheapReplace("6P", () => "6" + strPhysical.Value)
+                .CheapReplace("7P", () => "7" + strPhysical.Value)
+                .CheapReplace("8P", () => "8" + strPhysical.Value)
+                .CheapReplace("9P", () => "9" + strPhysical.Value);
         }
 
         public static async Task<string> ReplaceDamageStringsAsync(string strInput, string strLanguage,
@@ -4938,45 +4938,45 @@ namespace Chummer.Backend.Equipment
                 () => LanguageManager.GetStringAsync("String_DamagePhysical", strLanguage, token: token),
                 Utils.JoinableTaskFactory);
             return await (await ReplaceStringsAsync(strInput, strLanguage, token).ConfigureAwait(false))
-                .CheapReplaceAsync("0S", async () => '0' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("0S", async () => "0" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("1S", async () => '1' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("1S", async () => "1" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("2S", async () => '2' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("2S", async () => "2" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("3S", async () => '3' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("3S", async () => "3" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("4S", async () => '4' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("4S", async () => "4" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("5S", async () => '5' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("5S", async () => "5" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("6S", async () => '6' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("6S", async () => "6" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("7S", async () => '7' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("7S", async () => "7" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("8S", async () => '8' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("8S", async () => "8" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("9S", async () => '9' + await strStun.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("9S", async () => "9" + await strStun.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("0P", async () => '0' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("0P", async () => "0" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("1P", async () => '1' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("1P", async () => "1" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("2P", async () => '2' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("2P", async () => "2" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("3P", async () => '3' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("3P", async () => "3" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("4P", async () => '4' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("4P", async () => "4" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("5P", async () => '5' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("5P", async () => "5" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("6P", async () => '6' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("6P", async () => "6" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("7P", async () => '7' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("7P", async () => "7" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("8P", async () => '8' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("8P", async () => "8" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token)
-                .CheapReplaceAsync("9P", async () => '9' + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
+                .CheapReplaceAsync("9P", async () => "9" + await strPhysical.GetValueAsync(token).ConfigureAwait(false),
                     token: token).ConfigureAwait(false);
         }
 
@@ -5014,7 +5014,7 @@ namespace Chummer.Backend.Equipment
                     .CheapReplace(
                         "as round", () => LanguageManager.GetString("String_DamageAsRound", strLanguage, token: token))
                     .CheapReplace(
-                        "/m", () => '/' + LanguageManager.GetString("String_DamageMeter", strLanguage, token: token))
+                        "/m", () => "/" + LanguageManager.GetString("String_DamageMeter", strLanguage, token: token))
                     .CheapReplace(
                         "(M)", () => LanguageManager.GetString("String_DamageMatrix", strLanguage, token: token));
         }
@@ -5079,7 +5079,7 @@ namespace Chummer.Backend.Equipment
                         token: token)
                     .CheapReplaceAsync(
                         "/m",
-                        async () => '/' + await LanguageManager
+                        async () => "/" + await LanguageManager
                             .GetStringAsync("String_DamageMeter", strLanguage, token: token).ConfigureAwait(false),
                         token: token)
                     .CheapReplaceAsync(
@@ -5349,38 +5349,38 @@ namespace Chummer.Backend.Equipment
                             StringComparison.OrdinalIgnoreCase)
                         .CheapReplace(
                             "(b)",
-                            () => '(' + LanguageManager.GetString("String_AmmoBreakAction", strLanguage,
+                            () => "(" + LanguageManager.GetString("String_AmmoBreakAction", strLanguage,
                                             token: token)
-                                        + ')')
+                                        + ")")
                         .CheapReplace(
                             "(belt)",
-                            () => '(' + LanguageManager.GetString("String_AmmoBelt", strLanguage, token: token) +
-                                    ')')
+                            () => "(" + LanguageManager.GetString("String_AmmoBelt", strLanguage, token: token) +
+                                    ")")
                         .CheapReplace(
                             "(box)",
-                            () => '(' + LanguageManager.GetString("String_AmmoBox", strLanguage, token: token) +
-                                    ')')
+                            () => "(" + LanguageManager.GetString("String_AmmoBox", strLanguage, token: token) +
+                                    ")")
                         .CheapReplace(
                             "(c)",
-                            () => '(' + LanguageManager.GetString("String_AmmoClip", strLanguage, token: token) +
-                                    ')')
+                            () => "(" + LanguageManager.GetString("String_AmmoClip", strLanguage, token: token) +
+                                    ")")
                         .CheapReplace(
                             "(cy)",
-                            () => '(' +
-                                    LanguageManager.GetString("String_AmmoCylinder", strLanguage, token: token) + ')')
+                            () => "(" +
+                                    LanguageManager.GetString("String_AmmoCylinder", strLanguage, token: token) + ")")
                         .CheapReplace(
                             "(d)",
-                            () => '(' + LanguageManager.GetString("String_AmmoDrum", strLanguage, token: token) +
-                                    ')')
+                            () => "(" + LanguageManager.GetString("String_AmmoDrum", strLanguage, token: token) +
+                                    ")")
                         .CheapReplace(
                             "(m)",
-                            () => '(' +
-                                    LanguageManager.GetString("String_AmmoMagazine", strLanguage, token: token) + ')')
+                            () => "(" +
+                                    LanguageManager.GetString("String_AmmoMagazine", strLanguage, token: token) + ")")
                         .CheapReplace(
                             "(ml)",
-                            () => '(' + LanguageManager.GetString("String_AmmoMuzzleLoad", strLanguage,
+                            () => "(" + LanguageManager.GetString("String_AmmoMuzzleLoad", strLanguage,
                                             token: token)
-                                        + ')');
+                                        + ")");
                     // ReSharper restore MethodHasAsyncOverloadWithCancellation
                 }
                 else
@@ -5411,52 +5411,52 @@ namespace Chummer.Backend.Equipment
                             StringComparison.OrdinalIgnoreCase, token: token)
                         .CheapReplaceAsync(
                             "(b)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                                 "String_AmmoBreakAction", strLanguage, token: token)
-                                            .ConfigureAwait(false) + ')', token: token)
+                                            .ConfigureAwait(false) + ")", token: token)
                         .CheapReplaceAsync(
                             "(belt)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                             "String_AmmoBelt", strLanguage, token: token).ConfigureAwait(false) +
-                                        ')', token: token)
+                                        ")", token: token)
                         .CheapReplaceAsync(
                             "(box)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                             "String_AmmoBox", strLanguage, token: token).ConfigureAwait(false) +
-                                        ')', token: token)
+                                        ")", token: token)
                         .CheapReplaceAsync(
                             "(c)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                             "String_AmmoClip", strLanguage, token: token).ConfigureAwait(false) +
-                                        ')', token: token)
+                                        ")", token: token)
                         .CheapReplaceAsync(
                             "(cy)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                                 "String_AmmoCylinder", strLanguage, token: token)
-                                            .ConfigureAwait(false) + ')', token: token)
+                                            .ConfigureAwait(false) + ")", token: token)
                         .CheapReplaceAsync(
                             "(d)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                             "String_AmmoDrum", strLanguage, token: token).ConfigureAwait(false) +
-                                        ')', token: token)
+                                        ")", token: token)
                         .CheapReplaceAsync(
                             "(m)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                                 "String_AmmoMagazine", strLanguage, token: token)
-                                            .ConfigureAwait(false) + ')', token: token)
+                                            .ConfigureAwait(false) + ")", token: token)
                         .CheapReplaceAsync(
                             "(ml)",
-                            async () => '('
+                            async () => "("
                                         + await LanguageManager.GetStringAsync(
                                                 "String_AmmoMuzzleLoad", strLanguage, token: token)
-                                            .ConfigureAwait(false) + ')', token: token).ConfigureAwait(false);
+                                            .ConfigureAwait(false) + ")", token: token).ConfigureAwait(false);
                 }
             }
 
@@ -5574,7 +5574,7 @@ namespace Chummer.Backend.Equipment
                 // First look at any changes caused by the weapon being wireless
                 if (WirelessOn && WirelessWeaponBonus != null)
                 {
-                    string strFireMode = WirelessWeaponBonus["firemode"]?.InnerTextViaPool();
+                    string strFireMode = WirelessWeaponBonus["firemode"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strFireMode))
                     {
                         if (strFireMode.Contains('/'))
@@ -5590,7 +5590,7 @@ namespace Chummer.Backend.Equipment
                         }
                     }
 
-                    strFireMode = WirelessWeaponBonus["modereplace"]?.InnerTextViaPool();
+                    strFireMode = WirelessWeaponBonus["modereplace"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strFireMode))
                     {
                         setModes.Clear();
@@ -5648,7 +5648,7 @@ namespace Chummer.Backend.Equipment
 
                         if (WirelessOn && objAccessory.WirelessOn && objAccessory.WirelessWeaponBonus != null)
                         {
-                            string strFireMode = objAccessory.WirelessWeaponBonus["firemode"]?.InnerTextViaPool();
+                            string strFireMode = objAccessory.WirelessWeaponBonus["firemode"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 if (strFireMode.Contains('/'))
@@ -5664,7 +5664,7 @@ namespace Chummer.Backend.Equipment
                                 }
                             }
 
-                            strFireMode = objAccessory.WirelessWeaponBonus["modereplace"]?.InnerTextViaPool();
+                            strFireMode = objAccessory.WirelessWeaponBonus["modereplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 setModes.Clear();
@@ -5722,7 +5722,7 @@ namespace Chummer.Backend.Equipment
 
                         if (WirelessOn && objAccessory.WirelessOn && objAccessory.WirelessWeaponBonus != null)
                         {
-                            string strFireMode = objAccessory.WirelessWeaponBonus["firemode"]?.InnerTextViaPool();
+                            string strFireMode = objAccessory.WirelessWeaponBonus["firemode"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 if (strFireMode.Contains('/'))
@@ -5738,7 +5738,7 @@ namespace Chummer.Backend.Equipment
                                 }
                             }
 
-                            strFireMode = objAccessory.WirelessWeaponBonus["modereplace"]?.InnerTextViaPool();
+                            strFireMode = objAccessory.WirelessWeaponBonus["modereplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 setModes.Clear();
@@ -5767,7 +5767,7 @@ namespace Chummer.Backend.Equipment
                     {
                         if (Damage.Contains("(f)") && AmmoCategory != "Gear" && objGear.FlechetteWeaponBonus != null)
                         {
-                            string strFireMode = objGear.FlechetteWeaponBonus["firemode"]?.InnerTextViaPool();
+                            string strFireMode = objGear.FlechetteWeaponBonus["firemode"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 if (strFireMode.Contains('/'))
@@ -5783,7 +5783,7 @@ namespace Chummer.Backend.Equipment
                                 }
                             }
 
-                            strFireMode = objGear.FlechetteWeaponBonus["modereplace"]?.InnerTextViaPool();
+                            strFireMode = objGear.FlechetteWeaponBonus["modereplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 setModes.Clear();
@@ -5802,7 +5802,7 @@ namespace Chummer.Backend.Equipment
                         }
                         else if (objGear.WeaponBonus != null)
                         {
-                            string strFireMode = objGear.WeaponBonus["firemode"]?.InnerTextViaPool();
+                            string strFireMode = objGear.WeaponBonus["firemode"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 if (strFireMode.Contains('/'))
@@ -5818,7 +5818,7 @@ namespace Chummer.Backend.Equipment
                                 }
                             }
 
-                            strFireMode = objGear.WeaponBonus["modereplace"]?.InnerTextViaPool();
+                            strFireMode = objGear.WeaponBonus["modereplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strFireMode))
                             {
                                 setModes.Clear();
@@ -5845,7 +5845,7 @@ namespace Chummer.Backend.Equipment
                             if (Damage.Contains("(f)") && AmmoCategory != "Gear"
                                                        && objChild.FlechetteWeaponBonus != null)
                             {
-                                string strFireMode = objChild.FlechetteWeaponBonus["firemode"]?.InnerTextViaPool();
+                                string strFireMode = objChild.FlechetteWeaponBonus["firemode"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strFireMode))
                                 {
                                     if (strFireMode.Contains('/'))
@@ -5861,7 +5861,7 @@ namespace Chummer.Backend.Equipment
                                     }
                                 }
 
-                                strFireMode = objChild.FlechetteWeaponBonus["modereplace"]?.InnerTextViaPool();
+                                strFireMode = objChild.FlechetteWeaponBonus["modereplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strFireMode))
                                 {
                                     setModes.Clear();
@@ -5880,7 +5880,7 @@ namespace Chummer.Backend.Equipment
                             }
                             else if (objGear.WeaponBonus != null)
                             {
-                                string strFireMode = objChild.WeaponBonus["firemode"]?.InnerTextViaPool();
+                                string strFireMode = objChild.WeaponBonus["firemode"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strFireMode))
                                 {
                                     if (strFireMode.Contains('/'))
@@ -5896,7 +5896,7 @@ namespace Chummer.Backend.Equipment
                                     }
                                 }
 
-                                strFireMode = objChild.WeaponBonus["modereplace"]?.InnerTextViaPool();
+                                strFireMode = objChild.WeaponBonus["modereplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strFireMode))
                                 {
                                     setModes.Clear();
@@ -6465,11 +6465,11 @@ namespace Chummer.Backend.Equipment
                 if (WirelessOn && WirelessWeaponBonus != null)
                 {
                     // Change the Weapon's Damage Type.
-                    string strAPReplace = WirelessWeaponBonus["apreplace"]?.InnerTextViaPool();
+                    string strAPReplace = WirelessWeaponBonus["apreplace"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strAPReplace))
                         strAP = strAPReplace;
                     // Adjust the Weapon's Damage.
-                    string strAPAdd = WirelessWeaponBonus["ap"]?.InnerTextViaPool();
+                    string strAPAdd = WirelessWeaponBonus["ap"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
                         sbdBonusAP.Append('(').Append(strAPAdd.TrimStart('+')).Append(')');
                 }
@@ -6505,7 +6505,7 @@ namespace Chummer.Backend.Equipment
                             if (objAccessory.WirelessOn && WirelessOn && objAccessory.WirelessWeaponBonus != null)
                             {
                                 // Change the Weapon's Damage Type.
-                                strAPReplace = objAccessory.WirelessWeaponBonus["apreplace"]?.InnerTextViaPool();
+                                strAPReplace = objAccessory.WirelessWeaponBonus["apreplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPReplace))
                                 {
                                     strAPReplace = strAPReplace
@@ -6514,7 +6514,7 @@ namespace Chummer.Backend.Equipment
                                     strAP = strAPReplace;
                                 }
                                 // Adjust the Weapon's Damage.
-                                strAPAdd = objAccessory.WirelessWeaponBonus["ap"]?.InnerTextViaPool();
+                                strAPAdd = objAccessory.WirelessWeaponBonus["ap"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
                                 {
                                     strAPAdd = strAPAdd
@@ -6557,7 +6557,7 @@ namespace Chummer.Backend.Equipment
                             if (objAccessory.WirelessOn && WirelessOn && objAccessory.WirelessWeaponBonus != null)
                             {
                                 // Change the Weapon's Damage Type.
-                                strAPReplace = objAccessory.WirelessWeaponBonus["apreplace"]?.InnerTextViaPool();
+                                strAPReplace = objAccessory.WirelessWeaponBonus["apreplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPReplace))
                                 {
                                     strAPReplace = await strAPReplace
@@ -6566,7 +6566,7 @@ namespace Chummer.Backend.Equipment
                                     strAP = strAPReplace;
                                 }
                                 // Adjust the Weapon's Damage.
-                                strAPAdd = objAccessory.WirelessWeaponBonus["ap"]?.InnerTextViaPool();
+                                strAPAdd = objAccessory.WirelessWeaponBonus["ap"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
                                 {
                                     strAPAdd = await strAPAdd
@@ -6589,7 +6589,7 @@ namespace Chummer.Backend.Equipment
                         if (Damage.Contains("(f)") && AmmoCategory != "Gear" && objGear.FlechetteWeaponBonus != null)
                         {
                             // Change the Weapon's Damage Type.
-                            string strAPReplace = objGear.FlechetteWeaponBonus["apreplace"]?.InnerTextViaPool();
+                            string strAPReplace = objGear.FlechetteWeaponBonus["apreplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAPReplace))
                             {
                                 strAPReplace = blnSync
@@ -6602,7 +6602,7 @@ namespace Chummer.Backend.Equipment
                                 strAP = strAPReplace;
                             }
                             // Adjust the Weapon's Damage.
-                            string strAPAdd = objGear.FlechetteWeaponBonus["ap"]?.InnerTextViaPool();
+                            string strAPAdd = objGear.FlechetteWeaponBonus["ap"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
                             {
                                 strAPAdd = blnSync
@@ -6618,7 +6618,7 @@ namespace Chummer.Backend.Equipment
                         else if (objGear.WeaponBonus != null)
                         {
                             // Change the Weapon's Damage Type.
-                            string strAPReplace = objGear.WeaponBonus["apreplace"]?.InnerTextViaPool();
+                            string strAPReplace = objGear.WeaponBonus["apreplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAPReplace))
                             {
                                 strAPReplace = blnSync
@@ -6631,7 +6631,7 @@ namespace Chummer.Backend.Equipment
                                 strAP = strAPReplace;
                             }
                             // Adjust the Weapon's Damage.
-                            string strAPAdd = objGear.WeaponBonus["ap"]?.InnerTextViaPool();
+                            string strAPAdd = objGear.WeaponBonus["ap"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
                             {
                                 strAPAdd = blnSync
@@ -6655,7 +6655,7 @@ namespace Chummer.Backend.Equipment
                                 objChild.FlechetteWeaponBonus != null)
                             {
                                 // Change the Weapon's Damage Type.
-                                string strAPReplace = objChild.FlechetteWeaponBonus["apreplace"]?.InnerTextViaPool();
+                                string strAPReplace = objChild.FlechetteWeaponBonus["apreplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPReplace))
                                 {
                                     strAPReplace = blnSync
@@ -6668,7 +6668,7 @@ namespace Chummer.Backend.Equipment
                                     strAP = strAPReplace;
                                 }
                                 // Adjust the Weapon's Damage.
-                                string strAPAdd = objChild.FlechetteWeaponBonus["ap"]?.InnerTextViaPool();
+                                string strAPAdd = objChild.FlechetteWeaponBonus["ap"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
                                 {
                                     strAPAdd = blnSync
@@ -6684,7 +6684,7 @@ namespace Chummer.Backend.Equipment
                             else if (objChild.WeaponBonus != null)
                             {
                                 // Change the Weapon's Damage Type.
-                                string strAPReplace = objChild.WeaponBonus["apreplace"]?.InnerTextViaPool();
+                                string strAPReplace = objChild.WeaponBonus["apreplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPReplace))
                                 {
                                     strAPReplace = blnSync
@@ -6697,7 +6697,7 @@ namespace Chummer.Backend.Equipment
                                     strAP = strAPReplace;
                                 }
                                 // Adjust the Weapon's Damage.
-                                string strAPAdd = objChild.WeaponBonus["ap"]?.InnerTextViaPool();
+                                string strAPAdd = objChild.WeaponBonus["ap"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
                                 {
                                     strAPAdd = blnSync
@@ -6800,7 +6800,7 @@ namespace Chummer.Backend.Equipment
             if (intAP == 0)
                 return "-";
             if (intAP > 0)
-                return '+' + intAP.ToString(objCulture);
+                return "+" + intAP.ToString(objCulture);
             return intAP.ToString(objCulture);
         }
 
@@ -6895,7 +6895,7 @@ namespace Chummer.Backend.Equipment
                 // First look at any changes caused by the weapon being wireless
                 if (WirelessOn && WirelessWeaponBonus != null)
                 {
-                    string strRCBonus = WirelessWeaponBonus["rc"]?.InnerTextViaPool();
+                    string strRCBonus = WirelessWeaponBonus["rc"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strRCBonus) && int.TryParse(strRCBonus, out int intLoopRCBonus))
                     {
                         intRCBase += intLoopRCBonus;
@@ -6979,7 +6979,7 @@ namespace Chummer.Backend.Equipment
 
                     if (objAccessory.WirelessOn && WirelessOn && objAccessory.WirelessWeaponBonus != null)
                     {
-                        string strRCBonus = objAccessory.WirelessWeaponBonus["rc"]?.InnerTextViaPool();
+                        string strRCBonus = objAccessory.WirelessWeaponBonus["rc"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strRCBonus) && int.TryParse(strRCBonus, out int intLoopRCBonus))
                         {
                             intRCBase += intLoopRCBonus;
@@ -7017,7 +7017,7 @@ namespace Chummer.Backend.Equipment
                         // Change the Weapon's Damage Type.
                         if (Damage.Contains("(f)") && AmmoCategory != "Gear" && objGear.FlechetteWeaponBonus != null)
                         {
-                            string strRCBonus = objGear.FlechetteWeaponBonus["rc"]?.InnerTextViaPool();
+                            string strRCBonus = objGear.FlechetteWeaponBonus["rc"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strRCBonus) && int.TryParse(strRCBonus, out int intLoopRCBonus))
                             {
                                 intRCBase += intLoopRCBonus;
@@ -7037,7 +7037,7 @@ namespace Chummer.Backend.Equipment
                         }
                         else if (objGear.WeaponBonus != null)
                         {
-                            string strRCBonus = objGear.WeaponBonus["rc"]?.InnerTextViaPool();
+                            string strRCBonus = objGear.WeaponBonus["rc"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strRCBonus) && int.TryParse(strRCBonus, out int intLoopRCBonus))
                             {
                                 intRCBase += intLoopRCBonus;
@@ -7065,7 +7065,7 @@ namespace Chummer.Backend.Equipment
                             if (Damage.Contains("(f)") && AmmoCategory != "Gear" &&
                                 objChild.FlechetteWeaponBonus != null)
                             {
-                                string strRCBonus = objChild.FlechetteWeaponBonus["rc"]?.InnerTextViaPool();
+                                string strRCBonus = objChild.FlechetteWeaponBonus["rc"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strRCBonus) &&
                                     int.TryParse(strRCBonus, out int intLoopRCBonus))
                                 {
@@ -7086,7 +7086,7 @@ namespace Chummer.Backend.Equipment
                             }
                             else if (objChild.WeaponBonus != null)
                             {
-                                string strRCBonus = objChild.WeaponBonus["rc"]?.InnerTextViaPool();
+                                string strRCBonus = objChild.WeaponBonus["rc"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strRCBonus) &&
                                     int.TryParse(strRCBonus, out int intLoopRCBonus))
                                 {
@@ -7292,7 +7292,7 @@ namespace Chummer.Backend.Equipment
                 // If the full RC is not higher than the base, only the base value is shown.
                 strRC = intRCBase.ToString(objCulture);
                 if (intRCFull > intRCBase)
-                    strRC += strSpace + '(' + intRCFull.ToString(objCulture) + ')';
+                    strRC += strSpace + "(" + intRCFull.ToString(objCulture) + ")";
 
                 if (blnWithTooltip)
                     strTooltip = sbdRCTip.ToString();
@@ -7417,7 +7417,7 @@ namespace Chummer.Backend.Equipment
                                 if (!objWeaponAccessory.Name.StartsWith("Smartgun", StringComparison.Ordinal) && !objWeaponAccessory.Name.Contains("Sight"))
                                     sbdBonusAccuracy.Append("+(").Append(strAccuracyAdd.TrimStart('+')).Append(')');
                                 else if (!string.IsNullOrEmpty(objWeaponAccessory.Accuracy))
-                                    lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] = '(' + lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] + ") + (" + strAccuracyAdd.TrimStart('+') + ')';
+                                    lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] = "(" + lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] + ") + (" + strAccuracyAdd.TrimStart('+') + ")";
                                 else
                                     lstNonStackingAccessoryBonuses.Add(strAccuracyAdd);
                             }
@@ -7564,7 +7564,7 @@ namespace Chummer.Backend.Equipment
                     }
 
                     if (sbdBonusAccuracy.Length != 0)
-                        strAccuracy = '(' + strAccuracy + ')' + sbdBonusAccuracy;
+                        strAccuracy = "(" + strAccuracy + ")" + sbdBonusAccuracy.ToString();
                 }
             }
 
@@ -7611,11 +7611,11 @@ namespace Chummer.Backend.Equipment
                 if (WirelessOn && WirelessWeaponBonus != null)
                 {
                     // Change the Weapon's Damage Type.
-                    string strAccuracyReplace = WirelessWeaponBonus["accuracyreplace"]?.InnerTextViaPool();
+                    string strAccuracyReplace = WirelessWeaponBonus["accuracyreplace"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strAccuracyReplace))
                         strAccuracy = strAccuracyReplace;
                     // Adjust the Weapon's Damage.
-                    string strAccuracyAdd = WirelessWeaponBonus["accuracy"]?.InnerTextViaPool();
+                    string strAccuracyAdd = WirelessWeaponBonus["accuracy"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
                         sbdBonusAccuracy.Append('(').Append(strAccuracyAdd.TrimStart('+')).Append(')');
                 }
@@ -7640,7 +7640,7 @@ namespace Chummer.Backend.Equipment
                         if (objWeaponAccessory.WirelessOn && WirelessOn && objWeaponAccessory.WirelessWeaponBonus != null)
                         {
                             // Change the Weapon's Damage Type.
-                            string strAccuracyReplace = objWeaponAccessory.WirelessWeaponBonus["accuracyreplace"]?.InnerTextViaPool();
+                            string strAccuracyReplace = objWeaponAccessory.WirelessWeaponBonus["accuracyreplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAccuracyReplace))
                             {
                                 strAccuracyReplace = await strAccuracyReplace
@@ -7650,7 +7650,7 @@ namespace Chummer.Backend.Equipment
                                 strAccuracy = strAccuracyReplace;
                             }
                             // Adjust the Weapon's Damage.
-                            string strAccuracyAdd = objWeaponAccessory.WirelessWeaponBonus["accuracy"]?.InnerTextViaPool();
+                            string strAccuracyAdd = objWeaponAccessory.WirelessWeaponBonus["accuracy"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
                             {
                                 strAccuracyAdd = await strAccuracyAdd
@@ -7660,7 +7660,7 @@ namespace Chummer.Backend.Equipment
                                 if (!objWeaponAccessory.Name.StartsWith("Smartgun", StringComparison.Ordinal) && !objWeaponAccessory.Name.Contains("Sight"))
                                     sbdBonusAccuracy.Append("+(").Append(strAccuracyAdd.TrimStart('+')).Append(')');
                                 else if (!string.IsNullOrEmpty(objWeaponAccessory.Accuracy))
-                                    lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] = '(' + lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] + ") + (" + strAccuracyAdd.TrimStart('+') + ')';
+                                    lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] = "(" + lstNonStackingAccessoryBonuses[lstNonStackingAccessoryBonuses.Count - 1] + ") + (" + strAccuracyAdd.TrimStart('+') + ")";
                                 else
                                     lstNonStackingAccessoryBonuses.Add(strAccuracyAdd);
                             }
@@ -7718,7 +7718,7 @@ namespace Chummer.Backend.Equipment
                         if (Damage.Contains("(f)") && AmmoCategory != "Gear" && objGear.FlechetteWeaponBonus != null)
                         {
                             // Change the Weapon's Damage Type.
-                            string strAccuracyReplace = objGear.FlechetteWeaponBonus["accuracyreplace"]?.InnerTextViaPool();
+                            string strAccuracyReplace = objGear.FlechetteWeaponBonus["accuracyreplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAccuracyReplace))
                             {
                                 strAccuracyReplace = await strAccuracyReplace
@@ -7728,7 +7728,7 @@ namespace Chummer.Backend.Equipment
                                 strAccuracy = strAccuracyReplace;
                             }
                             // Adjust the Weapon's Damage.
-                            string strAccuracyAdd = objGear.FlechetteWeaponBonus["accuracy"]?.InnerTextViaPool();
+                            string strAccuracyAdd = objGear.FlechetteWeaponBonus["accuracy"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
                             {
                                 strAccuracyAdd = await strAccuracyAdd
@@ -7741,7 +7741,7 @@ namespace Chummer.Backend.Equipment
                         else if (objGear.WeaponBonus != null)
                         {
                             // Change the Weapon's Damage Type.
-                            string strAccuracyReplace = objGear.WeaponBonus["accuracyreplace"]?.InnerTextViaPool();
+                            string strAccuracyReplace = objGear.WeaponBonus["accuracyreplace"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAccuracyReplace))
                             {
                                 strAccuracyReplace = await strAccuracyReplace
@@ -7751,7 +7751,7 @@ namespace Chummer.Backend.Equipment
                                 strAccuracy = strAccuracyReplace;
                             }
                             // Adjust the Weapon's Damage.
-                            string strAccuracyAdd = objGear.WeaponBonus["accuracy"]?.InnerTextViaPool();
+                            string strAccuracyAdd = objGear.WeaponBonus["accuracy"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
                             {
                                 strAccuracyAdd = await strAccuracyAdd
@@ -7771,7 +7771,7 @@ namespace Chummer.Backend.Equipment
                                 objChild.FlechetteWeaponBonus != null)
                             {
                                 // Change the Weapon's Damage Type.
-                                string strAccuracyReplace = objChild.FlechetteWeaponBonus["accuracyreplace"]?.InnerTextViaPool();
+                                string strAccuracyReplace = objChild.FlechetteWeaponBonus["accuracyreplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAccuracyReplace))
                                 {
                                     strAccuracyReplace = await strAccuracyReplace
@@ -7781,7 +7781,7 @@ namespace Chummer.Backend.Equipment
                                     strAccuracy = strAccuracyReplace;
                                 }
                                 // Adjust the Weapon's Damage.
-                                string strAccuracyAdd = objChild.FlechetteWeaponBonus["accuracy"]?.InnerTextViaPool();
+                                string strAccuracyAdd = objChild.FlechetteWeaponBonus["accuracy"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
                                 {
                                     strAccuracyAdd = await strAccuracyAdd
@@ -7794,7 +7794,7 @@ namespace Chummer.Backend.Equipment
                             else if (objChild.WeaponBonus != null)
                             {
                                 // Change the Weapon's Damage Type.
-                                string strAccuracyReplace = objChild.WeaponBonus["accuracyreplace"]?.InnerTextViaPool();
+                                string strAccuracyReplace = objChild.WeaponBonus["accuracyreplace"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAccuracyReplace))
                                 {
                                     strAccuracyReplace = await strAccuracyReplace
@@ -7804,7 +7804,7 @@ namespace Chummer.Backend.Equipment
                                     strAccuracy = strAccuracyReplace;
                                 }
                                 // Adjust the Weapon's Damage.
-                                string strAccuracyAdd = objChild.WeaponBonus["accuracy"]?.InnerTextViaPool();
+                                string strAccuracyAdd = objChild.WeaponBonus["accuracy"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
                                 {
                                     strAccuracyAdd = await strAccuracyAdd
@@ -7818,7 +7818,7 @@ namespace Chummer.Backend.Equipment
                     }
 
                     if (sbdBonusAccuracy.Length != 0)
-                        strAccuracy = '(' + strAccuracy + ')' + sbdBonusAccuracy;
+                        strAccuracy = "(" + strAccuracy + ")" + sbdBonusAccuracy.ToString();
                 }
             }
 
@@ -7942,7 +7942,7 @@ namespace Chummer.Backend.Equipment
                     objXmlDocument = _objCharacter.LoadDataXPath("weapons.xml", strLanguage);
                     objXmlCategoryNode =
                         objXmlDocument.SelectSingleNodeAndCacheExpression("/chummer/categories/category[. = " +
-                                                                          strRange.CleanXPath() + ']');
+                                                                          strRange.CleanXPath() + "]");
                     xmlTranslateNode = objXmlCategoryNode?.SelectSingleNodeAndCacheExpression("@translate");
                     if (xmlTranslateNode != null)
                         strRange = xmlTranslateNode.Value;
@@ -7952,7 +7952,7 @@ namespace Chummer.Backend.Equipment
             {
                 return strRange;
             }
-            strRange += " (" + AmmoLoaded?.DisplayNameShort(strLanguage) + ')';
+            strRange += " (" + AmmoLoaded?.DisplayNameShort(strLanguage) + ")";
 
             return strRange;
         }
@@ -8046,7 +8046,7 @@ namespace Chummer.Backend.Equipment
                         .ConfigureAwait(false);
                     objXmlCategoryNode = objXmlDocument
                         .SelectSingleNodeAndCacheExpression(
-                            "/chummer/categories/category[. = " + strRange.CleanXPath() + ']',
+                            "/chummer/categories/category[. = " + strRange.CleanXPath() + "]",
                             token: token);
                     if (objXmlCategoryNode != null)
                     {
@@ -8061,7 +8061,7 @@ namespace Chummer.Backend.Equipment
             {
                 return strRange;
             }
-            strRange += " (" + (await AmmoLoaded?.DisplayNameShortAsync(strLanguage, token: token)) + ')';
+            strRange += " (" + (await AmmoLoaded?.DisplayNameShortAsync(strLanguage, token: token)) + ")";
 
             return strRange;
         }
@@ -8093,7 +8093,7 @@ namespace Chummer.Backend.Equipment
                     objXmlDocument = _objCharacter.LoadDataXPath("weapons.xml", strLanguage);
                     objXmlCategoryNode =
                         objXmlDocument.SelectSingleNodeAndCacheExpression("/chummer/categories/category[. = " +
-                                                                          strRange.CleanXPath() + ']');
+                                                                          strRange.CleanXPath() + "]");
                     xmlTranslateNode = objXmlCategoryNode?.SelectSingleNodeAndCacheExpression("@translate");
                     if (xmlTranslateNode != null)
                         strRange = xmlTranslateNode.Value;
@@ -8128,7 +8128,7 @@ namespace Chummer.Backend.Equipment
                         .ConfigureAwait(false);
                     objXmlCategoryNode = objXmlDocument
                         .SelectSingleNodeAndCacheExpression(
-                            "/chummer/categories/category[. = " + strRange.CleanXPath() + ']',
+                            "/chummer/categories/category[. = " + strRange.CleanXPath() + "]",
                             token: token);
                     if (objXmlCategoryNode != null)
                     {
@@ -8637,49 +8637,49 @@ namespace Chummer.Backend.Equipment
                     "short",
                     intMin < 0 || intShort < 0
                         ? string.Empty
-                        : intMin.ToString(objCulture) + '-' + intShort.ToString(objCulture)
+                        : intMin.ToString(objCulture) + "-" + intShort.ToString(objCulture)
                 },
                 {
                     "medium",
                     intShort < 0 || intMedium < 0
                         ? string.Empty
-                        : (intShort + 1).ToString(objCulture) + '-' + intMedium.ToString(objCulture)
+                        : (intShort + 1).ToString(objCulture) + "-" + intMedium.ToString(objCulture)
                 },
                 {
                     "long",
                     intMedium < 0 || intLong < 0
                         ? string.Empty
-                        : (intMedium + 1).ToString(objCulture) + '-' + intLong.ToString(objCulture)
+                        : (intMedium + 1).ToString(objCulture) + "-" + intLong.ToString(objCulture)
                 },
                 {
                     "extreme",
                     intLong < 0 || intExtreme < 0
                         ? string.Empty
-                        : (intLong + 1).ToString(objCulture) + '-' + intExtreme.ToString(objCulture)
+                        : (intLong + 1).ToString(objCulture) + "-" + intExtreme.ToString(objCulture)
                 },
                 {
                     "alternateshort",
                     intAlternateMin < 0 || intAlternateShort < 0
                         ? string.Empty
-                        : intAlternateMin.ToString(objCulture) + '-' + intAlternateShort.ToString(objCulture)
+                        : intAlternateMin.ToString(objCulture) + "-" + intAlternateShort.ToString(objCulture)
                 },
                 {
                     "alternatemedium",
                     intAlternateShort < 0 || intAlternateMedium < 0
                         ? string.Empty
-                        : (intAlternateShort + 1).ToString(objCulture) + '-' + intAlternateMedium.ToString(objCulture)
+                        : (intAlternateShort + 1).ToString(objCulture) + "-" + intAlternateMedium.ToString(objCulture)
                 },
                 {
                     "alternatelong",
                     intAlternateMedium < 0 || intAlternateLong < 0
                         ? string.Empty
-                        : (intAlternateMedium + 1).ToString(objCulture) + '-' + intAlternateLong.ToString(objCulture)
+                        : (intAlternateMedium + 1).ToString(objCulture) + "-" + intAlternateLong.ToString(objCulture)
                 },
                 {
                     "alternateextreme",
                     intAlternateLong < 0 || intAlternateExtreme < 0
                         ? string.Empty
-                        : (intAlternateLong + 1).ToString(objCulture) + '-' + intAlternateExtreme.ToString(objCulture)
+                        : (intAlternateLong + 1).ToString(objCulture) + "-" + intAlternateExtreme.ToString(objCulture)
                 }
             };
 
@@ -8719,49 +8719,49 @@ namespace Chummer.Backend.Equipment
                     "short",
                     intMin < 0 || intShort < 0
                         ? string.Empty
-                        : intMin.ToString(objCulture) + '-' + intShort.ToString(objCulture)
+                        : intMin.ToString(objCulture) + "-" + intShort.ToString(objCulture)
                 },
                 {
                     "medium",
                     intShort < 0 || intMedium < 0
                         ? string.Empty
-                        : (intShort + 1).ToString(objCulture) + '-' + intMedium.ToString(objCulture)
+                        : (intShort + 1).ToString(objCulture) + "-" + intMedium.ToString(objCulture)
                 },
                 {
                     "long",
                     intMedium < 0 || intLong < 0
                         ? string.Empty
-                        : (intMedium + 1).ToString(objCulture) + '-' + intLong.ToString(objCulture)
+                        : (intMedium + 1).ToString(objCulture) + "-" + intLong.ToString(objCulture)
                 },
                 {
                     "extreme",
                     intLong < 0 || intExtreme < 0
                         ? string.Empty
-                        : (intLong + 1).ToString(objCulture) + '-' + intExtreme.ToString(objCulture)
+                        : (intLong + 1).ToString(objCulture) + "-" + intExtreme.ToString(objCulture)
                 },
                 {
                     "alternateshort",
                     intAlternateMin < 0 || intAlternateShort < 0
                         ? string.Empty
-                        : intAlternateMin.ToString(objCulture) + '-' + intAlternateShort.ToString(objCulture)
+                        : intAlternateMin.ToString(objCulture) + "-" + intAlternateShort.ToString(objCulture)
                 },
                 {
                     "alternatemedium",
                     intAlternateShort < 0 || intAlternateMedium < 0
                         ? string.Empty
-                        : (intAlternateShort + 1).ToString(objCulture) + '-' + intAlternateMedium.ToString(objCulture)
+                        : (intAlternateShort + 1).ToString(objCulture) + "-" + intAlternateMedium.ToString(objCulture)
                 },
                 {
                     "alternatelong",
                     intAlternateMedium < 0 || intAlternateLong < 0
                         ? string.Empty
-                        : (intAlternateMedium + 1).ToString(objCulture) + '-' + intAlternateLong.ToString(objCulture)
+                        : (intAlternateMedium + 1).ToString(objCulture) + "-" + intAlternateLong.ToString(objCulture)
                 },
                 {
                     "alternateextreme",
                     intAlternateLong < 0 || intAlternateExtreme < 0
                         ? string.Empty
-                        : (intAlternateLong + 1).ToString(objCulture) + '-' + intAlternateExtreme.ToString(objCulture)
+                        : (intAlternateLong + 1).ToString(objCulture) + "-" + intAlternateExtreme.ToString(objCulture)
                 }
             };
 
@@ -9536,7 +9536,7 @@ namespace Chummer.Backend.Equipment
                 // First look at any changes caused by the weapon being wireless
                 if (WirelessOn && WirelessWeaponBonus != null)
                 {
-                    string strWeaponBonusPool = WirelessWeaponBonus["pool"]?.InnerTextViaPool();
+                    string strWeaponBonusPool = WirelessWeaponBonus["pool"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strWeaponBonusPool)
                         && strWeaponBonusPool != "0" && strWeaponBonusPool != "+0" && strWeaponBonusPool != "-0")
                     {
@@ -9545,7 +9545,7 @@ namespace Chummer.Backend.Equipment
                     }
                     if (HasWirelessSmartgun)
                     {
-                        strWeaponBonusPool = WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool();
+                        strWeaponBonusPool = WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strWeaponBonusPool)
                             && strWeaponBonusPool != "0" && strWeaponBonusPool != "+0" && strWeaponBonusPool != "-0")
                         {
@@ -9560,7 +9560,7 @@ namespace Chummer.Backend.Equipment
                 {
                     if (WirelessOn && a.WirelessOn && a.WirelessWeaponBonus != null)
                     {
-                        string strWeaponBonusPool = a.WirelessWeaponBonus["pool"]?.InnerTextViaPool();
+                        string strWeaponBonusPool = a.WirelessWeaponBonus["pool"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strWeaponBonusPool)
                             && strWeaponBonusPool != "0" && strWeaponBonusPool != "+0" && strWeaponBonusPool != "-0")
                         {
@@ -9572,7 +9572,7 @@ namespace Chummer.Backend.Equipment
                         }
                         if (HasWirelessSmartgun)
                         {
-                            strWeaponBonusPool = a.WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool();
+                            strWeaponBonusPool = a.WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strWeaponBonusPool)
                                 && strWeaponBonusPool != "0" && strWeaponBonusPool != "+0" && strWeaponBonusPool != "-0")
                             {
@@ -9785,7 +9785,7 @@ namespace Chummer.Backend.Equipment
                         = ExoticSkill.IsExoticSkillNameTuple(_objCharacter, strSkill);
                     if (blnIsExotic)
                     {
-                        strSkill = strSkillName + " (" + UseSkillSpec + ')';
+                        strSkill = strSkillName + " (" + UseSkillSpec + ")";
                     }
                 }
 
@@ -9816,7 +9816,7 @@ namespace Chummer.Backend.Equipment
                         .ConfigureAwait(false);
                 if (blnIsExotic)
                 {
-                    strSkill = strSkillName + " (" + UseSkillSpec + ')';
+                    strSkill = strSkillName + " (" + UseSkillSpec + ")";
                 }
             }
 
@@ -9847,11 +9847,11 @@ namespace Chummer.Backend.Equipment
                     return "Clubs";
 
                 case "Exotic Melee Weapons":
-                    return "Exotic Melee Weapon (" + UseSkillSpec + ')';
+                    return "Exotic Melee Weapon (" + UseSkillSpec + ")";
 
                 case "Exotic Ranged Weapons":
                 case "Special Weapons":
-                    return "Exotic Ranged Weapon (" + UseSkillSpec + ')';
+                    return "Exotic Ranged Weapon (" + UseSkillSpec + ")";
 
                 case "Flamethrowers":
                     return "Exotic Ranged Weapon (Flamethrowers)";
@@ -10437,7 +10437,7 @@ namespace Chummer.Backend.Equipment
                                          objSkill.GetSpecialization(DisplayCategory(GlobalSettings.Language)) ??
                                          objSkill.GetSpecialization(Category)) ?? (objSkill.GetSpecialization(Category.EndsWith('s')
                                             ? Category.TrimEndOnce('s')
-                                            : Category + 's') ?? (objSkill.GetSpecialization(Spec) ??
+                                            : Category + "s") ?? (objSkill.GetSpecialization(Spec) ??
                                                                   objSkill.GetSpecialization(Spec2)));
 
                                     if (spec != null)
@@ -10489,13 +10489,13 @@ namespace Chummer.Backend.Equipment
                 // First look at any changes caused by the weapon being wireless
                 if (WirelessOn && WirelessWeaponBonus != null)
                 {
-                    string strWeaponBonusPool = WirelessWeaponBonus["pool"]?.InnerTextViaPool();
+                    string strWeaponBonusPool = WirelessWeaponBonus["pool"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strWeaponBonusPool))
                     {
                         string strWireless = await LanguageManager.GetStringAsync("String_Wireless", token: token).ConfigureAwait(false);
                         if (HasWirelessSmartgun)
                         {
-                            string strInner = WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool();
+                            string strInner = WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strInner))
                             {
                                 if (decimal.TryParse(strWeaponBonusPool, out decimal decTemp)
@@ -10530,7 +10530,7 @@ namespace Chummer.Backend.Equipment
                     }
                     else if (HasWirelessSmartgun)
                     {
-                        strWeaponBonusPool = WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool();
+                        strWeaponBonusPool = WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strWeaponBonusPool))
                         {
                             sbdExtra.Append(strSpace).Append('+').Append(strSpace)
@@ -10553,13 +10553,13 @@ namespace Chummer.Backend.Equipment
                     }
                     if (WirelessOn && wa.WirelessOn && wa.WirelessWeaponBonus != null)
                     {
-                        string strWeaponBonusPool = wa.WirelessWeaponBonus["pool"]?.InnerTextViaPool();
+                        string strWeaponBonusPool = wa.WirelessWeaponBonus["pool"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strWeaponBonusPool))
                         {
                             string strWireless = await wa.GetCurrentDisplayNameAsync(token).ConfigureAwait(false) + strSpace + await LanguageManager.GetStringAsync("String_Wireless", token: token).ConfigureAwait(false);
                             if (HasWirelessSmartgun)
                             {
-                                string strInner = wa.WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool();
+                                string strInner = wa.WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool(token);
                                 if (!string.IsNullOrEmpty(strInner))
                                 {
                                     if (decimal.TryParse(strWeaponBonusPool, out decimal decTemp)
@@ -10594,7 +10594,7 @@ namespace Chummer.Backend.Equipment
                         }
                         else if (HasWirelessSmartgun)
                         {
-                            strWeaponBonusPool = wa.WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool();
+                            strWeaponBonusPool = wa.WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strWeaponBonusPool))
                             {
                                 sbdExtra.Append(strSpace).Append('+').Append(strSpace)
@@ -11102,7 +11102,7 @@ namespace Chummer.Backend.Equipment
                                      await objSkill.GetSpecializationAsync(Category, token).ConfigureAwait(false)) ??
                                     (await objSkill.GetSpecializationAsync(Category.EndsWith('s')
                                          ? Category.TrimEndOnce('s')
-                                         : Category + 's', token).ConfigureAwait(false) ??
+                                         : Category + "s", token).ConfigureAwait(false) ??
                                      (await objSkill.GetSpecializationAsync(Spec, token).ConfigureAwait(false) ??
                                       await objSkill.GetSpecializationAsync(Spec2, token).ConfigureAwait(false)));
 
@@ -12107,8 +12107,8 @@ namespace Chummer.Backend.Equipment
 
                         string strNameToUse = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
                         if (Parent != null)
-                            strNameToUse += await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + '('
-                                + await Parent.GetCurrentDisplayNameAsync(token).ConfigureAwait(false) + ')';
+                            strNameToUse += await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + "("
+                                + await Parent.GetCurrentDisplayNameAsync(token).ConfigureAwait(false) + ")";
 
                         if (intLowestValidRestrictedGearAvail >= 0
                             && dicRestrictedGearLimits[intLowestValidRestrictedGearAvail] > 0)
@@ -13655,12 +13655,12 @@ namespace Chummer.Backend.Equipment
                         sbdValue.Append(strExpression);
                         foreach (string strMatrixAttribute in MatrixAttributes.MatrixAttributeStrings)
                         {
-                            sbdValue.CheapReplace(strExpression, "{Gear " + strMatrixAttribute + '}',
+                            sbdValue.CheapReplace(strExpression, "{Gear " + strMatrixAttribute + "}",
                                                   () => (Parent?.GetBaseMatrixAttribute(strMatrixAttribute) ?? 0).ToString(
                                                       GlobalSettings.InvariantCultureInfo));
-                            sbdValue.CheapReplace(strExpression, "{Parent " + strMatrixAttribute + '}',
+                            sbdValue.CheapReplace(strExpression, "{Parent " + strMatrixAttribute + "}",
                                                   () => Parent?.GetMatrixAttributeString(strMatrixAttribute) ?? "0");
-                            if (Children.Count > 0 && strExpression.Contains("{Children " + strMatrixAttribute + '}'))
+                            if (Children.Count > 0 && strExpression.Contains("{Children " + strMatrixAttribute + "}"))
                             {
                                 int intTotalChildrenValue = 0;
                                 foreach (Weapon objLoopWeapon in Children)
@@ -13671,7 +13671,7 @@ namespace Chummer.Backend.Equipment
                                     }
                                 }
 
-                                sbdValue.Replace("{Children " + strMatrixAttribute + '}',
+                                sbdValue.Replace("{Children " + strMatrixAttribute + "}",
                                                  intTotalChildrenValue.ToString(GlobalSettings.InvariantCultureInfo));
                             }
                         }
@@ -13733,19 +13733,19 @@ namespace Chummer.Backend.Equipment
                         sbdValue.Append(strExpression);
                         foreach (string strMatrixAttribute in MatrixAttributes.MatrixAttributeStrings)
                         {
-                            await sbdValue.CheapReplaceAsync(strExpression, "{Gear " + strMatrixAttribute + '}',
+                            await sbdValue.CheapReplaceAsync(strExpression, "{Gear " + strMatrixAttribute + "}",
                                 () => (Parent?.GetBaseMatrixAttribute(strMatrixAttribute) ?? 0).ToString(
                                     GlobalSettings.InvariantCultureInfo), token: token).ConfigureAwait(false);
-                            await sbdValue.CheapReplaceAsync(strExpression, "{Parent " + strMatrixAttribute + '}',
+                            await sbdValue.CheapReplaceAsync(strExpression, "{Parent " + strMatrixAttribute + "}",
                                     () => Parent?.GetMatrixAttributeString(strMatrixAttribute) ?? "0", token: token)
                                 .ConfigureAwait(false);
                             if (await Children.GetCountAsync(token).ConfigureAwait(false) > 0 &&
-                                strExpression.Contains("{Children " + strMatrixAttribute + '}'))
+                                strExpression.Contains("{Children " + strMatrixAttribute + "}"))
                             {
                                 int intTotalChildrenValue = await Children.SumAsync(x => x.Equipped,
                                         x => x.GetBaseMatrixAttributeAsync(strMatrixAttribute, token), token)
                                     .ConfigureAwait(false);
-                                sbdValue.Replace("{Children " + strMatrixAttribute + '}',
+                                sbdValue.Replace("{Children " + strMatrixAttribute + "}",
                                     intTotalChildrenValue.ToString(GlobalSettings.InvariantCultureInfo));
                             }
                         }
@@ -13907,7 +13907,7 @@ namespace Chummer.Backend.Equipment
             }
             // Create the Expense Log Entry for the sale.
             ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
-            objExpense.Create(decAmount, LanguageManager.GetString(strExpense) + ' ' + CurrentDisplayNameShort, ExpenseType.Nuyen, DateTime.Now);
+            objExpense.Create(decAmount, LanguageManager.GetString(strExpense) + " " + CurrentDisplayNameShort, ExpenseType.Nuyen, DateTime.Now);
             _objCharacter.ExpenseEntries.AddWithSort(objExpense);
             _objCharacter.Nuyen += decAmount;
             return true;
@@ -13957,7 +13957,7 @@ namespace Chummer.Backend.Equipment
             ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
             objExpense.Create(decAmount,
                 await LanguageManager.GetStringAsync(strExpense, token: token).ConfigureAwait(false) +
-                ' ' + await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false), ExpenseType.Nuyen,
+                " " + await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false), ExpenseType.Nuyen,
                 DateTime.Now);
             await _objCharacter.ExpenseEntries.AddWithSortAsync(objExpense, token: token).ConfigureAwait(false);
             await _objCharacter.ModifyNuyenAsync(decAmount, token).ConfigureAwait(false);

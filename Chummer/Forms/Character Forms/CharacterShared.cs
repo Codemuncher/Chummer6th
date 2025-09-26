@@ -36,6 +36,7 @@ using System.Xml.XPath;
 using Chummer.Backend.Attributes;
 using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
+using Chummer.Backend.Uniques;
 using Chummer.UI.Attributes;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;

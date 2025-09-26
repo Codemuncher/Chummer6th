@@ -21,7 +21,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -65,8 +64,8 @@ namespace Chummer
                     string strName = string.IsNullOrEmpty(strPowerExtra)
                         ? await _objCharacter.TranslateExtraAsync(strPowerName).ConfigureAwait(false)
                         : await _objCharacter.TranslateExtraAsync(strPowerName).ConfigureAwait(false)
-                          + await LanguageManager.GetStringAsync("String_Space").ConfigureAwait(false) + '('
-                          + await _objCharacter.TranslateExtraAsync(strPowerExtra).ConfigureAwait(false) + ')';
+                          + await LanguageManager.GetStringAsync("String_Space").ConfigureAwait(false) + "("
+                          + await _objCharacter.TranslateExtraAsync(strPowerExtra).ConfigureAwait(false) + ")";
                     lstPowerItems.Add(new ListItem(new ValueTuple<string, string>(strPowerName, strPowerExtra), strName));
                 }
 
@@ -109,10 +108,6 @@ namespace Chummer
 
         public string SelectedPowerExtra => _strReturnExtra;
 
-        /// <summary>
-        /// Description to display on the form.
-        /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Description to display on the form.
         /// </summary>

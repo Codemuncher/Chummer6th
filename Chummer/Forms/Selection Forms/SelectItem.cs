@@ -73,7 +73,7 @@ namespace Chummer
                                     {
                                         // Append the plugin information to the name.
                                         (await sbdAmmoName.Append(strSpace).Append('[')
-                                                          .AppendJoinAsync(',' + strSpace,
+                                                          .AppendJoinAsync("," + strSpace,
                                                                            objGear.Children.Select(
                                                                                x => x.GetCurrentDisplayNameShortAsync())).ConfigureAwait(false))
                                             .Append(']');
@@ -436,9 +436,6 @@ namespace Chummer
         /// Whether the Form should be accepted if there is only one item left in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Whether the Form should be accepted if there is only one item left in the list.
-        /// </summary>
         public bool AllowAutoSelect
         {
             get => _blnAllowAutoSelect;
@@ -449,9 +446,6 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Description to show in the window.
-        /// </summary>
         public string Description
         {
             get => lblDescription.Text;

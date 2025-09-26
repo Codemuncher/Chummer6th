@@ -969,7 +969,9 @@ namespace Chummer
         /// </summary>
         public bool AddAgain { get; private set; }
 
-       
+        /// <summary>
+        /// Lifestyle that was created in the dialogue.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Lifestyle that was created in the dialogue.

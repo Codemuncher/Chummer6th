@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using Chummer.Backend.Equipment;
+using Chummer.Backend.Uniques;
 using Chummer.Properties;
 using Chummer.UI.Table;
 

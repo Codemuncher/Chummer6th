@@ -55,7 +55,7 @@ namespace Chummer
                     (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).GetEnabledCustomDataDirectoryPathsAsync().ConfigureAwait(false) : null).ConfigureAwait(false);
                 foreach (XPathNavigator objXmlCategory in !string.IsNullOrEmpty(OnlyCategory)
                              ? objXmlDocument.Select("/chummer/categories/category[. = "
-                                                      + OnlyCategory.CleanXPath() + ']')
+                                                      + OnlyCategory.CleanXPath() + "]")
                              : objXmlDocument.SelectAndCacheExpression("/chummer/categories/category"))
                 {
                     if (!string.IsNullOrEmpty(WeaponType) && objXmlCategory.Value != "Exotic Ranged Weapons")
@@ -130,9 +130,6 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Description to show in the window.
-        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;
@@ -142,9 +139,6 @@ namespace Chummer
         /// Restrict the list to only a single Category.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Restrict the list to only a single Category.
-        /// </summary>
         public string OnlyCategory
         {
             get => _strForceCategory;

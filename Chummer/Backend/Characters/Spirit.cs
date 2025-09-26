@@ -334,7 +334,7 @@ namespace Chummer
                     = await this.GetNodeAsync(strLanguageToPrint, token: token).ConfigureAwait(false);
                 if (!strLanguageToPrint.Equals(GlobalSettings.DefaultLanguage, StringComparison.OrdinalIgnoreCase))
                 {
-                    strDisplayName = objXmlCritterNode?["translate"]?.InnerTextViaPool() ?? strName;
+                    strDisplayName = objXmlCritterNode?["translate"]?.InnerTextViaPool(token) ?? strName;
                 }
 
                 // <spirit>
@@ -481,7 +481,7 @@ namespace Chummer
                                             intAttrValue = _intForce;
                                         int intDicepool = intAttrValue + _intForce;
 
-                                        string strEnglishName = xmlSkillNode.InnerTextViaPool();
+                                        string strEnglishName = xmlSkillNode.InnerTextViaPool(token);
                                         string strTranslatedName
                                             = xmlSkillsDocument
                                                   .SelectSingleNode("/chummer/skills/skill[name = "
@@ -600,7 +600,7 @@ namespace Chummer
                             .ConfigureAwait(false));
                     string strSource = string.Empty;
                     string strPage = string.Empty;
-                    string strPowerName = xmlPowerEntryNode.InnerTextViaPool();
+                    string strPowerName = xmlPowerEntryNode.InnerTextViaPool(token);
                     string strEnglishName = strPowerName;
                     string strEnglishCategory = string.Empty;
                     string strCategory = string.Empty;
@@ -610,11 +610,11 @@ namespace Chummer
                     string strDisplayDuration = string.Empty;
                     XPathNavigator objXmlPowerNode
                         = xmlSpiritPowersBaseChummerNode.SelectSingleNode(
-                              "powers/power[name = " + strPowerName.CleanXPath() + ']') ??
+                              "powers/power[name = " + strPowerName.CleanXPath() + "]") ??
                           xmlSpiritPowersBaseChummerNode.SelectSingleNode(
                               "powers/power[starts-with(" + strPowerName.CleanXPath() + ", name)]") ??
                           xmlCritterPowersBaseChummerNode.SelectSingleNode(
-                              "powers/power[name = " + strPowerName.CleanXPath() + ']') ??
+                              "powers/power[name = " + strPowerName.CleanXPath() + "]") ??
                           xmlCritterPowersBaseChummerNode.SelectSingleNode(
                               "powers/power[starts-with(" + strPowerName.CleanXPath() + ", name)]");
                     if (objXmlPowerNode != null)
@@ -776,10 +776,10 @@ namespace Chummer
                                     token: token)
                                 .CheapReplaceAsync(
                                     "(A)",
-                                    async () => '(' + await LanguageManager.GetStringAsync(
+                                    async () => "(" + await LanguageManager.GetStringAsync(
                                             "String_SpellRangeArea", strLanguageToPrint,
                                             token: token)
-                                        .ConfigureAwait(false) + ')', token: token)
+                                        .ConfigureAwait(false) + ")", token: token)
                                 .CheapReplaceAsync(
                                     "MAG",
                                     () => LanguageManager.GetStringAsync(
@@ -2820,8 +2820,7 @@ namespace Chummer
                                                                                || !(await x.GetLinkedCharactersAsync(token).ConfigureAwait(false)).Contains(
                                                                                    objOldLinkedCharacter), token: token)
                                         .ConfigureAwait(false)
-                                    && Program.MainForm.OpenFormsWithCharacters.All(
-                                        x => !x.CharacterObjects.Contains(objOldLinkedCharacter)))
+                                    && !await Program.MainForm.AnyOpenFormContainsCharacter(objOldLinkedCharacter, token: token).ConfigureAwait(false))
                                     await Program.OpenCharacters.RemoveAsync(objOldLinkedCharacter, token)
                                         .ConfigureAwait(false);
                             }
@@ -3487,8 +3486,7 @@ namespace Chummer
                                                                          || !(await x.GetLinkedCharactersAsync().ConfigureAwait(false)).Contains(
                                                                              _objLinkedCharacter))
                                                                 .ConfigureAwait(false)
-                                                && Program.MainForm.OpenFormsWithCharacters.All(
-                                                    x => !x.CharacterObjects.Contains(_objLinkedCharacter)))
+                                                && !await Program.MainForm.AnyOpenFormContainsCharacter(_objLinkedCharacter).ConfigureAwait(false))
                     await Program.OpenCharacters.RemoveAsync(_objLinkedCharacter).ConfigureAwait(false);
                 await _lstMugshots.ForEachAsync(x => x.Dispose()).ConfigureAwait(false);
                 await _lstMugshots.DisposeAsync().ConfigureAwait(false);

@@ -27,6 +27,7 @@ using System.Xml.XPath;
 using Chummer.Backend.Attributes;
 using Chummer.Backend.Equipment;
 using Chummer.Backend.Skills;
+using Chummer.Backend.Uniques;
 using NLog;
 
 // ReSharper disable InconsistentNaming

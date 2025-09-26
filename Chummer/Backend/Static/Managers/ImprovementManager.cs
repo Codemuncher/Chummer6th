@@ -19,6 +19,7 @@
 
 using Chummer.Backend.Equipment;
 using Chummer.Backend.Skills;
+using Chummer.Backend.Uniques;
 using NLog;
 using System;
 using System.Collections.Concurrent;
@@ -1564,15 +1565,15 @@ namespace Chummer
             if (blnIsKnowledgeSkill)
             {
                 int intMinimumRating = 0;
-                string strMinimumRating = xmlBonusNode.Attributes?["minimumrating"]?.InnerTextViaPool();
+                string strMinimumRating = xmlBonusNode.Attributes?["minimumrating"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrWhiteSpace(strMinimumRating))
                     intMinimumRating = blnSync
                         // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                         ? ValueToInt(objCharacter, strMinimumRating, intRating, token)
                         : await ValueToIntAsync(objCharacter, strMinimumRating, intRating, token).ConfigureAwait(false);
                 int intMaximumRating = int.MaxValue;
-                string strMaximumRating = xmlBonusNode.Attributes?["maximumrating"]?.InnerTextViaPool();
-                string strPrompt = xmlBonusNode.Attributes?["prompt"]?.InnerTextViaPool() ?? string.Empty;
+                string strMaximumRating = xmlBonusNode.Attributes?["maximumrating"]?.InnerTextViaPool(token);
+                string strPrompt = xmlBonusNode.Attributes?["prompt"]?.InnerTextViaPool(token) ?? string.Empty;
 
                 if (!string.IsNullOrWhiteSpace(strMaximumRating))
                     intMaximumRating = blnSync
@@ -1599,7 +1600,7 @@ namespace Chummer
                             {
                                 foreach (XmlNode objNode in xmlCategoryList)
                                 {
-                                    setAllowedCategories.Add(objNode.InnerTextViaPool());
+                                    setAllowedCategories.Add(objNode.InnerTextViaPool(token));
                                 }
                             }
                         }
@@ -1824,7 +1825,7 @@ namespace Chummer
                                                     }
 
                                                     string strFilter = sbdFilter.Length > 0
-                                                        ? ") and (" + sbdFilter
+                                                        ? ") and (" + sbdFilter.ToString()
                                                         : string.Empty;
                                                     foreach (XPathNavigator xmlSkill in (blnSync
                                                                  ? objCharacter
@@ -1951,7 +1952,7 @@ namespace Chummer
                         .SelectSingleNode(strFilter) ??
                         throw new AbortedException();
                     int intMinimumRating = 0;
-                    string strMinimumRating = xmlBonusNode.Attributes?["minimumrating"]?.InnerTextViaPool();
+                    string strMinimumRating = xmlBonusNode.Attributes?["minimumrating"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrWhiteSpace(strMinimumRating))
                         intMinimumRating = blnSync
                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
@@ -1959,7 +1960,7 @@ namespace Chummer
                             : await ValueToIntAsync(objCharacter, strMinimumRating, intRating, token)
                                 .ConfigureAwait(false);
                     int intMaximumRating = int.MaxValue;
-                    string strMaximumRating = xmlBonusNode.Attributes?["maximumrating"]?.InnerTextViaPool();
+                    string strMaximumRating = xmlBonusNode.Attributes?["maximumrating"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrWhiteSpace(strMaximumRating))
                         intMaximumRating = blnSync
                             // ReSharper disable once MethodHasAsyncOverloadWithCancellation
@@ -2264,7 +2265,7 @@ namespace Chummer
             {
                 sbdTrace.Append("objImprovementSource = ").AppendLine(objImprovementSource.ToString());
                 sbdTrace.Append("strSourceName = ").AppendLine(strSourceName);
-                sbdTrace.Append("nodBonus = ").AppendLine(nodBonus?.OuterXmlViaPool());
+                sbdTrace.Append("nodBonus = ").AppendLine(nodBonus?.OuterXmlViaPool(token));
                 sbdTrace.Append("intRating = ").AppendLine(intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 sbdTrace.Append("strFriendlyName = ").AppendLine(strFriendlyName);
 
@@ -2298,7 +2299,7 @@ namespace Chummer
 
                         if (nodBonus.HasChildNodes)
                         {
-                            string strUnique = nodBonus.Attributes?["unique"]?.InnerTextViaPool() ?? string.Empty;
+                            string strUnique = nodBonus.Attributes?["unique"]?.InnerTextViaPool(token) ?? string.Empty;
                             sbdTrace.AppendLine("Has Child Nodes");
                             if (nodBonus["selecttext"] != null)
                             {
@@ -2759,7 +2760,7 @@ namespace Chummer
             else if (bonusNode.NodeType != XmlNodeType.Comment)
             {
                 Utils.BreakIfDebug();
-                Log.Warn(new object[] { "Tried to get unknown bonus", bonusNode.OuterXmlViaPool() });
+                Log.Warn(new object[] { "Tried to get unknown bonus", bonusNode.OuterXmlViaPool(token) });
                 return false;
             }
 
@@ -2819,7 +2820,7 @@ namespace Chummer
             else if (bonusNode.NodeType != XmlNodeType.Comment)
             {
                 Utils.BreakIfDebug();
-                Log.Warn(new object[] { "Tried to get unknown bonus", bonusNode.OuterXmlViaPool() });
+                Log.Warn(new object[] { "Tried to get unknown bonus", bonusNode.OuterXmlViaPool(token) });
                 return new ValueTuple<bool, string>(false, strSourceName);
             }
 
@@ -4285,7 +4286,7 @@ namespace Chummer
                 if (strSourceName.IsGuid())
                 {
                     string strSourceNameSpaced = strSourceName + LanguageManager.GetString("String_Space", token: token);
-                    string strSourceNameSpacedInvariant = strSourceName + ' ';
+                    string strSourceNameSpacedInvariant = strSourceName + " ";
                     objImprovementList.AddRange(objCharacter.Improvements.Where(
                                                     objImprovement =>
                                                         objImprovement.ImproveSource == objImprovementSource &&
@@ -4334,7 +4335,7 @@ namespace Chummer
                 {
                     string strSourceNameSpaced =
                         strSourceName + LanguageManager.GetString("String_Space", token: token);
-                    string strSourceNameSpacedInvariant = strSourceName + ' ';
+                    string strSourceNameSpacedInvariant = strSourceName + " ";
                     objImprovementList.AddRange(objCharacter.Improvements.Where(
                         objImprovement =>
                             lstImprovementSources.Contains(objImprovement.ImproveSource) &&
@@ -4387,7 +4388,7 @@ namespace Chummer
                         setSpacedSourceNames.Add(
                             strSourceName + LanguageManager.GetString("String_Space", token: token));
                         setSpacedSourceNames.Add(
-                            strSourceName + ' ');
+                            strSourceName + " ");
                     }
 
                     objImprovementList = new List<Improvement>(objCharacter.Improvements.Count);
@@ -4456,7 +4457,7 @@ namespace Chummer
                         setSpacedSourceNames.Add(
                             strSourceName + LanguageManager.GetString("String_Space", token: token));
                         setSpacedSourceNames.Add(
-                            strSourceName + ' ');
+                            strSourceName + " ");
                     }
 
                     objImprovementList = new List<Improvement>(objCharacter.Improvements.Count);
@@ -4521,7 +4522,7 @@ namespace Chummer
                     string strSourceNameSpaced = strSourceName +
                                                  await LanguageManager.GetStringAsync("String_Space", token: token)
                                                      .ConfigureAwait(false);
-                    string strSourceNameSpacedInvariant = strSourceName + ' ';
+                    string strSourceNameSpacedInvariant = strSourceName + " ";
                     objImprovementList.AddRange(objCharacter.Improvements.Where(
                         objImprovement =>
                             objImprovement.ImproveSource == objImprovementSource &&
@@ -4578,7 +4579,7 @@ namespace Chummer
                     string strSourceNameSpaced = strSourceName +
                                                  await LanguageManager.GetStringAsync("String_Space", token: token)
                                                      .ConfigureAwait(false);
-                    string strSourceNameSpacedInvariant = strSourceName + ' ';
+                    string strSourceNameSpacedInvariant = strSourceName + " ";
                     objImprovementList.AddRange(objCharacter.Improvements.Where(
                         objImprovement =>
                             lstImprovementSources.Contains(objImprovement.ImproveSource) &&
@@ -4639,7 +4640,7 @@ namespace Chummer
                             strSourceName + await LanguageManager.GetStringAsync("String_Space", token: token)
                                 .ConfigureAwait(false));
                         setSpacedSourceNames.Add(
-                            strSourceName + ' ');
+                            strSourceName + " ");
                     }
 
                     objImprovementList = new List<Improvement>(await objCharacter.Improvements.GetCountAsync(token).ConfigureAwait(false));
@@ -4716,7 +4717,7 @@ namespace Chummer
                             strSourceName + await LanguageManager.GetStringAsync("String_Space", token: token)
                                 .ConfigureAwait(false));
                         setSpacedSourceNames.Add(
-                            strSourceName + ' ');
+                            strSourceName + " ");
                     }
 
                     objImprovementList = new List<Improvement>(await objCharacter.Improvements.GetCountAsync(token).ConfigureAwait(false));

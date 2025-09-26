@@ -30,6 +30,7 @@ using System.Xml.XPath;
 using Chummer.Backend.Enums;
 using Chummer.Backend.Equipment;
 using System.ComponentModel;
+
 namespace Chummer
 {
     public partial class SelectGear : Form
@@ -157,7 +158,7 @@ namespace Chummer
                         }
 
                         sbdMount.Append(". = \"General\"");
-                        objXmlCategoryList = _xmlBaseGearDataNode.Select("categories/category[" + sbdMount + ']');
+                        objXmlCategoryList = _xmlBaseGearDataNode.Select("categories/category[" + sbdMount.ToString() + "]");
                     }
                 }
                 else
@@ -592,6 +593,9 @@ namespace Chummer
         /// </summary>
         public bool AddAgain { get; private set; }
 
+        /// <summary>
+        /// Only items that grant Capacity should be shown.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that grant Capacity should be shown.
@@ -607,6 +611,9 @@ namespace Chummer
             }
         }
 
+        /// <summary>
+        /// Only items that consume Capacity should be shown.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that consume Capacity should be shown.
@@ -622,18 +629,27 @@ namespace Chummer
             }
         }
 
+        /// <summary>
+        /// Only items that consume Armor Capacity should be shown.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that consume Armor Capacity should be shown.
         /// </summary>
         public bool ShowArmorCapacityOnly { get; set; }
 
+        /// <summary>
+        /// Only items that are marked as being flechette ammo should be shown.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that are marked as being flechette ammo should be shown.
         /// </summary>
         public bool ShowFlechetteAmmoOnly { get; set; }
 
+        /// <summary>
+        /// Guid of Gear that was selected in the dialogue.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Guid of Gear that was selected in the dialogue.
@@ -704,6 +720,9 @@ namespace Chummer
         /// </summary>
         public bool Stack => _blnStack;
 
+        /// <summary>
+        /// Whether the Stack Checkbox should be shown (default true).
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Whether the Stack Checkbox should be shown (default true).
@@ -718,6 +737,9 @@ namespace Chummer
             }
         }
 
+        /// <summary>
+        /// Capacity display style.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Capacity display style.
@@ -732,12 +754,18 @@ namespace Chummer
         /// </summary>
         public bool BlackMarketDiscount => _blnBlackMarketDiscount;
 
+        /// <summary>
+        /// Default text string to filter by.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Default text string to filter by.
         /// </summary>
         public string DefaultSearchText { get; set; }
 
+        /// <summary>
+        /// What weapon type is our gear allowed to have
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// What weapon type is our gear allowed to have
@@ -948,7 +976,7 @@ namespace Chummer
                                 }
                             }
 
-                            objCostNode = objXmlGear.SelectSingleNode("cost" + intHighestCostNode);
+                            objCostNode = objXmlGear.SelectSingleNode("cost" + intHighestCostNode.ToString(GlobalSettings.InvariantCultureInfo));
                             for (int i = intRating; i <= intHighestCostNode; ++i)
                             {
                                 XPathNavigator objLoopNode
@@ -993,13 +1021,13 @@ namespace Chummer
                                     strCost = (decMin * decQuantityMultiplier).ToString(strFormat,
                                                               GlobalSettings.CultureInfo)
                                               + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token)
-                                                                     .ConfigureAwait(false) + '+';
+                                                                     .ConfigureAwait(false) + "+";
                                 }
                                 else
                                 {
                                     string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
                                     strCost = (decMin * decQuantityMultiplier).ToString(strFormat, GlobalSettings.CultureInfo)
-                                                                          + strSpace + '-' + strSpace
+                                                                          + strSpace + "-" + strSpace
                                                                           + (decMax * decQuantityMultiplier).ToString(strFormat, GlobalSettings.CultureInfo)
                                                                           + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                                 }
@@ -1032,7 +1060,7 @@ namespace Chummer
                     // Capacity.
 
                     if (_eCapacityStyle == CapacityStyle.Zero)
-                        await lblCapacity.DoThreadSafeAsync(x => x.Text = '[' + 0.ToString(GlobalSettings.CultureInfo) + ']', token: token).ConfigureAwait(false);
+                        await lblCapacity.DoThreadSafeAsync(x => x.Text = "[" + 0.ToString(GlobalSettings.CultureInfo) + "]", token: token).ConfigureAwait(false);
                     else
                     {
                         // XPathExpression cannot evaluate while there are square brackets, so remove them if necessary.
@@ -1062,10 +1090,10 @@ namespace Chummer
                                         await lblCapacity.DoThreadSafeAsync(x => x.Text = strCapacity, token: token).ConfigureAwait(false);
 
                                     if (blnSquareBrackets)
-                                        await lblCapacity.DoThreadSafeAsync(x => x.Text = '[' + x.Text + ']', token: token).ConfigureAwait(false);
+                                        await lblCapacity.DoThreadSafeAsync(x => x.Text = "[" + x.Text + "]", token: token).ConfigureAwait(false);
                                 }
 
-                                await lblCapacity.DoThreadSafeAsync(x => x.Text += '/' + strSecondHalf, token: token).ConfigureAwait(false);
+                                await lblCapacity.DoThreadSafeAsync(x => x.Text += "/" + strSecondHalf, token: token).ConfigureAwait(false);
                             }
                             else if (strCapacityText == "[*]")
                                 await lblCapacity.DoThreadSafeAsync(x => x.Text = "*", token: token).ConfigureAwait(false);
@@ -1082,7 +1110,7 @@ namespace Chummer
                                     await lblCapacity.DoThreadSafeAsync(x => x.Text = strCapacity, token: token).ConfigureAwait(false);
 
                                 if (blnSquareBrackets)
-                                    await lblCapacity.DoThreadSafeAsync(x => x.Text = '[' + x.Text + ']', token: token).ConfigureAwait(false);
+                                    await lblCapacity.DoThreadSafeAsync(x => x.Text = "[" + x.Text + "]", token: token).ConfigureAwait(false);
                             }
                         }
                         else
@@ -1191,7 +1219,7 @@ namespace Chummer
                     sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
 
                 if (sbdFilter.Length > 0)
-                    strFilter = '[' + sbdFilter.ToString() + ']';
+                    strFilter = "[" + sbdFilter.ToString() + "]";
             }
 
             int intOverLimit = 0;
@@ -1314,7 +1342,7 @@ namespace Chummer
                                         if (!string.IsNullOrEmpty(objFoundItem.Name))
                                         {
                                             lstGears[i] = new ListItem(objLoopItem.Value,
-                                                                       objLoopItem.Name + strSpace + '[' + objFoundItem.Name + ']');
+                                                                       objLoopItem.Name + strSpace + "[" + objFoundItem.Name + "]");
                                         }
                                     }
                                 }
@@ -1426,11 +1454,11 @@ namespace Chummer
                         }
                         foreach (string strMatrixAttribute in MatrixAttributes.MatrixAttributeStrings)
                         {
-                            await sbdValue.CheapReplaceAsync(strExpression, "{Gear " + strMatrixAttribute + '}',
+                            await sbdValue.CheapReplaceAsync(strExpression, "{Gear " + strMatrixAttribute + "}",
                                 () => (_objGearParent as IHasMatrixAttributes)?.GetBaseMatrixAttribute(
                                         strMatrixAttribute).ToString(GlobalSettings.InvariantCultureInfo) ?? "0"
                                     , token: token).ConfigureAwait(false);
-                            await sbdValue.CheapReplaceAsync(strExpression, "{Parent " + strMatrixAttribute + '}',
+                            await sbdValue.CheapReplaceAsync(strExpression, "{Parent " + strMatrixAttribute + "}",
                                 () => (_objGearParent as IHasMatrixAttributes)?.GetMatrixAttributeString(
                                     strMatrixAttribute) ?? "0", token: token).ConfigureAwait(false);
                         }
