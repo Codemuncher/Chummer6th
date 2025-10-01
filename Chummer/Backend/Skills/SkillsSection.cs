@@ -3266,6 +3266,7 @@ namespace Chummer.Backend.Skills
                             }
                             finally
                             {
+                                _lstSkillGroups.RaiseListChangedEvents = true;
                                 _lstSkills.RaiseListChangedEvents = true;
                             }
                     }
