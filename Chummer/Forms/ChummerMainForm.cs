@@ -2867,7 +2867,7 @@ namespace Chummer
                 = Interlocked.Exchange(ref _lstOpenCharacterEditorForms, null);
             if (lstToClose1 != null)
             {
-                using (lstToClose1.LockObject.EnterWriteLock())
+                using (lstToClose1.LockObject.EnterWriteLock(CancellationToken.None))
                 {
                     for (int i = lstToClose1.Count - 1; i >= 0; --i)
                     {
@@ -2903,7 +2903,7 @@ namespace Chummer
                 = Interlocked.Exchange(ref _lstOpenCharacterExportForms, null);
             if (lstToClose2 != null)
             {
-                using (lstToClose2.LockObject.EnterWriteLock())
+                using (lstToClose2.LockObject.EnterWriteLock(CancellationToken.None))
                 {
                     for (int i = lstToClose2.Count - 1; i >= 0; --i)
                     {
@@ -2939,7 +2939,7 @@ namespace Chummer
                 = Interlocked.Exchange(ref _lstOpenCharacterSheetViewers, null);
             if (lstToClose3 != null)
             {
-                using (lstToClose3.LockObject.EnterWriteLock())
+                using (lstToClose3.LockObject.EnterWriteLock(CancellationToken.None))
                 {
                     for (int i = lstToClose3.Count - 1; i >= 0; --i)
                     {
@@ -2964,7 +2964,7 @@ namespace Chummer
                             {
                                 // swallow this
                             }
-                        });
+                        }, CancellationToken.None);
                         foreach (Character objFormCharacter in lstFormCharacters)
                             objFormCharacter.Dispose();
                     }
@@ -4526,13 +4526,13 @@ namespace Chummer
                         return objReturn;
                     if (strArg.EndsWith(Path.GetFileName(Application.ExecutablePath), StringComparison.OrdinalIgnoreCase))
                         continue;
-                    switch (strArg)
+                    switch (strArg.ToUpperInvariant())
                     {
-                        case "/test":
+                        case "/TEST":
                             blnShowTest = true;
                             break;
 
-                        case "/help":
+                        case "/HELP":
                         case "?":
                         case "/?":
                             string msg = "Commandline parameters are either " +
@@ -4545,7 +4545,7 @@ namespace Chummer
                             Console.WriteLine(msg);
                             break;
                         default:
-                            if (strArg.Contains("/plugin"))
+                            if (strArg.Contains("/plugin", StringComparison.OrdinalIgnoreCase))
                             {
                                 Log.Info(
                                     "Encountered command line argument, that should already have been handled in one of the plugins: " +
@@ -4746,6 +4746,7 @@ namespace Chummer
         /// <summary>
         /// Set to True at the end of the OnLoad method. Useful because the load method is executed asynchronously, so form might end up getting closed before it fully loads.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool IsFinishedLoading { get; private set; }
 
         #endregion Application Properties

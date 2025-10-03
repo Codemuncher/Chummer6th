@@ -76,11 +76,12 @@ namespace Chummer.Backend.Equipment
 
         #region Constructor, Create, Save, Load, and Print Methods
 
-        public ArmorMod(Character objCharacter)
+        public ArmorMod(Character objCharacter, Armor objParent)
         {
             // Create the GUID for the new Armor Mod.
             _guiID = Guid.NewGuid();
             _objCharacter = objCharacter;
+            Parent = objParent;
             _lstGear = new TaggedObservableCollection<Gear>(objCharacter.LockObject);
             _lstGear.AddTaggedCollectionChanged(this, GearOnCollectionChanged);
         }
@@ -562,7 +563,7 @@ namespace Chummer.Backend.Equipment
             Lazy<XPathNavigator> objMyNode = null;
             Microsoft.VisualStudio.Threading.AsyncLazy<XPathNavigator> objMyNodeAsync = null;
             if (blnSync)
-                objMyNode = new Lazy<XPathNavigator>(() => this.GetNodeXPath());
+                objMyNode = new Lazy<XPathNavigator>(() => this.GetNodeXPath(token));
             else
                 objMyNodeAsync = new Microsoft.VisualStudio.Threading.AsyncLazy<XPathNavigator>(() => this.GetNodeXPathAsync(token), Utils.JoinableTaskFactory);
             if (blnCopy || !objNode.TryGetField("guid", Guid.TryParse, out _guiID))

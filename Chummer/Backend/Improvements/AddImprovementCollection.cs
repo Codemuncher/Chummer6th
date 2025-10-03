@@ -27,7 +27,6 @@ using System.Xml.XPath;
 using Chummer.Backend.Attributes;
 using Chummer.Backend.Equipment;
 using Chummer.Backend.Skills;
-using Chummer.Backend.Uniques;
 using NLog;
 
 // ReSharper disable InconsistentNaming
@@ -300,7 +299,7 @@ namespace Chummer
         {
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            switch (bonusNode["name"]?.InnerTextViaPool())
+            switch (bonusNode["name"]?.InnerTextViaPool().ToUpperInvariant())
             {
                 case "MAG":
                     CreateImprovement("MAG", _objImprovementSource, SourceName, Improvement.ImprovementType.Attribute,
@@ -369,34 +368,34 @@ namespace Chummer
                 {
                     foreach (XmlNode xmlEnable in xmlEnableList)
                     {
-                        switch (xmlEnable.InnerTextViaPool())
+                        switch (xmlEnable.InnerTextViaPool().ToUpperInvariant())
                         {
-                            case "magician":
+                            case "MAGICIAN":
                                 _objCharacter.MagicianEnabled = true;
                                 CreateImprovement("Magician", _objImprovementSource, SourceName, Improvement.ImprovementType.SpecialTab,
                                     "enabletab", 0, 0);
                                 break;
 
-                            case "adept":
+                            case "ADEPT":
                                 _objCharacter.AdeptEnabled = true;
                                 CreateImprovement("Adept", _objImprovementSource, SourceName, Improvement.ImprovementType.SpecialTab,
                                     "enabletab",
                                     0, 0);
                                 break;
 
-                            case "technomancer":
+                            case "TECHNOMANCER":
                                 _objCharacter.TechnomancerEnabled = true;
                                 CreateImprovement("Technomancer", _objImprovementSource, SourceName, Improvement.ImprovementType.SpecialTab,
                                     "enabletab", 0, 0);
                                 break;
 
-                            case "advanced programs":
+                            case "ADVANCED PROGRAMS":
                                 _objCharacter.AdvancedProgramsEnabled = true;
                                 CreateImprovement("Advanced Programs", _objImprovementSource, SourceName, Improvement.ImprovementType.SpecialTab,
                                     "enabletab", 0, 0);
                                 break;
 
-                            case "critter":
+                            case "CRITTER":
                                 _objCharacter.CritterEnabled = true;
                                 CreateImprovement("Critter", _objImprovementSource, SourceName, Improvement.ImprovementType.SpecialTab,
                                     "enabletab", 0, 0);
@@ -418,15 +417,15 @@ namespace Chummer
                 {
                     foreach (XmlNode xmlDisable in xmlDisableList)
                     {
-                        switch (xmlDisable.InnerTextViaPool())
+                        switch (xmlDisable.InnerTextViaPool().ToUpperInvariant())
                         {
-                            case "cyberware":
+                            case "CYBERWARE":
                                 _objCharacter.CyberwareDisabled = true;
                                 CreateImprovement("Cyberware", _objImprovementSource, SourceName, Improvement.ImprovementType.SpecialTab,
                                     "disabletab", 0, 0);
                                 break;
 
-                            case "initiation":
+                            case "INITIATION":
                                 _objCharacter.InitiationForceDisabled = true;
                                 CreateImprovement("Initiation", _objImprovementSource, SourceName, Improvement.ImprovementType.SpecialTab,
                                     "disabletab", 0, 0);
@@ -490,7 +489,7 @@ namespace Chummer
                     if (xmlTraditionsBaseChummerNode != null)
                     {
                         foreach (XPathNavigator xmlTradition in xmlTraditionsBaseChummerNode.Select(
-                                     "traditions/tradition[" + _objCharacter.Settings.BookXPath() + ']'))
+                                     "traditions/tradition[" + _objCharacter.Settings.BookXPath() + "]"))
                         {
                             string strName = xmlTradition.SelectSingleNodeAndCacheExpression("name")?.Value;
                             if (!string.IsNullOrEmpty(strName))
@@ -1207,19 +1206,19 @@ namespace Chummer
                 // string strBonus = bonusNode["value"].InnerTextViaPool();
                 Improvement.ImprovementType eType;
 
-                switch (strLimit)
+                switch (strLimit.ToUpperInvariant())
                 {
-                    case "Mental":
+                    case "MENTAL":
                         {
                             eType = Improvement.ImprovementType.MentalLimit;
                             break;
                         }
-                    case "Social":
+                    case "SOCIAL":
                         {
                             eType = Improvement.ImprovementType.SocialLimit;
                             break;
                         }
-                    case "Physical":
+                    case "PHYSICAL":
                         {
                             eType = Improvement.ImprovementType.PhysicalLimit;
                             break;
@@ -1754,7 +1753,7 @@ namespace Chummer
                 string strFilter = "/chummer/gears/gear";
                 if (!string.IsNullOrEmpty(strName) || !string.IsNullOrEmpty(strCategory))
                 {
-                    strFilter += '[';
+                    strFilter += "[";
                     if (!string.IsNullOrEmpty(strName))
                     {
                         strFilter += "name = " + strName.CleanXPath();
@@ -1763,7 +1762,7 @@ namespace Chummer
                     }
                     else
                         strFilter += "category = " + strCategory.CleanXPath();
-                    strFilter += ']';
+                    strFilter += "]";
                 }
 
                 XmlNode xmlGearDataNode = _objCharacter.LoadData("gear.xml").SelectSingleNode(strFilter) ?? throw new AbortedException();
@@ -2054,14 +2053,14 @@ namespace Chummer
             string strMode = bonusNode["type"]?.InnerTextViaPool() ?? "all";
 
             IList<Contact> lstSelectedContacts;
-            switch (strMode)
+            switch (strMode.ToUpperInvariant())
             {
-                case "all":
+                case "ALL":
                     lstSelectedContacts = _objCharacter.Contacts;
                     break;
 
-                case "group":
-                case "nongroup":
+                case "GROUP":
+                case "NONGROUP":
                     {
                         bool blnGroup = strMode == "group";
                         //Select any contact where IsGroup equals blnGroup
@@ -2116,7 +2115,7 @@ namespace Chummer
                 }
                 else
                 {
-                    SelectedValue += ',' + LanguageManager.GetString("String_Space") + objSelectedContact.Name;
+                    SelectedValue += "," + LanguageManager.GetString("String_Space") + objSelectedContact.Name;
                 }
             }
         }
@@ -2596,7 +2595,7 @@ namespace Chummer
                 strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
-                    strBonus = '+' + strBonus;
+                    strBonus = "+" + strBonus;
                 CreateImprovement(strBonus, _objImprovementSource, SourceName, Improvement.ImprovementType.LivingPersonaDeviceRating, _strUnique);
             }
 
@@ -2607,7 +2606,7 @@ namespace Chummer
                 strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
-                    strBonus = '+' + strBonus;
+                    strBonus = "+" + strBonus;
                 CreateImprovement(strBonus, _objImprovementSource, SourceName, Improvement.ImprovementType.LivingPersonaProgramLimit, _strUnique);
             }
 
@@ -2618,7 +2617,7 @@ namespace Chummer
                 strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
-                    strBonus = '+' + strBonus;
+                    strBonus = "+" + strBonus;
                 CreateImprovement(strBonus, _objImprovementSource, SourceName, Improvement.ImprovementType.LivingPersonaAttack, _strUnique);
             }
 
@@ -2629,7 +2628,7 @@ namespace Chummer
                 strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
-                    strBonus = '+' + strBonus;
+                    strBonus = "+" + strBonus;
                 CreateImprovement(strBonus, _objImprovementSource, SourceName, Improvement.ImprovementType.LivingPersonaSleaze, _strUnique);
             }
 
@@ -2640,7 +2639,7 @@ namespace Chummer
                 strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
-                    strBonus = '+' + strBonus;
+                    strBonus = "+" + strBonus;
                 CreateImprovement(strBonus, _objImprovementSource, SourceName, Improvement.ImprovementType.LivingPersonaDataProcessing, _strUnique);
             }
 
@@ -2651,7 +2650,7 @@ namespace Chummer
                 strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
-                    strBonus = '+' + strBonus;
+                    strBonus = "+" + strBonus;
                 CreateImprovement(strBonus, _objImprovementSource, SourceName, Improvement.ImprovementType.LivingPersonaFirewall, _strUnique);
             }
 
@@ -2662,7 +2661,7 @@ namespace Chummer
                 strBonus = strBonus.ProcessFixedValuesString(_intRating);
                 strBonus = strBonus.Replace("Rating", _intRating.ToString(GlobalSettings.InvariantCultureInfo));
                 if (int.TryParse(strBonus, out int intTemp) && intTemp > 0)
-                    strBonus = '+' + strBonus;
+                    strBonus = "+" + strBonus;
                 CreateImprovement(strBonus, _objImprovementSource, SourceName, Improvement.ImprovementType.LivingPersonaMatrixCM, _strUnique);
             }
         }
@@ -5247,7 +5246,7 @@ namespace Chummer
                     objXmlDocument.Select("/chummer/armors/armor[(" + _objCharacter.Settings.BookXPath() + ") and mods[name = 'Custom Fit']]");
             }
 
-            //.SelectNodes("/chummer/skills/skill[not(exotic = 'True') and (" + _objCharacter.Settings.BookXPath() + ')' + SkillFilter(filter) + ']');
+            //.SelectNodes("/chummer/skills/skill[not(exotic = 'True') and (" + _objCharacter.Settings.BookXPath() + ")" + SkillFilter(filter) + "]");
 
             using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstArmors))
             {
@@ -5401,7 +5400,7 @@ namespace Chummer
                         if (!blnIncludeUnarmed && objWeapon.Name == "Unarmed Attack")
                             continue;
                         if (!string.IsNullOrEmpty(strWeaponDetails)
-                            && objWeapon.GetNodeXPath()?.SelectSingleNode("self::node()[" + strWeaponDetails + ']') == null)
+                            && objWeapon.GetNodeXPath()?.SelectSingleNode("self::node()[" + strWeaponDetails + "]") == null)
                             continue;
                         lstWeapons.Add(new ListItem(objWeapon.InternalId,
                                                     objWeapon.CurrentDisplayNameShort));
@@ -5773,7 +5772,7 @@ namespace Chummer
                     objXmlSelectedQuality = objXmlDocument.TryGetNodeByNameOrId(
                         "/chummer/qualities/quality", frmPickItem.MyForm.SelectedItem);
                     objXmlBonusQuality
-                        = bonusNode.SelectSingleNode("quality[. = " + frmPickItem.MyForm.SelectedItem.CleanXPath() + ']');
+                        = bonusNode.SelectSingleNode("quality[. = " + frmPickItem.MyForm.SelectedItem.CleanXPath() + "]");
                 }
 
                 int intQualityDiscount = 0;
@@ -5798,7 +5797,7 @@ namespace Chummer
                                 {
                                     string strDisplayName = objXmlQuality["translate"]?.InnerTextViaPool() ?? strName;
                                     if (!string.IsNullOrWhiteSpace(strForceDiscountValue))
-                                        strDisplayName += " (" + strForceDiscountValue + ')';
+                                        strDisplayName += " (" + strForceDiscountValue + ")";
                                     lstQualities.Add(new ListItem(strName, strDisplayName));
                                 }
                             }
@@ -5829,7 +5828,7 @@ namespace Chummer
                                                                       frmPickItem.MyForm.SelectedItem);
                             objXmlBonusQuality
                                 = bonusNode.SelectSingleNode("discountqualities/quality[. = "
-                                                             + frmPickItem.MyForm.SelectedItem.CleanXPath() + ']');
+                                                             + frmPickItem.MyForm.SelectedItem.CleanXPath() + "]");
                             intQualityDiscount
                                 = ImprovementManager.ValueToInt(_objCharacter, objXmlBonusQuality?.SelectSingleNodeAndCacheExpressionAsNavigator("@discount")?.Value, _intRating);
                             List<Weapon> lstWeapons = new List<Weapon>(1);
@@ -6156,7 +6155,7 @@ namespace Chummer
                         foreach (XPathNavigator xmlSpirit in _objCharacter.LoadDataXPath("critters.xml")
                                                                           .Select(
                                                                               "/chummer/critters/critter[category = "
-                                                                              + strCritterCategory.CleanXPath() + ']'))
+                                                                              + strCritterCategory.CleanXPath() + "]"))
                         {
                             string strSpiritName = xmlSpirit.SelectSingleNodeAndCacheExpression("name")?.Value;
                             if (setAllowed.All(l => strSpiritName != l) && setAllowed.Count != 0)

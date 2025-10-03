@@ -501,7 +501,7 @@ namespace Chummer.Backend.Equipment
             Lazy<XPathNavigator> objMyNode = null;
             Microsoft.VisualStudio.Threading.AsyncLazy<XPathNavigator> objMyNodeAsync = null;
             if (blnSync)
-                objMyNode = new Lazy<XPathNavigator>(() => this.GetNodeXPath());
+                objMyNode = new Lazy<XPathNavigator>(() => this.GetNodeXPath(token));
             else
                 objMyNodeAsync = new Microsoft.VisualStudio.Threading.AsyncLazy<XPathNavigator>(() => this.GetNodeXPathAsync(token), Utils.JoinableTaskFactory);
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
@@ -2117,7 +2117,9 @@ namespace Chummer.Backend.Equipment
                 if (strCostExpr.Contains("Slots"))
                 {
                     string strValue = intSlots.ToString(GlobalSettings.InvariantCultureInfo);
-                    strCostExpr = strCostExpr.Replace("{Slots}", strValue).Replace("Slots", strValue);
+                    strCostExpr = strCostExpr
+                        .Replace("{Parent Slots}", strValue).Replace("Parent Slots", strValue)
+                        .Replace("{Slots}", strValue).Replace("Slots", strValue);
                 }
                 decReturn = (await ProcessRatingStringAsDecAsync(strCostExpr, () => GetRatingAsync(token), token).ConfigureAwait(false)).Item1;
 

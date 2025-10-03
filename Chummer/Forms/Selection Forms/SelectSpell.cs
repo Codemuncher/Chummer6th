@@ -19,13 +19,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -239,6 +239,9 @@ namespace Chummer
         /// Limit the Spell list to a particular Category.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Limit the Spell list to a particular Category.
+        /// </summary>
         public string LimitCategory
         {
             set => _strLimitCategory = value;
@@ -248,6 +251,9 @@ namespace Chummer
         /// Force a particular Spell to be selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Force a particular Spell to be selected.
+        /// </summary>
         public string ForceSpellName
         {
             set => _strForceSpell = value;
@@ -594,31 +600,31 @@ namespace Chummer
                                  ',', StringSplitOptions.RemoveEmptyEntries))
                     {
                         string strTrimmedDescriptor = strDescriptor.Trim();
-                        switch (strTrimmedDescriptor)
+                        switch (strTrimmedDescriptor.ToUpperInvariant())
                         {
-                            case "Alchemical Preparation":
+                            case "ALCHEMICAL PREPARATION":
                                 blnAlchemicalFound = true;
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescAlchemicalPreparation", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Extended Area":
+                            case "EXTENDED AREA":
                                 blnExtendedFound = true;
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescExtendedArea", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Material Link":
+                            case "MATERIAL LINK":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescMaterialLink", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Multi-Sense":
+                            case "MULTI-SENSE":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescMultiSense", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Organic Link":
+                            case "ORGANIC LINK":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescOrganicLink", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Single-Sense":
+                            case "SINGLE-SENSE":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescSingleSense", token: token).ConfigureAwait(false));
                                 break;
 
@@ -777,7 +783,7 @@ namespace Chummer
             await lblDescriptorsLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strDescriptors), token: token).ConfigureAwait(false);
 
             string strType;
-            switch (xmlSpell.SelectSingleNodeAndCacheExpression("type", token)?.Value)
+            switch (xmlSpell.SelectSingleNodeAndCacheExpression("type", token)?.Value.ToUpperInvariant())
             {
                 case "M":
                     strType = await LanguageManager.GetStringAsync("String_SpellTypeMana", token: token).ConfigureAwait(false);
@@ -791,7 +797,7 @@ namespace Chummer
             await lblTypeLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strType), token: token).ConfigureAwait(false);
 
             string strDuration;
-            switch (xmlSpell.SelectSingleNodeAndCacheExpression("duration", token)?.Value)
+            switch (xmlSpell.SelectSingleNodeAndCacheExpression("duration", token)?.Value.ToUpperInvariant())
             {
                 case "P":
                     strDuration = await LanguageManager.GetStringAsync("String_SpellDurationPermanent", token: token).ConfigureAwait(false);
@@ -862,7 +868,7 @@ namespace Chummer
             await lblRange.DoThreadSafeAsync(x => x.Text = strRange, token: token).ConfigureAwait(false);
             await lblRangeLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strRange), token: token).ConfigureAwait(false);
 
-            switch (xmlSpell.SelectSingleNodeAndCacheExpression("damage", token)?.Value)
+            switch (xmlSpell.SelectSingleNodeAndCacheExpression("damage", token)?.Value.ToUpperInvariant())
             {
                 case "P":
                     {

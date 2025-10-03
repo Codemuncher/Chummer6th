@@ -1438,7 +1438,7 @@ namespace Chummer.Backend.Equipment
             Lazy<XmlNode> objMyNode = null;
             AsyncLazy<XmlNode> objMyNodeAsync = null;
             if (blnSync)
-                objMyNode = new Lazy<XmlNode>(() => this.GetNode());
+                objMyNode = new Lazy<XmlNode>(() => this.GetNode(token));
             else
                 objMyNodeAsync = new AsyncLazy<XmlNode>(() => this.GetNodeAsync(token), Utils.JoinableTaskFactory);
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
@@ -2994,7 +2994,7 @@ namespace Chummer.Backend.Equipment
                         return;
                     // This will update a child's rating if it would become out of bounds due to its parent's rating changing
                     int intCurrentRating = await objChild.GetRatingAsync(token).ConfigureAwait(false);
-                    await objChild.SetRatingAsync(intCurrentRating).ConfigureAwait(false);
+                    await objChild.SetRatingAsync(intCurrentRating, token).ConfigureAwait(false);
                 }, token).ConfigureAwait(false);
             }
         }
@@ -3163,7 +3163,17 @@ namespace Chummer.Backend.Equipment
                 object objProcess;
                 (blnIsSuccess, objProcess) = CommonFunctions.EvaluateInvariantXPath(strExpression);
                 if (blnIsSuccess)
-                    return Convert.ToDecimal((double)objProcess);
+                {
+                    try
+                    {
+                        return Convert.ToDecimal((double)objProcess);
+                    }
+                    catch (OverflowException)
+                    {
+                        blnIsSuccess = false;
+                        return 0;
+                    }
+                }
             }
 
             return decValue;
@@ -3257,7 +3267,17 @@ namespace Chummer.Backend.Equipment
                 (blnIsSuccess, objProcess)
                         = await CommonFunctions.EvaluateInvariantXPathAsync(strExpression, token).ConfigureAwait(false);
                 if (blnIsSuccess)
-                    decValue = Convert.ToDecimal((double)objProcess);
+                {
+                    try
+                    {
+                        decValue = Convert.ToDecimal((double)objProcess);
+                    }
+                    catch (OverflowException)
+                    {
+                        blnIsSuccess = false;
+                        decValue = 0;
+                    }
+                }
             }
 
             return new ValueTuple<decimal, bool>(decValue, blnIsSuccess);
@@ -6811,7 +6831,7 @@ namespace Chummer.Backend.Equipment
                             token: token).ConfigureAwait(false), strLanguage, token).ConfigureAwait(false);
             }
 
-            int intAP;
+            int intAP = 0;
             if (blnSync)
             {
                 decimal decAP = ProcessRatingStringAsDec(strAP, () => Rating, out bool blnIsSuccess);
@@ -11879,18 +11899,18 @@ namespace Chummer.Backend.Equipment
         /// <param name="strValue">String value to convert.</param>
         public static FiringMode ConvertToFiringMode(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "DogBrain":
+                case "DOGBRAIN":
                     return FiringMode.DogBrain;
 
-                case "GunneryCommandDevice":
+                case "GUNNERYCOMMANDDEVICE":
                     return FiringMode.GunneryCommandDevice;
 
-                case "RemoteOperated":
+                case "REMOTEOPERATED":
                     return FiringMode.RemoteOperated;
 
-                case "ManualOperation":
+                case "MANUALOPERATION":
                     return FiringMode.ManualOperation;
 
                 default:

@@ -1298,74 +1298,92 @@ namespace Chummer.Backend.Skills
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (!_dicSkillBackups.IsEmpty)
+                if (_dicSkillBackups.IsEmpty && Skills.Count == 0 && KnowledgeSkills.Count == 0)
+                    return new List<Skill>();
+                XmlDocument xmlSkillsDocument =
+                    await _objCharacter.LoadDataAsync("skills.xml", token: token).ConfigureAwait(false);
+                using (XmlNodeList xmlSkillList = xmlSkillsDocument
+                           .SelectNodes("/chummer/skills/skill[not(exotic = 'True') and (" +
+                                        await _objCharacterSettings.BookXPathAsync(token: token)
+                                            .ConfigureAwait(false)
+                                        + ")"
+                                        + SkillFilter(eFilterOption, strName) + "]"))
                 {
-                    XmlDocument xmlSkillsDocument = await _objCharacter.LoadDataAsync("skills.xml", token: token).ConfigureAwait(false);
-                    using (XmlNodeList xmlSkillList = xmlSkillsDocument
-                               .SelectNodes("/chummer/skills/skill[not(exotic = 'True') and (" +
-                                            await _objCharacterSettings.BookXPathAsync(token: token).ConfigureAwait(false)
-                                            + ")"
-                                            + SkillFilter(eFilterOption, strName) + "]"))
+                    if (xmlSkillList?.Count > 0)
                     {
-                        if (xmlSkillList?.Count > 0)
+                        List<Skill> lstReturn = new List<Skill>(xmlSkillList.Count);
+                        foreach (XmlNode xmlSkill in xmlSkillList)
                         {
-                            List<Skill> lstReturn = new List<Skill>(xmlSkillList.Count);
-                            foreach (XmlNode xmlSkill in xmlSkillList)
+                            token.ThrowIfCancellationRequested();
+                            if (xmlSkill.TryGetField("id", Guid.TryParse, out Guid guiSkillId))
                             {
-                                token.ThrowIfCancellationRequested();
-                                if (xmlSkill.TryGetField("id", Guid.TryParse, out Guid guiSkillId))
-                                {
                                     if (_dicSkillBackups.TryGetValue(guiSkillId, out Skill objSkill) && objSkill != null)
-                                        lstReturn.Add(objSkill);
-                                    else
-                                    {
+                                    lstReturn.Add(objSkill);
+                                else
+                                {
                                         string strCategoryCleaned = xmlSkill["category"]?.InnerTextViaPool(token).CleanXPath();
-                                        bool blnIsKnowledgeSkill
-                                            = string.IsNullOrEmpty(strCategoryCleaned) || xmlSkillsDocument
-                                                .SelectSingleNodeAndCacheExpressionAsNavigator(
-                                                    "/chummer/categories/category[. = "
-                                                    + strCategoryCleaned + "]/@type", token)
-                                                ?.Value
-                                            != "active";
-                                        if (blnIsKnowledgeSkill)
-                                        {
-                                            ThreadSafeBindingList<KnowledgeSkill> lstKnowledgeSkills = await GetKnowledgeSkillsAsync(token).ConfigureAwait(false);
-                                            objSkill = await lstKnowledgeSkills.FirstOrDefaultAsync(async x => await x.GetSkillIdAsync(token).ConfigureAwait(false) == guiSkillId, token).ConfigureAwait(false);
-                                            if (objSkill != null)
-                                                lstReturn.Add(objSkill);
-                                            else
-                                            {
-                                                string strBackupName = string.Empty;
-                                                if (xmlSkill.TryGetStringFieldQuickly("name", ref strBackupName))
-                                                {
-                                                    objSkill = await lstKnowledgeSkills.FirstOrDefaultAsync(async x => await x.GetNameAsync(token).ConfigureAwait(false) == strName, token).ConfigureAwait(false);
-                                                    if (objSkill != null)
-                                                        lstReturn.Add(objSkill);
-                                                }
-                                            }
-                                        }
+                                    bool blnIsKnowledgeSkill
+                                        = string.IsNullOrEmpty(strCategoryCleaned) || xmlSkillsDocument
+                                            .SelectSingleNodeAndCacheExpressionAsNavigator(
+                                                "/chummer/categories/category[. = "
+                                                + strCategoryCleaned + "]/@type", token)
+                                            ?.Value
+                                        != "active";
+                                    if (blnIsKnowledgeSkill)
+                                    {
+                                        ThreadSafeBindingList<KnowledgeSkill> lstKnowledgeSkills =
+                                            await GetKnowledgeSkillsAsync(token).ConfigureAwait(false);
+                                        objSkill = await lstKnowledgeSkills
+                                            .FirstOrDefaultAsync(
+                                                async x => await x.GetSkillIdAsync(token).ConfigureAwait(false) ==
+                                                           guiSkillId, token).ConfigureAwait(false);
+                                        if (objSkill != null)
+                                            lstReturn.Add(objSkill);
                                         else
                                         {
-                                            ThreadSafeBindingList<Skill> lstSkills = await GetSkillsAsync(token).ConfigureAwait(false);
-                                            objSkill = await lstSkills.FirstOrDefaultAsync(async x => await x.GetSkillIdAsync(token).ConfigureAwait(false) == guiSkillId, token).ConfigureAwait(false);
-                                            if (objSkill != null)
-                                                lstReturn.Add(objSkill);
-                                            else
+                                            string strBackupName = string.Empty;
+                                            if (xmlSkill.TryGetStringFieldQuickly("name", ref strBackupName))
                                             {
-                                                string strBackupName = string.Empty;
-                                                if (xmlSkill.TryGetStringFieldQuickly("name", ref strBackupName))
-                                                {
-                                                    objSkill = await lstSkills.FirstOrDefaultAsync(async x => await x.GetNameAsync(token).ConfigureAwait(false) == strName, token).ConfigureAwait(false);
-                                                    if (objSkill != null)
-                                                        lstReturn.Add(objSkill);
-                                                }
+                                                objSkill = await lstKnowledgeSkills
+                                                    .FirstOrDefaultAsync(
+                                                        async x =>
+                                                            await x.GetNameAsync(token).ConfigureAwait(false) ==
+                                                            strName, token).ConfigureAwait(false);
+                                                if (objSkill != null)
+                                                    lstReturn.Add(objSkill);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        ThreadSafeBindingList<Skill> lstSkills =
+                                            await GetSkillsAsync(token).ConfigureAwait(false);
+                                        objSkill = await lstSkills
+                                            .FirstOrDefaultAsync(
+                                                async x => await x.GetSkillIdAsync(token).ConfigureAwait(false) ==
+                                                           guiSkillId, token).ConfigureAwait(false);
+                                        if (objSkill != null)
+                                            lstReturn.Add(objSkill);
+                                        else
+                                        {
+                                            string strBackupName = string.Empty;
+                                            if (xmlSkill.TryGetStringFieldQuickly("name", ref strBackupName))
+                                            {
+                                                objSkill = await lstSkills
+                                                    .FirstOrDefaultAsync(
+                                                        async x =>
+                                                            await x.GetNameAsync(token).ConfigureAwait(false) ==
+                                                            strName, token).ConfigureAwait(false);
+                                                if (objSkill != null)
+                                                    lstReturn.Add(objSkill);
                                             }
                                         }
                                     }
                                 }
                             }
-                            return lstReturn;
                         }
+
+                        return lstReturn;
                     }
                 }
             }
@@ -1387,7 +1405,7 @@ namespace Chummer.Backend.Skills
                 {
                     XPathNodeIterator lstXmlSkills = _objCharacter.LoadDataXPath("skills.xml")
                         .SelectAndCacheExpression(
-                            "/chummer/knowledgeskills/skill");
+                            "/chummer/knowledgeskills/skill[not(hide)]");
                     Dictionary<string, string> dicReturn = new Dictionary<string, string>(lstXmlSkills.Count);
                     foreach (XPathNavigator objXmlSkill in lstXmlSkills)
                     {
@@ -1417,7 +1435,7 @@ namespace Chummer.Backend.Skills
                     {
                         XPathNodeIterator lstXmlSkills = _objCharacter.LoadDataXPath("skills.xml")
                             .SelectAndCacheExpression(
-                                "/chummer/knowledgeskills/skill");
+                                "/chummer/knowledgeskills/skill[not(hide)]");
                         Dictionary<string, string> dicReturn =
                             new Dictionary<string, string>(lstXmlSkills.Count);
                         foreach (XPathNavigator objXmlSkill in lstXmlSkills)
@@ -1446,7 +1464,7 @@ namespace Chummer.Backend.Skills
                 XPathNodeIterator lstXmlSkills =
                     (await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false))
                     .SelectAndCacheExpression(
-                        "/chummer/knowledgeskills/skill", token);
+                        "/chummer/knowledgeskills/skill[not(hide)]", token);
                 Dictionary<string, string> dicReturn = new Dictionary<string, string>(lstXmlSkills.Count);
                 foreach (XPathNavigator objXmlSkill in lstXmlSkills)
                 {
@@ -1493,7 +1511,7 @@ namespace Chummer.Backend.Skills
                         (await _objCharacter.LoadDataXPathAsync("skills.xml", token: token)
                             .ConfigureAwait(false))
                         .SelectAndCacheExpression(
-                            "/chummer/knowledgeskills/skill", token);
+                            "/chummer/knowledgeskills/skill[not(hide)]", token);
                     Dictionary<string, string> dicReturn =
                         new Dictionary<string, string>(lstXmlSkills.Count);
                     foreach (XPathNavigator objXmlSkill in lstXmlSkills)
@@ -3035,11 +3053,13 @@ namespace Chummer.Backend.Skills
                         objSkill.MultiplePropertiesChangedAsync -= OnKnowledgeSkillPropertyChanged;
                         return objSkill.RemoveAsync(token);
                     }, token).ConfigureAwait(false);
+                    await SkillGroups.ForEachWithSideEffectsAsync(async x => await x.DisposeAsync().ConfigureAwait(false), token).ConfigureAwait(false);
                     _dicSkillBackups.Clear();
                     _dicSkills.Clear();
                     await _lstSkills.ClearAsync(token).ConfigureAwait(false);
                     await KnowledgeSkills.ClearAsync(token).ConfigureAwait(false);
                     await KnowsoftSkills.ClearAsync(token).ConfigureAwait(false);
+                    await SkillGroups.ClearAsync(token).ConfigureAwait(false);
                     SkillPointsMaximum = 0;
                     SkillGroupPointsMaximum = 0;
                     _blnSkillsInitialized = false;
@@ -3266,9 +3286,7 @@ namespace Chummer.Backend.Skills
                             }
                             finally
                             {
-                                _lstSkillGroups.RaiseListChangedEvents = true;
-                                _lstSkills.RaiseListChangedEvents = true;
-                            }
+                        }
                     }
                     finally
                     {
@@ -3276,19 +3294,19 @@ namespace Chummer.Backend.Skills
                     }
 
                     _blnSkillsInitialized = true;
-                }
-                    finally
-                {
+                        }
+                        finally
+                        {
                     await objLocker2.DisposeAsync().ConfigureAwait(false);
                 }
-
+                         
                 return _lstSkills;
                         }
                         finally
             {
                 await objLocker.DisposeAsync().ConfigureAwait(false);
-                    }
-        }
+                        }
+                        }
 
         public async Task<ThreadSafeBindingList<Skill>> GetSkillListAsync(CancellationToken token = default)
         {
@@ -3300,9 +3318,9 @@ namespace Chummer.Backend.Skills
                 if (_blnSkillsInitialized ||
                     await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false) != this)
                     return _lstNewSkills;
-                                                }
+                    }
                     finally
-            {
+                    {
                 await objLocker.DisposeAsync().ConfigureAwait(false);
                     }
 
@@ -4197,7 +4215,7 @@ namespace Chummer.Backend.Skills
                     List<ListItem> lstReturn = new List<ListItem>(byte.MaxValue);
                     XPathNavigator xmlSkillsDocument = _objCharacter.LoadDataXPath("skills.xml");
                     foreach (XPathNavigator xmlSkill in xmlSkillsDocument.SelectAndCacheExpression(
-                                 "/chummer/knowledgeskills/skill"))
+                                 "/chummer/knowledgeskills/skill[not(hide)]"))
                     {
                         string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name")?.Value ?? string.Empty;
                         lstReturn.Add(
@@ -4226,7 +4244,7 @@ namespace Chummer.Backend.Skills
                         _lstDefaultKnowledgeSkills = new List<ListItem>(byte.MaxValue);
                         XPathNavigator xmlSkillsDocument = _objCharacter.LoadDataXPath("skills.xml");
                         foreach (XPathNavigator xmlSkill in xmlSkillsDocument.SelectAndCacheExpression(
-                                     "/chummer/knowledgeskills/skill"))
+                                     "/chummer/knowledgeskills/skill[not(hide)]"))
                         {
                             string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name")?.Value ??
                                              string.Empty;
@@ -4251,7 +4269,7 @@ namespace Chummer.Backend.Skills
                 XPathNavigator xmlSkillsDocument =
                     await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false);
                 foreach (XPathNavigator xmlSkill in xmlSkillsDocument.SelectAndCacheExpression(
-                             "/chummer/knowledgeskills/skill", token))
+                             "/chummer/knowledgeskills/skill[not(hide)]", token))
                 {
                     string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name", token)?.Value ?? string.Empty;
                     lstReturn.Add(
@@ -4291,7 +4309,7 @@ namespace Chummer.Backend.Skills
                     XPathNavigator xmlSkillsDocument =
                         await _objCharacter.LoadDataXPathAsync("skills.xml", token: token).ConfigureAwait(false);
                     foreach (XPathNavigator xmlSkill in xmlSkillsDocument.SelectAndCacheExpression(
-                                 "/chummer/knowledgeskills/skill", token))
+                                 "/chummer/knowledgeskills/skill[not(hide)]", token))
                     {
                         string strName = xmlSkill.SelectSingleNodeAndCacheExpression("name", token)?.Value ??
                                          string.Empty;
@@ -4763,6 +4781,7 @@ namespace Chummer.Backend.Skills
                         //swallow this
                     }
                 }
+                await _lstSkillGroups.ForEachWithSideEffectsAsync(async x => await x.DisposeAsync().ConfigureAwait(false)).ConfigureAwait(false);
                 List<Skill> lstSkillBackups = _dicSkillBackups.GetValuesToListSafe();
                 _dicSkillBackups.Clear();
                 foreach (Skill objSkill in lstSkillBackups)
@@ -4773,6 +4792,7 @@ namespace Chummer.Backend.Skills
                 await _lstKnowledgeSkills.DisposeAsync().ConfigureAwait(false);
                 await _lstKnowsoftSkills.ClearAsync().ConfigureAwait(false);
                 await _lstKnowsoftSkills.DisposeAsync().ConfigureAwait(false);
+                await _lstSkillGroups.DisposeAsync().ConfigureAwait(false);
                 await _objSkillsInitializerLock.DisposeAsync().ConfigureAwait(false);
                 await _objCachedKnowledgePointsLock.DisposeAsync().ConfigureAwait(false);
                 IAsyncDisposable objLocker2 = await _objDefaultKnowledgeSkillsLock.EnterWriteLockAsync().ConfigureAwait(false);

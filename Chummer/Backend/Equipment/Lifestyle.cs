@@ -100,15 +100,15 @@ namespace Chummer.Backend.Equipment
         /// <param name="strValue">String value to convert.</param>
         public static LifestyleType ConvertToLifestyleType(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "BoltHole":
+                case "BOLTHOLE":
                     return LifestyleType.BoltHole;
 
-                case "Safehouse":
+                case "SAFEHOUSE":
                     return LifestyleType.Safehouse;
 
-                case "Advanced":
+                case "ADVANCED":
                     return LifestyleType.Advanced;
 
                 default:
@@ -122,14 +122,12 @@ namespace Chummer.Backend.Equipment
         /// <param name="strValue">String value to convert.</param>
         public static LifestyleIncrement ConvertToLifestyleIncrement(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "day":
-                case "Day":
+                case "DAY":
                     return LifestyleIncrement.Day;
 
-                case "week":
-                case "Week":
+                case "WEEK":
                     return LifestyleIncrement.Week;
 
                 default:
@@ -560,7 +558,7 @@ namespace Chummer.Backend.Equipment
                 Lazy<XmlNode> objMyNode = null;
                 Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode> objMyNodeAsync = null;
                 if (blnSync)
-                    objMyNode = new Lazy<XmlNode>(() => this.GetNode());
+                    objMyNode = new Lazy<XmlNode>(() => this.GetNode(token));
                 else
                     objMyNodeAsync = new Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode>(() => this.GetNodeAsync(token), Utils.JoinableTaskFactory);
                 if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
@@ -4527,17 +4525,18 @@ namespace Chummer.Backend.Equipment
                 return string.Empty;
             switch (strLifestyle)
             {
-                case "Bolt Hole":
+                case "BOLTHOLE":
+                case "BOLT HOLE":
                     return "Squatter";
 
-                case "Traveler":
+                case "TRAVELER":
                     return "Low";
 
-                case "Commercial":
+                case "COMMERCIAL":
                     return "Medium";
 
                 default:
-                    return strLifestyle.StartsWith("Hospitalized", StringComparison.Ordinal) ? "High" : strLifestyle;
+                    return strLifestyle.StartsWith("Hospitalized", StringComparison.OrdinalIgnoreCase) ? "High" : strLifestyle;
             }
         }
 
