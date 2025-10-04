@@ -1574,7 +1574,6 @@ namespace Chummer.Backend.Skills
                         _lstNewSkills.RaiseListChangedEvents = false;
                         _lstKnowledgeSkills.RaiseListChangedEvents = false;
                         _lstKnowsoftSkills.RaiseListChangedEvents = false;
-                        _lstSkillGroups.RaiseListChangedEvents = false;
                         try
                         {
                             _dicSkills.Clear();
@@ -3053,13 +3052,11 @@ namespace Chummer.Backend.Skills
                         objSkill.MultiplePropertiesChangedAsync -= OnKnowledgeSkillPropertyChanged;
                         return objSkill.RemoveAsync(token);
                     }, token).ConfigureAwait(false);
-                    await SkillGroups.ForEachWithSideEffectsAsync(async x => await x.DisposeAsync().ConfigureAwait(false), token).ConfigureAwait(false);
                     _dicSkillBackups.Clear();
                     _dicSkills.Clear();
                     await _lstSkills.ClearAsync(token).ConfigureAwait(false);
                     await KnowledgeSkills.ClearAsync(token).ConfigureAwait(false);
                     await KnowsoftSkills.ClearAsync(token).ConfigureAwait(false);
-                    await SkillGroups.ClearAsync(token).ConfigureAwait(false);
                     SkillPointsMaximum = 0;
                     SkillGroupPointsMaximum = 0;
                     _blnSkillsInitialized = false;
@@ -4781,7 +4778,6 @@ namespace Chummer.Backend.Skills
                         //swallow this
                     }
                 }
-                await _lstSkillGroups.ForEachWithSideEffectsAsync(async x => await x.DisposeAsync().ConfigureAwait(false)).ConfigureAwait(false);
                 List<Skill> lstSkillBackups = _dicSkillBackups.GetValuesToListSafe();
                 _dicSkillBackups.Clear();
                 foreach (Skill objSkill in lstSkillBackups)
@@ -4792,7 +4788,6 @@ namespace Chummer.Backend.Skills
                 await _lstKnowledgeSkills.DisposeAsync().ConfigureAwait(false);
                 await _lstKnowsoftSkills.ClearAsync().ConfigureAwait(false);
                 await _lstKnowsoftSkills.DisposeAsync().ConfigureAwait(false);
-                await _lstSkillGroups.DisposeAsync().ConfigureAwait(false);
                 await _objSkillsInitializerLock.DisposeAsync().ConfigureAwait(false);
                 await _objCachedKnowledgePointsLock.DisposeAsync().ConfigureAwait(false);
                 IAsyncDisposable objLocker2 = await _objDefaultKnowledgeSkillsLock.EnterWriteLockAsync().ConfigureAwait(false);

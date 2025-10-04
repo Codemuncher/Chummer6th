@@ -36,7 +36,8 @@ namespace Chummer.Controls.Shared
                 }
                 try
                 {
-                    Contents.ListChangedAsync -= ContentsChanged;
+                    if (Contents != null)
+                        Contents.ListChangedAsync -= ContentsChanged;
                 }
                 catch (ObjectDisposedException)
                 {
