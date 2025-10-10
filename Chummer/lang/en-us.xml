@@ -732,6 +732,14 @@
       <text>Filter by Essence</text>
     </string>
     <string>
+      <key>Checkbox_UseCurrentEssence</key>
+      <text>Current ESS</text>
+    </string>
+    <string>
+      <key>Checkbox_UseCurrentNuyen</key>
+      <text>Current ¥</text>
+    </string>
+    <string>
       <key>Label_Exact</key>
       <text>Exact:</text>
     </string>
@@ -8614,6 +8622,10 @@
       <key>String_RestrictedItemsHidden</key>
       <text>* {0} item(s) are hidden by Cost or Availability limits *</text>
     </string>
+    <string>
+      <key>String_RestrictedItemsHiddenMount</key>
+      <text>* {0} item(s) are hidden due to mount restrictions *</text>
+    </string>
     <!-- End Region -->
     <!-- Region Select Armor Window -->
     <string>
@@ -10978,6 +10990,14 @@
     <string>
       <key>String_GameplayOption</key>
       <text>Missing Gameplay Option</text>
+    </string>
+    <string>
+      <key>Label_GameplayOptionName</key>
+      <text>Gameplay Option Name:</text>
+    </string>
+    <string>
+      <key>Tip_GameplayOptionName</key>
+      <text>Enter the name of the gameplay option (e.g., 'Prime Runner', 'Street Scum', 'High Life') that this character setting represents. This is used by qualities and other elements as part of the Requirements system.</text>
     </string>
     <!-- XML Editor Strings -->
     <string>

@@ -1751,7 +1751,15 @@ namespace Chummer
                                               "String_GameplayOption",
                                               token: token).ConfigureAwait(false))
                                       + strSpace + "=" + strSpace + strNodeInnerText;
-                        return new ValueTuple<bool, string>(objCharacter.SettingsKey == strNodeInnerText, strName);
+                        // Check gameplay option name
+                        CharacterSettings objSettings = blnSync
+                            ? objCharacter.Settings
+                            : await objCharacter.GetSettingsAsync(token).ConfigureAwait(false);
+                        string strGameplayOptionName = blnSync
+                            ? objSettings.GameplayOptionName
+                            : await objSettings.GetGameplayOptionNameAsync(token).ConfigureAwait(false);
+                        bool blnResult = strGameplayOptionName == strNodeInnerText;
+                        return new ValueTuple<bool, string>(blnResult, strName);
                     }
                 case "gear":
                     {
@@ -3140,9 +3148,7 @@ namespace Chummer
                                                     && objGroup.SourceIDString != strLoop)
                                                     continue;
                                                 if (blnShowMessage)
-                                                    sbdOutput.Append(objGroup.CurrentDisplayName)
-                                                        .Append(',')
-                                                        .Append(strSpace);
+                                                    sbdOutput.Append(objGroup.CurrentDisplayName, ',', strSpace);
                                                 intTotal += objGroup.Rating;
                                                 break;
                                             }
@@ -3158,9 +3164,7 @@ namespace Chummer
                                                     && objGroup.SourceIDString != strLoop)
                                                     continue;
                                                 if (blnShowMessage)
-                                                    sbdOutput.Append(objGroup.CurrentDisplayName)
-                                                        .Append(',')
-                                                        .Append(strSpace);
+                                                    sbdOutput.Append(objGroup.CurrentDisplayName, ',', strSpace);
                                                 intTotal += objGroup.Rating;
                                                 break;
                                             }
@@ -3182,9 +3186,7 @@ namespace Chummer
                                                         return true;
                                                     if (blnShowMessage)
                                                         sbdOutput.Append(await objGroup.GetCurrentDisplayNameAsync(token)
-                                                                .ConfigureAwait(false))
-                                                            .Append(',')
-                                                            .Append(strSpace);
+                                                                .ConfigureAwait(false), ',', strSpace);
                                                     intTotal += await objGroup.GetRatingAsync(token).ConfigureAwait(false);
                                                     return false;
                                                 }, token).ConfigureAwait(false);
@@ -3204,9 +3206,7 @@ namespace Chummer
                                                         return true;
                                                     if (blnShowMessage)
                                                         sbdOutput.Append(await objGroup.GetCurrentDisplayNameAsync(token)
-                                                                .ConfigureAwait(false))
-                                                            .Append(',')
-                                                            .Append(strSpace);
+                                                                .ConfigureAwait(false), ',', strSpace);
                                                     intTotal += await objGroup.GetRatingAsync(token).ConfigureAwait(false);
                                                     return false;
                                                 }, token).ConfigureAwait(false);
@@ -3220,14 +3220,14 @@ namespace Chummer
                                     strName);
                             if (sbdOutput.Length > 0)
                                 sbdOutput.Length -= 2;
-                            strName = sbdOutput.Append(strSpace).Append('(').Append(blnSync
+                            strName = sbdOutput.Append(strSpace, '(').Append(blnSync
                                 // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString(
                                     "String_ExpenseSkill",
                                     token: token)
                                 : await LanguageManager.GetStringAsync(
                                     "String_ExpenseSkill",
-                                    token: token).ConfigureAwait(false)).Append(')').ToString();
+                                    token: token).ConfigureAwait(false), ')').ToString();
                         }
 
                         int intTarget = xmlNode.SelectSingleNodeAndCacheExpression("val", token)
@@ -3259,9 +3259,7 @@ namespace Chummer
                                             if (objGroup.Name == strLoop)
                                             {
                                                 if (blnShowMessage)
-                                                    sbdOutput.Append(objGroup.CurrentDisplayName)
-                                                        .Append(',')
-                                                        .Append(strSpace);
+                                                    sbdOutput.Append(objGroup.CurrentDisplayName, ',', strSpace);
                                                 intTotal += objGroup.Rating;
                                                 break;
                                             }
@@ -3281,9 +3279,7 @@ namespace Chummer
                                                         if (blnShowMessage)
                                                             sbdOutput.Append(await objGroup
                                                                     .GetCurrentDisplayNameAsync(token)
-                                                                    .ConfigureAwait(false))
-                                                                .Append(',')
-                                                                .Append(strSpace);
+                                                                    .ConfigureAwait(false), ',', strSpace);
                                                         intTotal += await objGroup.GetRatingAsync(token)
                                                             .ConfigureAwait(false);
                                                         return false;
@@ -3299,14 +3295,14 @@ namespace Chummer
                             {
                                 if (sbdOutput.Length > 0)
                                     sbdOutput.Length -= 2;
-                                strName = sbdOutput.Append(strSpace).Append('(').Append(blnSync
+                                strName = sbdOutput.Append(strSpace, '(').Append(blnSync
                                               // ReSharper disable once MethodHasAsyncOverload
                                               ? LanguageManager.GetString(
                                                   "String_ExpenseSkillGroup",
                                                   token: token)
                                               : await LanguageManager.GetStringAsync(
                                                   "String_ExpenseSkillGroup",
-                                                  token: token).ConfigureAwait(false)).Append(')').ToString();
+                                                  token: token).ConfigureAwait(false), ')').ToString();
                             }
                         }
 

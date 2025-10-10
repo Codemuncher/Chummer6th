@@ -60,6 +60,7 @@ namespace Chummer.UI.Skills
             InitializeComponent();
 
             Disposed += UnbindSkillsTabUserControlAsync;
+
             this.UpdateLightDarkMode(token: objMyToken);
             this.TranslateWinForm(token: objMyToken);
             this.UpdateParentForToolTipControls();
@@ -116,7 +117,7 @@ namespace Chummer.UI.Skills
                         try
                         {
                             x.RefreshSkillLabels(MyToken);
-                            x.RefreshKnowledgeSkillLabels(MyToken);
+                            x.RefreshKnowledgeSkillLabels(MyToken);                            
                         }
                         finally
                         {
@@ -259,10 +260,11 @@ namespace Chummer.UI.Skills
                             tlpBottomPanel.SetColumnSpan(_lstKnowledgeSkills, 4);
 
                             parts.TaskEnd("_lstKnowledgeSkills add");
-
-                                tlpActiveSkills.Margin = new Padding(0);
-                                tlpTopPanel.ColumnStyles[0] = new ColumnStyle(SizeType.AutoSize);
-                                tlpTopPanel.ColumnStyles[1] = new ColumnStyle(SizeType.Percent, 100F);
+                         
+                           tlpActiveSkills.Margin = new Padding(0);
+                           tlpTopPanel.ColumnStyles[0] = new ColumnStyle(SizeType.AutoSize);
+                           tlpTopPanel.ColumnStyles[1] = new ColumnStyle(SizeType.Percent, 100F);
+                            
 
                             parts.TaskEnd("MakeSkillDisplay()");
 
@@ -378,7 +380,7 @@ namespace Chummer.UI.Skills
 
                 if (!await _objCharacter.GetCreatedAsync(token).ConfigureAwait(false))
                 {
-                    await lblActiveSp.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
+                   await lblActiveSp.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Visible = y, _objCharacter,
                             nameof(Character
                                 .EffectiveBuildMethodUsesPriorityTables),
                             x => x
@@ -456,7 +458,8 @@ namespace Chummer.UI.Skills
             {
                 //swallow this
             }
-        }
+        }        
+
         private void RefreshSkillLabels(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -467,7 +470,6 @@ namespace Chummer.UI.Skills
             foreach (SkillControl objSkillControl in _lstActiveSkills.DisplayPanel.Controls)
             {
                 token.ThrowIfCancellationRequested();
-                
                 intNameLabelWidth = Math.Max(intNameLabelWidth, objSkillControl.NameWidth);
                 intRatingLabelWidth = Math.Max(intRatingLabelWidth, objSkillControl.NudSkillWidth);
             }
@@ -721,7 +723,8 @@ namespace Chummer.UI.Skills
                 lblKnoBwk.Margin.Top,
                 Math.Max(0, lblKnoBwk.Margin.Left + intRightButtonsWidth + SystemInformation.VerticalScrollBarWidth - lblKnoBwk.PreferredWidth / 2),
                 lblKnoBwk.Margin.Bottom);
-        }
+        }       
+
         private async Task SkillsOnListChanged(object sender, ListChangedEventArgs e, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -835,7 +838,7 @@ namespace Chummer.UI.Skills
                         ThreadSafeBindingList<Skill> lstSkills = await objSkillsSection.GetSkillsAsync(CancellationToken.None).ConfigureAwait(false);
                         if (lstSkills?.IsDisposed == false)
                             lstSkills.ListChangedAsync -= SkillsOnListChanged;
-                        ThreadSafeBindingList<KnowledgeSkill> lstKnoSkills = await objSkillsSection.GetKnowledgeSkillsAsync().ConfigureAwait(false);
+                       ThreadSafeBindingList<KnowledgeSkill> lstKnoSkills = await objSkillsSection.GetKnowledgeSkillsAsync(CancellationToken.None).ConfigureAwait(false);
                         if (lstKnoSkills?.IsDisposed == false)
                             lstKnoSkills.ListChanged -= KnowledgeSkillsOnListChanged;
                     }
@@ -1170,7 +1173,6 @@ namespace Chummer.UI.Skills
                         (skill, t) => Task.FromResult(skill.SkillGroup == strName)));
             }
 
-
             return ret;
         }
 
@@ -1388,7 +1390,7 @@ namespace Chummer.UI.Skills
         {
             try
             {
-                RefreshSkillLabels(MyToken);
+               RefreshSkillLabels(MyToken);
             }
             catch (OperationCanceledException)
             {
@@ -1889,5 +1891,14 @@ namespace Chummer.UI.Skills
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public AsyncFriendlyReaderWriterLock LockObject { get; internal set; }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
+        }
     }
 }

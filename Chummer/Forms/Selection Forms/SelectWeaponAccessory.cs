@@ -111,21 +111,14 @@ namespace Chummer
             {
                 // Populate the Accessory list.
                 string strFilter = string.Empty;
+                string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                 {
-                    sbdFilter.Append('(').Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false))
-                             .Append(
-                                 ") and (mount = \"\"");
-                    foreach (string strAllowedMount in _lstAllowedMounts.Where(
-                                 strAllowedMount => !string.IsNullOrEmpty(strAllowedMount)))
-                    {
-                        sbdFilter.Append(" or contains(mount, ").Append(strAllowedMount.CleanXPath()).Append(')');
-                    }
-
-                    sbdFilter.Append(')');
-                    string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
+                    sbdFilter.Append('(',
+                        await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false),
+                        ')');
                     if (!string.IsNullOrEmpty(strSearch))
-                        sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
+                        sbdFilter.Append(" and ", CommonFunctions.GenerateSearchXPath(strSearch));
 
                     // Apply cost filtering
                     decimal decMinimumCost = await nudMinimumCost.DoThreadSafeFuncAsync(x => x.Value, token: token).ConfigureAwait(false);
@@ -135,19 +128,20 @@ namespace Chummer
                     if (decExactCost > 0)
                     {
                         // Exact cost filtering
-                        sbdFilter.Append(" and (cost = ").Append(decExactCost.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                        sbdFilter.Append(" and (cost = ", decExactCost.ToString(GlobalSettings.InvariantCultureInfo), ')');
                     }
                     else if (decMinimumCost != 0 || decMaximumCost != 0)
                     {
                         // Range cost filtering
-                        sbdFilter.Append(" and (").Append(CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost")).Append(')');
+                        sbdFilter.Append(" and (", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"), ')');
                     }
 
                     if (sbdFilter.Length > 0)
-                        strFilter = "[" + sbdFilter.Append(']').ToString();
+                        strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
                 }
 
                 int intOverLimit = 0;
+                int intMountRestricted = 0;
                 bool blnHideOverAvailLimit = await chkHideOverAvailLimit.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false);
                 bool blnShowOnlyAffordItems = await chkShowOnlyAffordItems.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false);
                 bool blnFreeItem = await chkFreeItem.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false);
@@ -159,8 +153,14 @@ namespace Chummer
                     string strId = objXmlAccessory.SelectSingleNodeAndCacheExpression("id", token: token)?.Value;
                     if (string.IsNullOrEmpty(strId))
                         continue;
-                    if (!await _objParentWeapon.CheckAccessoryRequirementsAsync(objXmlAccessory, token).ConfigureAwait(false))
+
+                    // Check mount requirements first
+                    bool blnMeetsMountRequirements = await _objParentWeapon.CheckAccessoryRequirementsAsync(objXmlAccessory, token).ConfigureAwait(false);
+                    if (!blnMeetsMountRequirements)
+                    {
+                        ++intMountRestricted;
                         continue;
+                    }
 
                     decimal decCostMultiplier = decBaseCostMultiplier;
                     if (_blnIsParentWeaponBlackMarketAllowed)
@@ -188,6 +188,14 @@ namespace Chummer
                                                         GlobalSettings.CultureInfo,
                                                         await LanguageManager.GetStringAsync("String_RestrictedItemsHidden", token: token).ConfigureAwait(false),
                                                         intOverLimit)));
+                }
+                if (intMountRestricted > 0 && !string.IsNullOrEmpty(strSearch))
+                {
+                    // Add after sort so that it's always at the end
+                    lstAccessories.Add(new ListItem(string.Empty, string.Format(
+                                                        GlobalSettings.CultureInfo,
+                                                        await LanguageManager.GetStringAsync("String_RestrictedItemsHiddenMount", token: token).ConfigureAwait(false),
+                                                        intMountRestricted)));
                 }
 
                 string strOldSelected = await lstAccessory.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token: token).ConfigureAwait(false);

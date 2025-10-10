@@ -242,7 +242,6 @@ namespace Chummer.UI.Skills
                         cboSpec.SelectedIndexChanged += CboSpec_SelectedIndexChanged;
                         _tmrSpecChangeTimer = new Timer { Interval = 10 };
                         _tmrSpecChangeTimer.Tick += SpecChangeTimer_Tick;
-
                         chkKarma = new ColorableCheckBox
                         {
                             Anchor = AnchorStyles.Left,
@@ -356,6 +355,7 @@ namespace Chummer.UI.Skills
                                                                        _objMyToken)
                                                                    ,
                                                               _objMyToken);
+                    //TODO: is this call necessary.
                     btnAddSpec.RegisterOneWayAsyncDataBinding((x, y) => x.Visible = y, _objSkill,
                                                               nameof(Skill.CanHaveSpecs),
                                                               x => x.GetCanHaveSpecsAsync(_objMyToken)
@@ -452,6 +452,7 @@ namespace Chummer.UI.Skills
                             x => x.GetEffectiveBuildMethodUsesPriorityTablesAsync(
                                 _objMyToken),
                             _objMyToken);
+                        //TODO: is this call necessary.
                         cboSpec.RegisterOneWayAsyncDataBinding((x, y) => x.Enabled = y, _objSkill,
                                                                  nameof(Skill.CanHaveSpecs),
                                                                  x => x.GetCanHaveSpecsAsync(_objMyToken)
@@ -670,6 +671,7 @@ namespace Chummer.UI.Skills
                         x => x.GetEffectiveBuildMethodUsesPriorityTablesAsync(
                             _objMyToken),
                         token).ConfigureAwait(false);
+                    //TODO: is this call necessary.
                     await cboSpec.RegisterOneWayAsyncDataBindingAsync((x, y) => x.Enabled = y, _objSkill,
                                                                              nameof(Skill.CanHaveSpecs),
                                                                              x => x.GetCanHaveSpecsAsync(_objMyToken)
@@ -695,7 +697,7 @@ namespace Chummer.UI.Skills
                         //            x.Text = strDisplaySpec;
                         //    }
                         //}, token: token).ConfigureAwait(false);
-                    }
+                            }
                     finally
                     {
                         Interlocked.Decrement(ref _intUpdatingSpec);
@@ -1471,16 +1473,10 @@ namespace Chummer.UI.Skills
                     string strSpec = await cboSpec.DoThreadSafeFuncAsync(x => x.Text, token: _objMyToken)
                                                   .ConfigureAwait(false);
                     await _objSkill.SetTopMostDisplaySpecializationAsync(strSpec, _objMyToken).ConfigureAwait(false);
-                  
-                }
-                catch (Exception ex)
-                {
-                    var error = ex.Demystify;
                 }
                 finally
                 {
                     Interlocked.Decrement(ref _intUpdatingSpec);
-                    //                    SetSelectedSpecialization(cboSpec.Text);
                 }
             }
             catch (OperationCanceledException)
@@ -1492,7 +1488,6 @@ namespace Chummer.UI.Skills
         {
             if (cboSpec == null)
                 return;
-
             // Try to find the item in the ComboBox that matches the specializationName
             int index = -1;
             for (int i = 0; i < cboSpec.Items.Count; i++)
@@ -1503,22 +1498,16 @@ namespace Chummer.UI.Skills
                     index = i;
                     break;
                 }
-            }
-
-            //if (index >= 0)
-            //{
-            //    cboSpec.SelectedIndex = -1;
-            //    cboSpec.Text = specializationName;
-            //    //cboSpec.Text = specializationName;
-
-            //}
-            //else
-            //{
-            //    // If not found, set the text directly (for custom/typed-in specializations)
-            //   // cboSpec.SelectedIndex = -1;
-            //    cboSpec.Text = specializationName;
+            }     
             cboSpec.SelectedText = specializationName;
-            //}
+        }
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
         }
     }
 }

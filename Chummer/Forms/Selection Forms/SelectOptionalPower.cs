@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -108,6 +109,10 @@ namespace Chummer
 
         public string SelectedPowerExtra => _strReturnExtra;
 
+        /// <summary>
+        /// Description to display on the form.
+        /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Description to display on the form.
         /// </summary>

@@ -211,7 +211,7 @@ namespace Chummer.UI.Table
             }
         }
 
-        private sealed class ColumnHolder : IDisposable
+        private readonly struct ColumnHolder : IDisposable
         {
             public readonly HeaderCell header;
             public readonly List<TableCell> cells;
@@ -227,6 +227,13 @@ namespace Chummer.UI.Table
                 foreach (TableCell cell in cells)
                     cell.Dispose();
                 header.Dispose();
+            }
+
+            public void UpdateParentForToolTipControls()
+            {
+                header.UpdateParentForToolTipControls();
+                foreach (TableCell cell in cells)
+                    cell.UpdateParentForToolTipControls();
             }
         }
 
@@ -425,6 +432,7 @@ namespace Chummer.UI.Table
             TableCell cell = await this.DoThreadSafeFuncAsync(column.CreateCell, token: token).ConfigureAwait(false);
             try
             {
+                await cell.DoThreadSafeAsync(x => x.UpdateParentForToolTipControls(), token).ConfigureAwait(false);
                 await UpdateCell(column, cell, item, token).ConfigureAwait(false);
                 return cell;
             }
@@ -1278,6 +1286,17 @@ namespace Chummer.UI.Table
             if (InterlockedExtensions.Exchange(ref _eSortType, value) != value)
                 return SortAsync(token: token);
             return Task.CompletedTask;
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
+            foreach (ColumnHolder objHolder in _lstCells)
+                objHolder.UpdateParentForToolTipControls();
         }
     }
 }

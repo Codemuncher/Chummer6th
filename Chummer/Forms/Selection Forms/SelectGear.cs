@@ -160,11 +160,11 @@ namespace Chummer
                         foreach (string strAllowedMount in _setAllowedCategories)
                         {
                             if (!string.IsNullOrEmpty(strAllowedMount))
-                                sbdMount.Append(". = ").Append(strAllowedMount.CleanXPath()).Append(" or ");
+                                sbdMount.Append(". = ", strAllowedMount.CleanXPath(), " or ");
                         }
 
                         sbdMount.Append(". = \"General\"");
-                        objXmlCategoryList = _xmlBaseGearDataNode.Select("categories/category[" + sbdMount.Append(']').ToString());
+                        objXmlCategoryList = _xmlBaseGearDataNode.Select(sbdMount.Insert(0, "categories/category[").Append(']').ToString());
                     }
                 }
                 else
@@ -673,7 +673,6 @@ namespace Chummer
         /// <summary>
         /// Whether the user wants to add another item after this one.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool AddAgain { get; private set; }
 
         /// <summary>
@@ -757,6 +756,9 @@ namespace Chummer
         /// Set the maximum Capacity the piece of Gear is allowed to be.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Set the maximum Capacity the piece of Gear is allowed to be.
+        /// </summary>
         public decimal MaximumCapacity
         {
             get => _decMaximumCapacity;
@@ -804,6 +806,9 @@ namespace Chummer
         /// Whether the Stack Checkbox should be shown (default true).
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether the Stack Checkbox should be shown (default true).
+        /// </summary>
         public bool EnableStack
         {
             set
@@ -818,6 +823,9 @@ namespace Chummer
         /// Capacity display style.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Capacity display style.
+        /// </summary>
         public CapacityStyle CapacityDisplayStyle
         {
             set => _eCapacityStyle = value;
@@ -832,12 +840,18 @@ namespace Chummer
         /// Default text string to filter by.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Default text string to filter by.
+        /// </summary>
         public string DefaultSearchText { get; set; }
 
         /// <summary>
         /// What weapon type is our gear allowed to have
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// What weapon type is our gear allowed to have
+        /// </summary>
         public string ForceItemAmmoForWeaponType { get; set; }
 
         #endregion Properties
@@ -1226,13 +1240,13 @@ namespace Chummer
             string strFilter = string.Empty;
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
             {
-                sbdFilter.Append('(').Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
+                sbdFilter.Append('(', await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false), ')');
 
                 // Only add in category filter if we either are not searching or we have the option set to only search in categories
                 if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"
                                                        && (GlobalSettings.SearchInCategoryOnly
                                                            || await txtSearch.DoThreadSafeFuncAsync(x => x.TextLength, token: token).ConfigureAwait(false) == 0))
-                    sbdFilter.Append(" and category = ").Append(strCategory.CleanXPath());
+                    sbdFilter.Append(" and category = ", strCategory.CleanXPath());
                 else if (_setAllowedCategories.Count > 0)
                 {
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
@@ -1240,13 +1254,13 @@ namespace Chummer
                     {
                         foreach (string strItem in _lstCategory.Select(x => x.Value.ToString()))
                         {
-                            sbdCategoryFilter.Append("category = ").Append(strItem.CleanXPath()).Append(" or ");
+                            sbdCategoryFilter.Append("category = ", strItem.CleanXPath(), " or ");
                         }
 
                         if (sbdCategoryFilter.Length > 0)
                         {
                             sbdCategoryFilter.Length -= 4;
-                            sbdFilter.Append(" and (").Append(sbdCategoryFilter).Append(')');
+                            sbdFilter.Append(" and (", sbdCategoryFilter.ToString(), ')');
                         }
                     }
                 }
@@ -1258,13 +1272,13 @@ namespace Chummer
                     {
                         foreach (string strItem in _setAllowedNames)
                         {
-                            sbdNameFilter.Append("name = ").Append(strItem.CleanXPath()).Append(" or ");
+                            sbdNameFilter.Append("name = ", strItem.CleanXPath(), " or ");
                         }
 
                         if (sbdNameFilter.Length > 0)
                         {
                             sbdNameFilter.Length -= 4;
-                            sbdFilter.Append(" and (").Append(sbdNameFilter).Append(')');
+                            sbdFilter.Append(" and (", sbdNameFilter.ToString(), ')');
                         }
                     }
                 }
@@ -1280,11 +1294,11 @@ namespace Chummer
                 if (_objGearParent == null)
                     sbdFilter.Append(" and not(requireparent)");
                 if (!string.IsNullOrEmpty(ForceItemAmmoForWeaponType))
-                    sbdFilter.Append(" and ammoforweapontype = ").Append(ForceItemAmmoForWeaponType.CleanXPath());
+                    sbdFilter.Append(" and ammoforweapontype = ", ForceItemAmmoForWeaponType.CleanXPath());
 
                 string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
                 if (!string.IsNullOrEmpty(strSearch))
-                    sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
+                    sbdFilter.Append(" and ", CommonFunctions.GenerateSearchXPath(strSearch));
 
                 // Apply cost filtering
                 decimal decMinimumCost = await nudMinimumCost.DoThreadSafeFuncAsync(x => x.Value, token: token).ConfigureAwait(false);
@@ -1294,16 +1308,16 @@ namespace Chummer
                 if (decExactCost > 0)
                 {
                     // Exact cost filtering
-                    sbdFilter.Append(" and (cost = ").Append(decExactCost.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                    sbdFilter.Append(" and (cost = ", decExactCost.ToString(GlobalSettings.InvariantCultureInfo), ')');
                 }
                 else if (decMinimumCost != 0 || decMaximumCost != 0)
                 {
                     // Range cost filtering
-                    sbdFilter.Append(" and (").Append(CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost")).Append(')');
+                    sbdFilter.Append(" and (", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"), ')');
                 }
 
                 if (sbdFilter.Length > 0)
-                    strFilter = "[" + sbdFilter.Append(']').ToString();
+                    strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
             }
 
             int intOverLimit = 0;

@@ -313,11 +313,11 @@ namespace Chummer
                     string strFilter = string.Empty;
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                     {
-                        sbdFilter.Append('(').Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
+                        sbdFilter.Append('(', await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false), ')');
                         if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"
                                                                && (GlobalSettings.SearchInCategoryOnly
                                                                    || !blnHasSearch))
-                            sbdFilter.Append(" and category = ").Append(strCategory.CleanXPath());
+                            sbdFilter.Append(" and category = ", strCategory.CleanXPath());
                         else
                         {
                             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
@@ -327,15 +327,14 @@ namespace Chummer
                                 {
                                     if (!string.IsNullOrEmpty(strItem))
                                     {
-                                        sbdCategoryFilter.Append("category = ").Append(strItem.CleanXPath())
-                                                         .Append(" or ");
+                                        sbdCategoryFilter.Append("category = ", strItem.CleanXPath(), " or ");
                                     }
                                 }
 
                                 if (sbdCategoryFilter.Length > 0)
                                 {
                                     sbdCategoryFilter.Length -= 4;
-                                    sbdFilter.Append(" and (").Append(sbdCategoryFilter).Append(')');
+                                    sbdFilter.Append(" and (", sbdCategoryFilter.ToString(), ')');
                                 }
                             }
                         }
@@ -343,7 +342,7 @@ namespace Chummer
                         if (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetExtendAnyDetectionSpellAsync(token).ConfigureAwait(false))
                             sbdFilter.Append(" and ((not(contains(name, \", Extended\"))))");
                         if (!string.IsNullOrEmpty(strSearch))
-                            sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
+                            sbdFilter.Append(" and ", CommonFunctions.GenerateSearchXPath(strSearch));
 
                         // Populate the Spell list.
                         if (!_blnIgnoreRequirements)
@@ -362,7 +361,7 @@ namespace Chummer
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = "[" + sbdFilter.Append(']').ToString();
+                            strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
                     }
 
                     foreach (XPathNavigator objXmlSpell in _xmlBaseSpellDataNode.Select("spells/spell" + strFilter))
@@ -633,7 +632,7 @@ namespace Chummer
                                 break;
                         }
 
-                        sbdDescriptors.Append(',').Append(strSpace);
+                        sbdDescriptors.Append(',', strSpace);
                     }
                 }
 
@@ -685,8 +684,7 @@ namespace Chummer
                         return x.Checked;
                     }, token: token).ConfigureAwait(false))
                     {
-                        sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescExtendedArea", token: token).ConfigureAwait(false)).Append(',')
-                            .Append(strSpace);
+                        sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescExtendedArea", token: token).ConfigureAwait(false), ',', strSpace);
                     }
                 }
                 else
@@ -700,8 +698,7 @@ namespace Chummer
 
                 if (await chkAlchemical.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false) && !blnAlchemicalFound)
                 {
-                    sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescAlchemicalPreparation", token: token).ConfigureAwait(false)).Append(',')
-                                  .Append(strSpace);
+                    sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescAlchemicalPreparation", token: token).ConfigureAwait(false), ',', strSpace);
                 }
 
                 // Remove the trailing comma.
@@ -907,26 +904,7 @@ namespace Chummer
             bool blnForce = strDv.StartsWith('F');
             strDv = blnForce ? strDv.TrimStartOnce("F", true) : strDv;
             //Navigator can't do math on a single value, so inject a mathable value.
-            if (string.IsNullOrEmpty(strDv))
-            {
-                strDv = "0";
-            }
-            else
-            {
-                int intPos = strDv.IndexOf('-');
-                if (intPos != -1)
-                {
-                    strDv = strDv.Substring(intPos);
-                }
-                else
-                {
-                    intPos = strDv.IndexOf('+');
-                    if (intPos != -1)
-                    {
-                        strDv = strDv.Substring(intPos);
-                    }
-                }
-            }
+            strDv = string.IsNullOrEmpty(strDv) ? "0" : strDv.TrimStart('+');
 
             string strToAppend = string.Empty;
             int intDrainDv = 0;
@@ -935,10 +913,10 @@ namespace Chummer
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdDv))
                 {
-                    sbdDv.Append('(').Append(strDv).Append(')');
+                    sbdDv.Append('(', strDv, ')');
                     foreach (Improvement objImprovement in lstDrainRelevantImprovements)
                     {
-                        sbdDv.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                        sbdDv.Append("+(", objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo), ')');
                     }
 
                     if (await chkLimited.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false))
@@ -952,7 +930,7 @@ namespace Chummer
 
                     if (blnBarehandedAdept && !blnForce)
                     {
-                        sbdDv.Insert(0, "2 * (").Append(')');
+                        sbdDv.Insert(0, "2*(", ')');
                     }
 
                     await _objCharacter.ProcessAttributesInXPathAsync(sbdDv, token: token).ConfigureAwait(false);

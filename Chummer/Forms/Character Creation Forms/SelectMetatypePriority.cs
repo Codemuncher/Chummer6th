@@ -192,27 +192,27 @@ namespace Chummer
                                         }
 
                                         lstItems.Sort(CompareListItems.CompareNames);
-                                        switch (objXmlPriorityCategory.Value)
+                                        switch (objXmlPriorityCategory.Value.ToUpperInvariant())
                                         {
-                                            case "Heritage":
+                                            case "HERITAGE":
                                                 await cboHeritage.PopulateWithListItemsAsync(lstItems, _objGenericToken)
                                                                  .ConfigureAwait(false);
                                                 break;
 
-                                            case "Talent":
+                                            case "TALENT":
                                                 await cboTalent.PopulateWithListItemsAsync(lstItems, _objGenericToken).ConfigureAwait(false);
                                                 break;
 
-                                            case "Attributes":
+                                            case "ATTRIBUTES":
                                                 await cboAttributes.PopulateWithListItemsAsync(lstItems, _objGenericToken)
                                                                    .ConfigureAwait(false);
                                                 break;
 
-                                            case "Skills":
+                                            case "SKILLS":
                                                 await cboSkills.PopulateWithListItemsAsync(lstItems, _objGenericToken).ConfigureAwait(false);
                                                 break;
 
-                                            case "Resources":
+                                            case "RESOURCES":
                                                 await cboResources.PopulateWithListItemsAsync(lstItems, _objGenericToken)
                                                                   .ConfigureAwait(false);
                                                 break;
@@ -621,31 +621,31 @@ namespace Chummer
                                                                   .SelectAndCacheExpression(
                                                                       "skillgroupchoices/skillgroup", token);
                             XPathNodeIterator xmlSkillsList;
-                            switch (strSkillType)
+                            switch (strSkillType.ToUpperInvariant())
                             {
-                                case "magic":
+                                case "MAGIC":
                                     xmlSkillsList = GetMagicalSkillList(token);
                                     break;
 
-                                case "resonance":
+                                case "RESONANCE":
                                     xmlSkillsList = GetResonanceSkillList(token);
                                     break;
 
-                                case "matrix":
+                                case "MATRIX":
                                     xmlSkillsList = GetMatrixSkillList(token);
                                     break;
 
-                                case "grouped":
+                                case "GROUPED":
                                     xmlSkillsList = BuildSkillCategoryList(objNodeList);
                                     break;
 
-                                case "specific":
+                                case "SPECIFIC":
                                     xmlSkillsList
                                         = BuildSkillList(xmlTalentNode
                                                                .SelectAndCacheExpression("skillchoices/skill", token));
                                     break;
 
-                                case "xpath":
+                                case "XPATH":
                                     xmlSkillsList = GetActiveSkillList(
                                         xmlSkillTypeNode?.SelectSingleNodeAndCacheExpression("@xpath", token)?.Value, token);
                                     strSkillType = "active";
@@ -2058,34 +2058,6 @@ namespace Chummer
                         }
                     }
 
-                    blnDoSwitch = false;                 
-
-                    if (blnDoSwitch)
-                    {
-                        int intPointsSpent = 0;
-                        while (intPointsSpent < _objCharacter.SkillsSection.SkillGroupPointsMaximum)
-                        {
-                            SkillGroup objGroupToShift = null;
-                            await (await _objCharacter.SkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachWithSideEffectsAsync(async objGroup =>
-                            {
-                                if (await objGroup.GetKarmaAsync(token).ConfigureAwait(false) > 0
-                                    && (objGroupToShift == null || await objGroupToShift.GetRatingAsync(token).ConfigureAwait(false) < await objGroup.GetRatingAsync(token).ConfigureAwait(false)))
-                                {
-                                    objGroupToShift = objGroup;
-                                }
-                            }, token).ConfigureAwait(false);
-
-                            if (objGroupToShift == null)
-                                break;
-                            int intKarma = Math.Min(await objGroupToShift.GetKarmaAsync(token).ConfigureAwait(false),
-                                _objCharacter.SkillsSection.SkillGroupPointsMaximum
-                                - intPointsSpent);
-                            await objGroupToShift.ModifyKarmaAsync(-intKarma, token).ConfigureAwait(false);
-                            await objGroupToShift.ModifyBaseAsync(intKarma, token).ConfigureAwait(false);
-                            intPointsSpent += intKarma;
-                        }
-                    }
-
                     blnDoSwitch = false;
                     await (await _objCharacter.SkillsSection.GetSkillsAsync(token).ConfigureAwait(false)).ForEachWithBreakAsync(async objSkill =>
                     {
@@ -2609,11 +2581,10 @@ namespace Chummer
                                 sbdQualities.Append(objLoopQuality.Key);
                                 if (objLoopQuality.Value > 1)
                                 {
-                                    sbdQualities.Append(strSpace)
-                                                .Append(objLoopQuality.Value.ToString(GlobalSettings.CultureInfo));
+                                    sbdQualities.Append(strSpace, objLoopQuality.Value.ToString(GlobalSettings.CultureInfo));
                                 }
 
-                                sbdQualities.Append(',').Append(strSpace);
+                                sbdQualities.Append(',', strSpace);
                             }
 
                             sbdQualities.Length -= 2;
@@ -2734,11 +2705,10 @@ namespace Chummer
                                 sbdQualities.Append(objLoopQuality.Key);
                                 if (objLoopQuality.Value > 1)
                                 {
-                                    sbdQualities.Append(strSpace)
-                                                .Append(objLoopQuality.Value.ToString(GlobalSettings.CultureInfo));
+                                    sbdQualities.Append(strSpace, objLoopQuality.Value.ToString(GlobalSettings.CultureInfo));
                                 }
 
-                                sbdQualities.Append(',').Append(strSpace);
+                                sbdQualities.Append(',', strSpace);
                             }
 
                             sbdQualities.Length -= 2;
@@ -2948,9 +2918,9 @@ namespace Chummer
 
                                         foreach (XPathNavigator objXmlForbidden in objXmlOneOfList)
                                         {
-                                            switch (objXmlForbidden.Name)
+                                            switch (objXmlForbidden.Name.ToUpperInvariant())
                                             {
-                                                case "metatype":
+                                                case "METATYPE":
                                                     {
                                                         // Check the Metatype restriction.
                                                         if (objXmlForbidden.Value == await lstMetatypes.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false))
@@ -2962,7 +2932,7 @@ namespace Chummer
                                                         break;
                                                     }
                                                 // Check the Metavariant restriction.
-                                                case "metatypecategory":
+                                                case "METATYPECATEGORY":
                                                     {
                                                         // Check the Metatype Category restriction.
                                                         if (objXmlForbidden.Value == await cboCategory.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false))
@@ -2973,7 +2943,10 @@ namespace Chummer
 
                                                         break;
                                                     }
-                                                case "metavariant" when objXmlForbidden.Value == await cboMetavariant.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false):
+                                                case "METAVARIANT" when string.Equals(objXmlForbidden.Value,
+                                                    await cboMetavariant
+                                                        .DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token)
+                                                        .ConfigureAwait(false), StringComparison.OrdinalIgnoreCase):
                                                     blnRequirementForbidden = true;
                                                     goto EndForbiddenLoop;
                                             }
@@ -3001,9 +2974,9 @@ namespace Chummer
 
                                         foreach (XPathNavigator objXmlRequired in objXmlOneOfList)
                                         {
-                                            switch (objXmlRequired.Name)
+                                            switch (objXmlRequired.Name.ToUpperInvariant())
                                             {
-                                                case "metatype":
+                                                case "METATYPE":
                                                     {
                                                         // Check the Metatype restriction.
                                                         if (objXmlRequired.Value == await lstMetatypes.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false))
@@ -3015,7 +2988,7 @@ namespace Chummer
                                                         break;
                                                     }
                                                 // Check the Metavariant restriction.
-                                                case "metatypecategory":
+                                                case "METATYPECATEGORY":
                                                     {
                                                         // Check the Metatype Category restriction.
                                                         if (objXmlRequired.Value == await cboCategory.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false))
@@ -3026,7 +2999,10 @@ namespace Chummer
 
                                                         break;
                                                     }
-                                                case "metavariant" when objXmlRequired.Value == await cboMetavariant.DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token).ConfigureAwait(false):
+                                                case "METAVARIANT" when string.Equals(objXmlRequired.Value,
+                                                    await cboMetavariant
+                                                        .DoThreadSafeFuncAsync(x => x.SelectedValue?.ToString(), token)
+                                                        .ConfigureAwait(false), StringComparison.OrdinalIgnoreCase):
                                                     blnRequirementMet = true;
                                                     goto EndRequiredLoop;
                                             }
@@ -3552,7 +3528,7 @@ namespace Chummer
                     sbdGroups.Append('[');
                     foreach (XPathNavigator xmlSkillGroup in objSkillList)
                     {
-                        sbdGroups.Append(". = ").Append(xmlSkillGroup.Value.CleanXPath()).Append(" or ");
+                        sbdGroups.Append(". = ", xmlSkillGroup.Value.CleanXPath(), " or ");
                     }
 
                     sbdGroups.Length -= 4;
@@ -3573,7 +3549,7 @@ namespace Chummer
                     sbdGroups.Append('[');
                     foreach (XPathNavigator xmlSkillGroup in objSkillList)
                     {
-                        sbdGroups.Append("name = ").Append(xmlSkillGroup.Value.CleanXPath()).Append(" or ");
+                        sbdGroups.Append("name = ", xmlSkillGroup.Value.CleanXPath(), " or ");
                     }
 
                     sbdGroups.Length -= 4;

@@ -1594,13 +1594,14 @@ namespace Chummer.Backend.Uniques
                 {
                     if (Type == TraditionType.None)
                         return string.Empty;
+                    string strDrainExpression = DrainExpression;
                     string strSpace = LanguageManager.GetString("String_Space");
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdToolTip))
                     {
-                        sbdToolTip.Append(DrainExpression);
+                        sbdToolTip.Append(strDrainExpression);
                         // Update the Fading CharacterAttribute Value.
-                        _objCharacter.ProcessAttributesInXPathForTooltip(sbdToolTip, DrainExpression);
+                        _objCharacter.ProcessAttributesInXPathForTooltip(sbdToolTip, strDrainExpression);
 
                         List<Improvement> lstUsedImprovements
                             = ImprovementManager.GetCachedImprovementListForValueOf(
@@ -1610,11 +1611,9 @@ namespace Chummer.Backend.Uniques
                                     : Improvement.ImprovementType.DrainResistance);
                         foreach (Improvement objLoopImprovement in lstUsedImprovements)
                         {
-                            sbdToolTip.Append(strSpace).Append('+').Append(strSpace)
-                                      .Append(_objCharacter.GetObjectName(objLoopImprovement)).Append(strSpace)
-                                      .Append('(')
-                                      .Append(objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo))
-                                      .Append(')');
+                            sbdToolTip.Append(strSpace, '+', strSpace)
+                                      .Append(_objCharacter.GetObjectName(objLoopImprovement), strSpace)
+                                      .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
                         }
 
                         return sbdToolTip.ToString();
@@ -1633,15 +1632,16 @@ namespace Chummer.Backend.Uniques
                 TraditionType eType = await GetTypeAsync(token).ConfigureAwait(false);
                 if (eType == TraditionType.None)
                     return string.Empty;
+                string strDrainExpression = await GetDrainExpressionAsync(token).ConfigureAwait(false);
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token)
                     .ConfigureAwait(false);
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                            out StringBuilder sbdToolTip))
                 {
-                    sbdToolTip.Append(DrainExpression);
+                    sbdToolTip.Append(strDrainExpression);
                     // Update the Fading CharacterAttribute Value.
                     await _objCharacter
-                        .ProcessAttributesInXPathForTooltipAsync(sbdToolTip, DrainExpression, token: token)
+                        .ProcessAttributesInXPathForTooltipAsync(sbdToolTip, strDrainExpression, token: token)
                         .ConfigureAwait(false);
 
                     List<Improvement> lstUsedImprovements
@@ -1652,12 +1652,10 @@ namespace Chummer.Backend.Uniques
                                 : Improvement.ImprovementType.DrainResistance, token: token).ConfigureAwait(false);
                     foreach (Improvement objLoopImprovement in lstUsedImprovements)
                     {
-                        sbdToolTip.Append(strSpace).Append('+').Append(strSpace)
+                        sbdToolTip.Append(strSpace, '+', strSpace)
                             .Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token)
-                                .ConfigureAwait(false)).Append(strSpace)
-                            .Append('(')
-                            .Append(objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo))
-                            .Append(')');
+                                .ConfigureAwait(false), strSpace)
+                            .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
                     }
 
                     return sbdToolTip.ToString();

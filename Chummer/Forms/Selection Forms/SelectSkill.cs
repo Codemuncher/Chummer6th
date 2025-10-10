@@ -17,17 +17,17 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Skills;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+using Chummer.Backend.Skills;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -110,17 +110,14 @@ namespace Chummer
                         // If we don't have a minimum rating, include exotic skills as normal because they'll just make the second dropdown appear when selected
                         if (_intMinimumRating > 0)
                             sbdFilter.Append("not(exotic = 'True') and ");
-                        sbdFilter.Append('(')
-                                 .Append(await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false))
-                                 .Append(')');
+                        sbdFilter.Append('(', await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false), ')');
                         if (!string.IsNullOrEmpty(_strIncludeCategory))
                         {
                             sbdFilter.Append(" and (");
                             foreach (string strSkillCategory in _strIncludeCategory.SplitNoAlloc(
                                          ',', StringSplitOptions.RemoveEmptyEntries))
                             {
-                                sbdFilter.Append("category = ").Append(strSkillCategory.Trim().CleanXPath())
-                                         .Append(" or ");
+                                sbdFilter.Append("category = ", strSkillCategory.Trim().CleanXPath(), " or ");
                             }
 
                             // Remove the trailing " or ".
@@ -134,8 +131,7 @@ namespace Chummer
                             foreach (string strSkillCategory in _strExcludeCategory.SplitNoAlloc(
                                          ',', StringSplitOptions.RemoveEmptyEntries))
                             {
-                                sbdFilter.Append("category != ").Append(strSkillCategory.Trim().CleanXPath())
-                                         .Append(" and ");
+                                sbdFilter.Append("category != ", strSkillCategory.Trim().CleanXPath(), " and ");
                             }
 
                             // Remove the trailing " and ".
@@ -149,8 +145,7 @@ namespace Chummer
                             foreach (string strSkillGroup in _strIncludeSkillGroup.SplitNoAlloc(
                                          ',', StringSplitOptions.RemoveEmptyEntries))
                             {
-                                sbdFilter.Append("skillgroup = ").Append(strSkillGroup.Trim().CleanXPath())
-                                         .Append(" or ");
+                                sbdFilter.Append("skillgroup = ", strSkillGroup.Trim().CleanXPath(), " or ");
                             }
 
                             // Remove the trailing " or ".
@@ -164,8 +159,7 @@ namespace Chummer
                             foreach (string strSkillGroup in _strExcludeSkillGroup.SplitNoAlloc(
                                          ',', StringSplitOptions.RemoveEmptyEntries))
                             {
-                                sbdFilter.Append("skillgroup != ").Append(strSkillGroup.Trim().CleanXPath())
-                                         .Append(" and ");
+                                sbdFilter.Append("skillgroup != ", strSkillGroup.Trim().CleanXPath(), " and ");
                             }
 
                             // Remove the trailing " and ".
@@ -179,8 +173,7 @@ namespace Chummer
                             foreach (string strAttribute in LinkedAttribute.SplitNoAlloc(
                                          ',', StringSplitOptions.RemoveEmptyEntries))
                             {
-                                sbdFilter.Append("attribute = ").Append(strAttribute.Trim().CleanXPath())
-                                         .Append(" or ");
+                                sbdFilter.Append("attribute = ", strAttribute.Trim().CleanXPath(), " or ");
                             }
 
                             // Remove the trailing " or ".
@@ -193,7 +186,7 @@ namespace Chummer
                             sbdFilter.Append(" and (");
                             foreach (string strSkill in _strLimitToSkill.SplitNoAlloc(
                                          ',', StringSplitOptions.RemoveEmptyEntries))
-                                sbdFilter.Append("name = ").Append(strSkill.Trim().CleanXPath()).Append(" or ");
+                                sbdFilter.Append("name = ", strSkill.Trim().CleanXPath(), " or ");
                             // Remove the trailing " or ".
                             sbdFilter.Length -= 4;
                             sbdFilter.Append(')');
@@ -204,14 +197,14 @@ namespace Chummer
                             sbdFilter.Append(" and (");
                             foreach (string strSkill in _strExcludeSkill.SplitNoAlloc(
                                          ',', StringSplitOptions.RemoveEmptyEntries))
-                                sbdFilter.Append("name != ").Append(strSkill.Trim().CleanXPath()).Append(" and ");
+                                sbdFilter.Append("name != ", strSkill.Trim().CleanXPath(), " and ");
                             // Remove the trailing " and ".
                             sbdFilter.Length -= 5;
                             sbdFilter.Append(')');
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = "[" + sbdFilter.Append(']').ToString();
+                            strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
                     }
 
                     objXmlSkillList = _objXmlDocument.Select("/chummer/skills/skill" + strFilter);
@@ -433,6 +426,14 @@ namespace Chummer
         /// Only Skills of the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Only Skills of the selected Category should be in the list.
+        /// </summary>
         public string OnlyCategory
         {
             set => _strIncludeCategory = value;
@@ -442,6 +443,9 @@ namespace Chummer
         /// Only Skills from the selected Categories should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills from the selected Categories should be in the list.
+        /// </summary>
         public XmlNode LimitToCategories
         {
             set
@@ -454,8 +458,7 @@ namespace Chummer
                     {
                         foreach (XmlNode objNode in xmlCategoryList)
                         {
-                            sbdLimitToCategories.Append("category = ").Append(objNode.InnerTextViaPool().CleanXPath())
-                                                .Append(" or ");
+                            sbdLimitToCategories.Append("category = ", objNode.InnerTextViaPool().CleanXPath(), " or ");
                         }
 
                         // Remove the last " or "
@@ -471,6 +474,9 @@ namespace Chummer
         /// Only Skills not in the selected Category should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills not in the selected Category should be in the list.
+        /// </summary>
         public string ExcludeCategory
         {
             set => _strExcludeCategory = value;
@@ -480,6 +486,9 @@ namespace Chummer
         /// Only Skills in the selected Skill Group should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills in the selected Skill Group should be in the list.
+        /// </summary>
         public string OnlySkillGroup
         {
             set => _strIncludeSkillGroup = value;
@@ -489,6 +498,9 @@ namespace Chummer
         /// Restrict the list to only a single Skill.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Restrict the list to only a single Skill.
+        /// </summary>
         public string OnlySkill
         {
             set => _strForceSkill = value;
@@ -498,6 +510,9 @@ namespace Chummer
         /// Only Skills not in the selected Skill Group should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills not in the selected Skill Group should be in the list.
+        /// </summary>
         public string ExcludeSkillGroup
         {
             set => _strExcludeSkillGroup = value;
@@ -507,6 +522,9 @@ namespace Chummer
         /// Only the provided Skills should be shown in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only the provided Skills should be shown in the list.
+        /// </summary>
         public string LimitToSkill
         {
             set => _strLimitToSkill = value;
@@ -516,6 +534,9 @@ namespace Chummer
         /// Only Skills not among the selected should be in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only Skills not among the selected should be in the list.
+        /// </summary>
         public string ExcludeSkill
         {
             set => _strExcludeSkill = value;
@@ -530,6 +551,9 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description to show in the window.
+        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;
@@ -539,6 +563,9 @@ namespace Chummer
         /// Only show skills with a rating greater than or equal to this
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only show skills with a rating greater than or equal to this
+        /// </summary>
         public int MinimumRating
         {
             set => _intMinimumRating = value;
@@ -548,6 +575,9 @@ namespace Chummer
         /// Only show skills with a rating less than or equal to this
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only show skills with a rating less than or equal to this
+        /// </summary>
         public int MaximumRating
         {
             set => _intMaximumRating = value;

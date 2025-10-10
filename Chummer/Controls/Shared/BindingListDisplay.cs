@@ -108,12 +108,14 @@ namespace Chummer.Controls.Shared
         /// <summary>
         /// Base BindingList that represents all possible contents of the display, not necessarily all visible.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ThreadSafeBindingList<TType> Contents { get; private set; }
 
         public IEnumerable<Control> ContentControls => _lstContentList.Select(x => x.Control);
 
         public Panel DisplayPanel => pnlDisplay;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         private int ListItemControlHeight
         {
             get => _intListItemControlHeight;
@@ -1362,6 +1364,15 @@ namespace Chummer.Controls.Shared
             }
 
             await SetListItemControlHeightAsync(intMaxControlHeight).ConfigureAwait(false);
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
         }
     }
 }

@@ -125,33 +125,22 @@ namespace Chummer
 
 #pragma warning disable IDE1006 // Naming Styles
 
-        public static void qualitylevel(XmlNode bonusNode)
+        public void qualitylevel(XmlNode bonusNode)
         {
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            /*
-            //List of qualities to work with
-            Guid[] all =
-            {
-                new Guid("9ac85feb-ae1e-4996-8514-3570d411e1d5"), //national
-                new Guid("d9479e5c-d44a-45b9-8fb4-d1e08a9487b2"), //dirty criminal
-                new Guid("318d2edd-833b-48c5-a3e1-343bf03848a5"), //Limited
-                new Guid("e00623e1-54b0-4a91-b234-3c7e141deef4") //Corp
-            };
-            */
 
-            //Add to list
-            //retrieve list
-            //sort list
-            //find active instance
-            //if active = list[top]
-            //    return
-            //else
-            //    remove active
-            //  add list[top]
-            //    set list[top] active
+            // Get the level value from the bonus node
+            int intLevel = ImprovementManager.ValueToInt(_objCharacter, bonusNode.InnerTextViaPool(), _intRating);
+
+            // Get the quality group from the group attribute (e.g., "SINner", "TrustFund")
+            string strGroup = bonusNode.Attributes?["group"]?.InnerTextViaPool() ?? string.Empty;
+
+            // Create an improvement that tracks this quality level
+            CreateImprovement(strGroup, _objImprovementSource, SourceName,
+                Improvement.ImprovementType.QualityLevel, _strUnique,
+                intLevel, 1, 0, 0, 0, 0);
         }
-
         // Dummy Method for SelectText
         public static void selecttext(XmlNode bonusNode)
         {
@@ -996,7 +985,7 @@ namespace Chummer
                             continue;
                         if (sdbValue.Length > 0)
                         {
-                            sdbValue.Append(',').Append(strSpace);
+                            sdbValue.Append(',', strSpace);
                         }
 
                         sdbValue.AppendFormat(GlobalSettings.CultureInfo, "{0}{1}({2})", s, strSpace, i);
@@ -2329,6 +2318,20 @@ namespace Chummer
             if (!string.IsNullOrWhiteSpace(strPush))
             {
                 _objCharacter.PushText.Push(strPush);
+            }
+        }
+
+        public void pushtextforqualitygroup(XmlNode bonusNode)
+        {
+            if (bonusNode == null)
+                throw new ArgumentNullException(nameof(bonusNode));
+
+            string strPush = bonusNode.InnerTextViaPool();
+            string strQualityGroup = bonusNode.Attributes?["group"]?.InnerTextViaPool() ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(strPush) && !string.IsNullOrEmpty(strQualityGroup))
+            {
+                _objCharacter.PushTextForQualityGroup(strQualityGroup, strPush);
             }
         }
 
@@ -6898,11 +6901,11 @@ namespace Chummer
                 {
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdXPath))
                     {
-                        sbdXPath.Append("actions/action[").Append(_objCharacter.Settings.BookXPath());
+                        sbdXPath.Append("actions/action[", _objCharacter.Settings.BookXPath());
                         string strCategory = bonusNode.Attributes?["category"]?.InnerTextViaPool() ?? string.Empty;
                         if (!string.IsNullOrEmpty(strCategory))
                         {
-                            sbdXPath.Append(" and category = ").Append(strCategory.CleanXPath());
+                            sbdXPath.Append(" and category = ", strCategory.CleanXPath());
                         }
                         sbdXPath.Append(']');
                         if (xmlActionsBaseNode != null)

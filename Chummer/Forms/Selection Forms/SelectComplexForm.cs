@@ -174,26 +174,7 @@ namespace Chummer
                 bool blnForce = strFv.StartsWith('L');
                 strFv = blnForce ? strFv.TrimStartOnce("L", true) : strFv;
                 //Navigator can't do math on a single value, so inject a mathable value.
-                if (string.IsNullOrEmpty(strFv))
-                {
-                    strFv = "0";
-                }
-                else
-                {
-                    int intPos = strFv.IndexOf('-');
-                    if (intPos != -1)
-                    {
-                        strFv = strFv.Substring(intPos);
-                    }
-                    else
-                    {
-                        intPos = strFv.IndexOf('+');
-                        if (intPos != -1)
-                        {
-                            strFv = strFv.Substring(intPos);
-                        }
-                    }
-                }
+                strFv = string.IsNullOrEmpty(strFv) ? "0" : strFv.TrimStart('+');
 
                 string strToAppend = string.Empty;
                 int intFadingDv = 0;
@@ -205,11 +186,11 @@ namespace Chummer
                         using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdFv))
                         {
-                            sbdFv.Append('(').Append(strFv).Append(')');
+                            sbdFv.Append('(', strFv, ')');
                             foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
                                 _objCharacter, Improvement.ImprovementType.FadingValue, strSelectedComplexFormName, true).ConfigureAwait(false))
                             {
-                                sbdFv.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                                sbdFv.Append("+(", objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo), ')');
                             }
 
                             await _objCharacter.ProcessAttributesInXPathAsync(sbdFv).ConfigureAwait(false);

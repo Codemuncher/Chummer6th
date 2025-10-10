@@ -271,7 +271,10 @@ namespace Chummer
         /// <summary>
         /// The slots taken up by a weapon mount to which the vehicle mod might be being added
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]     
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// The slots taken up by a weapon mount to which the vehicle mod might be being added
+        /// </summary>
         public int WeaponMountSlots
         {
             set => _intWeaponMountSlots = value;
@@ -297,14 +300,18 @@ namespace Chummer
         /// </summary>
         public decimal Markup => _decMarkup;
 
-        
+        /// <summary>
+        /// Is the mod being added to a vehicle weapon mount?
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Is the mod being added to a vehicle weapon mount?
         /// </summary>
         public bool VehicleMountMods { get; set; }
 
-      
+        /// <summary>
+        /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
@@ -334,12 +341,12 @@ namespace Chummer
                     foreach (string strItem in _lstCategory.Select(x => x.Value))
                     {
                         if (!string.IsNullOrEmpty(strItem))
-                            sbdCategoryFilter.Append("category = ").Append(strItem.CleanXPath()).Append(" or ");
+                            sbdCategoryFilter.Append("category = ", strItem.CleanXPath(), " or ");
                     }
                     if (sbdCategoryFilter.Length > 0)
                     {
                         sbdCategoryFilter.Length -= 4;
-                        strFilter += " and (" + sbdCategoryFilter.Append(')').ToString();
+                        strFilter = sbdCategoryFilter.Insert(0, strFilter, " and (", ')').ToString();
                     }
                 }
             }
