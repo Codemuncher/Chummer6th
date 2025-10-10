@@ -1781,6 +1781,26 @@ namespace Chummer
                                 {
                                     // Directly awaiting here so that we can properly unset the dirty flag after the update
                                     await RequestAndProcessCharacterUpdate(GenericToken).ConfigureAwait(false);
+
+                                    // Update tradition UI after character loading is complete
+                                    Tradition objTradition = await CharacterObject.GetMagicTraditionAsync(GenericToken).ConfigureAwait(false);
+                                    if (objTradition != null && objTradition.IsCustomTradition)
+                                    {
+                                        // Just update UI visibility without recreating the tradition
+                                        await lblTraditionName.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await txtTraditionName.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritCombat.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritDetection.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritHealth.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritIllusion.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritManipulation.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritCombat.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritDetection.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritHealth.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritIllusion.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritManipulation.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                    }
+
                                     // Clear the Dirty flag which gets set when creating a new Character.
                                     if (!await CharacterObject.GetLoadAsDirtyAsync(GenericToken).ConfigureAwait(false))
                                         IsDirty = false;
@@ -13950,7 +13970,7 @@ namespace Chummer
                     await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false);
 
                 token.ThrowIfCancellationRequested();
-               
+
                 // ------------------------------------------------------------------------------
                 // Calculate the BP used by Active Skills.
                 int skillPointsKarma = await objSkillSection.Skills
@@ -14747,7 +14767,7 @@ namespace Chummer
             await lblKnowledgeSkillsBP.DoThreadSafeAsync(x => x.Text = strTemp2, token).ConfigureAwait(false);
             //Groups
             string strTemp3 = strZeroKarma;
-            int intSkillGroupPointsMaximum = CharacterObject.SkillsSection.SkillGroupPointsMaximum;            
+            int intSkillGroupPointsMaximum = CharacterObject.SkillsSection.SkillGroupPointsMaximum;
 
         }
 
