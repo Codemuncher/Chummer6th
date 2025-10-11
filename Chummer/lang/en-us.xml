@@ -724,6 +724,34 @@
       <text>Cost:</text>
     </string>
     <string>
+      <key>Label_FilterByCost</key>
+      <text>Filter by Cost (¥)</text>
+    </string>
+    <string>
+      <key>Label_FilterByEssence</key>
+      <text>Filter by Essence</text>
+    </string>
+    <string>
+      <key>Checkbox_UseCurrentEssence</key>
+      <text>Current ESS</text>
+    </string>
+    <string>
+      <key>Checkbox_UseCurrentNuyen</key>
+      <text>Current ¥</text>
+    </string>
+    <string>
+      <key>Label_Exact</key>
+      <text>Exact:</text>
+    </string>
+    <string>
+      <key>Label_Minimum</key>
+      <text>Minimum:</text>
+    </string>
+    <string>
+      <key>Label_Maximum</key>
+      <text>Maximum:</text>
+    </string>
+    <string>
       <key>Label_Accuracy</key>
       <text>Accuracy:</text>
     </string>
@@ -842,6 +870,42 @@
     <string>
       <key>Label_Search</key>
       <text>&amp;Search:</text>
+    </string>
+    <string>
+      <key>Checkbox_SelectQuality_XPathMode</key>
+      <text>XPath Mode</text>
+    </string>
+    <string>
+      <key>Tip_SelectQuality_XPathMode</key>
+      <text>Enable XPath mode for advanced filtering. When enabled, the search box accepts XPath expressions instead of text search.</text>
+    </string>
+    <string>
+      <key>String_SelectQuality_XPathQuery_AddQualityBonus</key>
+      <text>Add Quality Bonus</text>
+    </string>
+    <string>
+      <key>String_SelectQuality_XPathQuery_KarmaRange</key>
+      <text>Karma 5-10</text>
+    </string>
+    <string>
+      <key>String_SelectQuality_XPathQuery_RunFasterSource</key>
+      <text>Run Faster Source</text>
+    </string>
+    <string>
+      <key>String_SelectQuality_XPathQuery_SpellPoints</key>
+      <text>Can Buy with Spell Points</text>
+    </string>
+    <string>
+      <key>String_SelectQuality_XPathQuery_MetagenicOnly</key>
+      <text>Metagenic Only</text>
+    </string>
+    <string>
+      <key>String_SelectQuality_XPathQuery_PositiveOnly</key>
+      <text>Positive Qualities</text>
+    </string>
+    <string>
+      <key>String_SelectQuality_XPathQuery_NegativeOnly</key>
+      <text>Negative Qualities</text>
     </string>
     <string>
       <key>Label_Capacity</key>
@@ -1581,7 +1645,7 @@
     </string>
     <string>
       <key>Menu_Main_XmlEditor</key>
-      <text>&amp;XML Editor</text>
+      <text>&amp;XML Amendment Editor</text>
     </string>
     <string>
       <key>Menu_Main_HeroLabImporter</key>
@@ -6163,7 +6227,7 @@
     </string>
     <string>
       <key>Message_Options_ConfirmDetailedTelemetry</key>
-      <text>We greatly appreciate people sending us highly detailed logging information because it lets us really find places to improve the program that otherwise would have been overlooked. However, such highly detailed logging makes your data significantly less anonymous, and for those on metered internet connections who use the program a lot, it may end causing non-insignificant amounts of interent traffic.\n\nDo you wish to proceed and enable highly detailed telemetry?</text>
+      <text>We greatly appreciate people sending us highly detailed logging information because it lets us find places to improve the program that otherwise would have been overlooked. However, such highly detailed logging makes your data significantly less anonymous, and for those on metered internet connections who use the program a lot, it may end causing non-insignificant amounts of interent traffic.\n\nDo you wish to proceed and enable highly detailed telemetry?</text>
     </string>
     <string>
       <key>MessageTitle_Options_ConfirmDetailedTelemetry</key>
@@ -8558,6 +8622,10 @@
       <key>String_RestrictedItemsHidden</key>
       <text>* {0} item(s) are hidden by Cost or Availability limits *</text>
     </string>
+    <string>
+      <key>String_RestrictedItemsHiddenMount</key>
+      <text>* {0} item(s) are hidden due to mount restrictions *</text>
+    </string>
     <!-- End Region -->
     <!-- Region Select Armor Window -->
     <string>
@@ -8771,6 +8839,18 @@
     <string>
       <key>Message_BannedGrade</key>
       <text>You've selected a Grade that is banned by your gameplay options. Please select a valid Grade.</text>
+    </string>
+    <string>
+      <key>String_RestrictedItemsHiddenEssence</key>
+      <text>* {0} item(s) are hidden by Cost, Availability or Essence limits *</text>
+    </string>
+    <string>
+      <key>Checkbox_HideOverEssenceLimit</key>
+      <text>Hide Items Over Essence Limit</text>
+    </string>
+    <string>
+      <key>Label_MaxEssence</key>
+      <text>Max Essence:</text>
     </string>
     <!-- End Region-->
     <!-- Region Select Cyberware Suite Window -->
@@ -10477,27 +10557,27 @@
     <!-- End Region SINners Plugin-->
     <string>
       <key>String_ApplicationInsights_OnlyLocal</key>
-      <text>only local logging</text>
+      <text>Perform Only Local Logging</text>
     </string>
     <string>
       <key>String_ApplicationInsights_OnlyMetric</key>
-      <text>upload statistical data</text>
+      <text>Upload Only Statistical Data</text>
     </string>
     <string>
       <key>String_ApplicationInsights_Crashes</key>
-      <text>upload crashes</text>
+      <text>Upload Crashes</text>
     </string>
     <string>
       <key>String_ApplicationInsights_Info</key>
-      <text>upload some logs</text>
+      <text>Upload Crashes and Some Logs</text>
     </string>
     <string>
       <key>String_ApplicationInsights_Trace</key>
-      <text>upload detailed logs</text>
+      <text>Upload Crashes and Detailed Logs</text>
     </string>
     <string>
       <key>String_ApplicationInsights_NotSet</key>
-      <text>let chummer decide</text>
+      <text>Let Chummer Decide</text>
     </string>
     <string>
       <key>String_Chummy</key>
@@ -10911,7 +10991,51 @@
       <key>String_GameplayOption</key>
       <text>Missing Gameplay Option</text>
     </string>
+    <string>
+      <key>Label_GameplayOptionName</key>
+      <text>Gameplay Option Name:</text>
+    </string>
+    <string>
+      <key>Tip_GameplayOptionName</key>
+      <text>Enter the name of the gameplay option (e.g., 'Prime Runner', 'Street Scum', 'High Life') that this character setting represents. This is used by qualities and other elements as part of the Requirements system.</text>
+    </string>
     <!-- XML Editor Strings -->
+    <string>
+      <key>Title_XmlAmendmentEditor</key>
+      <text>XML Amendment Editor</text>
+    </string>
+    <string>
+      <key>Label_SelectBaseXmlFile</key>
+      <text>Select Base XML File</text>
+    </string>
+    <string>
+      <key>Button_LoadBaseXml</key>
+      <text>Load Base XML</text>
+    </string>
+    <string>
+      <key>Label_BaseXml</key>
+      <text>Base XML (Read-Only)</text>
+    </string>
+    <string>
+      <key>Label_AmendmentXml</key>
+      <text>Amendment XML (Edit Here)</text>
+    </string>
+    <string>
+      <key>Button_PreviewAmendment</key>
+      <text>Preview Amendment Effects</text>
+    </string>
+    <string>
+      <key>Button_SaveAmendment</key>
+      <text>Save Amendment to File</text>
+    </string>
+    <string>
+      <key>Label_AmendSystemDocumentation</key>
+      <text>Amendment System Documentation</text>
+    </string>
+    <string>
+      <key>Label_ResultAndDiffPreview</key>
+      <text>Result and Diff Preview</text>
+    </string>
     <string>
       <key>XmlEditor_Error_LoadingFiles</key>
       <text>Error loading XML files</text>

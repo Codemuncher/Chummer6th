@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace Chummer
 {
     partial class SelectMetatypePriority
@@ -13,9 +15,59 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                CancellationTokenSource objOldCancellationTokenSource = Interlocked.Exchange(ref _objLoadMetatypesCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateMetatypesCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateMetavariantsCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objPopulateTalentsCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objRefreshSelectedMetatypeCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objProcessTalentsIndexChangedCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objManagePriorityItemsCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                objOldCancellationTokenSource = Interlocked.Exchange(ref _objSumToTenCancellationTokenSource, null);
+                if (objOldCancellationTokenSource?.IsCancellationRequested == false)
+                {
+                    objOldCancellationTokenSource.Cancel(false);
+                    objOldCancellationTokenSource.Dispose();
+                }
+                _objGenericCancellationTokenSource?.Dispose();
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -29,914 +81,918 @@ namespace Chummer
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectMetatypePriority));
-            cboCategory = new ElasticComboBox();
-            cmdCancel = new Button();
-            lblMetavariantQualities = new Label();
-            cboMetavariant = new ElasticComboBox();
-            cmdOK = new Button();
-            lblWILLabel = new Label();
-            lblWIL = new Label();
-            lblLOGLabel = new Label();
-            lblLOG = new Label();
-            lblINTLabel = new Label();
-            lblINT = new Label();
-            lblCHALabel = new Label();
-            lblCHA = new Label();
-            lblSTR = new Label();
-            lblSTRLabel = new Label();
-            lblREA = new Label();
-            lblREALabel = new Label();
-            lblAGI = new Label();
-            lblAGILabel = new Label();
-            lblBOD = new Label();
-            lblBODLabel = new Label();
-            lstMetatypes = new ListBox();
-            lblSpecialAttributes = new Label();
-            lblMetavariantKarma = new Label();
-            tlpButtons = new TableLayoutPanel();
-            lblMetatypeSkillSelection = new Label();
-            cboSkill1 = new ElasticComboBox();
-            cboSkill2 = new ElasticComboBox();
-            cboSkill3 = new ElasticComboBox();
-            lblSpecialAttributesLabel = new Label();
-            cboTalents = new ElasticComboBox();
-            tlpTopHalf = new TableLayoutPanel();
-            lblHeritageLabel = new Label();
-            lblAttributesLabel = new Label();
-            cboResources = new ElasticComboBox();
-            lblTalentLabel = new Label();
-            cboSkills = new ElasticComboBox();
-            lblResourcesLabel = new Label();
-            cboTalent = new ElasticComboBox();
-            cboAttributes = new ElasticComboBox();
-            lblSkillsLabel = new Label();
-            cboHeritage = new ElasticComboBox();
-            lblSumtoTen = new Label();
-            tlpMain = new TableLayoutPanel();
-            lblMetavariantQualitiesLabel = new Label();
-            pnlQualities = new Panel();
-            lblMetavariantKarmaLabel = new Label();
-            tlpSpirits = new TableLayoutPanel();
-            chkPossessionBased = new ColorableCheckBox();
-            cboPossessionMethod = new ElasticComboBox();
-            lblForceLabel = new Label();
-            nudForce = new NumericUpDownEx();
-            tlpMetavariant = new TableLayoutPanel();
-            lblMetavariantLabel = new Label();
-            lblSourceLabel = new Label();
-            lblSource = new Label();
-            tlpButtons.SuspendLayout();
-            tlpTopHalf.SuspendLayout();
-            tlpMain.SuspendLayout();
-            pnlQualities.SuspendLayout();
-            tlpSpirits.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)nudForce).BeginInit();
-            tlpMetavariant.SuspendLayout();
-            SuspendLayout();
+            this.cboCategory = new Chummer.ElasticComboBox();
+            this.cmdCancel = new System.Windows.Forms.Button();
+            this.lblMetavariantQualities = new System.Windows.Forms.Label();
+            this.cboMetavariant = new Chummer.ElasticComboBox();
+            this.cmdOK = new System.Windows.Forms.Button();
+            this.lblWILLabel = new System.Windows.Forms.Label();
+            this.lblWIL = new System.Windows.Forms.Label();
+            this.lblLOGLabel = new System.Windows.Forms.Label();
+            this.lblLOG = new System.Windows.Forms.Label();
+            this.lblINTLabel = new System.Windows.Forms.Label();
+            this.lblINT = new System.Windows.Forms.Label();
+            this.lblCHALabel = new System.Windows.Forms.Label();
+            this.lblCHA = new System.Windows.Forms.Label();
+            this.lblSTR = new System.Windows.Forms.Label();
+            this.lblSTRLabel = new System.Windows.Forms.Label();
+            this.lblREA = new System.Windows.Forms.Label();
+            this.lblREALabel = new System.Windows.Forms.Label();
+            this.lblAGI = new System.Windows.Forms.Label();
+            this.lblAGILabel = new System.Windows.Forms.Label();
+            this.lblBOD = new System.Windows.Forms.Label();
+            this.lblBODLabel = new System.Windows.Forms.Label();
+            this.lstMetatypes = new System.Windows.Forms.ListBox();
+            this.lblSpecialAttributes = new System.Windows.Forms.Label();
+            this.lblMetavariantKarma = new System.Windows.Forms.Label();
+            this.tlpButtons = new System.Windows.Forms.TableLayoutPanel();
+            this.lblMetatypeSkillSelection = new System.Windows.Forms.Label();
+            this.cboSkill1 = new Chummer.ElasticComboBox();
+            this.cboSkill2 = new Chummer.ElasticComboBox();
+            this.cboSkill3 = new Chummer.ElasticComboBox();
+            this.lblSpecialAttributesLabel = new System.Windows.Forms.Label();
+            this.cboTalents = new Chummer.ElasticComboBox();
+            this.tlpTopHalf = new System.Windows.Forms.TableLayoutPanel();
+            this.lblHeritageLabel = new System.Windows.Forms.Label();
+            this.lblAttributesLabel = new System.Windows.Forms.Label();
+            this.cboResources = new Chummer.ElasticComboBox();
+            this.lblTalentLabel = new System.Windows.Forms.Label();
+            this.cboSkills = new Chummer.ElasticComboBox();
+            this.lblResourcesLabel = new System.Windows.Forms.Label();
+            this.cboTalent = new Chummer.ElasticComboBox();
+            this.cboAttributes = new Chummer.ElasticComboBox();
+            this.lblSkillsLabel = new System.Windows.Forms.Label();
+            this.cboHeritage = new Chummer.ElasticComboBox();
+            this.lblSumtoTen = new System.Windows.Forms.Label();
+            this.tlpMain = new System.Windows.Forms.TableLayoutPanel();
+            this.lblMetavariantQualitiesLabel = new System.Windows.Forms.Label();
+            this.pnlQualities = new System.Windows.Forms.Panel();
+            this.lblMetavariantKarmaLabel = new System.Windows.Forms.Label();
+            this.tlpSpirits = new System.Windows.Forms.TableLayoutPanel();
+            this.chkPossessionBased = new Chummer.ColorableCheckBox();
+            this.cboPossessionMethod = new Chummer.ElasticComboBox();
+            this.lblForceLabel = new System.Windows.Forms.Label();
+            this.nudForce = new Chummer.NumericUpDownEx();
+            this.tlpMetavariant = new System.Windows.Forms.TableLayoutPanel();
+            this.lblMetavariantLabel = new System.Windows.Forms.Label();
+            this.lblSourceLabel = new System.Windows.Forms.Label();
+            this.lblSource = new Chummer.LabelWithToolTip();
+            this.tlpButtons.SuspendLayout();
+            this.tlpTopHalf.SuspendLayout();
+            this.tlpMain.SuspendLayout();
+            this.pnlQualities.SuspendLayout();
+            this.tlpSpirits.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nudForce)).BeginInit();
+            this.tlpMetavariant.SuspendLayout();
+            this.SuspendLayout();
             // 
             // cboCategory
             // 
-            cboCategory.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboCategory.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboCategory.FormattingEnabled = true;
-            cboCategory.Location = new Point(4, 175);
-            cboCategory.Margin = new Padding(4, 3, 27, 3);
-            cboCategory.Name = "cboCategory";
-            cboCategory.Size = new Size(353, 23);
-            cboCategory.TabIndex = 6;
-            cboCategory.SelectedIndexChanged += cboCategory_SelectedIndexChanged;
+            this.cboCategory.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboCategory.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboCategory.FormattingEnabled = true;
+            this.cboCategory.Location = new System.Drawing.Point(3, 161);
+            this.cboCategory.Margin = new System.Windows.Forms.Padding(3, 3, 23, 3);
+            this.cboCategory.Name = "cboCategory";
+            this.cboCategory.Size = new System.Drawing.Size(303, 21);
+            this.cboCategory.TabIndex = 6;
+            this.cboCategory.SelectedIndexChanged += new System.EventHandler(this.cboCategory_SelectedIndexChanged);
             // 
             // cmdCancel
             // 
-            cmdCancel.AutoSize = true;
-            cmdCancel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            cmdCancel.DialogResult = DialogResult.Cancel;
-            cmdCancel.Dock = DockStyle.Fill;
-            cmdCancel.Location = new Point(4, 3);
-            cmdCancel.Margin = new Padding(4, 3, 4, 3);
-            cmdCancel.MinimumSize = new Size(93, 0);
-            cmdCancel.Name = "cmdCancel";
-            cmdCancel.Size = new Size(93, 25);
-            cmdCancel.TabIndex = 12;
-            cmdCancel.Tag = "String_Cancel";
-            cmdCancel.Text = "Cancel";
-            cmdCancel.UseVisualStyleBackColor = true;
-            cmdCancel.Click += cmdCancel_Click;
+            this.cmdCancel.AutoSize = true;
+            this.cmdCancel.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.cmdCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+            this.cmdCancel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.cmdCancel.Location = new System.Drawing.Point(3, 3);
+            this.cmdCancel.MinimumSize = new System.Drawing.Size(80, 0);
+            this.cmdCancel.Name = "cmdCancel";
+            this.cmdCancel.Size = new System.Drawing.Size(80, 23);
+            this.cmdCancel.TabIndex = 12;
+            this.cmdCancel.Tag = "String_Cancel";
+            this.cmdCancel.Text = "Cancel";
+            this.cmdCancel.UseVisualStyleBackColor = true;
+            this.cmdCancel.Click += new System.EventHandler(this.cmdCancel_Click);
             // 
             // lblMetavariantQualities
             // 
-            lblMetavariantQualities.AutoSize = true;
-            lblMetavariantQualities.Dock = DockStyle.Top;
-            lblMetavariantQualities.Location = new Point(4, 7);
-            lblMetavariantQualities.Margin = new Padding(4, 7, 4, 7);
-            lblMetavariantQualities.Name = "lblMetavariantQualities";
-            lblMetavariantQualities.Size = new Size(36, 15);
-            lblMetavariantQualities.TabIndex = 63;
-            lblMetavariantQualities.Tag = "String_None";
-            lblMetavariantQualities.Text = "None";
+            this.lblMetavariantQualities.AutoSize = true;
+            this.lblMetavariantQualities.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblMetavariantQualities.Location = new System.Drawing.Point(3, 6);
+            this.lblMetavariantQualities.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblMetavariantQualities.Name = "lblMetavariantQualities";
+            this.lblMetavariantQualities.Size = new System.Drawing.Size(33, 13);
+            this.lblMetavariantQualities.TabIndex = 63;
+            this.lblMetavariantQualities.Tag = "String_None";
+            this.lblMetavariantQualities.Text = "None";
             // 
             // cboMetavariant
             // 
-            cboMetavariant.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboMetavariant.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboMetavariant.DropDownWidth = 69;
-            cboMetavariant.FormattingEnabled = true;
-            cboMetavariant.Location = new Point(90, 3);
-            cboMetavariant.Margin = new Padding(4, 3, 4, 3);
-            cboMetavariant.Name = "cboMetavariant";
-            cboMetavariant.Size = new Size(417, 23);
-            cboMetavariant.TabIndex = 59;
-            cboMetavariant.SelectedIndexChanged += cboMetavariant_SelectedIndexChanged;
+            this.cboMetavariant.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboMetavariant.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboMetavariant.DropDownWidth = 69;
+            this.cboMetavariant.FormattingEnabled = true;
+            this.cboMetavariant.Location = new System.Drawing.Point(87, 3);
+            this.cboMetavariant.Name = "cboMetavariant";
+            this.cboMetavariant.Size = new System.Drawing.Size(347, 21);
+            this.cboMetavariant.TabIndex = 59;
+            this.cboMetavariant.SelectedIndexChanged += new System.EventHandler(this.cboMetavariant_SelectedIndexChanged);
             // 
             // cmdOK
             // 
-            cmdOK.AutoSize = true;
-            cmdOK.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            cmdOK.Dock = DockStyle.Fill;
-            cmdOK.Location = new Point(105, 3);
-            cmdOK.Margin = new Padding(4, 3, 4, 3);
-            cmdOK.MinimumSize = new Size(93, 0);
-            cmdOK.Name = "cmdOK";
-            cmdOK.Size = new Size(93, 25);
-            cmdOK.TabIndex = 11;
-            cmdOK.Tag = "String_OK";
-            cmdOK.Text = "OK";
-            cmdOK.UseVisualStyleBackColor = true;
-            cmdOK.Click += cmdOK_Click;
+            this.cmdOK.AutoSize = true;
+            this.cmdOK.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.cmdOK.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.cmdOK.Location = new System.Drawing.Point(89, 3);
+            this.cmdOK.MinimumSize = new System.Drawing.Size(80, 0);
+            this.cmdOK.Name = "cmdOK";
+            this.cmdOK.Size = new System.Drawing.Size(80, 23);
+            this.cmdOK.TabIndex = 11;
+            this.cmdOK.Tag = "String_OK";
+            this.cmdOK.Text = "OK";
+            this.cmdOK.UseVisualStyleBackColor = true;
+            this.cmdOK.Click += new System.EventHandler(this.cmdOK_Click);
             // 
             // lblWILLabel
             // 
-            lblWILLabel.Anchor = AnchorStyles.Right;
-            lblWILLabel.AutoSize = true;
-            lblWILLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblWILLabel.Location = new Point(775, 325);
-            lblWILLabel.Margin = new Padding(4, 7, 4, 7);
-            lblWILLabel.Name = "lblWILLabel";
-            lblWILLabel.Size = new Size(30, 13);
-            lblWILLabel.TabIndex = 52;
-            lblWILLabel.Tag = "String_AttributeWILShort";
-            lblWILLabel.Text = "WIL";
+            this.lblWILLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblWILLabel.AutoSize = true;
+            this.lblWILLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblWILLabel.Location = new System.Drawing.Point(656, 293);
+            this.lblWILLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblWILLabel.Name = "lblWILLabel";
+            this.lblWILLabel.Size = new System.Drawing.Size(30, 13);
+            this.lblWILLabel.TabIndex = 52;
+            this.lblWILLabel.Tag = "String_AttributeWILShort";
+            this.lblWILLabel.Text = "WIL";
             // 
             // lblWIL
             // 
-            lblWIL.Anchor = AnchorStyles.Left;
-            lblWIL.AutoSize = true;
-            lblWIL.Location = new Point(813, 324);
-            lblWIL.Margin = new Padding(4, 7, 4, 7);
-            lblWIL.Name = "lblWIL";
-            lblWIL.Size = new Size(53, 15);
-            lblWIL.TabIndex = 53;
-            lblWIL.Text = "2/12 (18)";
+            this.lblWIL.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblWIL.AutoSize = true;
+            this.lblWIL.Location = new System.Drawing.Point(692, 293);
+            this.lblWIL.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblWIL.Name = "lblWIL";
+            this.lblWIL.Size = new System.Drawing.Size(51, 13);
+            this.lblWIL.TabIndex = 53;
+            this.lblWIL.Text = "2/12 (18)";
             // 
             // lblLOGLabel
             // 
-            lblLOGLabel.Anchor = AnchorStyles.Right;
-            lblLOGLabel.AutoSize = true;
-            lblLOGLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblLOGLabel.Location = new Point(773, 296);
-            lblLOGLabel.Margin = new Padding(4, 7, 4, 7);
-            lblLOGLabel.Name = "lblLOGLabel";
-            lblLOGLabel.Size = new Size(32, 13);
-            lblLOGLabel.TabIndex = 50;
-            lblLOGLabel.Tag = "String_AttributeLOGShort";
-            lblLOGLabel.Text = "LOG";
+            this.lblLOGLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblLOGLabel.AutoSize = true;
+            this.lblLOGLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblLOGLabel.Location = new System.Drawing.Point(654, 268);
+            this.lblLOGLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblLOGLabel.Name = "lblLOGLabel";
+            this.lblLOGLabel.Size = new System.Drawing.Size(32, 13);
+            this.lblLOGLabel.TabIndex = 50;
+            this.lblLOGLabel.Tag = "String_AttributeLOGShort";
+            this.lblLOGLabel.Text = "LOG";
             // 
             // lblLOG
             // 
-            lblLOG.Anchor = AnchorStyles.Left;
-            lblLOG.AutoSize = true;
-            lblLOG.Location = new Point(813, 295);
-            lblLOG.Margin = new Padding(4, 7, 4, 7);
-            lblLOG.Name = "lblLOG";
-            lblLOG.Size = new Size(53, 15);
-            lblLOG.TabIndex = 51;
-            lblLOG.Text = "2/12 (18)";
+            this.lblLOG.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblLOG.AutoSize = true;
+            this.lblLOG.Location = new System.Drawing.Point(692, 268);
+            this.lblLOG.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblLOG.Name = "lblLOG";
+            this.lblLOG.Size = new System.Drawing.Size(51, 13);
+            this.lblLOG.TabIndex = 51;
+            this.lblLOG.Text = "2/12 (18)";
             // 
             // lblINTLabel
             // 
-            lblINTLabel.Anchor = AnchorStyles.Right;
-            lblINTLabel.AutoSize = true;
-            lblINTLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblINTLabel.Location = new Point(777, 267);
-            lblINTLabel.Margin = new Padding(4, 7, 4, 7);
-            lblINTLabel.Name = "lblINTLabel";
-            lblINTLabel.Size = new Size(28, 13);
-            lblINTLabel.TabIndex = 48;
-            lblINTLabel.Tag = "String_AttributeINTShort";
-            lblINTLabel.Text = "INT";
+            this.lblINTLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblINTLabel.AutoSize = true;
+            this.lblINTLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblINTLabel.Location = new System.Drawing.Point(658, 243);
+            this.lblINTLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblINTLabel.Name = "lblINTLabel";
+            this.lblINTLabel.Size = new System.Drawing.Size(28, 13);
+            this.lblINTLabel.TabIndex = 48;
+            this.lblINTLabel.Tag = "String_AttributeINTShort";
+            this.lblINTLabel.Text = "INT";
             // 
             // lblINT
             // 
-            lblINT.Anchor = AnchorStyles.Left;
-            lblINT.AutoSize = true;
-            lblINT.Location = new Point(813, 266);
-            lblINT.Margin = new Padding(4, 7, 4, 7);
-            lblINT.Name = "lblINT";
-            lblINT.Size = new Size(53, 15);
-            lblINT.TabIndex = 49;
-            lblINT.Text = "2/12 (18)";
+            this.lblINT.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblINT.AutoSize = true;
+            this.lblINT.Location = new System.Drawing.Point(692, 243);
+            this.lblINT.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblINT.Name = "lblINT";
+            this.lblINT.Size = new System.Drawing.Size(51, 13);
+            this.lblINT.TabIndex = 49;
+            this.lblINT.Text = "2/12 (18)";
             // 
             // lblCHALabel
             // 
-            lblCHALabel.Anchor = AnchorStyles.Right;
-            lblCHALabel.AutoSize = true;
-            lblCHALabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblCHALabel.Location = new Point(773, 238);
-            lblCHALabel.Margin = new Padding(4, 7, 4, 7);
-            lblCHALabel.Name = "lblCHALabel";
-            lblCHALabel.Size = new Size(32, 13);
-            lblCHALabel.TabIndex = 46;
-            lblCHALabel.Tag = "String_AttributeCHAShort";
-            lblCHALabel.Text = "CHA";
+            this.lblCHALabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblCHALabel.AutoSize = true;
+            this.lblCHALabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblCHALabel.Location = new System.Drawing.Point(654, 218);
+            this.lblCHALabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblCHALabel.Name = "lblCHALabel";
+            this.lblCHALabel.Size = new System.Drawing.Size(32, 13);
+            this.lblCHALabel.TabIndex = 46;
+            this.lblCHALabel.Tag = "String_AttributeCHAShort";
+            this.lblCHALabel.Text = "CHA";
             // 
             // lblCHA
             // 
-            lblCHA.Anchor = AnchorStyles.Left;
-            lblCHA.AutoSize = true;
-            lblCHA.Location = new Point(813, 237);
-            lblCHA.Margin = new Padding(4, 7, 4, 7);
-            lblCHA.Name = "lblCHA";
-            lblCHA.Size = new Size(53, 15);
-            lblCHA.TabIndex = 47;
-            lblCHA.Text = "2/12 (18)";
+            this.lblCHA.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblCHA.AutoSize = true;
+            this.lblCHA.Location = new System.Drawing.Point(692, 218);
+            this.lblCHA.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblCHA.Name = "lblCHA";
+            this.lblCHA.Size = new System.Drawing.Size(51, 13);
+            this.lblCHA.TabIndex = 47;
+            this.lblCHA.Text = "2/12 (18)";
             // 
             // lblSTR
             // 
-            lblSTR.Anchor = AnchorStyles.Left;
-            lblSTR.AutoSize = true;
-            lblSTR.Location = new Point(643, 324);
-            lblSTR.Margin = new Padding(4, 7, 4, 7);
-            lblSTR.Name = "lblSTR";
-            lblSTR.Size = new Size(53, 15);
-            lblSTR.TabIndex = 45;
-            lblSTR.Text = "2/12 (18)";
+            this.lblSTR.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblSTR.AutoSize = true;
+            this.lblSTR.Location = new System.Drawing.Point(548, 293);
+            this.lblSTR.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSTR.Name = "lblSTR";
+            this.lblSTR.Size = new System.Drawing.Size(51, 13);
+            this.lblSTR.TabIndex = 45;
+            this.lblSTR.Text = "2/12 (18)";
             // 
             // lblSTRLabel
             // 
-            lblSTRLabel.Anchor = AnchorStyles.Right;
-            lblSTRLabel.AutoSize = true;
-            lblSTRLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblSTRLabel.Location = new Point(603, 325);
-            lblSTRLabel.Margin = new Padding(4, 7, 4, 7);
-            lblSTRLabel.Name = "lblSTRLabel";
-            lblSTRLabel.Size = new Size(32, 13);
-            lblSTRLabel.TabIndex = 44;
-            lblSTRLabel.Tag = "String_AttributeSTRShort";
-            lblSTRLabel.Text = "STR";
+            this.lblSTRLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblSTRLabel.AutoSize = true;
+            this.lblSTRLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblSTRLabel.Location = new System.Drawing.Point(510, 293);
+            this.lblSTRLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSTRLabel.Name = "lblSTRLabel";
+            this.lblSTRLabel.Size = new System.Drawing.Size(32, 13);
+            this.lblSTRLabel.TabIndex = 44;
+            this.lblSTRLabel.Tag = "String_AttributeSTRShort";
+            this.lblSTRLabel.Text = "STR";
             // 
             // lblREA
             // 
-            lblREA.Anchor = AnchorStyles.Left;
-            lblREA.AutoSize = true;
-            lblREA.Location = new Point(643, 295);
-            lblREA.Margin = new Padding(4, 7, 4, 7);
-            lblREA.Name = "lblREA";
-            lblREA.Size = new Size(53, 15);
-            lblREA.TabIndex = 43;
-            lblREA.Text = "2/12 (18)";
+            this.lblREA.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblREA.AutoSize = true;
+            this.lblREA.Location = new System.Drawing.Point(548, 268);
+            this.lblREA.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblREA.Name = "lblREA";
+            this.lblREA.Size = new System.Drawing.Size(51, 13);
+            this.lblREA.TabIndex = 43;
+            this.lblREA.Text = "2/12 (18)";
             // 
             // lblREALabel
             // 
-            lblREALabel.Anchor = AnchorStyles.Right;
-            lblREALabel.AutoSize = true;
-            lblREALabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblREALabel.Location = new Point(603, 296);
-            lblREALabel.Margin = new Padding(4, 7, 4, 7);
-            lblREALabel.Name = "lblREALabel";
-            lblREALabel.Size = new Size(32, 13);
-            lblREALabel.TabIndex = 42;
-            lblREALabel.Tag = "String_AttributeREAShort";
-            lblREALabel.Text = "REA";
+            this.lblREALabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblREALabel.AutoSize = true;
+            this.lblREALabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblREALabel.Location = new System.Drawing.Point(510, 268);
+            this.lblREALabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblREALabel.Name = "lblREALabel";
+            this.lblREALabel.Size = new System.Drawing.Size(32, 13);
+            this.lblREALabel.TabIndex = 42;
+            this.lblREALabel.Tag = "String_AttributeREAShort";
+            this.lblREALabel.Text = "REA";
             // 
             // lblAGI
             // 
-            lblAGI.Anchor = AnchorStyles.Left;
-            lblAGI.AutoSize = true;
-            lblAGI.Location = new Point(643, 266);
-            lblAGI.Margin = new Padding(4, 7, 4, 7);
-            lblAGI.Name = "lblAGI";
-            lblAGI.Size = new Size(53, 15);
-            lblAGI.TabIndex = 41;
-            lblAGI.Text = "2/12 (18)";
+            this.lblAGI.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblAGI.AutoSize = true;
+            this.lblAGI.Location = new System.Drawing.Point(548, 243);
+            this.lblAGI.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblAGI.Name = "lblAGI";
+            this.lblAGI.Size = new System.Drawing.Size(51, 13);
+            this.lblAGI.TabIndex = 41;
+            this.lblAGI.Text = "2/12 (18)";
             // 
             // lblAGILabel
             // 
-            lblAGILabel.Anchor = AnchorStyles.Right;
-            lblAGILabel.AutoSize = true;
-            lblAGILabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblAGILabel.Location = new Point(607, 267);
-            lblAGILabel.Margin = new Padding(4, 7, 4, 7);
-            lblAGILabel.Name = "lblAGILabel";
-            lblAGILabel.Size = new Size(28, 13);
-            lblAGILabel.TabIndex = 40;
-            lblAGILabel.Tag = "String_AttributeAGIShort";
-            lblAGILabel.Text = "AGI";
+            this.lblAGILabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblAGILabel.AutoSize = true;
+            this.lblAGILabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblAGILabel.Location = new System.Drawing.Point(514, 243);
+            this.lblAGILabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblAGILabel.Name = "lblAGILabel";
+            this.lblAGILabel.Size = new System.Drawing.Size(28, 13);
+            this.lblAGILabel.TabIndex = 40;
+            this.lblAGILabel.Tag = "String_AttributeAGIShort";
+            this.lblAGILabel.Text = "AGI";
             // 
             // lblBOD
             // 
-            lblBOD.Anchor = AnchorStyles.Left;
-            lblBOD.AutoSize = true;
-            lblBOD.Location = new Point(643, 237);
-            lblBOD.Margin = new Padding(4, 7, 4, 7);
-            lblBOD.Name = "lblBOD";
-            lblBOD.Size = new Size(53, 15);
-            lblBOD.TabIndex = 39;
-            lblBOD.Text = "2/12 (18)";
+            this.lblBOD.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblBOD.AutoSize = true;
+            this.lblBOD.Location = new System.Drawing.Point(548, 218);
+            this.lblBOD.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblBOD.Name = "lblBOD";
+            this.lblBOD.Size = new System.Drawing.Size(51, 13);
+            this.lblBOD.TabIndex = 39;
+            this.lblBOD.Text = "2/12 (18)";
             // 
             // lblBODLabel
             // 
-            lblBODLabel.Anchor = AnchorStyles.Right;
-            lblBODLabel.AutoSize = true;
-            lblBODLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblBODLabel.Location = new Point(602, 238);
-            lblBODLabel.Margin = new Padding(4, 7, 4, 7);
-            lblBODLabel.Name = "lblBODLabel";
-            lblBODLabel.Size = new Size(33, 13);
-            lblBODLabel.TabIndex = 38;
-            lblBODLabel.Tag = "String_AttributeBODShort";
-            lblBODLabel.Text = "BOD";
+            this.lblBODLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblBODLabel.AutoSize = true;
+            this.lblBODLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblBODLabel.Location = new System.Drawing.Point(509, 218);
+            this.lblBODLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblBODLabel.Name = "lblBODLabel";
+            this.lblBODLabel.Size = new System.Drawing.Size(33, 13);
+            this.lblBODLabel.TabIndex = 38;
+            this.lblBODLabel.Tag = "String_AttributeBODShort";
+            this.lblBODLabel.Text = "BOD";
             // 
             // lstMetatypes
             // 
-            lstMetatypes.Dock = DockStyle.Fill;
-            lstMetatypes.FormattingEnabled = true;
-            lstMetatypes.Location = new Point(4, 204);
-            lstMetatypes.Margin = new Padding(4, 3, 27, 3);
-            lstMetatypes.Name = "lstMetatypes";
-            tlpMain.SetRowSpan(lstMetatypes, 11);
-            lstMetatypes.Size = new Size(353, 420);
-            lstMetatypes.Sorted = true;
-            lstMetatypes.TabIndex = 7;
-            lstMetatypes.SelectedIndexChanged += lstMetatypes_SelectedIndexChanged;
-            lstMetatypes.DoubleClick += cmdOK_Click;
+            this.lstMetatypes.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lstMetatypes.FormattingEnabled = true;
+            this.lstMetatypes.Location = new System.Drawing.Point(3, 188);
+            this.lstMetatypes.Margin = new System.Windows.Forms.Padding(3, 3, 23, 3);
+            this.lstMetatypes.Name = "lstMetatypes";
+            this.tlpMain.SetRowSpan(this.lstMetatypes, 11);
+            this.lstMetatypes.Size = new System.Drawing.Size(303, 352);
+            this.lstMetatypes.Sorted = true;
+            this.lstMetatypes.TabIndex = 7;
+            this.lstMetatypes.SelectedIndexChanged += new System.EventHandler(this.lstMetatypes_SelectedIndexChanged);
+            this.lstMetatypes.DoubleClick += new System.EventHandler(this.cmdOK_Click);
             // 
             // lblSpecialAttributes
             // 
-            lblSpecialAttributes.Anchor = AnchorStyles.Left;
-            lblSpecialAttributes.AutoSize = true;
-            lblSpecialAttributes.Location = new Point(473, 280);
-            lblSpecialAttributes.Margin = new Padding(4, 7, 4, 7);
-            lblSpecialAttributes.Name = "lblSpecialAttributes";
-            tlpMain.SetRowSpan(lblSpecialAttributes, 2);
-            lblSpecialAttributes.Size = new Size(13, 15);
-            lblSpecialAttributes.TabIndex = 71;
-            lblSpecialAttributes.Text = "0";
-            lblSpecialAttributes.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblSpecialAttributes.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblSpecialAttributes.AutoSize = true;
+            this.lblSpecialAttributes.Location = new System.Drawing.Point(404, 255);
+            this.lblSpecialAttributes.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSpecialAttributes.Name = "lblSpecialAttributes";
+            this.tlpMain.SetRowSpan(this.lblSpecialAttributes, 2);
+            this.lblSpecialAttributes.Size = new System.Drawing.Size(13, 13);
+            this.lblSpecialAttributes.TabIndex = 71;
+            this.lblSpecialAttributes.Text = "0";
+            this.lblSpecialAttributes.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // lblMetavariantKarma
             // 
-            lblMetavariantKarma.Anchor = AnchorStyles.Left;
-            lblMetavariantKarma.AutoSize = true;
-            lblMetavariantKarma.Location = new Point(473, 237);
-            lblMetavariantKarma.Margin = new Padding(4, 7, 4, 7);
-            lblMetavariantKarma.Name = "lblMetavariantKarma";
-            lblMetavariantKarma.Size = new Size(13, 15);
-            lblMetavariantKarma.TabIndex = 77;
-            lblMetavariantKarma.Text = "0";
-            lblMetavariantKarma.TextAlign = ContentAlignment.MiddleLeft;
+            this.lblMetavariantKarma.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblMetavariantKarma.AutoSize = true;
+            this.lblMetavariantKarma.Location = new System.Drawing.Point(404, 218);
+            this.lblMetavariantKarma.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblMetavariantKarma.Name = "lblMetavariantKarma";
+            this.lblMetavariantKarma.Size = new System.Drawing.Size(13, 13);
+            this.lblMetavariantKarma.TabIndex = 77;
+            this.lblMetavariantKarma.Text = "0";
+            this.lblMetavariantKarma.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // tlpButtons
             // 
-            tlpButtons.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            tlpButtons.AutoSize = true;
-            tlpButtons.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            tlpButtons.ColumnCount = 2;
-            tlpMain.SetColumnSpan(tlpButtons, 6);
-            tlpButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tlpButtons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tlpButtons.Controls.Add(cmdCancel, 0, 0);
-            tlpButtons.Controls.Add(cmdOK, 1, 0);
-            tlpButtons.Location = new Point(693, 596);
-            tlpButtons.Margin = new Padding(0);
-            tlpButtons.Name = "tlpButtons";
-            tlpButtons.RowCount = 1;
-            tlpButtons.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpButtons.Size = new Size(202, 31);
-            tlpButtons.TabIndex = 80;
+            this.tlpButtons.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.tlpButtons.AutoSize = true;
+            this.tlpButtons.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.tlpButtons.ColumnCount = 2;
+            this.tlpMain.SetColumnSpan(this.tlpButtons, 6);
+            this.tlpButtons.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tlpButtons.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tlpButtons.Controls.Add(this.cmdCancel, 0, 0);
+            this.tlpButtons.Controls.Add(this.cmdOK, 1, 0);
+            this.tlpButtons.Location = new System.Drawing.Point(594, 514);
+            this.tlpButtons.Margin = new System.Windows.Forms.Padding(0);
+            this.tlpButtons.Name = "tlpButtons";
+            this.tlpButtons.RowCount = 1;
+            this.tlpButtons.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tlpButtons.Size = new System.Drawing.Size(172, 29);
+            this.tlpButtons.TabIndex = 80;
             // 
             // lblMetatypeSkillSelection
             // 
-            lblMetatypeSkillSelection.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
-            lblMetatypeSkillSelection.AutoSize = true;
-            tlpMain.SetColumnSpan(lblMetatypeSkillSelection, 6);
-            lblMetatypeSkillSelection.Location = new Point(388, 487);
-            lblMetatypeSkillSelection.Margin = new Padding(4, 7, 4, 7);
-            lblMetatypeSkillSelection.Name = "lblMetatypeSkillSelection";
-            lblMetatypeSkillSelection.Size = new Size(439, 15);
-            lblMetatypeSkillSelection.TabIndex = 75;
-            lblMetatypeSkillSelection.Tag = "String_MetamagicSkillBase";
-            lblMetatypeSkillSelection.Text = "Based on your talent selection, you may choose 2 magical skills to start at rating 5.";
-            lblMetatypeSkillSelection.Visible = false;
+            this.lblMetatypeSkillSelection.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblMetatypeSkillSelection.AutoSize = true;
+            this.tlpMain.SetColumnSpan(this.lblMetatypeSkillSelection, 6);
+            this.lblMetatypeSkillSelection.Location = new System.Drawing.Point(332, 414);
+            this.lblMetatypeSkillSelection.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblMetatypeSkillSelection.Name = "lblMetatypeSkillSelection";
+            this.lblMetatypeSkillSelection.Size = new System.Drawing.Size(393, 13);
+            this.lblMetatypeSkillSelection.TabIndex = 75;
+            this.lblMetatypeSkillSelection.Tag = "String_MetamagicSkillBase";
+            this.lblMetatypeSkillSelection.Text = "Based on your talent selection, you may choose 2 magical skills to start at ratin" +
+    "g 5.";
+            this.lblMetatypeSkillSelection.Visible = false;
             // 
             // cboSkill1
             // 
-            cboSkill1.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            tlpMain.SetColumnSpan(cboSkill1, 6);
-            cboSkill1.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboSkill1.FormattingEnabled = true;
-            cboSkill1.Location = new Point(388, 512);
-            cboSkill1.Margin = new Padding(4, 3, 4, 3);
-            cboSkill1.Name = "cboSkill1";
-            cboSkill1.Size = new Size(503, 23);
-            cboSkill1.TabIndex = 9;
-            cboSkill1.Visible = false;
+            this.cboSkill1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.tlpMain.SetColumnSpan(this.cboSkill1, 6);
+            this.cboSkill1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboSkill1.FormattingEnabled = true;
+            this.cboSkill1.Location = new System.Drawing.Point(332, 436);
+            this.cboSkill1.Name = "cboSkill1";
+            this.cboSkill1.Size = new System.Drawing.Size(431, 21);
+            this.cboSkill1.TabIndex = 9;
+            this.cboSkill1.Visible = false;
             // 
             // cboSkill2
             // 
-            cboSkill2.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            tlpMain.SetColumnSpan(cboSkill2, 6);
-            cboSkill2.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboSkill2.FormattingEnabled = true;
-            cboSkill2.Location = new Point(388, 541);
-            cboSkill2.Margin = new Padding(4, 3, 4, 3);
-            cboSkill2.Name = "cboSkill2";
-            cboSkill2.Size = new Size(503, 23);
-            cboSkill2.TabIndex = 10;
-            cboSkill2.Visible = false;
+            this.cboSkill2.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.tlpMain.SetColumnSpan(this.cboSkill2, 6);
+            this.cboSkill2.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboSkill2.FormattingEnabled = true;
+            this.cboSkill2.Location = new System.Drawing.Point(332, 463);
+            this.cboSkill2.Name = "cboSkill2";
+            this.cboSkill2.Size = new System.Drawing.Size(431, 21);
+            this.cboSkill2.TabIndex = 10;
+            this.cboSkill2.Visible = false;
             // 
             // cboSkill3
             // 
-            cboSkill3.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            tlpMain.SetColumnSpan(cboSkill3, 6);
-            cboSkill3.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboSkill3.FormattingEnabled = true;
-            cboSkill3.Location = new Point(388, 570);
-            cboSkill3.Margin = new Padding(4, 3, 4, 3);
-            cboSkill3.Name = "cboSkill3";
-            cboSkill3.Size = new Size(503, 23);
-            cboSkill3.TabIndex = 78;
-            cboSkill3.Visible = false;
+            this.cboSkill3.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.tlpMain.SetColumnSpan(this.cboSkill3, 6);
+            this.cboSkill3.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboSkill3.FormattingEnabled = true;
+            this.cboSkill3.Location = new System.Drawing.Point(332, 490);
+            this.cboSkill3.Name = "cboSkill3";
+            this.cboSkill3.Size = new System.Drawing.Size(431, 21);
+            this.cboSkill3.TabIndex = 78;
+            this.cboSkill3.Visible = false;
             // 
             // lblSpecialAttributesLabel
             // 
-            lblSpecialAttributesLabel.Anchor = AnchorStyles.Right;
-            lblSpecialAttributesLabel.AutoSize = true;
-            lblSpecialAttributesLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblSpecialAttributesLabel.Location = new Point(400, 275);
-            lblSpecialAttributesLabel.Margin = new Padding(4, 7, 4, 7);
-            lblSpecialAttributesLabel.Name = "lblSpecialAttributesLabel";
-            tlpMain.SetRowSpan(lblSpecialAttributesLabel, 2);
-            lblSpecialAttributesLabel.Size = new Size(65, 26);
-            lblSpecialAttributesLabel.TabIndex = 70;
-            lblSpecialAttributesLabel.Tag = "Label_SpecialAttributes";
-            lblSpecialAttributesLabel.Text = "Special Attributes:";
-            lblSpecialAttributesLabel.TextAlign = ContentAlignment.MiddleRight;
+            this.lblSpecialAttributesLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblSpecialAttributesLabel.AutoSize = true;
+            this.lblSpecialAttributesLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblSpecialAttributesLabel.Location = new System.Drawing.Point(333, 249);
+            this.lblSpecialAttributesLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSpecialAttributesLabel.Name = "lblSpecialAttributesLabel";
+            this.tlpMain.SetRowSpan(this.lblSpecialAttributesLabel, 2);
+            this.lblSpecialAttributesLabel.Size = new System.Drawing.Size(65, 26);
+            this.lblSpecialAttributesLabel.TabIndex = 70;
+            this.lblSpecialAttributesLabel.Tag = "Label_SpecialAttributes";
+            this.lblSpecialAttributesLabel.Text = "Special Attributes:";
+            this.lblSpecialAttributesLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // cboTalents
             // 
-            cboTalents.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboTalents.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboTalents.FormattingEnabled = true;
-            cboTalents.Location = new Point(514, 61);
-            cboTalents.Margin = new Padding(4, 3, 4, 3);
-            cboTalents.Name = "cboTalents";
-            cboTalents.Size = new Size(377, 23);
-            cboTalents.TabIndex = 8;
-            cboTalents.SelectedIndexChanged += cboTalents_SelectedIndexChanged;
+            this.cboTalents.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboTalents.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboTalents.FormattingEnabled = true;
+            this.cboTalents.Location = new System.Drawing.Point(443, 57);
+            this.cboTalents.Name = "cboTalents";
+            this.cboTalents.Size = new System.Drawing.Size(320, 21);
+            this.cboTalents.TabIndex = 8;
+            this.cboTalents.SelectedIndexChanged += new System.EventHandler(this.cboTalents_SelectedIndexChanged);
             // 
             // tlpTopHalf
             // 
-            tlpTopHalf.AutoSize = true;
-            tlpTopHalf.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            tlpTopHalf.ColumnCount = 3;
-            tlpMain.SetColumnSpan(tlpTopHalf, 7);
-            tlpTopHalf.ColumnStyles.Add(new ColumnStyle());
-            tlpTopHalf.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tlpTopHalf.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            tlpTopHalf.Controls.Add(cboTalents, 2, 2);
-            tlpTopHalf.Controls.Add(lblHeritageLabel, 0, 0);
-            tlpTopHalf.Controls.Add(lblAttributesLabel, 0, 1);
-            tlpTopHalf.Controls.Add(cboResources, 1, 4);
-            tlpTopHalf.Controls.Add(lblTalentLabel, 0, 2);
-            tlpTopHalf.Controls.Add(cboSkills, 1, 3);
-            tlpTopHalf.Controls.Add(lblResourcesLabel, 0, 4);
-            tlpTopHalf.Controls.Add(cboTalent, 1, 2);
-            tlpTopHalf.Controls.Add(cboAttributes, 1, 1);
-            tlpTopHalf.Controls.Add(lblSkillsLabel, 0, 3);
-            tlpTopHalf.Controls.Add(cboHeritage, 1, 0);
-            tlpTopHalf.Controls.Add(lblSumtoTen, 2, 3);
-            tlpTopHalf.Dock = DockStyle.Fill;
-            tlpTopHalf.Location = new Point(0, 0);
-            tlpTopHalf.Margin = new Padding(0, 0, 0, 27);
-            tlpTopHalf.Name = "tlpTopHalf";
-            tlpTopHalf.RowCount = 5;
-            tlpTopHalf.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
-            tlpTopHalf.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
-            tlpTopHalf.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
-            tlpTopHalf.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
-            tlpTopHalf.RowStyles.Add(new RowStyle(SizeType.Percent, 20F));
-            tlpTopHalf.Size = new Size(895, 145);
-            tlpTopHalf.TabIndex = 105;
+            this.tlpTopHalf.AutoSize = true;
+            this.tlpTopHalf.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.tlpTopHalf.ColumnCount = 3;
+            this.tlpMain.SetColumnSpan(this.tlpTopHalf, 7);
+            this.tlpTopHalf.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.tlpTopHalf.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tlpTopHalf.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tlpTopHalf.Controls.Add(this.cboTalents, 2, 2);
+            this.tlpTopHalf.Controls.Add(this.lblHeritageLabel, 0, 0);
+            this.tlpTopHalf.Controls.Add(this.lblAttributesLabel, 0, 1);
+            this.tlpTopHalf.Controls.Add(this.cboResources, 1, 4);
+            this.tlpTopHalf.Controls.Add(this.lblTalentLabel, 0, 2);
+            this.tlpTopHalf.Controls.Add(this.cboSkills, 1, 3);
+            this.tlpTopHalf.Controls.Add(this.lblResourcesLabel, 0, 4);
+            this.tlpTopHalf.Controls.Add(this.cboTalent, 1, 2);
+            this.tlpTopHalf.Controls.Add(this.cboAttributes, 1, 1);
+            this.tlpTopHalf.Controls.Add(this.lblSkillsLabel, 0, 3);
+            this.tlpTopHalf.Controls.Add(this.cboHeritage, 1, 0);
+            this.tlpTopHalf.Controls.Add(this.lblSumtoTen, 2, 3);
+            this.tlpTopHalf.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tlpTopHalf.Location = new System.Drawing.Point(0, 0);
+            this.tlpTopHalf.Margin = new System.Windows.Forms.Padding(0, 0, 0, 23);
+            this.tlpTopHalf.Name = "tlpTopHalf";
+            this.tlpTopHalf.RowCount = 5;
+            this.tlpTopHalf.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.tlpTopHalf.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.tlpTopHalf.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.tlpTopHalf.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.tlpTopHalf.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            this.tlpTopHalf.Size = new System.Drawing.Size(766, 135);
+            this.tlpTopHalf.TabIndex = 105;
             // 
             // lblHeritageLabel
             // 
-            lblHeritageLabel.Anchor = AnchorStyles.Right;
-            lblHeritageLabel.AutoSize = true;
-            lblHeritageLabel.Location = new Point(61, 7);
-            lblHeritageLabel.Margin = new Padding(4, 7, 4, 7);
-            lblHeritageLabel.Name = "lblHeritageLabel";
-            lblHeritageLabel.Size = new Size(60, 15);
-            lblHeritageLabel.TabIndex = 102;
-            lblHeritageLabel.Tag = "Label_PriorityHeritage";
-            lblHeritageLabel.Text = "Metatype:";
+            this.lblHeritageLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblHeritageLabel.AutoSize = true;
+            this.lblHeritageLabel.Location = new System.Drawing.Point(58, 7);
+            this.lblHeritageLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblHeritageLabel.Name = "lblHeritageLabel";
+            this.lblHeritageLabel.Size = new System.Drawing.Size(54, 13);
+            this.lblHeritageLabel.TabIndex = 102;
+            this.lblHeritageLabel.Tag = "Label_PriorityHeritage";
+            this.lblHeritageLabel.Text = "Metatype:";
             // 
             // lblAttributesLabel
             // 
-            lblAttributesLabel.Anchor = AnchorStyles.Right;
-            lblAttributesLabel.AutoSize = true;
-            lblAttributesLabel.Location = new Point(59, 36);
-            lblAttributesLabel.Margin = new Padding(4, 7, 4, 7);
-            lblAttributesLabel.Name = "lblAttributesLabel";
-            lblAttributesLabel.Size = new Size(62, 15);
-            lblAttributesLabel.TabIndex = 106;
-            lblAttributesLabel.Tag = "Label_PriorityAttributes";
-            lblAttributesLabel.Text = "Attributes:";
+            this.lblAttributesLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblAttributesLabel.AutoSize = true;
+            this.lblAttributesLabel.Location = new System.Drawing.Point(58, 34);
+            this.lblAttributesLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblAttributesLabel.Name = "lblAttributesLabel";
+            this.lblAttributesLabel.Size = new System.Drawing.Size(54, 13);
+            this.lblAttributesLabel.TabIndex = 106;
+            this.lblAttributesLabel.Tag = "Label_PriorityAttributes";
+            this.lblAttributesLabel.Text = "Attributes:";
             // 
             // cboResources
             // 
-            cboResources.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboResources.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboResources.FormattingEnabled = true;
-            cboResources.Location = new Point(129, 119);
-            cboResources.Margin = new Padding(4, 3, 4, 3);
-            cboResources.Name = "cboResources";
-            cboResources.Size = new Size(377, 23);
-            cboResources.TabIndex = 5;
-            cboResources.SelectedIndexChanged += cboResources_SelectedIndexChanged;
+            this.cboResources.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboResources.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboResources.FormattingEnabled = true;
+            this.cboResources.Location = new System.Drawing.Point(118, 111);
+            this.cboResources.Name = "cboResources";
+            this.cboResources.Size = new System.Drawing.Size(319, 21);
+            this.cboResources.TabIndex = 5;
+            this.cboResources.SelectedIndexChanged += new System.EventHandler(this.cboResources_SelectedIndexChanged);
             // 
             // lblTalentLabel
             // 
-            lblTalentLabel.Anchor = AnchorStyles.Right;
-            lblTalentLabel.AutoSize = true;
-            lblTalentLabel.Location = new Point(4, 65);
-            lblTalentLabel.Margin = new Padding(4, 7, 4, 7);
-            lblTalentLabel.Name = "lblTalentLabel";
-            lblTalentLabel.Size = new Size(117, 15);
-            lblTalentLabel.TabIndex = 104;
-            lblTalentLabel.Tag = "Label_PriorityTalent";
-            lblTalentLabel.Text = "Magic or Resonance:";
+            this.lblTalentLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblTalentLabel.AutoSize = true;
+            this.lblTalentLabel.Location = new System.Drawing.Point(3, 61);
+            this.lblTalentLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblTalentLabel.Name = "lblTalentLabel";
+            this.lblTalentLabel.Size = new System.Drawing.Size(109, 13);
+            this.lblTalentLabel.TabIndex = 104;
+            this.lblTalentLabel.Tag = "Label_PriorityTalent";
+            this.lblTalentLabel.Text = "Magic or Resonance:";
             // 
             // cboSkills
             // 
-            cboSkills.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboSkills.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboSkills.FormattingEnabled = true;
-            cboSkills.Location = new Point(129, 90);
-            cboSkills.Margin = new Padding(4, 3, 4, 3);
-            cboSkills.Name = "cboSkills";
-            cboSkills.Size = new Size(377, 23);
-            cboSkills.TabIndex = 4;
-            cboSkills.SelectedIndexChanged += cboSkills_SelectedIndexChanged;
+            this.cboSkills.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboSkills.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboSkills.FormattingEnabled = true;
+            this.cboSkills.Location = new System.Drawing.Point(118, 84);
+            this.cboSkills.Name = "cboSkills";
+            this.cboSkills.Size = new System.Drawing.Size(319, 21);
+            this.cboSkills.TabIndex = 4;
+            this.cboSkills.SelectedIndexChanged += new System.EventHandler(this.cboSkills_SelectedIndexChanged);
             // 
             // lblResourcesLabel
             // 
-            lblResourcesLabel.Anchor = AnchorStyles.Right;
-            lblResourcesLabel.AutoSize = true;
-            lblResourcesLabel.Location = new Point(58, 123);
-            lblResourcesLabel.Margin = new Padding(4, 7, 4, 7);
-            lblResourcesLabel.Name = "lblResourcesLabel";
-            lblResourcesLabel.Size = new Size(63, 15);
-            lblResourcesLabel.TabIndex = 110;
-            lblResourcesLabel.Tag = "Label_PriorityResources";
-            lblResourcesLabel.Text = "Resources:";
+            this.lblResourcesLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblResourcesLabel.AutoSize = true;
+            this.lblResourcesLabel.Location = new System.Drawing.Point(51, 115);
+            this.lblResourcesLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblResourcesLabel.Name = "lblResourcesLabel";
+            this.lblResourcesLabel.Size = new System.Drawing.Size(61, 13);
+            this.lblResourcesLabel.TabIndex = 110;
+            this.lblResourcesLabel.Tag = "Label_PriorityResources";
+            this.lblResourcesLabel.Text = "Resources:";
             // 
             // cboTalent
             // 
-            cboTalent.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboTalent.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboTalent.FormattingEnabled = true;
-            cboTalent.Location = new Point(129, 61);
-            cboTalent.Margin = new Padding(4, 3, 4, 3);
-            cboTalent.Name = "cboTalent";
-            cboTalent.Size = new Size(377, 23);
-            cboTalent.TabIndex = 3;
-            cboTalent.SelectedIndexChanged += cboTalent_SelectedIndexChanged;
+            this.cboTalent.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboTalent.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboTalent.FormattingEnabled = true;
+            this.cboTalent.Location = new System.Drawing.Point(118, 57);
+            this.cboTalent.Name = "cboTalent";
+            this.cboTalent.Size = new System.Drawing.Size(319, 21);
+            this.cboTalent.TabIndex = 3;
+            this.cboTalent.SelectedIndexChanged += new System.EventHandler(this.cboTalent_SelectedIndexChanged);
             // 
             // cboAttributes
             // 
-            cboAttributes.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboAttributes.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboAttributes.FormattingEnabled = true;
-            cboAttributes.Location = new Point(129, 32);
-            cboAttributes.Margin = new Padding(4, 3, 4, 3);
-            cboAttributes.Name = "cboAttributes";
-            cboAttributes.Size = new Size(377, 23);
-            cboAttributes.TabIndex = 2;
-            cboAttributes.SelectedIndexChanged += cboAttributes_SelectedIndexChanged;
+            this.cboAttributes.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboAttributes.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboAttributes.FormattingEnabled = true;
+            this.cboAttributes.Location = new System.Drawing.Point(118, 30);
+            this.cboAttributes.Name = "cboAttributes";
+            this.cboAttributes.Size = new System.Drawing.Size(319, 21);
+            this.cboAttributes.TabIndex = 2;
+            this.cboAttributes.SelectedIndexChanged += new System.EventHandler(this.cboAttributes_SelectedIndexChanged);
             // 
             // lblSkillsLabel
             // 
-            lblSkillsLabel.Anchor = AnchorStyles.Right;
-            lblSkillsLabel.AutoSize = true;
-            lblSkillsLabel.Location = new Point(85, 94);
-            lblSkillsLabel.Margin = new Padding(4, 7, 4, 7);
-            lblSkillsLabel.Name = "lblSkillsLabel";
-            lblSkillsLabel.Size = new Size(36, 15);
-            lblSkillsLabel.TabIndex = 108;
-            lblSkillsLabel.Tag = "Label_PrioritySkills";
-            lblSkillsLabel.Text = "Skills:";
+            this.lblSkillsLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblSkillsLabel.AutoSize = true;
+            this.lblSkillsLabel.Location = new System.Drawing.Point(78, 88);
+            this.lblSkillsLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSkillsLabel.Name = "lblSkillsLabel";
+            this.lblSkillsLabel.Size = new System.Drawing.Size(34, 13);
+            this.lblSkillsLabel.TabIndex = 108;
+            this.lblSkillsLabel.Tag = "Label_PrioritySkills";
+            this.lblSkillsLabel.Text = "Skills:";
             // 
             // cboHeritage
             // 
-            cboHeritage.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboHeritage.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboHeritage.FormattingEnabled = true;
-            cboHeritage.Location = new Point(129, 3);
-            cboHeritage.Margin = new Padding(4, 3, 4, 3);
-            cboHeritage.Name = "cboHeritage";
-            cboHeritage.Size = new Size(377, 23);
-            cboHeritage.TabIndex = 1;
-            cboHeritage.SelectedIndexChanged += cboHeritage_SelectedIndexChanged;
+            this.cboHeritage.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboHeritage.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboHeritage.FormattingEnabled = true;
+            this.cboHeritage.Location = new System.Drawing.Point(118, 3);
+            this.cboHeritage.Name = "cboHeritage";
+            this.cboHeritage.Size = new System.Drawing.Size(319, 21);
+            this.cboHeritage.TabIndex = 1;
+            this.cboHeritage.SelectedIndexChanged += new System.EventHandler(this.cboHeritage_SelectedIndexChanged);
             // 
             // lblSumtoTen
             // 
-            lblSumtoTen.Anchor = AnchorStyles.None;
-            lblSumtoTen.AutoSize = true;
-            lblSumtoTen.Font = new Font("Microsoft Sans Serif", 16.5F, FontStyle.Regular, GraphicsUnit.Point, 0);
-            lblSumtoTen.Location = new Point(675, 103);
-            lblSumtoTen.Margin = new Padding(4, 7, 4, 7);
-            lblSumtoTen.Name = "lblSumtoTen";
-            tlpTopHalf.SetRowSpan(lblSumtoTen, 2);
-            lblSumtoTen.Size = new Size(54, 26);
-            lblSumtoTen.TabIndex = 111;
-            lblSumtoTen.Text = "0/10";
-            lblSumtoTen.TextAlign = ContentAlignment.MiddleCenter;
-            lblSumtoTen.Visible = false;
+            this.lblSumtoTen.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.lblSumtoTen.AutoSize = true;
+            this.lblSumtoTen.Font = new System.Drawing.Font("Microsoft Sans Serif", 16.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblSumtoTen.Location = new System.Drawing.Point(576, 95);
+            this.lblSumtoTen.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSumtoTen.Name = "lblSumtoTen";
+            this.tlpTopHalf.SetRowSpan(this.lblSumtoTen, 2);
+            this.lblSumtoTen.Size = new System.Drawing.Size(54, 26);
+            this.lblSumtoTen.TabIndex = 111;
+            this.lblSumtoTen.Text = "0/10";
+            this.lblSumtoTen.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblSumtoTen.Visible = false;
             // 
             // tlpMain
             // 
-            tlpMain.ColumnCount = 7;
-            tlpMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 43F));
-            tlpMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 9.5F));
-            tlpMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 9.5F));
-            tlpMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 9.5F));
-            tlpMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 9.5F));
-            tlpMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 9.5F));
-            tlpMain.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 9.5F));
-            tlpMain.Controls.Add(lstMetatypes, 0, 3);
-            tlpMain.Controls.Add(cboCategory, 0, 2);
-            tlpMain.Controls.Add(lblMetavariantQualitiesLabel, 1, 8);
-            tlpMain.Controls.Add(cboSkill1, 1, 10);
-            tlpMain.Controls.Add(cboSkill2, 1, 11);
-            tlpMain.Controls.Add(tlpTopHalf, 0, 0);
-            tlpMain.Controls.Add(tlpButtons, 1, 13);
-            tlpMain.Controls.Add(cboSkill3, 1, 12);
-            tlpMain.Controls.Add(pnlQualities, 2, 8);
-            tlpMain.Controls.Add(lblWILLabel, 5, 7);
-            tlpMain.Controls.Add(lblWIL, 6, 7);
-            tlpMain.Controls.Add(lblSTRLabel, 3, 7);
-            tlpMain.Controls.Add(lblSTR, 4, 7);
-            tlpMain.Controls.Add(lblREALabel, 3, 6);
-            tlpMain.Controls.Add(lblREA, 4, 6);
-            tlpMain.Controls.Add(lblAGILabel, 3, 5);
-            tlpMain.Controls.Add(lblAGI, 4, 5);
-            tlpMain.Controls.Add(lblBODLabel, 3, 4);
-            tlpMain.Controls.Add(lblBOD, 4, 4);
-            tlpMain.Controls.Add(lblLOGLabel, 5, 6);
-            tlpMain.Controls.Add(lblLOG, 6, 6);
-            tlpMain.Controls.Add(lblINT, 6, 5);
-            tlpMain.Controls.Add(lblCHA, 6, 4);
-            tlpMain.Controls.Add(lblINTLabel, 5, 5);
-            tlpMain.Controls.Add(lblCHALabel, 5, 4);
-            tlpMain.Controls.Add(lblMetavariantKarmaLabel, 1, 4);
-            tlpMain.Controls.Add(lblMetavariantKarma, 2, 4);
-            tlpMain.Controls.Add(tlpSpirits, 1, 3);
-            tlpMain.Controls.Add(tlpMetavariant, 1, 2);
-            tlpMain.Controls.Add(lblSpecialAttributesLabel, 1, 5);
-            tlpMain.Controls.Add(lblSpecialAttributes, 2, 5);
-            tlpMain.Controls.Add(lblSourceLabel, 1, 7);
-            tlpMain.Controls.Add(lblSource, 2, 7);
-            tlpMain.Controls.Add(lblMetatypeSkillSelection, 1, 9);
-            tlpMain.Dock = DockStyle.Fill;
-            tlpMain.Location = new Point(10, 10);
-            tlpMain.Margin = new Padding(0);
-            tlpMain.Name = "tlpMain";
-            tlpMain.RowCount = 14;
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.RowStyles.Add(new RowStyle());
-            tlpMain.Size = new Size(895, 627);
-            tlpMain.TabIndex = 106;
+            this.tlpMain.ColumnCount = 7;
+            this.tlpMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 43F));
+            this.tlpMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 9.5F));
+            this.tlpMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 9.5F));
+            this.tlpMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 9.5F));
+            this.tlpMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 9.5F));
+            this.tlpMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 9.5F));
+            this.tlpMain.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 9.5F));
+            this.tlpMain.Controls.Add(this.lstMetatypes, 0, 3);
+            this.tlpMain.Controls.Add(this.cboCategory, 0, 2);
+            this.tlpMain.Controls.Add(this.lblMetavariantQualitiesLabel, 1, 8);
+            this.tlpMain.Controls.Add(this.cboSkill1, 1, 10);
+            this.tlpMain.Controls.Add(this.cboSkill2, 1, 11);
+            this.tlpMain.Controls.Add(this.tlpTopHalf, 0, 0);
+            this.tlpMain.Controls.Add(this.tlpButtons, 1, 13);
+            this.tlpMain.Controls.Add(this.cboSkill3, 1, 12);
+            this.tlpMain.Controls.Add(this.pnlQualities, 2, 8);
+            this.tlpMain.Controls.Add(this.lblWILLabel, 5, 7);
+            this.tlpMain.Controls.Add(this.lblWIL, 6, 7);
+            this.tlpMain.Controls.Add(this.lblSTRLabel, 3, 7);
+            this.tlpMain.Controls.Add(this.lblSTR, 4, 7);
+            this.tlpMain.Controls.Add(this.lblREALabel, 3, 6);
+            this.tlpMain.Controls.Add(this.lblREA, 4, 6);
+            this.tlpMain.Controls.Add(this.lblAGILabel, 3, 5);
+            this.tlpMain.Controls.Add(this.lblAGI, 4, 5);
+            this.tlpMain.Controls.Add(this.lblBODLabel, 3, 4);
+            this.tlpMain.Controls.Add(this.lblBOD, 4, 4);
+            this.tlpMain.Controls.Add(this.lblLOGLabel, 5, 6);
+            this.tlpMain.Controls.Add(this.lblLOG, 6, 6);
+            this.tlpMain.Controls.Add(this.lblINT, 6, 5);
+            this.tlpMain.Controls.Add(this.lblCHA, 6, 4);
+            this.tlpMain.Controls.Add(this.lblINTLabel, 5, 5);
+            this.tlpMain.Controls.Add(this.lblCHALabel, 5, 4);
+            this.tlpMain.Controls.Add(this.lblMetavariantKarmaLabel, 1, 4);
+            this.tlpMain.Controls.Add(this.lblMetavariantKarma, 2, 4);
+            this.tlpMain.Controls.Add(this.tlpSpirits, 1, 3);
+            this.tlpMain.Controls.Add(this.tlpMetavariant, 1, 2);
+            this.tlpMain.Controls.Add(this.lblSpecialAttributesLabel, 1, 5);
+            this.tlpMain.Controls.Add(this.lblSpecialAttributes, 2, 5);
+            this.tlpMain.Controls.Add(this.lblSourceLabel, 1, 7);
+            this.tlpMain.Controls.Add(this.lblSource, 2, 7);
+            this.tlpMain.Controls.Add(this.lblMetatypeSkillSelection, 1, 9);
+            this.tlpMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tlpMain.Location = new System.Drawing.Point(9, 9);
+            this.tlpMain.Margin = new System.Windows.Forms.Padding(0);
+            this.tlpMain.Name = "tlpMain";
+            this.tlpMain.RowCount = 14;
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpMain.Size = new System.Drawing.Size(766, 543);
+            this.tlpMain.TabIndex = 106;
             // 
             // lblMetavariantQualitiesLabel
             // 
-            lblMetavariantQualitiesLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            lblMetavariantQualitiesLabel.AutoSize = true;
-            lblMetavariantQualitiesLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblMetavariantQualitiesLabel.Location = new Point(405, 353);
-            lblMetavariantQualitiesLabel.Margin = new Padding(4, 7, 4, 7);
-            lblMetavariantQualitiesLabel.Name = "lblMetavariantQualitiesLabel";
-            lblMetavariantQualitiesLabel.Size = new Size(60, 13);
-            lblMetavariantQualitiesLabel.TabIndex = 62;
-            lblMetavariantQualitiesLabel.Tag = "Label_Qualities";
-            lblMetavariantQualitiesLabel.Text = "Qualities:";
+            this.lblMetavariantQualitiesLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblMetavariantQualitiesLabel.AutoSize = true;
+            this.lblMetavariantQualitiesLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblMetavariantQualitiesLabel.Location = new System.Drawing.Point(338, 318);
+            this.lblMetavariantQualitiesLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblMetavariantQualitiesLabel.Name = "lblMetavariantQualitiesLabel";
+            this.lblMetavariantQualitiesLabel.Size = new System.Drawing.Size(60, 13);
+            this.lblMetavariantQualitiesLabel.TabIndex = 62;
+            this.lblMetavariantQualitiesLabel.Tag = "Label_Qualities";
+            this.lblMetavariantQualitiesLabel.Text = "Qualities:";
             // 
             // pnlQualities
             // 
-            pnlQualities.AutoScroll = true;
-            tlpMain.SetColumnSpan(pnlQualities, 5);
-            pnlQualities.Controls.Add(lblMetavariantQualities);
-            pnlQualities.Dock = DockStyle.Fill;
-            pnlQualities.Location = new Point(469, 346);
-            pnlQualities.Margin = new Padding(0);
-            pnlQualities.Name = "pnlQualities";
-            pnlQualities.Padding = new Padding(4, 7, 15, 7);
-            pnlQualities.Size = new Size(426, 134);
-            pnlQualities.TabIndex = 106;
+            this.pnlQualities.AutoScroll = true;
+            this.tlpMain.SetColumnSpan(this.pnlQualities, 5);
+            this.pnlQualities.Controls.Add(this.lblMetavariantQualities);
+            this.pnlQualities.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pnlQualities.Location = new System.Drawing.Point(401, 312);
+            this.pnlQualities.Margin = new System.Windows.Forms.Padding(0);
+            this.pnlQualities.Name = "pnlQualities";
+            this.pnlQualities.Padding = new System.Windows.Forms.Padding(3, 6, 13, 6);
+            this.pnlQualities.Size = new System.Drawing.Size(365, 96);
+            this.pnlQualities.TabIndex = 106;
             // 
             // lblMetavariantKarmaLabel
             // 
-            lblMetavariantKarmaLabel.Anchor = AnchorStyles.Right;
-            lblMetavariantKarmaLabel.AutoSize = true;
-            lblMetavariantKarmaLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblMetavariantKarmaLabel.Location = new Point(419, 238);
-            lblMetavariantKarmaLabel.Margin = new Padding(4, 7, 4, 7);
-            lblMetavariantKarmaLabel.Name = "lblMetavariantKarmaLabel";
-            lblMetavariantKarmaLabel.Size = new Size(46, 13);
-            lblMetavariantKarmaLabel.TabIndex = 76;
-            lblMetavariantKarmaLabel.Tag = "Label_Karma";
-            lblMetavariantKarmaLabel.Text = "Karma:";
-            lblMetavariantKarmaLabel.TextAlign = ContentAlignment.MiddleRight;
+            this.lblMetavariantKarmaLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblMetavariantKarmaLabel.AutoSize = true;
+            this.lblMetavariantKarmaLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblMetavariantKarmaLabel.Location = new System.Drawing.Point(352, 218);
+            this.lblMetavariantKarmaLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblMetavariantKarmaLabel.Name = "lblMetavariantKarmaLabel";
+            this.lblMetavariantKarmaLabel.Size = new System.Drawing.Size(46, 13);
+            this.lblMetavariantKarmaLabel.TabIndex = 76;
+            this.lblMetavariantKarmaLabel.Tag = "Label_Karma";
+            this.lblMetavariantKarmaLabel.Text = "Karma:";
+            this.lblMetavariantKarmaLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // tlpSpirits
             // 
-            tlpSpirits.AutoSize = true;
-            tlpSpirits.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            tlpSpirits.ColumnCount = 4;
-            tlpMain.SetColumnSpan(tlpSpirits, 6);
-            tlpSpirits.ColumnStyles.Add(new ColumnStyle());
-            tlpSpirits.ColumnStyles.Add(new ColumnStyle());
-            tlpSpirits.ColumnStyles.Add(new ColumnStyle());
-            tlpSpirits.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tlpSpirits.Controls.Add(cboPossessionMethod, 3, 0);
-            tlpSpirits.Controls.Add(lblForceLabel, 0, 0);
-            tlpSpirits.Controls.Add(nudForce, 1, 0);
-            tlpSpirits.Dock = DockStyle.Fill;
-            tlpSpirits.Location = new Point(384, 201);
-            tlpSpirits.Margin = new Padding(0);
-            tlpSpirits.Name = "tlpSpirits";
-            tlpSpirits.RowCount = 1;
-            tlpSpirits.RowStyles.Add(new RowStyle());
-            tlpSpirits.Size = new Size(511, 29);
-            tlpSpirits.TabIndex = 107;
+            this.tlpSpirits.AutoSize = true;
+            this.tlpSpirits.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.tlpSpirits.ColumnCount = 4;
+            this.tlpMain.SetColumnSpan(this.tlpSpirits, 6);
+            this.tlpSpirits.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.tlpSpirits.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.tlpSpirits.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.tlpSpirits.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tlpSpirits.Controls.Add(this.chkPossessionBased, 2, 0);
+            this.tlpSpirits.Controls.Add(this.cboPossessionMethod, 3, 0);
+            this.tlpSpirits.Controls.Add(this.lblForceLabel, 0, 0);
+            this.tlpSpirits.Controls.Add(this.nudForce, 1, 0);
+            this.tlpSpirits.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tlpSpirits.Location = new System.Drawing.Point(329, 185);
+            this.tlpSpirits.Margin = new System.Windows.Forms.Padding(0);
+            this.tlpSpirits.Name = "tlpSpirits";
+            this.tlpSpirits.RowCount = 1;
+            this.tlpSpirits.RowStyles.Add(new System.Windows.Forms.RowStyle());
+            this.tlpSpirits.Size = new System.Drawing.Size(437, 27);
+            this.tlpSpirits.TabIndex = 107;
             // 
             // chkPossessionBased
             // 
-            chkPossessionBased.Anchor = AnchorStyles.Left;
-            chkPossessionBased.AutoSize = true;
-            chkPossessionBased.DefaultColorScheme = true;
-            chkPossessionBased.Location = new Point(98, 5);
-            chkPossessionBased.Name = "chkPossessionBased";
-            chkPossessionBased.Size = new Size(211, 17);
-            chkPossessionBased.TabIndex = 64;
-            chkPossessionBased.Tag = "Checkbox_Metatype_PossessionTradition";
-            chkPossessionBased.Text = "Summoned by Possess-based Tradition";
-            chkPossessionBased.TextAlign =ContentAlignment.TopLeft;
-            chkPossessionBased.UseVisualStyleBackColor = true;
-            chkPossessionBased.Visible = false;
-            chkPossessionBased.CheckedChanged += new System.EventHandler(this.chkPossessionBased_CheckedChanged);
+            this.chkPossessionBased.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.chkPossessionBased.AutoSize = true;
+            this.chkPossessionBased.DefaultColorScheme = true;
+            this.chkPossessionBased.Location = new System.Drawing.Point(98, 5);
+            this.chkPossessionBased.Name = "chkPossessionBased";
+            this.chkPossessionBased.Size = new System.Drawing.Size(211, 17);
+            this.chkPossessionBased.TabIndex = 64;
+            this.chkPossessionBased.Tag = "Checkbox_Metatype_PossessionTradition";
+            this.chkPossessionBased.Text = "Summoned by Possess-based Tradition";
+            this.chkPossessionBased.TextAlign = System.Drawing.ContentAlignment.TopLeft;
+            this.chkPossessionBased.UseVisualStyleBackColor = true;
+            this.chkPossessionBased.Visible = false;
+            this.chkPossessionBased.CheckedChanged += new System.EventHandler(this.chkPossessionBased_CheckedChanged);
             // 
             // cboPossessionMethod
             // 
-            cboPossessionMethod.Anchor = AnchorStyles.Left | AnchorStyles.Right;
-            cboPossessionMethod.DropDownStyle = ComboBoxStyle.DropDownList;
-            cboPossessionMethod.Enabled = false;
-            cboPossessionMethod.FormattingEnabled = true;
-            cboPossessionMethod.Location = new Point(107, 3);
-            cboPossessionMethod.Margin = new Padding(4, 3, 4, 3);
-            cboPossessionMethod.Name = "cboPossessionMethod";
-            cboPossessionMethod.Size = new Size(400, 23);
-            cboPossessionMethod.TabIndex = 65;
-            cboPossessionMethod.Visible = false;
+            this.cboPossessionMethod.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right)));
+            this.cboPossessionMethod.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboPossessionMethod.Enabled = false;
+            this.cboPossessionMethod.FormattingEnabled = true;
+            this.cboPossessionMethod.Location = new System.Drawing.Point(315, 3);
+            this.cboPossessionMethod.Name = "cboPossessionMethod";
+            this.cboPossessionMethod.Size = new System.Drawing.Size(119, 21);
+            this.cboPossessionMethod.TabIndex = 65;
+            this.cboPossessionMethod.Visible = false;
             // 
             // lblForceLabel
             // 
-            lblForceLabel.Anchor = AnchorStyles.Right;
-            lblForceLabel.AutoSize = true;
-            lblForceLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblForceLabel.Location = new Point(4, 8);
-            lblForceLabel.Margin = new Padding(4, 7, 4, 7);
-            lblForceLabel.Name = "lblForceLabel";
-            lblForceLabel.Size = new Size(48, 13);
-            lblForceLabel.TabIndex = 56;
-            lblForceLabel.Tag = "String_Force";
-            lblForceLabel.Text = "FORCE";
-            lblForceLabel.Visible = false;
+            this.lblForceLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblForceLabel.AutoSize = true;
+            this.lblForceLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblForceLabel.Location = new System.Drawing.Point(3, 7);
+            this.lblForceLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblForceLabel.Name = "lblForceLabel";
+            this.lblForceLabel.Size = new System.Drawing.Size(48, 13);
+            this.lblForceLabel.TabIndex = 56;
+            this.lblForceLabel.Tag = "String_Force";
+            this.lblForceLabel.Text = "FORCE";
+            this.lblForceLabel.Visible = false;
             // 
             // nudForce
             // 
-            nudForce.Anchor = AnchorStyles.Top | AnchorStyles.Left;
-            nudForce.AutoSize = true;
-            nudForce.Location = new Point(59, 3);
-            nudForce.Name = "nudForce";
-            nudForce.Size = new Size(41, 23);
-            nudForce.TabIndex = 57;
-            nudForce.Value = new decimal(new int[] { 1, 0, 0, 0 });
-            nudForce.Visible = false;
+            this.nudForce.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.nudForce.AutoSize = true;
+            this.nudForce.Location = new System.Drawing.Point(57, 3);
+            this.nudForce.Maximum = new decimal(new int[] {
+            20,
+            0,
+            0,
+            0});
+            this.nudForce.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nudForce.Name = "nudForce";
+            this.nudForce.Size = new System.Drawing.Size(35, 20);
+            this.nudForce.TabIndex = 57;
+            this.nudForce.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.nudForce.Visible = false;
             // 
             // tlpMetavariant
             // 
-            tlpMetavariant.AutoSize = true;
-            tlpMetavariant.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            tlpMetavariant.ColumnCount = 2;
-            tlpMain.SetColumnSpan(tlpMetavariant, 6);
-            tlpMetavariant.ColumnStyles.Add(new ColumnStyle());
-            tlpMetavariant.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            tlpMetavariant.Controls.Add(lblMetavariantLabel, 0, 0);
-            tlpMetavariant.Controls.Add(cboMetavariant, 1, 0);
-            tlpMetavariant.Dock = DockStyle.Fill;
-            tlpMetavariant.Location = new Point(384, 172);
-            tlpMetavariant.Margin = new Padding(0);
-            tlpMetavariant.Name = "tlpMetavariant";
-            tlpMetavariant.RowCount = 1;
-            tlpMetavariant.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            tlpMetavariant.Size = new Size(511, 29);
-            tlpMetavariant.TabIndex = 108;
+            this.tlpMetavariant.AutoSize = true;
+            this.tlpMetavariant.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
+            this.tlpMetavariant.ColumnCount = 2;
+            this.tlpMain.SetColumnSpan(this.tlpMetavariant, 6);
+            this.tlpMetavariant.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            this.tlpMetavariant.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tlpMetavariant.Controls.Add(this.lblMetavariantLabel, 0, 0);
+            this.tlpMetavariant.Controls.Add(this.cboMetavariant, 1, 0);
+            this.tlpMetavariant.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tlpMetavariant.Location = new System.Drawing.Point(329, 158);
+            this.tlpMetavariant.Margin = new System.Windows.Forms.Padding(0);
+            this.tlpMetavariant.Name = "tlpMetavariant";
+            this.tlpMetavariant.RowCount = 1;
+            this.tlpMetavariant.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tlpMetavariant.Size = new System.Drawing.Size(437, 27);
+            this.tlpMetavariant.TabIndex = 108;
             // 
             // lblMetavariantLabel
             // 
-            lblMetavariantLabel.Anchor = AnchorStyles.Right;
-            lblMetavariantLabel.AutoSize = true;
-            lblMetavariantLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblMetavariantLabel.Location = new Point(4, 8);
-            lblMetavariantLabel.Margin = new Padding(4, 7, 4, 7);
-            lblMetavariantLabel.Name = "lblMetavariantLabel";
-            lblMetavariantLabel.Size = new Size(78, 13);
-            lblMetavariantLabel.TabIndex = 58;
-            lblMetavariantLabel.Tag = "Label_Metavariant";
-            lblMetavariantLabel.Text = "Metavariant:";
-            lblMetavariantLabel.TextAlign = ContentAlignment.MiddleRight;
+            this.lblMetavariantLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblMetavariantLabel.AutoSize = true;
+            this.lblMetavariantLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblMetavariantLabel.Location = new System.Drawing.Point(3, 7);
+            this.lblMetavariantLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblMetavariantLabel.Name = "lblMetavariantLabel";
+            this.lblMetavariantLabel.Size = new System.Drawing.Size(78, 13);
+            this.lblMetavariantLabel.TabIndex = 58;
+            this.lblMetavariantLabel.Tag = "Label_Metavariant";
+            this.lblMetavariantLabel.Text = "Metavariant:";
+            this.lblMetavariantLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // lblSourceLabel
             // 
-            lblSourceLabel.Anchor = AnchorStyles.Right;
-            lblSourceLabel.AutoSize = true;
-            lblSourceLabel.Font = new Font("Microsoft Sans Serif", 8.25F, FontStyle.Bold, GraphicsUnit.Point, 0);
-            lblSourceLabel.Location = new Point(414, 325);
-            lblSourceLabel.Margin = new Padding(4, 7, 4, 7);
-            lblSourceLabel.Name = "lblSourceLabel";
-            lblSourceLabel.Size = new Size(51, 13);
-            lblSourceLabel.TabIndex = 109;
-            lblSourceLabel.Tag = "Label_Source";
-            lblSourceLabel.Text = "Source:";
-            lblSourceLabel.TextAlign = ContentAlignment.MiddleRight;
+            this.lblSourceLabel.Anchor = System.Windows.Forms.AnchorStyles.Right;
+            this.lblSourceLabel.AutoSize = true;
+            this.lblSourceLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblSourceLabel.Location = new System.Drawing.Point(347, 293);
+            this.lblSourceLabel.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSourceLabel.Name = "lblSourceLabel";
+            this.lblSourceLabel.Size = new System.Drawing.Size(51, 13);
+            this.lblSourceLabel.TabIndex = 109;
+            this.lblSourceLabel.Tag = "Label_Source";
+            this.lblSourceLabel.Text = "Source:";
+            this.lblSourceLabel.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
             // lblSource
             // 
-            lblSource.Anchor = AnchorStyles.Left;
-            lblSource.AutoSize = true;
-            lblSource.Cursor = Cursors.Hand;
-            lblSource.Location = new Point(473, 324);
-            lblSource.Margin = new Padding(4, 7, 4, 7);
-            lblSource.Name = "lblSource";
-            lblSource.Size = new Size(51, 15);
-            lblSource.TabIndex = 110;
-            lblSource.Text = "[Source]";
-            lblSource.TextAlign = ContentAlignment.MiddleLeft;
-            lblSource.Click += OpenSourceFromLabel;
+            this.lblSource.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.lblSource.AutoSize = true;
+            this.lblSource.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.lblSource.Location = new System.Drawing.Point(404, 293);
+            this.lblSource.Margin = new System.Windows.Forms.Padding(3, 6, 3, 6);
+            this.lblSource.Name = "lblSource";
+            this.lblSource.Size = new System.Drawing.Size(47, 13);
+            this.lblSource.TabIndex = 110;
+            this.lblSource.Text = "[Source]";
+            this.lblSource.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.lblSource.Click += new System.EventHandler(this.OpenSourceFromLabel);
             // 
             // SelectMetatypePriority
             // 
-            AutoScaleDimensions = new SizeF(7F, 15F);
-            AutoScaleMode = AutoScaleMode.Font;
-            AutoSize = true;
-            ClientSize = new Size(915, 647);
-            Controls.Add(tlpMain);
-            Icon = (Icon)resources.GetObject("$this.Icon");
-            MaximizeBox = false;
-            MinimizeBox = false;
-            Name = "SelectMetatypePriority";
-            Padding = new Padding(10);
-            StartPosition = FormStartPosition.CenterParent;
-            Tag = "Title_ChooseCharacterPriorities";
-            Text = "Choose Character Priorities";
-            FormClosing += SelectMetatypePriority_Closing;
-            Load += SelectMetatypePriority_Load;
-            tlpButtons.ResumeLayout(false);
-            tlpButtons.PerformLayout();
-            tlpTopHalf.ResumeLayout(false);
-            tlpTopHalf.PerformLayout();
-            tlpMain.ResumeLayout(false);
-            tlpMain.PerformLayout();
-            pnlQualities.ResumeLayout(false);
-            pnlQualities.PerformLayout();
-            tlpSpirits.ResumeLayout(false);
-            tlpSpirits.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)nudForce).EndInit();
-            tlpMetavariant.ResumeLayout(false);
-            tlpMetavariant.PerformLayout();
-            ResumeLayout(false);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoSize = true;
+            this.ClientSize = new System.Drawing.Size(784, 561);
+            this.Controls.Add(this.tlpMain);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Name = "SelectMetatypePriority";
+            this.Padding = new System.Windows.Forms.Padding(9);
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            this.Tag = "Title_ChooseCharacterPriorities";
+            this.Text = "Choose Character Priorities";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.SelectMetatypePriority_Closing);
+            this.Load += new System.EventHandler(this.SelectMetatypePriority_Load);
+            this.tlpButtons.ResumeLayout(false);
+            this.tlpButtons.PerformLayout();
+            this.tlpTopHalf.ResumeLayout(false);
+            this.tlpTopHalf.PerformLayout();
+            this.tlpMain.ResumeLayout(false);
+            this.tlpMain.PerformLayout();
+            this.pnlQualities.ResumeLayout(false);
+            this.pnlQualities.PerformLayout();
+            this.tlpSpirits.ResumeLayout(false);
+            this.tlpSpirits.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.nudForce)).EndInit();
+            this.tlpMetavariant.ResumeLayout(false);
+            this.tlpMetavariant.PerformLayout();
+            this.ResumeLayout(false);
 
         }
 
@@ -997,6 +1053,6 @@ namespace Chummer
         private NumericUpDownEx nudForce;
         private System.Windows.Forms.TableLayoutPanel tlpMetavariant;
         internal System.Windows.Forms.Label lblSourceLabel;
-        internal System.Windows.Forms.Label lblSource;
+        internal Chummer.LabelWithToolTip lblSource;
     }
 }

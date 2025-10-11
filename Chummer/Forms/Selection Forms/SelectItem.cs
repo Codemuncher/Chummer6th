@@ -19,12 +19,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.XPath;
 using Chummer.Backend.Equipment;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -47,17 +47,17 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _lstGeneralItems = Utils.ListItemListPool.Get();
-            Disposed += (sender, args) => Utils.ListItemListPool.Return(ref _lstGeneralItems);
         }
 
         private async void SelectItem_Load(object sender, EventArgs e)
         {
             using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstItems))
             {
-                switch (_strMode)
+                switch (_strMode.ToUpperInvariant())
                 {
-                    case "Gear":
+                    case "GEAR":
                         {
                             string strSpace = await LanguageManager.GetStringAsync("String_Space").ConfigureAwait(false);
                             await cboAmmo.DoThreadSafeAsync(x => x.DropDownStyle = ComboBoxStyle.DropDownList).ConfigureAwait(false);
@@ -72,8 +72,8 @@ namespace Chummer
                                     if (await objGear.Children.GetCountAsync().ConfigureAwait(false) > 0)
                                     {
                                         // Append the plugin information to the name.
-                                        (await sbdAmmoName.Append(strSpace).Append('[')
-                                                          .AppendJoinAsync(',' + strSpace,
+                                        (await sbdAmmoName.Append(strSpace, '[')
+                                                          .AppendJoinAsync("," + strSpace,
                                                                            objGear.Children.Select(
                                                                                x => x.GetCurrentDisplayNameShortAsync())).ConfigureAwait(false))
                                             .Append(']');
@@ -82,24 +82,23 @@ namespace Chummer
                                     int intRating = await objGear.GetRatingAsync().ConfigureAwait(false);
                                     if (intRating > 0)
                                     {
-                                        sbdAmmoName.Append(strSpace).Append('(')
+                                        sbdAmmoName.Append(strSpace, '(')
                                                    .AppendFormat(GlobalSettings.CultureInfo,
                                                                  await LanguageManager.GetStringAsync("Label_RatingFormat")
                                                                      .ConfigureAwait(false),
                                                                  await LanguageManager.GetStringAsync(objGear.RatingLabel)
-                                                                     .ConfigureAwait(false)).Append(strSpace)
-                                                   .Append(intRating.ToString(GlobalSettings.CultureInfo)).Append(')');
+                                                                     .ConfigureAwait(false))
+                                                   .Append(strSpace, intRating.ToString(GlobalSettings.CultureInfo), ')');
                                     }
 
-                                    sbdAmmoName.Append(strSpace).Append('×')
-                                               .Append(objGear.Quantity.ToString(GlobalSettings.InvariantCultureInfo));
+                                    sbdAmmoName.Append(strSpace, '×', objGear.Quantity.ToString(GlobalSettings.InvariantCultureInfo));
                                     lstItems.Add(new ListItem(objGear.InternalId, sbdAmmoName.ToString()));
                                 }
                             }
 
                             break;
                         }
-                    case "Vehicles":
+                    case "VEHICLES":
                         {
                             await cboAmmo.DoThreadSafeAsync(x => x.DropDownStyle = ComboBoxStyle.DropDownList).ConfigureAwait(false);
                             // Add each of the items to a new List.
@@ -110,12 +109,12 @@ namespace Chummer
 
                             break;
                         }
-                    case "General":
+                    case "GENERAL":
                         await cboAmmo.DoThreadSafeAsync(x => x.DropDownStyle = ComboBoxStyle.DropDownList).ConfigureAwait(false);
                         lstItems.AddRange(_lstGeneralItems);
                         break;
 
-                    case "Dropdown":
+                    case "DROPDOWN":
                         await cboAmmo.DoThreadSafeAsync(x =>
                         {
                             x.DropDownStyle = ComboBoxStyle.DropDown;
@@ -124,7 +123,7 @@ namespace Chummer
                         lstItems.AddRange(_lstGeneralItems);
                         break;
 
-                    case "Restricted":
+                    case "RESTRICTED":
                         {
                             await cboAmmo.DoThreadSafeAsync(x =>
                             {
@@ -413,6 +412,14 @@ namespace Chummer
         /// Internal ID of the item that was selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Internal ID of the item that was selected.
+        /// </summary>
         public string SelectedItem
         {
             get => _strSelectedItem;
@@ -428,6 +435,9 @@ namespace Chummer
         /// Whether the Form should be accepted if there is only one item left in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether the Form should be accepted if there is only one item left in the list.
+        /// </summary>
         public bool AllowAutoSelect
         {
             get => _blnAllowAutoSelect;
@@ -438,6 +448,9 @@ namespace Chummer
         /// Description to show in the window.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description to show in the window.
+        /// </summary>
         public string Description
         {
             get => lblDescription.Text;

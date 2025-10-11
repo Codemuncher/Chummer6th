@@ -66,47 +66,6 @@ namespace Chummer
             InitializeComponent();
             tabSkillsUc.MyToken = GenericToken;
             tabPowerUc.MyToken = GenericToken;
-            Disposed += (sender, args) =>
-            {
-                _fntNormal.Dispose();
-                _fntStrikeout.Dispose();
-                Interlocked.Exchange(ref _objFormClosingSemaphore, null)?.Dispose();
-                // These tabs might not necessarily be present in our form, so check to dispose them manually
-                if (!tabInitiation.IsDisposed)
-                {
-                    tabInitiation.Dispose();
-                }
-
-                if (!tabMagician.IsDisposed)
-                {
-                    tabMagician.Dispose();
-                }
-
-                if (!tabAdept.IsDisposed)
-                {
-                    tabAdept.Dispose();
-                }
-
-                if (!tabTechnomancer.IsDisposed)
-                {
-                    tabTechnomancer.Dispose();
-                }
-
-                if (!tabAdvancedPrograms.IsDisposed)
-                {
-                    tabAdvancedPrograms.Dispose();
-                }
-
-                if (!tabCritter.IsDisposed)
-                {
-                    tabCritter.Dispose();
-                }
-
-                if (!tabEnemies.IsDisposed)
-                {
-                    tabEnemies.Dispose();
-                }
-            };
         }
 
         [Obsolete("This constructor is for use by form designers only.", true)]
@@ -126,6 +85,8 @@ namespace Chummer
             tabPowerUc.CachedCharacter = objCharacter;
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
+
             ContextMenuStrip[] lstCMSToTranslate =
             {
                 cmsAdvancedLifestyle,
@@ -729,7 +690,7 @@ namespace Chummer
                                                                  + await CharacterObjectSettings
                                                                      .BookXPathAsync(token: GenericToken)
                                                                      .ConfigureAwait(false)
-                                                                 + ']'))
+                                                                 + "]"))
                                                 {
                                                     string strName
                                                         = xmlTradition.SelectSingleNodeAndCacheExpression(
@@ -990,7 +951,7 @@ namespace Chummer
                                                                  + await CharacterObjectSettings
                                                                      .BookXPathAsync(token: GenericToken)
                                                                      .ConfigureAwait(false)
-                                                                 + ']'))
+                                                                 + "]"))
                                                 {
                                                     string strName
                                                         = xmlTradition.SelectSingleNodeAndCacheExpression(
@@ -1076,10 +1037,6 @@ namespace Chummer
                                     using (Timekeeper.StartSyncron(
                                                "load_frm_create_databinding2", op_load_frm_create))
                                     {
-                                        // Merge the ToolStrips.
-                                        ToolStripManager.RevertMerge("toolStrip");
-                                        ToolStripManager.Merge(tsMain, "toolStrip");
-
                                         await nudNuyen.RegisterOneWayAsyncDataBindingAsync(
                                                 (x, y) => x.Maximum = y, CharacterObject,
                                                 nameof(Character.TotalNuyenMaximumBP),
@@ -1824,6 +1781,26 @@ namespace Chummer
                                 {
                                     // Directly awaiting here so that we can properly unset the dirty flag after the update
                                     await RequestAndProcessCharacterUpdate(GenericToken).ConfigureAwait(false);
+
+                                    // Update tradition UI after character loading is complete
+                                    Tradition objTradition = await CharacterObject.GetMagicTraditionAsync(GenericToken).ConfigureAwait(false);
+                                    if (objTradition != null && objTradition.IsCustomTradition)
+                                    {
+                                        // Just update UI visibility without recreating the tradition
+                                        await lblTraditionName.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await txtTraditionName.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritCombat.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritDetection.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritHealth.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritIllusion.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await lblSpiritManipulation.DoThreadSafeAsync(x => x.Visible = true, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritCombat.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritDetection.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritHealth.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritIllusion.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                        await cboSpiritManipulation.DoThreadSafeAsync(x => { x.Enabled = true; x.Visible = true; }, GenericToken).ConfigureAwait(false);
+                                    }
+
                                     // Clear the Dirty flag which gets set when creating a new Character.
                                     if (!await CharacterObject.GetLoadAsDirtyAsync(GenericToken).ConfigureAwait(false))
                                         IsDirty = false;
@@ -1863,7 +1840,7 @@ namespace Chummer
                                     if (await Program.ShowScrollableMessageBoxAsync(
                                         this, strDescription,
                                         await LanguageManager.GetStringAsync("MessageTitle_ImprovementLoadError", token: GenericToken).ConfigureAwait(false),
-                                        MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation).ConfigureAwait(false) == DialogResult.Yes)
+                                        MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation, token: GenericToken).ConfigureAwait(false) == DialogResult.Yes)
                                     {
                                         await DoReapplyImprovements(lstInternalIdsNeedingReapplyImprovements,
                                             GenericToken).ConfigureAwait(false);
@@ -1872,7 +1849,7 @@ namespace Chummer
 
                                 // If we end up with a character who is flagged as dirty after loading, immediately autosave them
                                 if (IsDirty)
-                                    tskAutosave = Task.Run(() => AutoSaveCharacter(GenericToken), GenericToken);
+                                    tskAutosave = AutoSaveCharacter(GenericToken);
 
                                 op_load_frm_create.SetSuccess(true);
                             }
@@ -1982,11 +1959,7 @@ namespace Chummer
                                 }
 
                                 await this.DoThreadSafeAsync(x => x.UseWaitCursor = true, GenericToken).ConfigureAwait(false);
-                                GenericCancellationTokenSource?.Cancel(false);
-
-                                // Reset the ToolStrip so the Save button is removed for the currently closing window.
-                                if (Program.MainForm.ActiveMdiChild == this)
-                                    ToolStripManager.RevertMerge("toolStrip");
+                                CancelGenericToken();
 
                                 // Unsubscribe from events.
                                 GlobalSettings.ClipboardChangedAsync -= DoRefreshPasteStatus;
@@ -2093,18 +2066,18 @@ namespace Chummer
                                         return;
                                     throw;
                                 }
-                            }).ConfigureAwait(false);
+                            }, CancellationToken.None).ConfigureAwait(false);
                         }
                     }
                     finally
                     {
                         if (frmSender != null)
-                            await frmSender.DoThreadSafeAsync(x => x.Enabled = true).ConfigureAwait(false); // Doesn't matter if we're closed
+                            await frmSender.DoThreadSafeAsync(x => x.Enabled = true, CancellationToken.None).ConfigureAwait(false); // Doesn't matter if we're closed
                     }
                 }
                 finally
                 {
-                    if (objSemaphore?.IsDisposed == false)
+                    if (!objSemaphore.IsDisposed)
                         objSemaphore.Release();
                 }
             }
@@ -2116,9 +2089,12 @@ namespace Chummer
 
         private void CharacterCreate_Activated(object sender, EventArgs e)
         {
-            // Merge the ToolStrips.
-            ToolStripManager.RevertMerge("toolStrip");
-            ToolStripManager.Merge(tsMain, "toolStrip");
+            ToolStripManager.Merge(tsMain, Program.MainForm.MainToolStrip);
+        }
+
+        private void CharacterCreate_Deactivate(object sender, EventArgs e)
+        {
+            ToolStripManager.RevertMerge(Program.MainForm.MainToolStrip, tsMain);
         }
 
         #endregion Form Events
@@ -2278,7 +2254,7 @@ namespace Chummer
                             intGrade + 1,
                             await CharacterObjectSettings.GetKarmaInitiationFlatAsync(token).ConfigureAwait(false) + (intGrade + 1) *
                             await CharacterObjectSettings.GetKarmaInitiationAsync(token).ConfigureAwait(false));
-                        await cmdAddMetamagic.SetToolTipAsync(strInitTip, token).ConfigureAwait(false);
+                        await cmdAddMetamagic.SetToolTipTextAsync(strInitTip, token).ConfigureAwait(false);
                         string strTemp7 = await LanguageManager
                             .GetStringAsync("Checkbox_JoinedGroup", token: token)
                             .ConfigureAwait(false);
@@ -2398,7 +2374,7 @@ namespace Chummer
                             intGrade + 1,
                             await CharacterObjectSettings.GetKarmaInitiationFlatAsync(token).ConfigureAwait(false) + (intGrade + 1) *
                             await CharacterObjectSettings.GetKarmaInitiationAsync(token).ConfigureAwait(false));
-                        await cmdAddMetamagic.SetToolTipAsync(strInitTip, token).ConfigureAwait(false);
+                        await cmdAddMetamagic.SetToolTipTextAsync(strInitTip, token).ConfigureAwait(false);
                         string strTemp7 = await LanguageManager
                             .GetStringAsync("Checkbox_JoinedNetwork", token: token)
                             .ConfigureAwait(false);
@@ -2971,7 +2947,7 @@ namespace Chummer
                                                  "traditions/tradition["
                                                  + await CharacterObjectSettings.BookXPathAsync(token: token)
                                                      .ConfigureAwait(false)
-                                                 + ']'))
+                                                 + "]"))
                                     {
                                         string strName
                                             = xmlTradition
@@ -3130,7 +3106,7 @@ namespace Chummer
                                                  "traditions/tradition["
                                                  + await CharacterObjectSettings.BookXPathAsync(token: token)
                                                      .ConfigureAwait(false)
-                                                 + ']'))
+                                                 + "]"))
                                     {
                                         string strName
                                             = xmlTradition
@@ -3691,7 +3667,7 @@ namespace Chummer
                         .ConfigureAwait(false),
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question, token: token).ConfigureAwait(false) == DialogResult.No)
                 return;
-            using (TemporaryArray<string> eParam = strSelectedId.YieldAsPooled())
+            using (TemporaryStringArray eParam = strSelectedId.YieldAsPooled())
                 await DoReapplyImprovements(eParam, token: token).ConfigureAwait(false);
         }
 
@@ -4504,11 +4480,11 @@ namespace Chummer
                                               "Message_ReapplyImprovementsFoundOutdatedItems_Top",
                                               token: token)
                                           .ConfigureAwait(false) +
-                                      sbdOutdatedItems +
+                                      sbdOutdatedItems.Append(
                                       await LanguageManager.GetStringAsync(
                                               "Message_ReapplyImprovementsFoundOutdatedItems_Bottom",
                                               token: token)
-                                          .ConfigureAwait(false),
+                                          .ConfigureAwait(false)).ToString(),
                                 await LanguageManager
                                     .GetStringAsync("MessageTitle_ConfirmReapplyImprovements", token: token)
                                     .ConfigureAwait(false),
@@ -4678,7 +4654,7 @@ namespace Chummer
                                 XmlNode objXmlNode = (await GlobalSettings.GetClipboardAsync(GenericToken).ConfigureAwait(false)).SelectSingleNode("/character/armormod");
                                 if (objXmlNode != null)
                                 {
-                                    ArmorMod objArmorMod = new ArmorMod(CharacterObject);
+                                    ArmorMod objArmorMod = new ArmorMod(CharacterObject, selectedArmor);
                                     try
                                     {
                                         await objArmorMod.LoadAsync(objXmlNode, true, GenericToken).ConfigureAwait(false);
@@ -4727,7 +4703,7 @@ namespace Chummer
                                                     .ConfigureAwait(false)) &&
                                                 !await objCyberware.GetValidLimbSlotAsync(
                                                     await objCyberware.GetNodeXPathAsync(GlobalSettings.Language, GenericToken)
-                                                        .ConfigureAwait(false)).ConfigureAwait(false))
+                                                        .ConfigureAwait(false), GenericToken).ConfigureAwait(false))
                                             {
                                                 await objCyberware.DeleteCyberwareAsync(token: GenericToken)
                                                     .ConfigureAwait(false);
@@ -5055,7 +5031,7 @@ namespace Chummer
                     default:
                         await cmdDeleteMartialArt.DoThreadSafeAsync(x => x.Enabled = false, token)
                                                  .ConfigureAwait(false);
-                        await SourceString.Blank.SetControlAsync(lblMartialArtSource, token).ConfigureAwait(false);
+                        await SourceString.Blank.SetControlAsync(lblMartialArtSource, this, token).ConfigureAwait(false);
                         break;
                 }
             }
@@ -5383,8 +5359,8 @@ namespace Chummer
                                                                   await LanguageManager.GetStringAsync(
                                                                           "String_Improvement_SelectText", token: GenericToken)
                                                                       .ConfigureAwait(false),
-                                                                  objXmlProgram["translate"]?.InnerText
-                                                                  ?? objXmlProgram["name"]?.InnerText);
+                                                                  objXmlProgram["translate"]?.InnerTextViaPool(GenericToken)
+                                                                  ?? objXmlProgram["name"]?.InnerTextViaPool(GenericToken));
                             using (ThreadSafeForm<SelectText> frmPickText = await ThreadSafeForm<SelectText>.GetAsync(
                                        () => new SelectText
                                        {
@@ -5829,11 +5805,11 @@ namespace Chummer
                     --x.Maximum;
                     if (x.Value <= x.Maximum)
                     {
-                        return new Tuple<bool, int>(true, x.ValueAsInt);
+                        return new ValueTuple<bool, int>(true, x.ValueAsInt);
                     }
 
                     x.Value = x.Maximum;
-                    return new Tuple<bool, int>(false, x.ValueAsInt);
+                    return new ValueTuple<bool, int>(false, x.ValueAsInt);
                 }, GenericToken).ConfigureAwait(false);
                 if (blnDoExtra)
                 {
@@ -6185,7 +6161,7 @@ namespace Chummer
                                                                     + intStage.ToString(
                                                                                   GlobalSettings.InvariantCultureInfo)
                                                                               .CleanXPath()
-                                                                    + ']', GenericToken);
+                                                                    + "]", GenericToken);
                             if (xmlStageNode == null)
                             {
                                 --intStage;
@@ -6534,7 +6510,7 @@ namespace Chummer
                                 {
                                     objReplaceQuality.Type = QualityType.Negative;
                                     if (!string.IsNullOrEmpty(objReplaceQuality.Extra))
-                                        objReplaceQuality.Extra += ',' + await LanguageManager
+                                        objReplaceQuality.Extra += "," + await LanguageManager
                                             .GetStringAsync("String_Space", token: token)
                                             .ConfigureAwait(false);
                                     objReplaceQuality.Extra
@@ -6546,7 +6522,7 @@ namespace Chummer
                                 {
                                     objReplaceQuality.Type = QualityType.Positive;
                                     if (!string.IsNullOrEmpty(objReplaceQuality.Extra))
-                                        objReplaceQuality.Extra += ',' + await LanguageManager
+                                        objReplaceQuality.Extra += "," + await LanguageManager
                                             .GetStringAsync("String_Space", token: token)
                                             .ConfigureAwait(false);
                                     objReplaceQuality.Extra
@@ -6590,7 +6566,7 @@ namespace Chummer
                                         .ConfigureAwait(false);
                                 // Create the Qualities that come with the Metatype.
                                 foreach (XPathNavigator objXmlQualityItem in xmlCharacterNode.Select(
-                                             "qualities/*/quality[. = " + (await objSelectedQuality.GetNameAsync(token).ConfigureAwait(false)).CleanXPath() + ']'))
+                                             "qualities/*/quality[. = " + (await objSelectedQuality.GetNameAsync(token).ConfigureAwait(false)).CleanXPath() + "]"))
                                 {
                                     XmlNode objXmlQuality
                                         = xmlQualitiesDoc.TryGetNodeByNameOrId(
@@ -7360,12 +7336,12 @@ namespace Chummer
 
                 XmlNode objXmlArmor = await objArmor.GetNodeAsync(GenericToken).ConfigureAwait(false);
 
-                string strAllowedCategories = objArmor.Category + ',' + objArmor.Name;
+                string strAllowedCategories = objArmor.Category + "," + objArmor.Name;
                 bool blnExcludeGeneralCategory = false;
                 XmlElement xmlAddModCategory = objXmlArmor["forcemodcategory"];
                 if (xmlAddModCategory != null)
                 {
-                    strAllowedCategories = xmlAddModCategory.InnerText;
+                    strAllowedCategories = xmlAddModCategory.InnerTextViaPool(GenericToken);
                     blnExcludeGeneralCategory = true;
                 }
                 else
@@ -7373,7 +7349,7 @@ namespace Chummer
                     xmlAddModCategory = objXmlArmor["addmodcategory"];
                     if (xmlAddModCategory != null)
                     {
-                        strAllowedCategories += ',' + xmlAddModCategory.InnerText;
+                        strAllowedCategories += "," + xmlAddModCategory.InnerTextViaPool(GenericToken);
                     }
                 }
 
@@ -7405,12 +7381,12 @@ namespace Chummer
                                     frmPickArmorMod.MyForm.SelectedArmorMod);
 
                                 List<Weapon> lstWeapons = new List<Weapon>(1);
-                                int.TryParse(objXmlArmor["maxrating"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intMaxRating);
+                                int.TryParse(objXmlArmor["maxrating"]?.InnerTextViaPool(GenericToken), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intMaxRating);
                                 int intRating
                                         = intMaxRating > 1
                                             ? frmPickArmorMod.MyForm.SelectedRating
                                             : 0;
-                                ArmorMod objMod = new ArmorMod(CharacterObject);
+                                ArmorMod objMod = new ArmorMod(CharacterObject, objArmor);
                                 try
                                 {
                                     await objMod.CreateAsync(objXmlArmor, intRating, lstWeapons, token: GenericToken)
@@ -7607,22 +7583,27 @@ namespace Chummer
         {
             try
             {
+                if (!(await treVehicles.DoThreadSafeFuncAsync(x => x.SelectedNode?.Tag, GenericToken)
+                                       .ConfigureAwait(false) is IHasInternalId
+                        selectedObject))
+                    return;
+                string strSelectedId = selectedObject.InternalId;
                 // Make sure that a Weapon Mount has been selected.
                 // Attempt to locate the selected VehicleMod.
-                WeaponMount objWeaponMount = null;
                 VehicleMod objMod = null;
-                switch (await treVehicles.DoThreadSafeFuncAsync(x => x.SelectedNode?.Tag, GenericToken)
-                                         .ConfigureAwait(false))
+                WeaponMount objWeaponMount = null;
+                if (!string.IsNullOrEmpty(strSelectedId))
                 {
-                    case WeaponMount objSelectedMount:
-                        objWeaponMount = objSelectedMount;
-                        break;
-
-                    case VehicleMod objSelectedMod
-                        when objSelectedMod.Name.StartsWith("Mechanical Arm", StringComparison.Ordinal)
-                             || objSelectedMod.Name.Contains("Drone Arm"):
-                        objMod = objSelectedMod;
-                        break;
+                    (objWeaponMount, _) = await CharacterObject.Vehicles.FindVehicleWeaponMountAsync(strSelectedId, GenericToken).ConfigureAwait(false);
+                    if (objWeaponMount == null)
+                    {
+                        (objMod, _, objWeaponMount) = await CharacterObject.Vehicles.FindVehicleModAsync(x => x.InternalId == strSelectedId, GenericToken).ConfigureAwait(false);
+                        if (objMod?.Name.StartsWith("Mechanical Arm", StringComparison.Ordinal) == false
+                            && !objMod.Name.Contains("Drone Arm"))
+                        {
+                            objMod = null;
+                        }
+                    }
                 }
 
                 if (objWeaponMount == null && objMod == null)
@@ -7645,96 +7626,84 @@ namespace Chummer
                     return;
                 }
 
-                XmlDocument objXmlDocument = await CharacterObject.LoadDataAsync("weapons.xml", token: GenericToken).ConfigureAwait(false);
-
-                CursorWait objCursorWait = await CursorWait.NewAsync(this, token: GenericToken).ConfigureAwait(false);
-                try
+                bool blnAddAgain;
+                do
                 {
-                    bool blnAddAgain;
-                    do
-                    {
-                        IAsyncDisposable objLocker = await CharacterObject.LockObject.EnterUpgradeableReadLockAsync(GenericToken).ConfigureAwait(false);
-                        try
-                        {
-                            GenericToken.ThrowIfCancellationRequested();
-                            using (ThreadSafeForm<SelectWeapon> frmPickWeapon = await ThreadSafeForm<SelectWeapon>
-                                       .GetAsync(
-                                           () => new SelectWeapon(CharacterObject)
-                                           {
-                                               LimitToCategories = objMod != null
-                                                   ? objMod.WeaponMountCategories
-                                                   : objWeaponMount?.AllowedWeaponCategories ?? string.Empty
-                                           }, GenericToken).ConfigureAwait(false))
-                            {
-                                if (await frmPickWeapon.ShowDialogSafeAsync(this, GenericToken).ConfigureAwait(false)
-                                    == DialogResult.Cancel)
-                                    return;
-
-                                // Open the Weapons XML file and locate the selected piece.
-                                XmlNode objXmlWeapon = objXmlDocument.TryGetNodeByNameOrId("/chummer/weapons/weapon",
-                                    frmPickWeapon.MyForm.SelectedWeapon);
-
-                                List<Weapon> lstWeapons = new List<Weapon>(1);
-                                Weapon objWeapon = new Weapon(CharacterObject);
-                                try
-                                {
-                                    if (objMod != null)
-                                        await objWeapon.SetParentVehicleModAsync(objMod, GenericToken)
-                                            .ConfigureAwait(false);
-                                    else
-                                        await objWeapon.SetParentMountAsync(objWeaponMount, GenericToken)
-                                            .ConfigureAwait(false);
-                                    await objWeapon.CreateAsync(objXmlWeapon, lstWeapons, token: GenericToken)
-                                        .ConfigureAwait(false);
-                                    objWeapon.DiscountCost = frmPickWeapon.MyForm.BlackMarketDiscount;
-
-                                    if (frmPickWeapon.MyForm.FreeCost)
-                                    {
-                                        objWeapon.Cost = "0";
-                                    }
-
-                                    if (objMod != null)
-                                        await objMod.Weapons.AddAsync(objWeapon, GenericToken).ConfigureAwait(false);
-                                    else
-                                        await objWeaponMount.Weapons.AddAsync(objWeapon, GenericToken)
-                                            .ConfigureAwait(false);
-
-                                    foreach (Weapon objLoopWeapon in lstWeapons)
-                                    {
-                                        if (objMod == null)
-                                            await objWeaponMount.Weapons.AddAsync(objLoopWeapon, GenericToken)
-                                                .ConfigureAwait(false);
-                                        else
-                                            await objMod.Weapons.AddAsync(objLoopWeapon, GenericToken)
-                                                .ConfigureAwait(false);
-                                    }
-
-                                    blnAddAgain = frmPickWeapon.MyForm.AddAgain
-                                                  && (objMod != null || !objWeaponMount.IsWeaponsFull);
-                                }
-                                catch
-                                {
-                                    foreach (Weapon objLoopWeapon in lstWeapons)
-                                        await objLoopWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
-                                    await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
-                                    throw;
-                                }
-                            }
-                        }
-                        finally
-                        {
-                            await objLocker.DisposeAsync().ConfigureAwait(false);
-                        }
-                    } while (blnAddAgain);
-                }
-                finally
-                {
-                    await objCursorWait.DisposeAsync().ConfigureAwait(false);
-                }
+                    blnAddAgain = await AddWeaponToWeaponMount(objWeaponMount, objMod, GenericToken)
+                        .ConfigureAwait(false);
+                } while (blnAddAgain);
             }
             catch (OperationCanceledException)
             {
                 //swallow this
+            }
+        }
+
+        private async Task<bool> AddWeaponToWeaponMount(WeaponMount objWeaponMount, VehicleMod objMod, CancellationToken token = default)
+        {
+            IAsyncDisposable objLocker = await CharacterObject.LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
+            try
+            {
+                token.ThrowIfCancellationRequested();
+                using (ThreadSafeForm<SelectWeapon> frmPickWeapon = await ThreadSafeForm<SelectWeapon>.GetAsync(
+                           () => new SelectWeapon(CharacterObject)
+                           {
+                               LimitToCategories = objMod == null
+                                   ? objWeaponMount.AllowedWeaponCategories
+                                   : objMod.WeaponMountCategories,
+                               WeaponFilter = objMod == null
+                                   ? objWeaponMount.WeaponFilter
+                                   : string.Empty
+                           }, token).ConfigureAwait(false))
+                {
+                    if (await frmPickWeapon.ShowDialogSafeAsync(this, token).ConfigureAwait(false) ==
+                        DialogResult.Cancel)
+                        return false;
+
+                    // Open the Weapons XML file and locate the selected piece.
+                    XmlDocument objXmlDocument
+                        = await CharacterObject.LoadDataAsync("weapons.xml", token: token).ConfigureAwait(false);
+
+                    XmlNode objXmlWeapon = objXmlDocument.TryGetNodeByNameOrId("/chummer/weapons/weapon",
+                        frmPickWeapon.MyForm.SelectedWeapon);
+
+                    List<Weapon> lstWeapons = new List<Weapon>(1);
+                    Weapon objWeapon = new Weapon(CharacterObject);
+                    try
+                    {
+                        if (objMod != null)
+                            await objWeapon.SetParentVehicleModAsync(objMod, GenericToken).ConfigureAwait(false);
+                        else
+                            await objWeapon.SetParentMountAsync(objWeaponMount, GenericToken).ConfigureAwait(false);
+                        await objWeapon.CreateAsync(objXmlWeapon, lstWeapons, token: token).ConfigureAwait(false);
+
+                        if (objMod != null)
+                            await objMod.Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+                        else
+                            await objWeaponMount.Weapons.AddAsync(objWeapon, token).ConfigureAwait(false);
+
+                        foreach (Weapon objLoopWeapon in lstWeapons)
+                        {
+                            if (objMod != null)
+                                await objMod.Weapons.AddAsync(objLoopWeapon, token).ConfigureAwait(false);
+                            else
+                                await objWeaponMount.Weapons.AddAsync(objLoopWeapon, token).ConfigureAwait(false);
+                        }
+
+                        return frmPickWeapon.MyForm.AddAgain && (objMod != null || !objWeaponMount.IsWeaponsFull);
+                    }
+                    catch
+                    {
+                        foreach (Weapon objLoopWeapon in lstWeapons)
+                            await objLoopWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                        await objWeapon.DeleteWeaponAsync(token: CancellationToken.None).ConfigureAwait(false);
+                        throw;
+                    }
+                }
+            }
+            finally
+            {
+                await objLocker.DisposeAsync().ConfigureAwait(false);
             }
         }
 
@@ -7887,7 +7856,7 @@ namespace Chummer
                             Weapon objWeapon = new Weapon(CharacterObject);
                             try
                             {
-                                await objWeapon.SetParentAsync(objSelectedWeapon).ConfigureAwait(false);
+                                await objWeapon.SetParentAsync(objSelectedWeapon, GenericToken).ConfigureAwait(false);
                                 await objWeapon.CreateAsync(objXmlWeapon, lstWeapons, token: GenericToken)
                                     .ConfigureAwait(false);
                                 objWeapon.DiscountCost = frmPickWeapon.MyForm.BlackMarketDiscount;
@@ -8088,7 +8057,7 @@ namespace Chummer
                                                                   out StringBuilder sbdCategories))
                     {
                         foreach (XPathNavigator objXmlCategory in xmlAddonCategoryList)
-                            sbdCategories.Append(objXmlCategory.Value).Append(',');
+                            sbdCategories.Append(objXmlCategory.Value, ',');
                         // Remove the trailing comma.
                         --sbdCategories.Length;
                         strCategories = sbdCategories.ToString();
@@ -8141,7 +8110,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                                    objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -8959,7 +8928,7 @@ namespace Chummer
                             if (objCyberwareParent == null)
                             {
                                 //frmPickCyberware.SetGrade = "Standard";
-                                frmPickCyberware.MyForm.MaximumCapacity = await objMod.GetCapacityRemainingAsync(GenericToken).ConfigureAwait(false);
+                                await frmPickCyberware.MyForm.SetMaximumCapacityAsync(await objMod.GetCapacityRemainingAsync(GenericToken).ConfigureAwait(false), GenericToken).ConfigureAwait(false);
                                 frmPickCyberware.MyForm.Subsystems = objMod.Subsystems;
                                 using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                            out HashSet<string> setDisallowedMounts))
@@ -8989,7 +8958,7 @@ namespace Chummer
                                                 && (!strLoop.EndsWith("Left", StringComparison.Ordinal)
                                                     || setDisallowedMounts.Contains(
                                                         strLoop.Substring(0, strLoop.Length - 4) + "Right")))
-                                                sbdDisallowedMounts.Append(strLoop.TrimEndOnce("Left")).Append(',');
+                                                sbdDisallowedMounts.Append(strLoop.TrimEndOnce("Left"), ',');
                                         }
 
                                         // Remove trailing ","
@@ -9002,7 +8971,7 @@ namespace Chummer
                                                out StringBuilder sbdHasMounts))
                                     {
                                         foreach (string strLoop in setHasMounts)
-                                            sbdHasMounts.Append(strLoop).Append(',');
+                                            sbdHasMounts.Append(strLoop, ',');
                                         // Remove trailing ","
                                         if (sbdHasMounts.Length > 0)
                                             --sbdHasMounts.Length;
@@ -9018,7 +8987,7 @@ namespace Chummer
                                     || objCyberwareParent.Capacity.Contains("/["))
                                 {
                                     frmPickCyberware.MyForm.Subsystems = objCyberwareParent.AllowedSubsystems;
-                                    frmPickCyberware.MyForm.MaximumCapacity = await objCyberwareParent.GetCapacityRemainingAsync(GenericToken).ConfigureAwait(false);
+                                    await frmPickCyberware.MyForm.SetMaximumCapacityAsync(await objCyberwareParent.GetCapacityRemainingAsync(GenericToken).ConfigureAwait(false), GenericToken).ConfigureAwait(false);
 
                                     // Do not allow the user to add a new piece of Cyberware if its Capacity has been reached.
                                     if (await CharacterObjectSettings.GetEnforceCapacityAsync(GenericToken).ConfigureAwait(false)
@@ -9067,7 +9036,7 @@ namespace Chummer
                                                 && (!strLoop.EndsWith("Left", StringComparison.Ordinal)
                                                     || setDisallowedMounts.Contains(
                                                         strLoop.Substring(0, strLoop.Length - 4) + "Right")))
-                                                sbdDisallowedMounts.Append(strLoop.TrimEndOnce("Left")).Append(',');
+                                                sbdDisallowedMounts.Append(strLoop.TrimEndOnce("Left"), ',');
                                         }
 
                                         // Remove trailing ","
@@ -9080,7 +9049,7 @@ namespace Chummer
                                                out StringBuilder sbdHasMounts))
                                     {
                                         foreach (string strLoop in setHasMounts)
-                                            sbdHasMounts.Append(strLoop).Append(',');
+                                            sbdHasMounts.Append(strLoop, ',');
                                         // Remove trailing ","
                                         if (sbdHasMounts.Length > 0)
                                             --sbdHasMounts.Length;
@@ -9111,7 +9080,7 @@ namespace Chummer
                                         blnBlackMarket: frmPickCyberware.MyForm.BlackMarketDiscount,
                                         blnForVehicle: true,
                                         strExpenseString: "String_ExpensePurchaseVehicleCyberware",
-                                        objParent: objCyberwareParent).ConfigureAwait(false))
+                                        objParent: objCyberwareParent, token: GenericToken).ConfigureAwait(false))
                                     await objCyberware.DeleteCyberwareAsync(token: GenericToken).ConfigureAwait(false);
                             }
                             catch
@@ -9428,7 +9397,7 @@ namespace Chummer
                             if (xmlGearCategoryList != null)
                             {
                                 foreach (XmlNode objXmlCategory in xmlGearCategoryList)
-                                    sbdCategories.Append(objXmlCategory.InnerText).Append(',');
+                                    sbdCategories.Append(objXmlCategory.InnerTextViaPool(GenericToken), ',');
                                 if (sbdCategories.Length > 0)
                                     --sbdCategories.Length;
                                 strCategories = sbdCategories.ToString();
@@ -9445,7 +9414,7 @@ namespace Chummer
                             if (xmlGearNameList?.Count > 0)
                             {
                                 foreach (XmlNode objXmlName in xmlGearNameList)
-                                    sbdGearNames.Append(objXmlName.InnerText).Append(',');
+                                    sbdGearNames.Append(objXmlName.InnerTextViaPool(GenericToken), ',');
                                 --sbdGearNames.Length;
                                 strGearNames = sbdGearNames.ToString();
                             }
@@ -9496,7 +9465,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objNewGear.Cost = '(' + objNewGear.Cost + ") * 0.5";
+                                    objNewGear.Cost = "(" + objNewGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -9567,7 +9536,7 @@ namespace Chummer
                                out StringBuilder sbdCategories))
                     {
                         foreach (XmlNode objXmlCategory in objCyberware.AllowGear)
-                            sbdCategories.Append(objXmlCategory.InnerText).Append(',');
+                            sbdCategories.Append(objXmlCategory.InnerTextViaPool(GenericToken), ',');
                         if (sbdCategories.Length > 0)
                             --sbdCategories.Length;
                         strCategories = sbdCategories.ToString();
@@ -9616,7 +9585,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objNewGear.Cost = '(' + objNewGear.Cost + ") * 0.5";
+                                    objNewGear.Cost = "(" + objNewGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -9690,7 +9659,7 @@ namespace Chummer
                                                                   out StringBuilder sbdCategories))
                     {
                         foreach (XPathNavigator objXmlCategory in xmlAddonCategoryList)
-                            sbdCategories.Append(objXmlCategory.Value).Append(',');
+                            sbdCategories.Append(objXmlCategory.Value, ',');
                         // Remove the trailing comma.
                         --sbdCategories.Length;
                         strCategories = sbdCategories.ToString();
@@ -9747,7 +9716,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                                    objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -9817,7 +9786,7 @@ namespace Chummer
                                                                   out StringBuilder sbdCategories))
                     {
                         foreach (XPathNavigator objXmlCategory in xmlAddonCategoryList)
-                            sbdCategories.Append(objXmlCategory.Value).Append(',');
+                            sbdCategories.Append(objXmlCategory.Value, ',');
                         // Remove the trailing comma.
                         --sbdCategories.Length;
                         strCategories = sbdCategories.ToString();
@@ -9871,7 +9840,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                                    objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -9928,7 +9897,7 @@ namespace Chummer
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdCategories))
                 {
                     foreach (XmlNode objXmlCategory in objAccessory.AllowGear)
-                        sbdCategories.Append(objXmlCategory.InnerText).Append(',');
+                        sbdCategories.Append(objXmlCategory.InnerTextViaPool(GenericToken), ',');
                     if (sbdCategories.Length > 0)
                         --sbdCategories.Length;
                     strCategories = sbdCategories.ToString();
@@ -9976,7 +9945,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                                    objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -10037,7 +10006,7 @@ namespace Chummer
                                                                   out StringBuilder sbdCategories))
                     {
                         foreach (XPathNavigator objXmlCategory in xmlAddonCategoryList)
-                            sbdCategories.Append(objXmlCategory.Value).Append(',');
+                            sbdCategories.Append(objXmlCategory.Value, ',');
                         // Remove the trailing comma.
                         --sbdCategories.Length;
                         strCategories = sbdCategories.ToString();
@@ -10096,7 +10065,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                                    objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -10159,13 +10128,12 @@ namespace Chummer
                 await treVehicles
                       .DoThreadSafeAsync(() => objSelectedNode.Text = strText, GenericToken)
                       .ConfigureAwait(false);
+                await SetDirty(true).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
                 // Swallow this
             }
-
-            await SetDirty(true).ConfigureAwait(false);
         }
 
         private async void tsCreateNaturalWeapon_Click(object sender, EventArgs e)
@@ -10226,7 +10194,7 @@ namespace Chummer
                                                                   out StringBuilder sbdCategories))
                     {
                         foreach (XPathNavigator objXmlCategory in xmlAddonCategoryList)
-                            sbdCategories.Append(objXmlCategory.Value).Append(',');
+                            sbdCategories.Append(objXmlCategory.Value, ',');
                         // Remove the trailing comma.
                         --sbdCategories.Length;
                         strCategories = sbdCategories.ToString();
@@ -10281,7 +10249,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                                    objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                 {
@@ -10344,7 +10312,7 @@ namespace Chummer
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdCategories))
                 {
                     foreach (XmlNode objXmlCategory in objAccessory.AllowGear)
-                        sbdCategories.Append(objXmlCategory.InnerText).Append(',');
+                        sbdCategories.Append(objXmlCategory.InnerTextViaPool(GenericToken), ',');
                     if (sbdCategories.Length > 0)
                         --sbdCategories.Length;
                     strCategories = sbdCategories.ToString();
@@ -10389,7 +10357,7 @@ namespace Chummer
 
                             // Reduce the cost for Do It Yourself components.
                             if (frmPickGear.MyForm.DoItYourself)
-                                objNewGear.Cost = '(' + objNewGear.Cost + ") * 0.5";
+                                objNewGear.Cost = "(" + objNewGear.Cost + ") * 0.5";
                             // If the item was marked as free, change its cost.
                             if (frmPickGear.MyForm.FreeCost)
                             {
@@ -10895,10 +10863,10 @@ namespace Chummer
                                     .ConfigureAwait(false), GenericToken).ConfigureAwait(false);
 
                                 // See if a Bonus node exists.
-                                if (objCyberware.Bonus?.InnerXml.Contains("Rating") == true
-                                    || objCyberware.PairBonus?.InnerXml.Contains("Rating") == true ||
+                                if (objCyberware.Bonus?.InnerXmlContentContains("Rating", GenericToken) == true
+                                    || objCyberware.PairBonus?.InnerXmlContentContains("Rating", GenericToken) == true ||
                                     objCyberware.WirelessOn
-                                    && objCyberware.WirelessBonus?.InnerXml.Contains("Rating") == true)
+                                    && objCyberware.WirelessBonus?.InnerXmlContentContains("Rating", GenericToken) == true)
                                 {
                                     // If the Bonus contains "Rating", remove the existing Improvements and create new ones.
                                     await ImprovementManager
@@ -11600,7 +11568,7 @@ namespace Chummer
                 {
                     await objCommlink.SetHomeNodeAsync(CharacterObject,
                             await chkGearHomeNode.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                                .ConfigureAwait(false))
+                                .ConfigureAwait(false), GenericToken)
                         .ConfigureAwait(false);
                 }
             }
@@ -11621,7 +11589,7 @@ namespace Chummer
                 {
                     await objCommlink.SetHomeNodeAsync(CharacterObject,
                             await chkArmorHomeNode.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                                .ConfigureAwait(false))
+                                .ConfigureAwait(false), GenericToken)
                         .ConfigureAwait(false);
                 }
             }
@@ -11642,7 +11610,7 @@ namespace Chummer
                 {
                     await objCommlink.SetHomeNodeAsync(CharacterObject,
                             await chkWeaponHomeNode.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                                .ConfigureAwait(false))
+                                .ConfigureAwait(false), GenericToken)
                         .ConfigureAwait(false);
                 }
             }
@@ -11663,7 +11631,7 @@ namespace Chummer
                 {
                     await objCommlink.SetHomeNodeAsync(CharacterObject,
                             await chkCyberwareHomeNode.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                                .ConfigureAwait(false))
+                                .ConfigureAwait(false), GenericToken)
                         .ConfigureAwait(false);
                 }
             }
@@ -11684,7 +11652,7 @@ namespace Chummer
                 {
                     await objCommlink.SetHomeNodeAsync(CharacterObject,
                             await chkVehicleHomeNode.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                                .ConfigureAwait(false))
+                                .ConfigureAwait(false), GenericToken)
                         .ConfigureAwait(false);
                 }
             }
@@ -11722,7 +11690,7 @@ namespace Chummer
                 {
                     await objSelectedCommlink.SetActiveCommlinkAsync(CharacterObject,
                         await chkGearActiveCommlink.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                            .ConfigureAwait(false)).ConfigureAwait(false);
+                            .ConfigureAwait(false), GenericToken).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -11745,7 +11713,7 @@ namespace Chummer
                 {
                     await objSelectedCommlink.SetActiveCommlinkAsync(CharacterObject,
                         await chkArmorActiveCommlink.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                            .ConfigureAwait(false)).ConfigureAwait(false);
+                            .ConfigureAwait(false), GenericToken).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -11791,7 +11759,7 @@ namespace Chummer
                 {
                     await objSelectedCommlink.SetActiveCommlinkAsync(CharacterObject,
                         await chkCyberwareActiveCommlink.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                            .ConfigureAwait(false)).ConfigureAwait(false);
+                            .ConfigureAwait(false), GenericToken).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -11814,7 +11782,7 @@ namespace Chummer
                 {
                     await objSelectedCommlink.SetActiveCommlinkAsync(CharacterObject,
                         await chkVehicleActiveCommlink.DoThreadSafeFuncAsync(x => x.Checked, GenericToken)
-                            .ConfigureAwait(false)).ConfigureAwait(false);
+                            .ConfigureAwait(false), GenericToken).ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -12529,20 +12497,20 @@ namespace Chummer
                                 ?.TotalForce ?? 0;
                         }
 
-                        List<string> lstActiveIds = new List<string>();
-                        await treViewToUse.DoThreadSafeAsync(y =>
+                        List<string> lstActiveIds = await treViewToUse.DoThreadSafeFuncAsync(y =>
                         {
+                            List<string> lstInnerReturn = new List<string>(y.Nodes.Count);
                             // Run through the list of items. Count the number of Foci the character would have bonded including this one, plus the total Force of all checked Foci.
                             foreach (TreeNode objNode in y.Nodes)
                             {
                                 if (objNode.Checked)
                                 {
-                                    string strNodeId = objNode.Tag.ToString();
-                                    ++intFociCount;
-                                    lstActiveIds.Add(strNodeId);
+                                    lstInnerReturn.Add(objNode.Tag.ToString());
                                 }
                             }
+                            return lstInnerReturn;
                         }, GenericToken).ConfigureAwait(false);
+                        intFociCount += lstActiveIds.Count;
 
                         foreach (string strNodeId in lstActiveIds)
                         {
@@ -12801,8 +12769,8 @@ namespace Chummer
                                           .ConfigureAwait(false);
 
                             // See if a Bonus node exists.
-                            if (objMod.Bonus?.InnerXml.Contains("Rating") == true || objMod.WirelessOn
-                                && objMod.WirelessBonus?.InnerXml.Contains("Rating") == true)
+                            if (objMod.Bonus?.InnerXmlContentContains("Rating", GenericToken) == true || objMod.WirelessOn
+                                && objMod.WirelessBonus?.InnerXmlContentContains("Rating", GenericToken) == true)
                             {
                                 // If the Bonus contains "Rating", remove the existing Improvements and create new ones.
                                 await ImprovementManager.RemoveImprovementsAsync(
@@ -12864,8 +12832,8 @@ namespace Chummer
                                           .ConfigureAwait(false);
 
                             // See if a Bonus node exists.
-                            if (objGear.Bonus?.InnerXml.Contains("Rating") == true || objGear.WirelessOn
-                                && objGear.WirelessBonus?.InnerXml.Contains("Rating") == true)
+                            if (objGear.Bonus?.InnerXmlContentContains("Rating", GenericToken) == true || objGear.WirelessOn
+                                && objGear.WirelessBonus?.InnerXmlContentContains("Rating", GenericToken) == true)
                             {
                                 // If the Bonus contains "Rating", remove the existing Improvements and create new ones.
                                 await ImprovementManager.RemoveImprovementsAsync(
@@ -13213,7 +13181,7 @@ namespace Chummer
                 {
                     await lblAIProgramsRequires.DoThreadSafeAsync(x => x.Text = string.Empty, token)
                                                .ConfigureAwait(false);
-                    await SourceString.Blank.SetControlAsync(lblAIProgramsSource, token).ConfigureAwait(false);
+                    await SourceString.Blank.SetControlAsync(lblAIProgramsSource, this, token).ConfigureAwait(false);
                 }
             }
             finally
@@ -13370,7 +13338,7 @@ namespace Chummer
                                 x.Enabled = objGrade.Grade >= 0;
                                 x.Visible = true;
                             }, token).ConfigureAwait(false);
-                            await SourceString.Blank.SetControlAsync(lblMetamagicSource, token).ConfigureAwait(false);
+                            await SourceString.Blank.SetControlAsync(lblMetamagicSource, this, token).ConfigureAwait(false);
                             break;
                         }
                     default:
@@ -13488,7 +13456,7 @@ namespace Chummer
                     await lblCritterPowerDuration.DoThreadSafeAsync(x => x.Text = string.Empty, token)
                                                  .ConfigureAwait(false);
                     await chkCritterPowerCount.DoThreadSafeAsync(x => x.Checked = false, token).ConfigureAwait(false);
-                    await SourceString.Blank.SetControlAsync(lblCritterPowerSource, token).ConfigureAwait(false);
+                    await SourceString.Blank.SetControlAsync(lblCritterPowerSource, this, token).ConfigureAwait(false);
                     await lblCritterPowerPointCost.DoThreadSafeAsync(x => x.Visible = false, token)
                                                   .ConfigureAwait(false);
                     await lblCritterPowerPointCostLabel.DoThreadSafeAsync(x => x.Visible = false, token)
@@ -13887,7 +13855,7 @@ namespace Chummer
                                             .ConfigureAwait(false);
                                 }
                                 else if (!string.IsNullOrWhiteSpace(strName))
-                                    strNameToUse += '/' + strName;
+                                    strNameToUse += "/" + strName;
 
                                 sbdPositiveQualityTooltip.AppendFormat(GlobalSettings.CultureInfo, "{0}{1}({2})",
                                     strNameToUse,
@@ -13897,9 +13865,9 @@ namespace Chummer
                             }, token).ConfigureAwait(false);
                         }
 
-                        await lblPositiveQualitiesBP.SetToolTipAsync(sbdPositiveQualityTooltip.ToString(), token)
+                        await lblPositiveQualitiesBP.SetToolTipTextAsync(sbdPositiveQualityTooltip.ToString(), token)
                             .ConfigureAwait(false);
-                        await lblNegativeQualitiesBP.SetToolTipAsync(sbdNegativeQualityTooltip.ToString(), token)
+                        await lblNegativeQualitiesBP.SetToolTipTextAsync(sbdNegativeQualityTooltip.ToString(), token)
                             .ConfigureAwait(false);
                     }
                 }
@@ -13958,11 +13926,11 @@ namespace Chummer
                             if (blnDoUIUpdate)
                             {
                                 if (sbdMartialArtsBPToolTip.Length > 0)
-                                    sbdMartialArtsBPToolTip.AppendLine().Append(strSpace).Append('+').Append(strSpace);
+                                    sbdMartialArtsBPToolTip.AppendLine().Append(strSpace, '+', strSpace);
                                 sbdMartialArtsBPToolTip
                                     .Append(await objMartialArt.GetCurrentDisplayNameAsync(token).ConfigureAwait(false))
-                                    .Append(strSpace).Append('(')
-                                    .Append(intLoopCost.ToString(GlobalSettings.CultureInfo)).Append(')');
+                                    .Append(strSpace, '(')
+                                    .Append(intLoopCost.ToString(GlobalSettings.CultureInfo), ')');
 
                                 bool blnIsFirst = true;
                                 await objMartialArt.Techniques.ForEachAsync(async objTechnique =>
@@ -13977,12 +13945,10 @@ namespace Chummer
                                     intLoopCost = intKarmaTechnique;
                                     intMartialArtsPoints += intLoopCost;
 
-                                    sbdMartialArtsBPToolTip.AppendLine().Append(strSpace).Append('+').Append(strSpace)
+                                    sbdMartialArtsBPToolTip.AppendLine().Append(strSpace, '+', strSpace)
                                         .Append(await objTechnique.GetCurrentDisplayNameAsync(token)
-                                            .ConfigureAwait(false)).Append(strSpace)
-                                        .Append('(')
-                                        .Append(intLoopCost.ToString(GlobalSettings.CultureInfo))
-                                        .Append(')');
+                                            .ConfigureAwait(false), strSpace)
+                                        .Append('(', intLoopCost.ToString(GlobalSettings.CultureInfo), ')');
                                 }, token: token).ConfigureAwait(false);
                             }
                             else
@@ -13994,7 +13960,7 @@ namespace Chummer
                     token.ThrowIfCancellationRequested();
 
                     if (blnDoUIUpdate)
-                        await lblBuildMartialArts.SetToolTipAsync(sbdMartialArtsBPToolTip.ToString(), token)
+                        await lblBuildMartialArts.SetToolTipTextAsync(sbdMartialArtsBPToolTip.ToString(), token)
                             .ConfigureAwait(false);
                 }
 
@@ -14003,8 +13969,8 @@ namespace Chummer
                 SkillsSection objSkillSection =
                     await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false);
 
-                          
                 token.ThrowIfCancellationRequested();
+
                 // ------------------------------------------------------------------------------
                 // Calculate the BP used by Active Skills.
                 int skillPointsKarma = await objSkillSection.Skills
@@ -14233,10 +14199,10 @@ namespace Chummer
                             || lblBuildRitualsBP != null))
                     {
                         token.ThrowIfCancellationRequested();
-                        string strFormat = "{0}" + strSpace + '×' + strSpace + "{1}" + strSpace
+                        string strFormat = "{0}" + strSpace + "×" + strSpace + "{1}" + strSpace
                                            + await LanguageManager.GetStringAsync("String_Karma", token: token)
                                                .ConfigureAwait(false)
-                                           + strSpace + '=' + strSpace + "{2}" + strSpace + await LanguageManager
+                                           + strSpace + "=" + strSpace + "{2}" + strSpace + await LanguageManager
                                                .GetStringAsync("String_Karma", token: token).ConfigureAwait(false);
                         if (lblSpellsBP != null)
                         {
@@ -14247,17 +14213,17 @@ namespace Chummer
                                     .GetStringAsync(
                                         "Tip_SelectSpell_MasteryQuality",
                                         token: token).ConfigureAwait(false);
-                            await lblSpellsBP.SetToolTipAsync(strTooltip, token).ConfigureAwait(false);
+                            await lblSpellsBP.SetToolTipTextAsync(strTooltip, token).ConfigureAwait(false);
                         }
 
                         if (lblBuildRitualsBP != null)
                             await lblBuildRitualsBP
-                                .SetToolTipAsync(
+                                .SetToolTipTextAsync(
                                     string.Format(GlobalSettings.CultureInfo, strFormat, rituals, spellCost,
                                         intRitualPointsUsed), token).ConfigureAwait(false);
                         if (lblBuildPrepsBP != null)
                             await lblBuildPrepsBP
-                                .SetToolTipAsync(
+                                .SetToolTipTextAsync(
                                     string.Format(GlobalSettings.CultureInfo, strFormat, preps, spellCost,
                                         intPrepPointsUsed), token).ConfigureAwait(false);
                         if (intFreeSpells + intLimitMod > 0)
@@ -14398,16 +14364,13 @@ namespace Chummer
                             if (!blnDoUIUpdate)
                                 return true;
                             if (sbdFociPointsTooltip.Length > 0)
-                                sbdFociPointsTooltip.AppendLine().Append(strSpace).Append('+').Append(strSpace);
+                                sbdFociPointsTooltip.AppendLine().Append(strSpace, '+', strSpace);
                             if (objFocus.GearObject != null)
                                 sbdFociPointsTooltip
                                     .Append(await objFocus.GearObject.GetCurrentDisplayNameAsync(token)
-                                        .ConfigureAwait(false))
-                                    .Append(strSpace);
+                                        .ConfigureAwait(false), strSpace);
                             sbdFociPointsTooltip
-                                .Append('(')
-                                .Append(intBindingCost.ToString(GlobalSettings.CultureInfo))
-                                .Append(')');
+                                .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
                             return true;
                         }, token).ConfigureAwait(false);
 
@@ -14429,14 +14392,11 @@ namespace Chummer
                                     if (!blnDoUIUpdate)
                                         return intBindingCost;
                                     if (sbdFociPointsTooltip.Length > 0)
-                                        sbdFociPointsTooltip.AppendLine().Append(strSpace).Append('+')
-                                            .Append(strSpace);
+                                        sbdFociPointsTooltip.AppendLine().Append(strSpace, '+', strSpace);
                                     sbdFociPointsTooltip
                                         .Append(await objFocus.GetCurrentDisplayNameAsync(token)
-                                            .ConfigureAwait(false))
-                                        .Append(strSpace).Append('(')
-                                        .Append(intBindingCost.ToString(GlobalSettings.CultureInfo))
-                                        .Append(')');
+                                            .ConfigureAwait(false), strSpace)
+                                        .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
                                     return intBindingCost;
                                 }, token).ConfigureAwait(false);
 
@@ -14444,7 +14404,7 @@ namespace Chummer
 
                     if (blnDoUIUpdate)
                     {
-                        await lblBuildFoci.SetToolTipAsync(sbdFociPointsTooltip.ToString(), token)
+                        await lblBuildFoci.SetToolTipTextAsync(sbdFociPointsTooltip.ToString(), token)
                             .ConfigureAwait(false);
                     }
                 }
@@ -14606,25 +14566,22 @@ namespace Chummer
                     sbdContactPoints.Append(Math.Max(0, intContactPoints - intPointsInContacts).ToString(GlobalSettings.CultureInfo));
                     if (blnFriendsInHighPlaces)
                     {
-                        sbdContactPoints.Append('/')
-                            .Append(Math.Max(0, intFriendsInHighPlacesPoints - intHighPlacesFriends)
+                        sbdContactPoints.Append('/', Math.Max(0, intFriendsInHighPlacesPoints - intHighPlacesFriends)
                                 .ToString(GlobalSettings.CultureInfo));
                     }
 
                     sbdContactPoints.Append(strOf).Append(intContactPoints.ToString(GlobalSettings.CultureInfo));
                     if (blnFriendsInHighPlaces)
                     {
-                        sbdContactPoints.Append('/')
-                            .Append(intFriendsInHighPlacesPoints.ToString(GlobalSettings.CultureInfo));
+                        sbdContactPoints.Append('/', intFriendsInHighPlacesPoints.ToString(GlobalSettings.CultureInfo));
                     }
 
                     if (intPointsInContacts > intContactPoints || intHighPlacesFriends > intFriendsInHighPlacesPoints)
                     {
                         int intKarmaUsed = Math.Max(0, intPointsInContacts - intContactPoints) +
                                            Math.Max(0, intHighPlacesFriends - intFriendsInHighPlacesPoints);
-                        sbdContactPoints.Append(strSpace).Append('(')
-                            .Append(intKarmaUsed.ToString(GlobalSettings.CultureInfo)).Append(strSpace)
-                            .Append(strPoints).Append(')');
+                        sbdContactPoints.Append(strSpace, '(', intKarmaUsed.ToString(GlobalSettings.CultureInfo))
+                            .Append(strSpace, strPoints, ')');
                     }
 
                     string strContactPoints = sbdContactPoints.ToString();
@@ -14811,14 +14768,7 @@ namespace Chummer
             //Groups
             string strTemp3 = strZeroKarma;
             int intSkillGroupPointsMaximum = CharacterObject.SkillsSection.SkillGroupPointsMaximum;
-            if (intSkillGroupPointsMaximum > 0)
-            {
-                strTemp3
-                    = (await CharacterObject.SkillsSection.GetSkillGroupPointsAsync(token).ConfigureAwait(false))
-                    .ToString(GlobalSettings.CultureInfo) + strOf
-                                                          + intSkillGroupPointsMaximum.ToString(
-                                                              GlobalSettings.CultureInfo);
-            }
+
         }
 
         private int _intFileUpdateQueued;
@@ -14948,7 +14898,7 @@ namespace Chummer
                             if (await Program.ShowScrollableMessageBoxAsync(
                                 this, strDescription,
                                 await LanguageManager.GetStringAsync("MessageTitle_ImprovementLoadError", token: GenericToken).ConfigureAwait(false),
-                                MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation).ConfigureAwait(false) == DialogResult.Yes)
+                                MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation, token: GenericToken).ConfigureAwait(false) == DialogResult.Yes)
                             {
                                 await DoReapplyImprovements(lstInternalIdsNeedingReapplyImprovements,
                                     GenericToken).ConfigureAwait(false);
@@ -15233,7 +15183,7 @@ namespace Chummer
                                             x => x.Text = blnNoParent
                                                 ? decCalculatedEss.ToString(
                                                     strESSFormat, GlobalSettings.CultureInfo)
-                                                : '+'
+                                                : "+"
                                                   + decCalculatedEss.ToString(
                                                       strESSFormat, GlobalSettings.CultureInfo), token)
                                         .ConfigureAwait(false);
@@ -15833,7 +15783,7 @@ namespace Chummer
                                     x.Visible = true;
                                     x.Text = strPool;
                                 }, token).ConfigureAwait(false);
-                                await lblWeaponDicePool.SetToolTipAsync(await objWeapon.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token)
+                                await lblWeaponDicePool.SetToolTipTextAsync(await objWeapon.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token)
                                                        .ConfigureAwait(false);
                                 if (objWeapon.RangeType == "Ranged")
                                 {
@@ -15849,7 +15799,7 @@ namespace Chummer
                                         x.Visible = true;
                                         x.Text = strRC;
                                     }, token).ConfigureAwait(false);
-                                    await lblWeaponRC.SetToolTipAsync(strRCTooltip, token).ConfigureAwait(false);
+                                    await lblWeaponRC.SetToolTipTextAsync(strRCTooltip, token).ConfigureAwait(false);
                                     await lblWeaponAmmoLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                             .ConfigureAwait(false);
                                     string strAmmo = await objWeapon.GetDisplayAmmoAsync(token).ConfigureAwait(false);
@@ -16106,8 +16056,7 @@ namespace Chummer
                                             sbdSlotsText
                                                 .Append(await LanguageManager
                                                               .GetStringAsync("String_Mount" + strMount, token: token)
-                                                              .ConfigureAwait(false))
-                                                .Append('/');
+                                                              .ConfigureAwait(false), '/');
                                         --sbdSlotsText.Length;
                                     }
 
@@ -16122,7 +16071,7 @@ namespace Chummer
                                         {
                                             if (!boolHaveAddedItem)
                                             {
-                                                sbdSlotsText.Append(strSpace).Append('+').Append(strSpace);
+                                                sbdSlotsText.Append(strSpace, '+', strSpace);
                                                 boolHaveAddedItem = true;
                                             }
 
@@ -16130,8 +16079,7 @@ namespace Chummer
                                                 .Append(await LanguageManager.GetStringAsync(
                                                                                  "String_Mount" + strCurrentExtraMount,
                                                                                  token: token)
-                                                                             .ConfigureAwait(false))
-                                                .Append('/');
+                                                                             .ConfigureAwait(false), '/');
                                         }
 
                                         // Remove the trailing /
@@ -16141,11 +16089,10 @@ namespace Chummer
 
                                     if (!string.IsNullOrEmpty(objSelectedAccessory.AddMount))
                                     {
-                                        sbdSlotsText.Append(strSpace).Append("(++").Append(strSpace)
-                                                .Append(await LanguageManager.GetStringAsync(
+                                        sbdSlotsText.Append(strSpace, "(++", strSpace).Append(await LanguageManager.GetStringAsync(
                                                                                     "String_Mount" + objSelectedAccessory.AddMount,
                                                                                     token: token)
-                                                                                .ConfigureAwait(false)).Append(')');
+                                                                                .ConfigureAwait(false), ')');
                                     }
 
                                     strSlotsText = sbdSlotsText.ToString();
@@ -16784,11 +16731,11 @@ namespace Chummer
                                 x => x.Text = strCapacity, token).ConfigureAwait(false);
                             if (!string.IsNullOrEmpty(objArmorMod.GearCapacity))
                             {
-                                string strText = objArmorMod.GearCapacity + '/' + strCapacity + strSpace + '(' +
+                                string strText = objArmorMod.GearCapacity + "/" + strCapacity + strSpace + "(" +
                                                  (await objArmorMod.GetGearCapacityRemainingAsync(token).ConfigureAwait(false)).ToString(
                                                      "#,0.##", GlobalSettings.CultureInfo) + strSpace +
                                                  await LanguageManager.GetStringAsync("String_Remaining", token: token)
-                                                     .ConfigureAwait(false) + ')';
+                                                     .ConfigureAwait(false) + ")";
                                 await lblArmorCapacity.DoThreadSafeAsync(x => x.Text = strText, token)
                                                       .ConfigureAwait(false);
                             }
@@ -16898,7 +16845,7 @@ namespace Chummer
                                         {
                                             await lblArmorCapacity
                                                 .DoThreadSafeAsync(
-                                                    x => x.Text = '[' + 0.ToString(GlobalSettings.CultureInfo) + ']',
+                                                    x => x.Text = "[" + 0.ToString(GlobalSettings.CultureInfo) + "]",
                                                     token).ConfigureAwait(false);
                                         }
                                         else
@@ -17066,10 +17013,8 @@ namespace Chummer
                                                 {
                                                     sbdArmorEquipped
                                                         .Append(await objLoopArmor.GetCurrentDisplayNameAsync(token)
-                                                                                  .ConfigureAwait(false))
-                                                        .Append(strSpace)
-                                                        .Append('(')
-                                                        .Append(await objLoopArmor.GetDisplayArmorValueAsync(token).ConfigureAwait(false))
+                                                                                  .ConfigureAwait(false), strSpace)
+                                                        .Append('(', await objLoopArmor.GetDisplayArmorValueAsync(token).ConfigureAwait(false))
                                                         .AppendLine(')');
                                                 }
                                             }, token).ConfigureAwait(false);
@@ -17117,10 +17062,8 @@ namespace Chummer
                                                     {
                                                         sbdArmorEquipped
                                                             .Append(await objLoopArmor.GetCurrentDisplayNameAsync(token)
-                                                                        .ConfigureAwait(false))
-                                                            .Append(strSpace)
-                                                            .Append('(')
-                                                            .Append(await objLoopArmor.GetDisplayArmorValueAsync(token).ConfigureAwait(false))
+                                                                        .ConfigureAwait(false), strSpace)
+                                                            .Append('(', await objLoopArmor.GetDisplayArmorValueAsync(token).ConfigureAwait(false))
                                                             .AppendLine(')');
                                                     }
                                                 }, token).ConfigureAwait(false);
@@ -17486,6 +17429,11 @@ namespace Chummer
             }
         }
 
+        protected override Task<string> GetFormModeAsync(CancellationToken token = default)
+        {
+            return LanguageManager.GetStringAsync("Title_CreateNewCharacter", token: token);
+        }
+
         /// <summary>
         /// Save the Character.
         /// </summary>
@@ -17566,7 +17514,7 @@ namespace Chummer
                                                          + strMetavariantGuidString.CleanXPath()
                                                          + " or translate(id, 'abcdef', 'ABCDEF') = "
                                                          + strMetavariantGuidString.ToUpperInvariant().CleanXPath()
-                                                         + ']';
+                                                         + "]";
                             AttributeSection objAttributeSection =
                                 await CharacterObject.GetAttributeSectionAsync(token).ConfigureAwait(false);
                             ThreadSafeObservableCollection<CharacterAttrib> lstAttributeList =
@@ -17931,8 +17879,8 @@ namespace Chummer
                             if (!objSelectedCyberware.Capacity.Contains('[') ||
                                 objSelectedCyberware.Capacity.Contains("/["))
                             {
-                                frmPickCyberware.MyForm.MaximumCapacity = await objSelectedCyberware
-                                    .GetCapacityRemainingAsync(token).ConfigureAwait(false);
+                                await frmPickCyberware.MyForm.SetMaximumCapacityAsync(await objSelectedCyberware
+                                    .GetCapacityRemainingAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
                             }
 
                             string strLoopHasModularMount = await objSelectedCyberware.GetHasModularMountAsync(token)
@@ -18055,7 +18003,7 @@ namespace Chummer
                                 if (intValue >= await CharacterObject
                                         .LimbCountAsync(Cyberware.MountToLimbType(strKey), token)
                                         .ConfigureAwait(false))
-                                    sbdDisallowedMounts.Append(strKey).Append(',');
+                                    sbdDisallowedMounts.Append(strKey, ',');
                             }
 
                             // Remove trailing ","
@@ -18086,7 +18034,7 @@ namespace Chummer
                                 if (intValue >= await CharacterObject
                                         .LimbCountAsync(Cyberware.MountToLimbType(strKey), token)
                                         .ConfigureAwait(false))
-                                    sbdHasMounts.Append(strKey).Append(',');
+                                    sbdHasMounts.Append(strKey, ',');
                             }
 
                             // Remove trailing ","
@@ -18195,7 +18143,7 @@ namespace Chummer
                                        Utils.StringBuilderPool, out StringBuilder sbdCategories))
                             {
                                 foreach (XPathNavigator objXmlCategory in xmlAddonCategoryList)
-                                    sbdCategories.Append(objXmlCategory.Value).Append(',');
+                                    sbdCategories.Append(objXmlCategory.Value, ',');
                                 // Remove the trailing comma.
                                 --sbdCategories.Length;
                                 strCategories = sbdCategories.ToString();
@@ -18215,8 +18163,7 @@ namespace Chummer
                                 || objSelectedGear.Capacity.Contains("/[")))
                         {
                             // If the Gear has a Capacity with no brackets (meaning it grants Capacity), show only Subsystems (those that conume Capacity).
-                            frmPickGear.MyForm.MaximumCapacity = await objSelectedGear.GetCapacityRemainingAsync(token)
-                                .ConfigureAwait(false);
+                            await frmPickGear.MyForm.SetMaximumCapacityAsync(await objSelectedGear.GetCapacityRemainingAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
                             if (!string.IsNullOrEmpty(strCategories))
                                 frmPickGear.MyForm.ShowNegativeCapacityOnly = true;
                         }
@@ -18255,7 +18202,7 @@ namespace Chummer
                         objGear.DiscountCost = frmPickGear.MyForm.BlackMarketDiscount;
                         // Reduce the cost for Do It Yourself components.
                         if (frmPickGear.MyForm.DoItYourself)
-                            objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                            objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                         // If the item was marked as free, change its cost.
                         if (frmPickGear.MyForm.FreeCost)
                         {
@@ -18373,7 +18320,7 @@ namespace Chummer
                                        out StringBuilder sbdCategories))
                             {
                                 foreach (XPathNavigator objXmlCategory in xmlAddonCategoryList)
-                                    sbdCategories.Append(objXmlCategory.Value).Append(',');
+                                    sbdCategories.Append(objXmlCategory.Value, ',');
                                 // Remove the trailing comma.
                                 if (sbdCategories.Length > 0)
                                     --sbdCategories.Length;
@@ -18395,11 +18342,11 @@ namespace Chummer
                         {
                             // If the Gear has a Capacity with no brackets (meaning it grants Capacity), show only Subsystems (those that conume Capacity).
                             if (objSelectedGear?.Capacity.Contains('[') == false)
-                                frmPickGear.MyForm.MaximumCapacity = await objSelectedGear
-                                    .GetCapacityRemainingAsync(token).ConfigureAwait(false);
+                                await frmPickGear.MyForm.SetMaximumCapacityAsync(await objSelectedGear
+                                    .GetCapacityRemainingAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
                             else if (objSelectedMod != null)
-                                frmPickGear.MyForm.MaximumCapacity = await objSelectedMod
-                                    .GetGearCapacityRemainingAsync(token).ConfigureAwait(false);
+                                await frmPickGear.MyForm.SetMaximumCapacityAsync(await objSelectedMod
+                                    .GetGearCapacityRemainingAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
                         }
 
                         // Make sure the dialogue window was not canceled.
@@ -18436,7 +18383,7 @@ namespace Chummer
 
                         // Reduce the cost for Do It Yourself components.
                         if (frmPickGear.MyForm.DoItYourself)
-                            objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                            objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                         // If the item was marked as free, change its cost.
                         if (frmPickGear.MyForm.FreeCost)
                         {
@@ -18537,7 +18484,7 @@ namespace Chummer
                                      + await LanguageManager.GetStringAsync("String_D6", token: token)
                                                             .ConfigureAwait(false)
                                      + strSpace
-                                     + '×' + strSpace
+                                     + "×" + strSpace
                                      + objLifestyle.Multiplier.ToString(
                                          await CharacterObjectSettings.GetNuyenFormatAsync(token).ConfigureAwait(false),
                                          GlobalSettings.CultureInfo) + await LanguageManager
@@ -18597,7 +18544,7 @@ namespace Chummer
                         using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                       out StringBuilder sbdQualities))
                         {
-                            await sbdQualities.AppendJoinAsync(',' + Environment.NewLine,
+                            await sbdQualities.AppendJoinAsync("," + Environment.NewLine,
                                                                objLifestyle.LifestyleQualities.Select(
                                                                    r => r.GetCurrentFormattedDisplayNameAsync(token)),
                                                                token).ConfigureAwait(false);
@@ -18612,13 +18559,12 @@ namespace Chummer
 
                                 sbdQualities.Append(await CharacterObject
                                                           .GetObjectNameAsync(objImprovement, token: token)
-                                                          .ConfigureAwait(false))
-                                            .Append(await LanguageManager.GetStringAsync("String_Space", token: token)
-                                                                         .ConfigureAwait(false)).Append('[')
-                                            .Append(
+                                                          .ConfigureAwait(false),
+                                                          await LanguageManager.GetStringAsync("String_Space", token: token)
+                                                                         .ConfigureAwait(false))
+                                            .Append('[',
                                                 objImprovement.Value.ToString(
-                                                    "+#,0;-#,0;0", GlobalSettings.CultureInfo))
-                                            .Append("%]");
+                                                    "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                             }
 
                             if (await objLifestyle.GetStyleTypeAsync(token).ConfigureAwait(false) == LifestyleType.Standard)
@@ -18634,13 +18580,11 @@ namespace Chummer
 
                                     sbdQualities.Append(await CharacterObject
                                             .GetObjectNameAsync(objImprovement, token: token)
+                                            .ConfigureAwait(false), await LanguageManager.GetStringAsync("String_Space", token: token)
                                             .ConfigureAwait(false))
-                                        .Append(await LanguageManager.GetStringAsync("String_Space", token: token)
-                                            .ConfigureAwait(false)).Append('[')
-                                        .Append(
+                                        .Append('[',
                                             objImprovement.Value.ToString(
-                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo))
-                                        .Append("%]");
+                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                                 }
                             }
 
@@ -18867,12 +18811,12 @@ namespace Chummer
                                 {
                                     int intSlots = await objVehicle.GetSlotsAsync(token).ConfigureAwait(false);
                                     string strText = intSlots.ToString(GlobalSettings.CultureInfo) + strSpace
-                                        + '('
+                                        + "("
                                         + (intSlots - await objVehicle.GetSlotsUsedAsync(token).ConfigureAwait(false)).ToString(
                                             GlobalSettings.CultureInfo)
                                         + strSpace + await LanguageManager.GetStringAsync("String_Remaining", token: token)
                                                                           .ConfigureAwait(false)
-                                        + ')';
+                                        + ")";
                                     await lblVehicleSlotsLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                               .ConfigureAwait(false);
                                     await lblVehicleSlots.DoThreadSafeAsync(x =>
@@ -18980,7 +18924,7 @@ namespace Chummer
                                                                           .ConfigureAwait(false);
                                         string strText
                                             = (await objVehicle.GetDroneModSlotsUsedAsync(token).ConfigureAwait(false)).ToString(
-                                                GlobalSettings.CultureInfo) + '/'
+                                                GlobalSettings.CultureInfo) + "/"
                                                                             + (await objVehicle
                                                                                 .GetDroneModSlotsAsync(token).ConfigureAwait(false))
                                                                             .ToString(GlobalSettings.CultureInfo);
@@ -19491,7 +19435,7 @@ namespace Chummer
                                     x.Text = strPool;
                                     x.Visible = true;
                                 }, token).ConfigureAwait(false);
-                                await lblVehicleWeaponDicePool.SetToolTipAsync(await objWeapon.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token)
+                                await lblVehicleWeaponDicePool.SetToolTipTextAsync(await objWeapon.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token)
                                                               .ConfigureAwait(false);
                                 await lblVehicleWeaponRCLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                              .ConfigureAwait(false);
@@ -19501,7 +19445,7 @@ namespace Chummer
                                     x.Text = strRC;
                                     x.Visible = true;
                                 }, token).ConfigureAwait(false);
-                                await lblVehicleWeaponRC.SetToolTipAsync(strRCTooltip, token).ConfigureAwait(false);
+                                await lblVehicleWeaponRC.SetToolTipTextAsync(strRCTooltip, token).ConfigureAwait(false);
                                 await lblVehicleWeaponReachLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                                 .ConfigureAwait(false);
                                 string strReach
@@ -19782,8 +19726,7 @@ namespace Chummer
                                         sbdMount.Append(await LanguageManager
                                                               .GetStringAsync(
                                                                   "String_Mount" + strCurrentMount, token: token)
-                                                              .ConfigureAwait(false))
-                                                .Append('/');
+                                                              .ConfigureAwait(false), '/');
                                     // Remove the trailing /
                                     if (sbdMount.Length > 0)
                                         --sbdMount.Length;
@@ -19795,15 +19738,14 @@ namespace Chummer
                                         {
                                             if (!boolHaveAddedItem)
                                             {
-                                                sbdMount.Append(strSpace).Append('+').Append(strSpace);
+                                                sbdMount.Append(strSpace, '+', strSpace);
                                                 boolHaveAddedItem = true;
                                             }
 
                                             sbdMount.Append(await LanguageManager.GetStringAsync(
                                                                                      "String_Mount" + strCurrentExtraMount,
                                                                                      token: token)
-                                                                                 .ConfigureAwait(false))
-                                                    .Append('/');
+                                                                                 .ConfigureAwait(false), '/');
                                         }
 
                                         token.ThrowIfCancellationRequested();
@@ -19814,11 +19756,10 @@ namespace Chummer
 
                                     if (!string.IsNullOrEmpty(objAccessory.AddMount))
                                     {
-                                        sbdMount.Append(strSpace).Append("(++").Append(strSpace)
-                                                .Append(await LanguageManager.GetStringAsync(
+                                        sbdMount.Append(strSpace, "(++", strSpace).Append(await LanguageManager.GetStringAsync(
                                                                                     "String_Mount" + objAccessory.AddMount,
                                                                                     token: token)
-                                                                                .ConfigureAwait(false)).Append(')');
+                                                                                .ConfigureAwait(false), ')');
                                     }
 
                                     strMountText = sbdMount.ToString();
@@ -19954,7 +19895,7 @@ namespace Chummer
                                             = decDicePool.ToString("+#,0.##;-#,0.##;0.##", GlobalSettings.CultureInfo);
                                         x.Visible = true;
                                     }, token).ConfigureAwait(false);
-                                    await lblVehicleWeaponDicePool.SetToolTipAsync(string.Empty, token)
+                                    await lblVehicleWeaponDicePool.SetToolTipTextAsync(string.Empty, token)
                                                                   .ConfigureAwait(false);
                                 }
 
@@ -20250,13 +20191,13 @@ namespace Chummer
                                                     .ConfigureAwait(false);
                                 await lblVehicleSlotsLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                           .ConfigureAwait(false);
-                                string strText2 = objGear.CalculatedCapacity + strSpace + '('
+                                string strText2 = objGear.CalculatedCapacity + strSpace + "("
                                                   + objGear.CapacityRemaining.ToString(
                                                       "#,0.##", GlobalSettings.CultureInfo) +
                                                   strSpace + await LanguageManager
                                                                    .GetStringAsync("String_Remaining", token: token)
                                                                    .ConfigureAwait(false)
-                                                  + ')';
+                                                  + ")";
                                 await lblVehicleSlots.DoThreadSafeAsync(x =>
                                 {
                                     x.Visible = true;
@@ -20497,14 +20438,14 @@ namespace Chummer
                         string strText7 = await objSpell.DisplayDvAsync(GlobalSettings.Language, token)
                                                         .ConfigureAwait(false);
                         await lblSpellDV.DoThreadSafeAsync(x => x.Text = strText7, token).ConfigureAwait(false);
-                        await lblSpellDV.SetToolTipAsync(await objSpell.GetDvTooltipAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                        await lblSpellDV.SetToolTipTextAsync(await objSpell.GetDvTooltipAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
                         await objSpell.SetSourceDetailAsync(lblSpellSource, token).ConfigureAwait(false);
                         // Determine the size of the Spellcasting Dice Pool.
                         int intPool = await objSpell.GetDicePoolAsync(token).ConfigureAwait(false);
                         await lblSpellDicePool
                               .DoThreadSafeAsync(x => x.Text = intPool.ToString(GlobalSettings.CultureInfo),
                                                  token).ConfigureAwait(false);
-                        await lblSpellDicePool.SetToolTipAsync(await objSpell.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                        await lblSpellDicePool.SetToolTipTextAsync(await objSpell.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
                     }
                     else
                     {
@@ -20554,7 +20495,7 @@ namespace Chummer
                         string strText3 = await objComplexForm.DisplayFvAsync(GlobalSettings.Language, token)
                                                               .ConfigureAwait(false);
                         await lblFV.DoThreadSafeAsync(x => x.Text = strText3, token).ConfigureAwait(false);
-                        await lblFV.SetToolTipAsync(await objComplexForm.GetFvTooltipAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
+                        await lblFV.SetToolTipTextAsync(await objComplexForm.GetFvTooltipAsync(token).ConfigureAwait(false), token).ConfigureAwait(false);
                         await objComplexForm.SetSourceDetailAsync(lblComplexFormSource, token).ConfigureAwait(false);
                         // Determine the size of the Threading Dice Pool.
                         string strDicePool = (await objComplexForm.GetDicePoolAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
@@ -20562,7 +20503,7 @@ namespace Chummer
                               .DoThreadSafeAsync(
                                   x => x.Text = strDicePool, token)
                               .ConfigureAwait(false);
-                        await lblComplexFormDicePool.SetToolTipAsync(await objComplexForm.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token)
+                        await lblComplexFormDicePool.SetToolTipTextAsync(await objComplexForm.GetDicePoolTooltipAsync(token).ConfigureAwait(false), token)
                                                     .ConfigureAwait(false);
                     }
                     else
@@ -20690,8 +20631,6 @@ namespace Chummer
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                           out StringBuilder sbdMessage))
             {
-                sbdMessage.Append(await LanguageManager.GetStringAsync("Message_InvalidBeginning", token: token)
-                                                       .ConfigureAwait(false));
                 CursorWait objCursorWait = await CursorWait.NewAsync(this, token: token).ConfigureAwait(false);
                 try
                 {
@@ -20985,12 +20924,11 @@ namespace Chummer
                                 return;
                             (await sbdMessage.AppendLine()
                                              .Append(await objSkill.GetCurrentDisplayNameAsync(token)
-                                                                   .ConfigureAwait(false))
-                                             .Append(await LanguageManager.GetStringAsync("String_Space", token: token)
-                                                                          .ConfigureAwait(false))
-                                             .Append('(')
+                                                                   .ConfigureAwait(false),
+                                                                   await LanguageManager.GetStringAsync("String_Space", token: token)
+                                                                          .ConfigureAwait(false), '(')
                                              .AppendJoinAsync(
-                                                 ',' + await LanguageManager.GetStringAsync(
+                                                 "," + await LanguageManager.GetStringAsync(
                                                      "String_Space", token: token).ConfigureAwait(false),
                                                  lstSpecs.Select(
                                                      x => x.GetCurrentDisplayNameAsync(token)), token)
@@ -21507,7 +21445,7 @@ namespace Chummer
                                 lstOverCapacity.Count);
                             foreach (string strItem in lstOverCapacity)
                             {
-                                sbdMessage.AppendLine().Append("\t- ").Append(strItem);
+                                sbdMessage.AppendLine().Append("\t- ", strItem);
                             }
                         }
                     }
@@ -21566,7 +21504,7 @@ namespace Chummer
                                 intIllegalDowngrades);
                             foreach (string strItem in lstDronesIllegalDowngrades)
                             {
-                                sbdMessage.AppendLine().Append("\t- ").Append(strItem);
+                                sbdMessage.AppendLine().Append("\t- ", strItem);
                             }
                         }
                     }
@@ -21940,14 +21878,16 @@ namespace Chummer
                     await objCursorWait.DisposeAsync().ConfigureAwait(false);
                 }
 
-                if (!blnValid && sbdMessage.Length > (await LanguageManager
-                                                            .GetStringAsync("Message_InvalidBeginning", token: token)
-                                                            .ConfigureAwait(false)).Length)
+                if (!blnValid && sbdMessage.Length > 0)
+                {
+                    sbdMessage.Insert(0, await LanguageManager.GetStringAsync("Message_InvalidBeginning", token: token)
+                                                       .ConfigureAwait(false));
                     await Program.ShowScrollableMessageBoxAsync(this, sbdMessage.ToString(),
                         await LanguageManager
                             .GetStringAsync("MessageTitle_Invalid", token: token)
                             .ConfigureAwait(false),
                         MessageBoxButtons.OK, MessageBoxIcon.Error, token: token).ConfigureAwait(false);
+                }
             }
 
             return blnValid;
@@ -22033,11 +21973,11 @@ namespace Chummer
                         {
                             // Create a pre-Career Mode backup of the character.
                             // Make sure the backup directory exists.
-                            if (!Directory.Exists(Path.Combine(Utils.GetStartupPath, "saves", "backup")))
+                            if (!Directory.Exists(Utils.GetBackupSavesFolderPath))
                             {
                                 try
                                 {
-                                    Directory.CreateDirectory(Path.Combine(Utils.GetStartupPath, "saves", "backup"));
+                                    Directory.CreateDirectory(Utils.GetBackupSavesFolderPath);
                                 }
                                 catch (UnauthorizedAccessException)
                                 {
@@ -22063,7 +22003,7 @@ namespace Chummer
                             }
 
                             strNewName += await LanguageManager.GetStringAsync("String_Space", token: token)
-                                    .ConfigureAwait(false) + '('
+                                    .ConfigureAwait(false) + "("
                                                            + await LanguageManager
                                                                .GetStringAsync(
                                                                    "Title_CreateMode", token: token)
@@ -22072,7 +22012,7 @@ namespace Chummer
                             if (CharacterObject.FileName?.EndsWith(".chum5lz", StringComparison.OrdinalIgnoreCase) ==
                                 true)
                                 strNewName += "lz";
-                            strNewName = Path.Combine(Utils.GetStartupPath, "saves", "backup", strNewName);
+                            strNewName = Path.Combine(Utils.GetBackupSavesFolderPath, strNewName);
 
                             CursorWait objCursorWait =
                                 await CursorWait.NewAsync(this, token: token).ConfigureAwait(false);
@@ -22234,12 +22174,12 @@ namespace Chummer
                                 .ConfigureAwait(false);
                             foreach (XmlNode objXmlChild in xmlChildrenList)
                             {
-                                string strName = objXmlChild["name"]?.InnerText;
+                                string strName = objXmlChild["name"]?.InnerTextViaPool(token);
                                 if (string.IsNullOrEmpty(strName))
                                     continue;
                                 XmlNode objXmlChildCyberware = objXmlDocument.TryGetNodeByNameOrId(
                                     "/chummer/" + strType + "s/" + strType, strName);
-                                int.TryParse(objXmlChild["rating"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intChildRating);
+                                int.TryParse(objXmlChild["rating"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intChildRating);
                                 await (await objCyberware.GetChildrenAsync(token).ConfigureAwait(false)).AddAsync(await CreateSuiteCyberware(objXmlChild,
                                     objXmlChildCyberware, objGrade,
                                     intChildRating, eSource, token).ConfigureAwait(false), token).ConfigureAwait(false);
@@ -22326,13 +22266,13 @@ namespace Chummer
                             foreach (XmlNode objXmlQuality in xmlQualityList)
                             {
                                 XmlNode objXmlQualityNode = xmlQualityDocument.TryGetNodeByNameOrId(
-                                    "/chummer/qualities/quality", objXmlQuality.InnerText,
+                                    "/chummer/qualities/quality", objXmlQuality.InnerTextViaPool(token),
                                     await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
 
                                 if (objXmlQualityNode == null)
                                     continue;
                                 string strForceValue =
-                                        objXmlQuality.Attributes?["select"]?.InnerText ?? string.Empty;
+                                        objXmlQuality.Attributes?["select"]?.InnerTextViaPool(token) ?? string.Empty;
                                 List<Weapon> lstWeapons = new List<Weapon>(1);
                                 Quality objQuality = new Quality(CharacterObject);
                                 try
@@ -22364,7 +22304,7 @@ namespace Chummer
                 XmlElement xmlSelectMartialArt = objXmlKit["selectmartialart"];
                 if (xmlSelectMartialArt != null)
                 {
-                    string strForcedValue = xmlSelectMartialArt.Attributes["select"]?.InnerText ?? string.Empty;
+                    string strForcedValue = xmlSelectMartialArt.Attributes["select"]?.InnerTextViaPool(token) ?? string.Empty;
 
                     using (ThreadSafeForm<SelectMartialArt> frmPickMartialArt = await ThreadSafeForm<SelectMartialArt>
                                .GetAsync(() => new SelectMartialArt(CharacterObject)
@@ -22413,7 +22353,7 @@ namespace Chummer
                             foreach (XmlNode objXmlArt in xmlMartialArtsList)
                             {
                                 XmlNode objXmlArtNode = objXmlMartialArtDocument.TryGetNodeByNameOrId(
-                                        "/chummer/martialarts/martialart", objXmlArt["name"]?.InnerText,
+                                        "/chummer/martialarts/martialart", objXmlArt["name"]?.InnerTextViaPool(token),
                                         await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                                 if (objXmlArtNode == null)
                                     continue;
@@ -22432,7 +22372,7 @@ namespace Chummer
                                             {
                                                 MartialArtTechnique objTechnique = new MartialArtTechnique(CharacterObject);
                                                 XmlNode xmlTechniqueNode = objXmlMartialArtDocument.TryGetNodeByNameOrId(
-                                                    "/chummer/techniques/technique", xmlTechnique["name"]?.InnerText,
+                                                    "/chummer/techniques/technique", xmlTechnique["name"]?.InnerTextViaPool(token),
                                                     await CharacterObjectSettings.BookXPathAsync(token: token)
                                                         .ConfigureAwait(false));
                                                 await objTechnique.CreateAsync(xmlTechniqueNode, token)
@@ -22481,7 +22421,7 @@ namespace Chummer
                             {
                                 XmlNode objXmlComplexFormNode =
                                     objXmlComplexFormDocument.TryGetNodeByNameOrId(
-                                        "/chummer/complexforms/complexform", objXmlComplexForm["name"]?.InnerText,
+                                        "/chummer/complexforms/complexform", objXmlComplexForm["name"]?.InnerTextViaPool(token),
                                         await CharacterObjectSettings.BookXPathAsync(token: token)
                                             .ConfigureAwait(false));
                                 if (objXmlComplexFormNode != null)
@@ -22524,7 +22464,7 @@ namespace Chummer
                             foreach (XmlNode objXmlProgram in xmlProgramsList)
                             {
                                 XmlNode objXmlProgramNode = objXmlProgramDocument.TryGetNodeByNameOrId(
-                                    "/chummer/programs/program", objXmlProgram["name"]?.InnerText,
+                                    "/chummer/programs/program", objXmlProgram["name"]?.InnerTextViaPool(token),
                                     await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                                 if (objXmlProgramNode != null)
                                 {
@@ -22549,8 +22489,8 @@ namespace Chummer
                         {
                             foreach (XmlNode objXmlSpell in xmlSpellsList)
                             {
-                                string strCategory = objXmlSpell["category"]?.InnerText;
-                                string strName = objXmlSpell["name"].InnerText;
+                                string strCategory = objXmlSpell["category"]?.InnerTextViaPool(token);
+                                string strName = objXmlSpell["name"].InnerTextViaPool(token);
                                 // Make sure the Spell has not already been added to the character.
                                 if (await CharacterObject.Spells
                                         .AnyAsync(x => x.Name == strName && x.Category == strCategory, token)
@@ -22559,12 +22499,12 @@ namespace Chummer
                                 XmlNode objXmlSpellNode = objXmlSpellDocument.TryGetNodeByNameOrId(
                                     "/chummer/spells/spell", strName,
                                     "category = " + strCategory.CleanXPath() + " and (" + await CharacterObjectSettings
-                                        .BookXPathAsync(token: token).ConfigureAwait(false) + ')');
+                                        .BookXPathAsync(token: token).ConfigureAwait(false) + ")");
 
                                 if (objXmlSpellNode == null)
                                     continue;
 
-                                string strForceValue = objXmlSpell.Attributes?["select"]?.InnerText ?? string.Empty;
+                                string strForceValue = objXmlSpell.Attributes?["select"]?.InnerTextViaPool(token) ?? string.Empty;
                                 Spell objSpell = new Spell(CharacterObject);
                                 try
                                 {
@@ -22592,13 +22532,13 @@ namespace Chummer
                         {
                             foreach (XmlNode objXmlSpirit in xmlSpiritsList)
                             {
-                                int.TryParse(objXmlSpirit["force"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intForce);
-                                int.TryParse(objXmlSpirit["services"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intServices);
+                                int.TryParse(objXmlSpirit["force"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intForce);
+                                int.TryParse(objXmlSpirit["services"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intServices);
                                 Spirit objSpirit = new Spirit(CharacterObject);
                                 try
                                 {
                                     await objSpirit.SetEntityTypeAsync(SpiritType.Spirit, token).ConfigureAwait(false);
-                                    await objSpirit.SetNameAsync(objXmlSpirit["name"].InnerText, token).ConfigureAwait(false);
+                                    await objSpirit.SetNameAsync(objXmlSpirit["name"].InnerTextViaPool(token), token).ConfigureAwait(false);
                                     await objSpirit.SetForceAsync(intForce, token).ConfigureAwait(false);
                                     await objSpirit.SetServicesOwedAsync(intServices, token).ConfigureAwait(false);
                                     await CharacterObject.Spirits.AddAsync(objSpirit, token).ConfigureAwait(false);
@@ -22632,7 +22572,7 @@ namespace Chummer
                     {
                         // Create the Lifestyle.
                         XmlNode objXmlLifestyleNode = objXmlLifestyleDocument.TryGetNodeByNameOrId(
-                            "/chummer/lifestyles/lifestyle", objXmlLifestyle["baselifestyle"].InnerText);
+                            "/chummer/lifestyles/lifestyle", objXmlLifestyle["baselifestyle"].InnerTextViaPool(token));
                         if (objXmlLifestyleNode == null)
                             continue;
                         Lifestyle objLifestyle = new Lifestyle(CharacterObject);
@@ -22640,12 +22580,12 @@ namespace Chummer
                         {
                             await objLifestyle.CreateAsync(objXmlLifestyleNode, token).ConfigureAwait(false);
                             // This is an Advanced Lifestyle, so build it manually.
-                            objLifestyle.CustomName = objXmlLifestyle["name"]?.InnerText ?? string.Empty;
-                            int.TryParse(objXmlLifestyle["comforts"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intComforts);
+                            objLifestyle.CustomName = objXmlLifestyle["name"]?.InnerTextViaPool(token) ?? string.Empty;
+                            int.TryParse(objXmlLifestyle["comforts"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intComforts);
                             objLifestyle.Comforts = intComforts;
-                            int.TryParse(objXmlLifestyle["security"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intSecurity);
+                            int.TryParse(objXmlLifestyle["security"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intSecurity);
                             objLifestyle.Security = intSecurity;
-                            int.TryParse(objXmlLifestyle["area"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intArea);
+                            int.TryParse(objXmlLifestyle["area"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intArea);
                             objLifestyle.Area = intArea;
 
                             foreach (XmlNode objXmlQuality in objXmlLifestyle.SelectNodes("qualities/quality"))
@@ -22676,7 +22616,7 @@ namespace Chummer
                 }
 
                 // Update NuyenBP.
-                string strNuyenBP = objXmlKit["nuyenbp"]?.InnerText;
+                string strNuyenBP = objXmlKit["nuyenbp"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrEmpty(strNuyenBP)
                     && decimal.TryParse(strNuyenBP, NumberStyles.Any, GlobalSettings.InvariantCultureInfo,
                         out decimal decAmount))
@@ -22699,7 +22639,7 @@ namespace Chummer
                     foreach (XmlNode objXmlArmor in xmlArmors.SelectNodes("armor"))
                     {
                         XmlNode objXmlArmorNode = objXmlArmorDocument.TryGetNodeByNameOrId(
-                            "/chummer/armors/armor", objXmlArmor["name"].InnerText,
+                            "/chummer/armors/armor", objXmlArmor["name"].InnerTextViaPool(token),
                             await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                         if (objXmlArmorNode == null)
                             continue;
@@ -22707,7 +22647,7 @@ namespace Chummer
                         List<Weapon> lstWeapons = new List<Weapon>(1);
                         try
                         {
-                            int.TryParse(objXmlArmor["rating"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
+                            int.TryParse(objXmlArmor["rating"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
                             await objArmor.CreateAsync(objXmlArmorNode,
                                 intRating, lstWeapons, false,
                                 blnCreateChildren, token: token).ConfigureAwait(false);
@@ -22717,15 +22657,15 @@ namespace Chummer
                             foreach (XmlNode objXmlMod in objXmlArmor.SelectNodes("mods/mod"))
                             {
                                 XmlNode objXmlModNode = objXmlArmorDocument.TryGetNodeByNameOrId(
-                                    "/chummer/mods/mod", objXmlMod["name"].InnerText,
+                                    "/chummer/mods/mod", objXmlMod["name"].InnerTextViaPool(token),
                                     await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                                 if (objXmlModNode != null)
                                 {
-                                    ArmorMod objMod = new ArmorMod(CharacterObject);
+                                    ArmorMod objMod = new ArmorMod(CharacterObject, objArmor);
                                     try
                                     {
                                         if (objXmlMod["rating"] != null)
-                                            int.TryParse(objXmlMod["rating"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out intRating);
+                                            int.TryParse(objXmlMod["rating"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out intRating);
                                         await objMod.CreateAsync(objXmlModNode, intRating, lstWeapons, token: token)
                                             .ConfigureAwait(false);
 
@@ -22784,7 +22724,7 @@ namespace Chummer
                             Utils.DoEventsSafe();
 
                             XmlNode objXmlWeaponNode = objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                "/chummer/weapons/weapon", objXmlWeapon["name"].InnerText,
+                                "/chummer/weapons/weapon", objXmlWeapon["name"].InnerTextViaPool(token),
                                 await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                             if (objXmlWeaponNode != null)
                             {
@@ -22801,18 +22741,18 @@ namespace Chummer
                                     foreach (XmlNode objXmlAccessory in objXmlWeapon.SelectNodes("accessories/accessory"))
                                     {
                                         XmlNode objXmlAccessoryNode = objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                            "/chummer/accessories/accessory", objXmlAccessory["name"].InnerText,
+                                            "/chummer/accessories/accessory", objXmlAccessory["name"].InnerTextViaPool(token),
                                             await CharacterObjectSettings.BookXPathAsync(token: token)
                                                 .ConfigureAwait(false));
                                         if (objXmlAccessoryNode == null)
                                             continue;
-                                        string strMount = objXmlAccessory["mount"]?.InnerText ?? "Internal";
-                                        string strExtraMount = objXmlAccessory["extramount"]?.InnerText ?? "None";
+                                        string strMount = objXmlAccessory["mount"]?.InnerTextViaPool(token) ?? "Internal";
+                                        string strExtraMount = objXmlAccessory["extramount"]?.InnerTextViaPool(token) ?? "None";
                                         WeaponAccessory objMod = new WeaponAccessory(CharacterObject);
                                         try
                                         {
                                             await objMod.CreateAsync(objXmlAccessoryNode,
-                                                new Tuple<string, string>(strMount, strExtraMount), 0,
+                                                new ValueTuple<string, string>(strMount, strExtraMount), 0,
                                                 false, blnCreateChildren, token: token).ConfigureAwait(false);
                                             await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
@@ -22835,7 +22775,7 @@ namespace Chummer
                                     if (xmlUnderbarrelNode != null)
                                     {
                                         XmlNode objXmlUnderbarrelNode = objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                            "/chummer/weapons/weapon", objXmlWeapon["underbarrel"].InnerText,
+                                            "/chummer/weapons/weapon", objXmlWeapon["underbarrel"].InnerTextViaPool(token),
                                             await CharacterObjectSettings.BookXPathAsync(token: token)
                                                 .ConfigureAwait(false));
                                         if (objXmlUnderbarrelNode == null)
@@ -22864,18 +22804,18 @@ namespace Chummer
                                                 {
                                                     XmlNode objXmlAccessoryNode =
                                                         objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                                            "/chummer/accessories/accessory", objXmlAccessory["name"].InnerText,
+                                                            "/chummer/accessories/accessory", objXmlAccessory["name"].InnerTextViaPool(token),
                                                             await CharacterObjectSettings.BookXPathAsync(token: token)
                                                                 .ConfigureAwait(false));
                                                     if (objXmlAccessoryNode == null)
                                                         continue;
-                                                    string strMount = objXmlAccessory["mount"]?.InnerText ?? "Internal";
-                                                    string strExtraMount = objXmlAccessory["extramount"]?.InnerText ?? "None";
+                                                    string strMount = objXmlAccessory["mount"]?.InnerTextViaPool(token) ?? "Internal";
+                                                    string strExtraMount = objXmlAccessory["extramount"]?.InnerTextViaPool(token) ?? "None";
                                                     WeaponAccessory objMod = new WeaponAccessory(CharacterObject);
                                                     try
                                                     {
                                                         await objMod.CreateAsync(objXmlAccessoryNode,
-                                                            new Tuple<string, string>(strMount, strExtraMount), 0, false,
+                                                            new ValueTuple<string, string>(strMount, strExtraMount), 0, false,
                                                             blnCreateChildren, token: token).ConfigureAwait(false);
                                                         await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
@@ -23055,7 +22995,7 @@ namespace Chummer
                             Gear objDefaultSensor = null;
 
                             XmlNode objXmlVehicleNode = objXmlVehicleDocument.TryGetNodeByNameOrId(
-                                "/chummer/vehicles/vehicle", objXmlVehicle["name"].InnerText,
+                                "/chummer/vehicles/vehicle", objXmlVehicle["name"].InnerTextViaPool(token),
                                 await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                             if (objXmlVehicleNode == null)
                                 continue;
@@ -23083,7 +23023,7 @@ namespace Chummer
                                 foreach (XmlNode objXmlMod in objXmlVehicle.SelectNodes("mods/mod"))
                                 {
                                     XmlNode objXmlModNode = objXmlVehicleDocument.TryGetNodeByNameOrId(
-                                        "/chummer/mods/mod", objXmlMod["name"].InnerText,
+                                        "/chummer/mods/mod", objXmlMod["name"].InnerTextViaPool(token),
                                         await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                                     if (objXmlModNode == null)
                                         continue;
@@ -23135,7 +23075,7 @@ namespace Chummer
                                     {
                                         List<Weapon> lstSubWeapons = new List<Weapon>(1);
                                         XmlNode objXmlWeaponNode = objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                            "/chummer/weapons/weapon", objXmlWeapon["name"].InnerText,
+                                            "/chummer/weapons/weapon", objXmlWeapon["name"].InnerTextViaPool(token),
                                             await CharacterObjectSettings.BookXPathAsync(token: token)
                                                 .ConfigureAwait(false));
                                         if (objXmlWeaponNode == null)
@@ -23171,18 +23111,18 @@ namespace Chummer
                                             {
                                                 XmlNode objXmlAccessoryNode =
                                                     objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                                        "/chummer/accessories/accessory", objXmlAccessory["name"].InnerText,
+                                                        "/chummer/accessories/accessory", objXmlAccessory["name"].InnerTextViaPool(token),
                                                         await CharacterObjectSettings.BookXPathAsync(token: token)
                                                             .ConfigureAwait(false));
                                                 if (objXmlAccessoryNode == null)
                                                     continue;
-                                                string strMount = objXmlAccessory["mount"]?.InnerText ?? "Internal";
-                                                string strExtraMount = objXmlAccessory["extramount"]?.InnerText ?? "None";
+                                                string strMount = objXmlAccessory["mount"]?.InnerTextViaPool(token) ?? "Internal";
+                                                string strExtraMount = objXmlAccessory["extramount"]?.InnerTextViaPool(token) ?? "None";
                                                 WeaponAccessory objMod = new WeaponAccessory(CharacterObject);
                                                 try
                                                 {
                                                     await objMod.CreateAsync(objXmlAccessoryNode,
-                                                        new Tuple<string, string>(strMount, strExtraMount),
+                                                        new ValueTuple<string, string>(strMount, strExtraMount),
                                                         0, false, blnCreateChildren, token: token).ConfigureAwait(false);
                                                     await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
@@ -23201,7 +23141,7 @@ namespace Chummer
                                             {
                                                 XmlNode objXmlUnderbarrelNode =
                                                     objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                                        "/chummer/weapons/weapon", objXmlWeapon["underbarrel"].InnerText,
+                                                        "/chummer/weapons/weapon", objXmlWeapon["underbarrel"].InnerTextViaPool(token),
                                                         await CharacterObjectSettings.BookXPathAsync(token: token)
                                                             .ConfigureAwait(false));
                                                 if (objXmlUnderbarrelNode != null)
@@ -23230,19 +23170,19 @@ namespace Chummer
                                                                      "accessories/accessory"))
                                                         {
                                                             XmlNode objXmlAccessoryNode = objXmlWeaponDocument.TryGetNodeByNameOrId(
-                                                                "/chummer/accessories/accessory", objXmlAccessory["name"].InnerText,
+                                                                "/chummer/accessories/accessory", objXmlAccessory["name"].InnerTextViaPool(token),
                                                                 await CharacterObjectSettings.BookXPathAsync(token: token)
                                                                     .ConfigureAwait(false));
                                                             if (objXmlAccessoryNode == null)
                                                                 continue;
-                                                            string strMount = objXmlAccessory["mount"]?.InnerText ?? "Internal";
+                                                            string strMount = objXmlAccessory["mount"]?.InnerTextViaPool(token) ?? "Internal";
                                                             string strExtraMount =
-                                                                objXmlAccessory["extramount"]?.InnerText ?? "None";
+                                                                objXmlAccessory["extramount"]?.InnerTextViaPool(token) ?? "None";
                                                             WeaponAccessory objMod = new WeaponAccessory(CharacterObject);
                                                             try
                                                             {
                                                                 await objMod.CreateAsync(objXmlAccessoryNode,
-                                                                    new Tuple<string, string>(strMount, strExtraMount), 0, false,
+                                                                    new ValueTuple<string, string>(strMount, strExtraMount), 0, false,
                                                                     blnCreateChildren, token: token).ConfigureAwait(false);
                                                                 await objMod.SetParentAsync(objWeapon, token).ConfigureAwait(false);
 
@@ -23388,7 +23328,7 @@ namespace Chummer
             }
 
             token.ThrowIfCancellationRequested();
-            await cmdAddMetamagic.SetToolTipAsync(strInitTip, token).ConfigureAwait(false);
+            await cmdAddMetamagic.SetToolTipTextAsync(strInitTip, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -23478,19 +23418,19 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             // Common Tab.
             await lblAttributes
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_CommonAttributes", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblAttributesBase
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_CommonAttributesBase", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblAttributesAug
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_CommonAttributesAug", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblAttributesMetatype
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_CommonAttributesMetatypeLimits", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             string strNuyenTooltip = await (await CharacterObjectSettings.GetChargenKarmaToNuyenExpressionAsync(token).ConfigureAwait(false))
@@ -23504,73 +23444,73 @@ namespace Chummer
                                                                .GetStringAsync("Tip_CommonNuyen", token: token)
                                                                .ConfigureAwait(false),
                                                          strNuyenTooltip);
-            await lblNuyen.SetToolTipAsync(strNuyenTooltip, token).ConfigureAwait(false);
+            await lblNuyen.SetToolTipTextAsync(strNuyenTooltip, token).ConfigureAwait(false);
             // Armor Tab.
             await chkArmorEquipped
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_ArmorEquipped", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             // Gear Tab.
             await chkGearActiveCommlink
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_ActiveCommlink", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await chkCyberwareActiveCommlink
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_ActiveCommlink", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             // Vehicles Tab.
             await chkVehicleWeaponAccessoryInstalled
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_WeaponInstalled", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await chkVehicleActiveCommlink
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_ActiveCommlink", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblVehiclePowertrainLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_TotalVehicleModCapacity", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblVehicleCosmeticLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_TotalVehicleModCapacity", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblVehicleElectromagneticLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_TotalVehicleModCapacity", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblVehicleBodymodLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_TotalVehicleModCapacity", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblVehicleWeaponsmodLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_TotalVehicleModCapacity", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblVehicleProtectionLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_TotalVehicleModCapacity", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             // Character Info Tab.
             await chkCharacterCreated
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_CharacterCreated", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             // Build Point Summary Tab.
             await lblBuildPrimaryAttributes
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_CommonAttributes", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblBuildPositiveQualities
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_BuildPositiveQualities", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblBuildNegativeQualities
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_BuildNegativeQualities", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
-            await lblBuildContacts.SetToolTipAsync(string.Format(GlobalSettings.CultureInfo,
+            await lblBuildContacts.SetToolTipTextAsync(string.Format(GlobalSettings.CultureInfo,
                                                                  await LanguageManager
                                                                        .GetStringAsync(
                                                                            "Tip_CommonContacts", token: token)
@@ -23579,17 +23519,17 @@ namespace Chummer
                                                                      GlobalSettings.CultureInfo)), token)
                                   .ConfigureAwait(false);
             await lblBuildEnemies
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_CommonEnemies", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
-            await lblBuildNuyen.SetToolTipAsync(strNuyenTooltip, token).ConfigureAwait(false);
-            await lblBuildSkillGroups.SetToolTipAsync(
+            await lblBuildNuyen.SetToolTipTextAsync(strNuyenTooltip, token).ConfigureAwait(false);
+            await lblBuildSkillGroups.SetToolTipTextAsync(
                 string.Format(GlobalSettings.CultureInfo,
                               await LanguageManager.GetStringAsync("Tip_SkillsSkillGroups", token: token)
                                                    .ConfigureAwait(false),
                               (await CharacterObjectSettings.GetKarmaImproveSkillGroupAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo)),
                 token).ConfigureAwait(false);
-            await lblBuildActiveSkills.SetToolTipAsync(
+            await lblBuildActiveSkills.SetToolTipTextAsync(
                                           string.Format(GlobalSettings.CultureInfo,
                                                         await LanguageManager
                                                               .GetStringAsync("Tip_SkillsActiveSkills", token: token)
@@ -23599,7 +23539,7 @@ namespace Chummer
                                                         (await CharacterObjectSettings.GetKarmaSpecializationAsync(token).ConfigureAwait(false)).ToString(
                                                             GlobalSettings.CultureInfo)), token)
                                       .ConfigureAwait(false);
-            await lblBuildKnowledgeSkills.SetToolTipAsync(
+            await lblBuildKnowledgeSkills.SetToolTipTextAsync(
                                              string.Format(GlobalSettings.CultureInfo,
                                                            await LanguageManager
                                                                  .GetStringAsync("Tip_SkillsKnowledgeSkills",
@@ -23610,7 +23550,7 @@ namespace Chummer
                                                            (await CharacterObjectSettings.GetKarmaKnowledgeSpecializationAsync(token).ConfigureAwait(false))
                                                                .ToString(GlobalSettings.CultureInfo)), token)
                                          .ConfigureAwait(false);
-            await lblBuildSpells.SetToolTipAsync(
+            await lblBuildSpells.SetToolTipTextAsync(
                                     string.Format(GlobalSettings.CultureInfo,
                                                   await LanguageManager
                                                         .GetStringAsync("Tip_SpellsSelectedSpells", token: token)
@@ -23618,7 +23558,7 @@ namespace Chummer
                                                   (await CharacterObjectSettings.GetKarmaSpellAsync(token).ConfigureAwait(false)).ToString(
                                                       GlobalSettings.CultureInfo)), token)
                                 .ConfigureAwait(false);
-            await lblBuildSpirits.SetToolTipAsync(
+            await lblBuildSpirits.SetToolTipTextAsync(
                                      string.Format(GlobalSettings.CultureInfo,
                                                    await LanguageManager
                                                          .GetStringAsync("Tip_SpellsSpirits", token: token)
@@ -23626,7 +23566,7 @@ namespace Chummer
                                                    (await CharacterObjectSettings.GetKarmaSpiritAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
                                                        .CultureInfo)), token)
                                  .ConfigureAwait(false);
-            await lblBuildSprites.SetToolTipAsync(
+            await lblBuildSprites.SetToolTipTextAsync(
                                      string.Format(GlobalSettings.CultureInfo,
                                                    await LanguageManager
                                                          .GetStringAsync("Tip_TechnomancerSprites", token: token)
@@ -23634,7 +23574,7 @@ namespace Chummer
                                                    (await CharacterObjectSettings.GetKarmaSpiritAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
                                                        .CultureInfo)), token)
                                  .ConfigureAwait(false);
-            await lblBuildComplexForms.SetToolTipAsync(
+            await lblBuildComplexForms.SetToolTipTextAsync(
                                           string.Format(GlobalSettings.CultureInfo,
                                                         await LanguageManager
                                                               .GetStringAsync(
@@ -23645,71 +23585,71 @@ namespace Chummer
                                       .ConfigureAwait(false);
             // Other Info Tab.
             await lblCMPhysicalLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherCMPhysical", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblCMStunLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherCMStun", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblINILabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherInitiative", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblMatrixINILabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherMatrixInitiative", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblAstralINILabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherAstralInitiative", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblArmorLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherArmor", token: token).ConfigureAwait(false), token)
                   .ConfigureAwait(false);
             await lblESS
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherEssence", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblRemainingNuyenLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherNuyen", token: token).ConfigureAwait(false), token)
                   .ConfigureAwait(false);
             await lblMovementLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherMovement", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblSwimLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherSwim", token: token).ConfigureAwait(false), token)
                   .ConfigureAwait(false);
             await lblFlyLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherFly", token: token).ConfigureAwait(false), token)
                   .ConfigureAwait(false);
             await lblLiftCarryLimitsLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherLiftAndCarryLimits", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblComposureLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherComposure", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblSurpriseLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherSurprise", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblJudgeIntentionsLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherJudgeIntentions", token: token)
                                            .ConfigureAwait(false), token).ConfigureAwait(false);
             await lblLiftCarryLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherLiftAndCarry", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
             await lblMemoryLabel
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       await LanguageManager.GetStringAsync("Tip_OtherMemory", token: token).ConfigureAwait(false),
                       token).ConfigureAwait(false);
         }
@@ -23897,7 +23837,7 @@ namespace Chummer
                         return;
                     Grade objGrade
                         = await Grade
-                            .ConvertToCyberwareGradeAsync(xmlSuite["grade"]?.InnerText, objSource, CharacterObject,
+                            .ConvertToCyberwareGradeAsync(xmlSuite["grade"]?.InnerTextViaPool(token), objSource, CharacterObject,
                                 token).ConfigureAwait(false);
 
                     string strXPathPrefix = strType + "s/" + strType;
@@ -23908,13 +23848,13 @@ namespace Chummer
                         {
                             foreach (XmlNode xmlItem in xmlItemList)
                             {
-                                string strName = xmlItem["name"]?.InnerText;
+                                string strName = xmlItem["name"]?.InnerTextViaPool(token);
                                 if (string.IsNullOrEmpty(strName))
                                     continue;
                                 XmlNode objXmlCyberware
                                     = objXmlDocument.TryGetNodeByNameOrId(
                                         "/chummer/" + strXPathPrefix, strName);
-                                int.TryParse(xmlItem["rating"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
+                                int.TryParse(xmlItem["rating"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
 
                                 Cyberware objCyberware
                                     = await CreateSuiteCyberware(xmlItem, objXmlCyberware, objGrade, intRating,
@@ -23943,14 +23883,14 @@ namespace Chummer
                                   bool blnCreateChildren, CancellationToken token = default)
         {
             XmlNode objXmlGearNode = null;
-            string strName = objXmlGear["name"]?.InnerText;
+            string strName = objXmlGear["name"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strName))
             {
-                string strCategory = objXmlGear["category"]?.InnerText;
+                string strCategory = objXmlGear["category"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrEmpty(strCategory))
                     objXmlGearNode = objXmlGearDocument.TryGetNodeByNameOrId(
                         "/chummer/gears/gear", strName.CleanXPath(),
-                        '(' + await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false)
+                        "(" + await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false)
                             + ") and category = " + strCategory.CleanXPath());
                 else
                     objXmlGearNode = objXmlGearDocument.TryGetNodeByNameOrId(
@@ -23961,9 +23901,9 @@ namespace Chummer
             if (objXmlGearNode == null)
                 return null;
 
-            int.TryParse(objXmlGear["rating"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
+            int.TryParse(objXmlGear["rating"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
             decimal decQty = 1;
-            string strQty = objXmlGear["qty"]?.InnerText;
+            string strQty = objXmlGear["qty"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strQty))
             {
                 decimal.TryParse(strQty, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decQty);
@@ -24073,13 +24013,13 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                Grade objGrade = await Grade.ConvertToCyberwareGradeAsync(xmlCyberware["grade"]?.InnerText,
+                Grade objGrade = await Grade.ConvertToCyberwareGradeAsync(xmlCyberware["grade"]?.InnerTextViaPool(token),
                     Improvement.ImprovementSource.Cyberware, CharacterObject, token).ConfigureAwait(false);
 
-                int.TryParse(xmlCyberware["rating"]?.InnerText, NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
+                int.TryParse(xmlCyberware["rating"]?.InnerTextViaPool(token), NumberStyles.Integer, GlobalSettings.InvariantCultureInfo, out int intRating);
 
                 Improvement.ImprovementSource eSource = Improvement.ImprovementSource.Cyberware;
-                string strName = xmlCyberware["name"]?.InnerText;
+                string strName = xmlCyberware["name"]?.InnerTextViaPool(token);
                 if (string.IsNullOrEmpty(strName))
                     return;
 
@@ -24431,7 +24371,7 @@ namespace Chummer
                         return;
 
                     // Find the associated Power
-                    string strPower = objXmlArt["power"]?.InnerText;
+                    string strPower = objXmlArt["power"]?.InnerTextViaPool(GenericToken);
                     Power objPower = await CharacterObject.Powers
                                                           .FirstOrDefaultAsync(
                                                               x => x.Name == strPower
@@ -24538,7 +24478,6 @@ namespace Chummer
                     StoryBuilder objBuilder = new StoryBuilder(CharacterObject);
                     if (Interlocked.CompareExchange(ref _objStoryBuilder, objBuilder, null) == null)
                     {
-                        Disposed += (o, args) => objBuilder.Dispose();
                         await btnCreateBackstory.DoThreadSafeAsync(x => x.Enabled = false, token: GenericToken)
                             .ConfigureAwait(false);
                     }
@@ -25129,9 +25068,17 @@ namespace Chummer
                     using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(
                                Utils.ListItemListPool, out List<ListItem> lstModularMounts))
                     {
-                        lstModularMounts.AddRange(await CharacterObject
+                        List<ListItem> lstModularCyberlimbList = await CharacterObject
                             .ConstructModularCyberlimbListAsync(
-                                objModularCyberware, GenericToken).ConfigureAwait(false));
+                                objModularCyberware, true, GenericToken).ConfigureAwait(false);
+                        try
+                        {
+                            lstModularMounts.AddRange(lstModularCyberlimbList);
+                        }
+                        finally
+                        {
+                            Utils.ListItemListPool.Return(ref lstModularCyberlimbList);
+                        }
                         //Mounted cyberware should always be allowed to be dismounted.
                         //Unmounted cyberware requires that a valid mount be present.
                         if (!await objModularCyberware.GetIsModularCurrentlyEquippedAsync(GenericToken)
@@ -25276,9 +25223,17 @@ namespace Chummer
                     using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(
                                Utils.ListItemListPool, out List<ListItem> lstModularMounts))
                     {
-                        lstModularMounts.AddRange(await CharacterObject
+                        List<ListItem> lstModularCyberlimbList = await CharacterObject
                             .ConstructModularCyberlimbListAsync(
-                                objModularCyberware, GenericToken).ConfigureAwait(false));
+                                objModularCyberware, true, GenericToken).ConfigureAwait(false);
+                        try
+                        {
+                            lstModularMounts.AddRange(lstModularCyberlimbList);
+                        }
+                        finally
+                        {
+                            Utils.ListItemListPool.Return(ref lstModularCyberlimbList);
+                        }
                         //Mounted cyberware should always be allowed to be dismounted.
                         //Unmounted cyberware requires that a valid mount be present.
                         if (!await objModularCyberware.GetIsModularCurrentlyEquippedAsync(GenericToken)

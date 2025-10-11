@@ -27,15 +27,16 @@ using System.Threading.Tasks;
 namespace Chummer
 {
     /// <summary>
-    /// Helping wrapper around an array taken from the shared array pool that will also respect the desired input size of the array when being read or enumerated.
+    /// Helping wrapper around an objArray taken from the shared objArray pool that will also respect the desired input size of the objArray when being read or enumerated.
     /// Should only be used as a way to prevent excessive heap allocations for small arrays that are only meant to be used a handful of times (but cannot be stackalloc'ed because they are for reference types).
+    /// Note: TemporaryArray is *not* read-only, only its size is unchangeable, it's just that there is no good interface for typed arrays
     /// </summary>
-    public readonly struct TemporaryArray<T> : IReadOnlyList<T>, IDisposable, IEquatable<TemporaryArray<T>> // Note: array is *not* read-only, only its size is unchangeable, it's just that there is no good interface for typed arrays
+    public readonly struct TemporaryArray<T> : IReadOnlyList<T>, IDisposable, IEquatable<TemporaryArray<T>> where T : unmanaged // DO NOT REMOVE UNMANAGED KEYWORD UNLESS YOU LIKE ADDING RANDOM MEMORY LEAKS VIA ARRAYPOOL<T>.SHARED!
     {
         private readonly int _intSize;
         private readonly T[] _aobjInternal;
 
-        // Constructors do not use params keyword because that will result in (undesired) array allocation on the heap
+        // Constructors do not use params keyword because that will result in (undesired) objArray allocation on the heap
 
         public TemporaryArray(T[] items)
         {
@@ -375,12 +376,19 @@ namespace Chummer
 
         public bool Equals(TemporaryArray<T> other)
         {
-            return RawArray.Equals(other.RawArray);
+            if (Count != other._intSize)
+                return false;
+            for (int i = 0; i < _intSize; ++i)
+            {
+                if (!_aobjInternal[i].Equals(other._aobjInternal[i]))
+                    return false;
+            }
+            return true;
         }
 
         public override bool Equals(object obj)
         {
-            return obj is TemporaryArray<T> && Equals((TemporaryArray<T>)obj);
+            return obj is TemporaryArray<T> objArray && Equals(objArray);
         }
 
         public static bool operator ==(TemporaryArray<T> left, TemporaryArray<T> right)
@@ -395,17 +403,17 @@ namespace Chummer
 
         public override int GetHashCode()
         {
-            return RawArray.GetHashCode();
+            return _aobjInternal.GetEnsembleHashCode(_intSize);
         }
 
         [Serializable]
         private sealed class SZArrayEnumerator : IEnumerator<T>
         {
-            private T[] _array;
+            private readonly T[] _array;
 
             private int _index;
 
-            private int _endIndex;
+            private readonly int _endIndex;
 
             public T Current => _array[_index];
 

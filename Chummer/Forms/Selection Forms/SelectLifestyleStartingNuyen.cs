@@ -41,6 +41,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         [Obsolete("This constructor is for use by form designers only.", true)]
@@ -80,13 +81,13 @@ namespace Chummer
                 string strFormat = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token).ConfigureAwait(false)
                     + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                 decimal decMultiplier = SelectedLifestyle != null ? await SelectedLifestyle.GetMultiplierAsync(token).ConfigureAwait(false) : 0;
-                string strText = ')' + strSpace + '×' + strSpace +
+                string strText = ")" + strSpace + "×" + strSpace +
                                  decMultiplier.ToString(strFormat, GlobalSettings.CultureInfo) +
-                                 strSpace + '=' + strSpace +
+                                 strSpace + "=" + strSpace +
                                  (await GetStartingNuyenAsync(token).ConfigureAwait(false)).ToString(strFormat, GlobalSettings.CultureInfo);
                 if (Extra != 0)
                 {
-                    strText = strSpace + '+' + strSpace + Extra.ToString("#,0.##", GlobalSettings.CultureInfo) + strText;
+                    strText = strSpace + "+" + strSpace + Extra.ToString("#,0.##", GlobalSettings.CultureInfo) + strText;
                 }
                 await lblResult.DoThreadSafeAsync(x => x.Text = strText, token: token).ConfigureAwait(false);
             }
@@ -250,7 +251,7 @@ namespace Chummer
             int intResult = 0;
             for (int i = 0; i < intDice; ++i)
             {
-                intResult += await GlobalSettings.RandomGenerator.NextD6ModuloBiasRemovedAsync(token: token).ConfigureAwait(false);
+                intResult += await Utils.GlobalRandom.NextD6ModuloBiasRemovedAsync(token: token).ConfigureAwait(false);
             }
 
             await nudDiceResult.DoThreadSafeAsync(x => x.Value = intResult, token: token).ConfigureAwait(false);

@@ -18,9 +18,9 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -42,6 +42,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private void cboMembership_SelectedIndexChanged(object sender, EventArgs e)
@@ -146,22 +147,22 @@ namespace Chummer
                 await cboMembership
                       .DoThreadSafeAsync(x => x.SelectedIndex
                                              = x.FindString(
-                                                 '+' + _intMembership.ToString(GlobalSettings.InvariantCultureInfo)))
+                                                 "+" + _intMembership.ToString(GlobalSettings.InvariantCultureInfo)))
                       .ConfigureAwait(false);
                 await cboAreaOfInfluence
                       .DoThreadSafeAsync(x => x.SelectedIndex
                                              = x.FindString(
-                                                 '+' + _intAreaOfInfluence.ToString(
+                                                 "+" + _intAreaOfInfluence.ToString(
                                                      GlobalSettings.InvariantCultureInfo))).ConfigureAwait(false);
                 await cboMagicalResources
                       .DoThreadSafeAsync(x => x.SelectedIndex
                                              = x.FindString(
-                                                 '+' + _intMagicalResources.ToString(
+                                                 "+" + _intMagicalResources.ToString(
                                                      GlobalSettings.InvariantCultureInfo))).ConfigureAwait(false);
                 await cboMatrixResources
                       .DoThreadSafeAsync(x => x.SelectedIndex
                                              = x.FindString(
-                                                 '+' + _intMatrixResources.ToString(
+                                                 "+" + _intMatrixResources.ToString(
                                                      GlobalSettings.InvariantCultureInfo))).ConfigureAwait(false);
                 await txtGroupName.DoThreadSafeAsync(x => x.Text = _strGroupName).ConfigureAwait(false);
                 await cmdChangeColor.DoThreadSafeAsync(x => x.BackColor = _objColor).ConfigureAwait(false);
@@ -178,15 +179,14 @@ namespace Chummer
         private async void cmdChangeColor_Click(object sender, EventArgs e)
         {
             Color objPreviewColor = ColorManager.GenerateCurrentModeColor(_objColor);
-            Color objSelectedColor = _objColor;
-            DialogResult eResult = await this.DoThreadSafeFuncAsync(x =>
+            (DialogResult eResult, Color objSelectedColor) = await this.DoThreadSafeFuncAsync(x =>
             {
                 using (ColorDialog dlgColor = new ColorDialog())
                 {
                     dlgColor.Color = objPreviewColor;
                     DialogResult eReturn = dlgColor.ShowDialog(x);
                     objSelectedColor = ColorManager.GenerateModeIndependentColor(dlgColor.Color);
-                    return eReturn;
+                    return new ValueTuple<DialogResult, Color>(eReturn, objSelectedColor);
                 }
             }).ConfigureAwait(false);
             if (eResult != DialogResult.OK)
@@ -213,6 +213,14 @@ namespace Chummer
         /// Membership.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Membership.
+        /// </summary>
         public int Membership
         {
             get => _intMembership;

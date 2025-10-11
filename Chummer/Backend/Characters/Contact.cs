@@ -316,13 +316,13 @@ namespace Chummer
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                                lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
                         await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
@@ -465,12 +465,12 @@ namespace Chummer
         {
             if (string.IsNullOrEmpty(strValue))
                 return default;
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "Contact":
+                case "CONTACT":
                     return ContactType.Contact;
 
-                case "Pet":
+                case "PET":
                     return ContactType.Pet;
 
                 default:
@@ -838,11 +838,11 @@ namespace Chummer
                             await LanguageManager.GetStringAsync(
                                     "String_Group", strLanguageToPrint,
                                     token: token)
-                                .ConfigureAwait(false) + '('
+                                .ConfigureAwait(false) + "("
                                                        + (await GetConnectionAsync(token)
                                                            .ConfigureAwait(false))
                                                        .ToString(objCulture)
-                                                       + ')', token: token).ConfigureAwait(false);
+                                                       + ")", token: token).ConfigureAwait(false);
                     await objWriter.WriteElementStringAsync(
                         "loyalty", (await GetLoyaltyAsync(token).ConfigureAwait(false)).ToString(objCulture),
                         token: token).ConfigureAwait(false);
@@ -1316,12 +1316,12 @@ namespace Chummer
                     string strMetatypeTranslate
                         = objMetatypeNode?.SelectSingleNodeAndCacheExpression("translate")?.Value;
                     strReturn += LanguageManager.GetString("String_Space", strLanguage)
-                                 + '('
+                                 + "("
                                  + (!string.IsNullOrEmpty(strMetatypeTranslate)
                                      ? strMetatypeTranslate
                                      : _objCharacter.TranslateExtra(LinkedCharacter.Metavariant, strLanguage,
                                                                     "metatypes.xml"))
-                                 + ')';
+                                 + ")";
                 }
                 else
                     strReturn = _objCharacter.TranslateExtra(Metatype, strLanguage, "metatypes.xml");
@@ -1361,14 +1361,14 @@ namespace Chummer
                         ?.SelectSingleNodeAndCacheExpression("translate", token: token)?.Value;
                     strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token)
                                      .ConfigureAwait(false)
-                                 + '('
+                                 + "("
                                  + (!string.IsNullOrEmpty(strMetatypeTranslate)
                                      ? strMetatypeTranslate
                                      : await _objCharacter.TranslateExtraAsync(
                                          await objLinkedCharacter.GetMetavariantAsync(token).ConfigureAwait(false),
                                          strLanguage, "metatypes.xml",
                                          token).ConfigureAwait(false))
-                                 + ')';
+                                 + ")";
                 }
                 else
                     strReturn = await _objCharacter.TranslateExtraAsync(
@@ -1412,8 +1412,8 @@ namespace Chummer
                         string strMetatype = LinkedCharacter.Metatype;
                         if (!string.IsNullOrEmpty(LinkedCharacter.Metavariant))
                         {
-                            strMetatype += LanguageManager.GetString("String_Space") + '(' + LinkedCharacter.Metavariant
-                                           + ')';
+                            strMetatype += LanguageManager.GetString("String_Space") + "(" + LinkedCharacter.Metavariant
+                                           + ")";
                         }
 
                         return strMetatype;
@@ -1450,8 +1450,8 @@ namespace Chummer
                     if (!string.IsNullOrEmpty(strMetavariant))
                     {
                         strMetatype += await LanguageManager.GetStringAsync("String_Space", token: token)
-                                                            .ConfigureAwait(false) + '('
-                            + strMetavariant + ')';
+                                                            .ConfigureAwait(false) + "("
+                            + strMetavariant + ")";
                     }
 
                     return strMetatype;
@@ -3322,8 +3322,7 @@ namespace Chummer
                                                                                || !(await x.GetLinkedCharactersAsync(token).ConfigureAwait(false)).Contains(
                                                                                    objOldLinkedCharacter), token: token)
                                         .ConfigureAwait(false)
-                                    && Program.MainForm.OpenFormsWithCharacters.All(
-                                        x => !x.CharacterObjects.Contains(objOldLinkedCharacter)))
+                                    && !await Program.MainForm.AnyOpenFormContainsCharacter(objOldLinkedCharacter, token: token).ConfigureAwait(false))
                                     await Program.OpenCharacters.RemoveAsync(objOldLinkedCharacter, token)
                                         .ConfigureAwait(false);
                             }
@@ -3388,27 +3387,28 @@ namespace Chummer
             }
         }
 
-        private Task LinkedCharacterOnPropertyChanged(object sender, MultiplePropertiesChangedEventArgs e,
+        private async Task LinkedCharacterOnPropertyChanged(object sender, MultiplePropertiesChangedEventArgs e,
             CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            List<string> lstProperties = new List<string>();
-            if (e.PropertyNames.Contains(nameof(Character.CharacterName)))
-                lstProperties.Add(nameof(Name));
-            if (e.PropertyNames.Contains(nameof(Character.Age)))
-                lstProperties.Add(nameof(Age));
-            if (e.PropertyNames.Contains(nameof(Character.Metatype)) ||
-                e.PropertyNames.Contains(nameof(Character.Metavariant)))
-                lstProperties.Add(nameof(Metatype));
-            if (e.PropertyNames.Contains(nameof(Character.Mugshots)))
-                lstProperties.Add(nameof(Mugshots));
-            if (e.PropertyNames.Contains(nameof(Character.MainMugshot)))
-                lstProperties.Add(nameof(MainMugshot));
-            if (e.PropertyNames.Contains(nameof(Character.MainMugshotIndex)))
-                lstProperties.Add(nameof(MainMugshotIndex));
-            return lstProperties.Count > 0
-                ? OnMultiplePropertiesChangedAsync(lstProperties, token)
-                : Task.CompletedTask;
+            using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool, out HashSet<string> setProperties))
+            {
+                if (e.PropertyNames.Contains(nameof(Character.CharacterName)))
+                    setProperties.Add(nameof(Name));
+                if (e.PropertyNames.Contains(nameof(Character.Age)))
+                    setProperties.Add(nameof(Age));
+                if (e.PropertyNames.Contains(nameof(Character.Metatype)) ||
+                    e.PropertyNames.Contains(nameof(Character.Metavariant)))
+                    setProperties.Add(nameof(Metatype));
+                if (e.PropertyNames.Contains(nameof(Character.Mugshots)))
+                    setProperties.Add(nameof(Mugshots));
+                if (e.PropertyNames.Contains(nameof(Character.MainMugshot)))
+                    setProperties.Add(nameof(MainMugshot));
+                if (e.PropertyNames.Contains(nameof(Character.MainMugshotIndex)))
+                    setProperties.Add(nameof(MainMugshotIndex));
+                if (setProperties.Count > 0)
+                    await OnMultiplePropertiesChangedAsync(setProperties, token).ConfigureAwait(false);
+            }
         }
 
         #endregion Properties
@@ -3797,29 +3797,22 @@ namespace Chummer
 
                         if (xmlMugshotsList.Count > 1)
                         {
-                            Image[] objMugshotImages = ArrayPool<Image>.Shared.Rent(xmlMugshotsList.Count);
-                            try
+                            Bitmap[] objMugshotImages = new Bitmap[xmlMugshotsList.Count];
+                            token.ThrowIfCancellationRequested();
+                            Parallel.For(0, xmlMugshotsList.Count,
+                                            i =>
+                                            {
+                                                string strLoop = astrMugshotsBase64[i];
+                                                if (!string.IsNullOrEmpty(strLoop))
+                                                    objMugshotImages[i] = strLoop.ToImage(PixelFormat.Format32bppPArgb, token);
+                                                else
+                                                    objMugshotImages[i] = null;
+                                            });
+                            for (int i = 0; i < xmlMugshotsList.Count; ++i)
                             {
-                                token.ThrowIfCancellationRequested();
-                                Parallel.For(0, xmlMugshotsList.Count,
-                                             i =>
-                                             {
-                                                 string strLoop = astrMugshotsBase64[i];
-                                                 if (!string.IsNullOrEmpty(strLoop))
-                                                     objMugshotImages[i] = strLoop.ToImage(PixelFormat.Format32bppPArgb, token);
-                                                 else
-                                                     objMugshotImages[i] = null;
-                                             });
-                                for (int i = 0; i < xmlMugshotsList.Count; ++i)
-                                {
-                                    Image objLoop = objMugshotImages[i];
-                                    if (objLoop != null)
-                                        _lstMugshots.Add(objLoop);
-                                }
-                            }
-                            finally
-                            {
-                                ArrayPool<Image>.Shared.Return(objMugshotImages);
+                                Image objLoop = objMugshotImages[i];
+                                if (objLoop != null)
+                                    _lstMugshots.Add(objLoop);
                             }
                         }
                         else
@@ -3864,24 +3857,17 @@ namespace Chummer
 
                         if (xmlMugshotsList.Count > 1)
                         {
-                            Bitmap[] aobjMugshots = await ParallelExtensions.ForAsync(0, xmlMugshotsList.Count, async i =>
+                            Bitmap[] aobjMugshots = await ParallelExtensions.ForAsync(0, xmlMugshotsList.Count, i =>
                             {
                                 string strLoop = astrMugshotsBase64[i];
                                 if (!string.IsNullOrEmpty(strLoop))
-                                    return await strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token).ConfigureAwait(false);
-                                return null;
-                            }, true, token).ConfigureAwait(false);
-                            try
+                                    return strLoop.ToImageAsync(PixelFormat.Format32bppPArgb, token);
+                                return Task.FromResult<Bitmap>(null);
+                            }, token).ConfigureAwait(false);
+                            foreach (Bitmap objImage in aobjMugshots)
                             {
-                                foreach (Bitmap objImage in aobjMugshots)
-                                {
-                                    if (objImage != null)
-                                        await _lstMugshots.AddAsync(objImage, token).ConfigureAwait(false);
-                                }
-                            }
-                            finally
-                            {
-                                ArrayPool<Bitmap>.Shared.Return(aobjMugshots);
+                                if (objImage != null)
+                                    await _lstMugshots.AddAsync(objImage, token).ConfigureAwait(false);
                             }
                         }
                         else
@@ -3919,23 +3905,9 @@ namespace Chummer
                     ThreadSafeList<Image> lstMugshots = await GetMugshotsAsync(token).ConfigureAwait(false);
                     if (await lstMugshots.GetCountAsync(token).ConfigureAwait(false) > 0)
                     {
-                        // Since IE is retarded and can't handle base64 images before IE9, we need to dump the image to a temporary directory and re-write the information.
-                        // If you give it an extension of jpg, gif, or png, it expects the file to be in that format and won't render the image unless it was originally that type.
-                        // But if you give it the extension img, it will render whatever you give it (which doesn't make any damn sense, but that's IE for you).
-                        string strMugshotsDirectoryPath = Path.Combine(Utils.GetStartupPath, "mugshots");
-                        if (!Directory.Exists(strMugshotsDirectoryPath))
-                        {
-                            try
-                            {
-                                Directory.CreateDirectory(strMugshotsDirectoryPath);
-                            }
-                            catch (UnauthorizedAccessException)
-                            {
-                                await Program.ShowScrollableMessageBoxAsync(await LanguageManager
-                                    .GetStringAsync("Message_Insufficient_Permissions_Warning",
-                                        token: token).ConfigureAwait(false), token: token).ConfigureAwait(false);
-                            }
-                        }
+                        // Note: Internet Explorer 8 and earlier are the only browsers that do not support data URIs.
+                        // The workaround for them would require saving each image to a file first and then referencing that file instead of embedding the image's base64 directly.
+                        // However, users who only use IE8 and earlier are so vanishingly small compared to the effort this workaround requires that we are just not going to bother.
 
                         Image imgMainMugshot = await GetMainMugshotAsync(token).ConfigureAwait(false);
                         if (imgMainMugshot != null)
@@ -4013,6 +3985,11 @@ namespace Chummer
                 foreach (Image imgMugshot in _lstMugshots)
                     imgMugshot.Dispose();
                 _lstMugshots.Dispose();
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
         }
 
@@ -4028,11 +4005,15 @@ namespace Chummer
                                                                          || !(await x.GetLinkedCharactersAsync().ConfigureAwait(false)).Contains(
                                                                              _objLinkedCharacter))
                                                                 .ConfigureAwait(false)
-                                                && Program.MainForm.OpenFormsWithCharacters.All(
-                                                    x => !x.CharacterObjects.Contains(_objLinkedCharacter)))
+                                                && !await Program.MainForm.AnyOpenFormContainsCharacter(_objLinkedCharacter).ConfigureAwait(false))
                     await Program.OpenCharacters.RemoveAsync(_objLinkedCharacter).ConfigureAwait(false);
                 await _lstMugshots.ForEachAsync(x => x.Dispose()).ConfigureAwait(false);
                 await _lstMugshots.DisposeAsync().ConfigureAwait(false);
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
             finally
             {

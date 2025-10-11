@@ -150,7 +150,7 @@ namespace Chummer
                                                           NativeMethods.WM_SHOWME, 0, IntPtr.Zero);
 
                                 string strCommandLineArgumentsJoined =
-                                    string.Join("<|>", Environment.GetCommandLineArgs());
+                                    StringExtensions.JoinFast("<|>", Environment.GetCommandLineArgs());
                                 NativeMethods.CopyDataStruct objData = default;
                                 IntPtr ptrCommandLineArguments = IntPtr.Zero;
                                 try
@@ -319,8 +319,8 @@ namespace Chummer
                         // We avoid weird issues with ProfileOptimization pointing JIT to the wrong place by checking for and removing all profile optimization files that
                         // were made in an older version (i.e. an older assembly)
                         string strProfileOptimizationName
-                            = "chummerprofile_" + Utils.CurrentChummerVersion + ".profile";
-                        List<string> lstToDelete = new List<string>();
+                            = "chummerprofile_" + Utils.CurrentChummerVersion.ToString() + ".profile";
+                        List<string> lstToDelete = new List<string>(1);
                         foreach (string strProfileFile in Directory.EnumerateFiles(Utils.GetStartupPath, "*.profile"))
                         {
                             if (!string.Equals(strProfileFile, strProfileOptimizationName,
@@ -383,7 +383,7 @@ namespace Chummer
 
                             LogManager.ThrowExceptions = false;
                             Log = LogManager.GetCurrentClassLogger();
-                            if (GlobalSettings.UseLogging)
+                            if (GlobalSettings.UseLogging && LogManager.Configuration != null)
                             {
                                 foreach (LoggingRule objRule in LogManager.Configuration.LoggingRules)
                                 {
@@ -430,7 +430,7 @@ namespace Chummer
                                     pvt = new PageViewTelemetry("frmChummerMain()")
                                     {
                                         Name = "Chummer Startup: " +
-                                               Utils.CurrentChummerVersion,
+                                               Utils.CurrentChummerVersion.ToString(),
                                         Id = Settings.Default.UploadClientId.ToString(),
                                         Timestamp = startTime
                                     };
@@ -668,7 +668,7 @@ namespace Chummer
                 {
                     // Get the last error and display it.
                     int intError = Marshal.GetLastWin32Error();
-                    Win32Exception exception = new Win32Exception(intError, "Error while unblocking " + strFile + '.');
+                    Win32Exception exception = new Win32Exception(intError, "Error while unblocking " + strFile + ".");
                     switch (exception.NativeErrorCode)
                     {
                         //file not found - that means the alternate data-stream is not present.
@@ -1459,6 +1459,7 @@ namespace Chummer
                     if (!blnLoaded)
                     {
                         blnLoaded = blnSync
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             ? OpenCharacters.Remove(objCharacter)
                             : await OpenCharacters.RemoveAsync(objCharacter, token).ConfigureAwait(false);
                     }
@@ -1469,11 +1470,13 @@ namespace Chummer
                     if (!blnLoaded)
                     {
                         if (blnSync)
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             OpenCharacters.Remove(objCharacter);
                         else
                             await OpenCharacters.RemoveAsync(objCharacter, token).ConfigureAwait(false);
                     }
                     if (blnSync)
+                        // ReSharper disable once MethodHasAsyncOverload
                         objCharacter.Dispose();
                     else
                         await objCharacter.DisposeAsync().ConfigureAwait(false);
@@ -1519,13 +1522,13 @@ namespace Chummer
         /// <summary>
         /// Opens the correct window for a single character in the main form, queues the command to open on the main form if it is not assigned (thread-safe).
         /// </summary>
-        public static async Task OpenCharacter(Character objCharacter, bool blnIncludeInMru = true, CancellationToken token = default)
+        public static Task OpenCharacter(Character objCharacter, bool blnIncludeInMru = true, CancellationToken token = default)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled(token);
             if (objCharacter == null)
-                return;
-            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
-                await OpenCharacterList(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
+                return Task.CompletedTask;
+            return OpenCharacterList(objCharacter.Yield(), blnIncludeInMru, token);
         }
 
         /// <summary>
@@ -1540,7 +1543,7 @@ namespace Chummer
                 return Task.CompletedTask;
             if (MainForm != null)
                 return MainForm.OpenCharacterList(lstCharacters, blnIncludeInMru, token);
-            return Task.Run(() => MainFormOnAssignAsyncActions.Add(
+            return TaskExtensions.RunWithoutEC(() => MainFormOnAssignAsyncActions.Add(
                                 x => x.OpenCharacterList(lstCharacters, blnIncludeInMru, token)), token);
         }
 
@@ -1555,13 +1558,13 @@ namespace Chummer
         /// <summary>
         /// Open a character's print form up without necessarily opening them up fully for editing.
         /// </summary>
-        public static async Task OpenCharacterForPrinting(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
+        public static Task OpenCharacterForPrinting(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled(token);
             if (objCharacter == null)
-                return;
-            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
-                await OpenCharacterListForPrinting(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
+                return Task.CompletedTask;
+            return OpenCharacterListForPrinting(objCharacter.Yield(), blnIncludeInMru, token);
         }
 
         /// <summary>
@@ -1576,7 +1579,7 @@ namespace Chummer
                 return Task.CompletedTask;
             if (MainForm != null)
                 return MainForm.OpenCharacterListForPrinting(lstCharacters, blnIncludeInMru, token);
-            return Task.Run(() => MainFormOnAssignAsyncActions.Add(
+            return TaskExtensions.RunWithoutEC(() => MainFormOnAssignAsyncActions.Add(
                                 x => x.OpenCharacterListForPrinting(lstCharacters, blnIncludeInMru, token)), token);
         }
 
@@ -1591,13 +1594,13 @@ namespace Chummer
         /// <summary>
         /// Open a character for exporting without necessarily opening them up fully for editing.
         /// </summary>
-        public static async Task OpenCharacterForExport(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
+        public static Task OpenCharacterForExport(Character objCharacter, bool blnIncludeInMru = false, CancellationToken token = default)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled(token);
             if (objCharacter == null)
-                return;
-            using (TemporaryArray<Character> objYielded = objCharacter.YieldAsPooled())
-                await OpenCharacterListForExport(objYielded, blnIncludeInMru, token).ConfigureAwait(false);
+                return Task.CompletedTask;
+            return OpenCharacterListForExport(objCharacter.Yield(), blnIncludeInMru, token);
         }
 
         /// <summary>
@@ -1612,7 +1615,7 @@ namespace Chummer
                 return Task.CompletedTask;
             if (MainForm != null)
                 return MainForm.OpenCharacterListForExport(lstCharacters, blnIncludeInMru, token);
-            return Task.Run(() => MainFormOnAssignAsyncActions.Add(
+            return TaskExtensions.RunWithoutEC(() => MainFormOnAssignAsyncActions.Add(
                                 x => x.OpenCharacterListForExport(lstCharacters, blnIncludeInMru, token)), token);
         }
 
@@ -1695,7 +1698,7 @@ namespace Chummer
             //Chummer looks for data in cwd, to be able to move exe (legacy+bootstrapper uses this)
 
             if (Directory.Exists(Utils.GetDataFolderPath)
-                && Directory.Exists(Path.Combine(Utils.GetStartupPath, "lang")))
+                && Directory.Exists(Utils.GetLanguageFolderPath))
             {
                 //both normally used data dirs present (add file loading abstraction to the list)
                 //so do nothing

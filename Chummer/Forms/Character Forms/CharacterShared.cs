@@ -62,19 +62,27 @@ namespace Chummer
         private FileSystemWatcher _objCharacterFileWatcher;
         protected readonly SaveFileDialog dlgSaveFile;
 
-        protected CancellationTokenSource GenericCancellationTokenSource { get; } = new CancellationTokenSource();
+        private CancellationTokenSource _objGenericCancellationTokenSource;
+
+        private CancellationTokenSource _objUpdateCharacterInfoCancellationTokenSource;
 
         protected CancellationToken GenericToken { get; }
 
+        protected void CancelGenericToken()
+        {
+            // Use this intermediate method to avoid having to use CancellationToken.Register
+            Interlocked.Exchange(ref _objUpdateCharacterInfoCancellationTokenSource, null)?.Cancel(false);
+            Interlocked.Exchange(ref _objGenericCancellationTokenSource, null)?.Cancel(false);
+        }
+
         protected CharacterShared(Character objCharacter)
         {
-            GenericToken = GenericCancellationTokenSource.Token;
+            _objGenericCancellationTokenSource = new CancellationTokenSource();
+            GenericToken = _objGenericCancellationTokenSource.Token;
             _objCharacter = objCharacter;
-            CancellationTokenRegistration objCancellationRegistration
-                = GenericToken.Register(() => Interlocked.Exchange(ref _objUpdateCharacterInfoCancellationTokenSource, null)?.Cancel(false));
-            Disposed += (sender, args) => objCancellationRegistration.Dispose();
             _objCharacter.MultiplePropertiesChangedAsync += CharacterPropertyChanged;
             dlgSaveFile = new SaveFileDialog();
+            dlgSaveFile.DefaultExt = "chum5";
             Load += OnLoad;
             Program.MainForm.OpenCharacterEditorForms?.Add(this);
             string name = "Show_Form_" + GetType();
@@ -138,8 +146,8 @@ namespace Chummer
         {
             try
             {
-                dlgSaveFile.Filter = await LanguageManager.GetStringAsync("DialogFilter_Chum5", token: GenericToken).ConfigureAwait(false) + '|' +
-                                     await LanguageManager.GetStringAsync("DialogFilter_Chum5lz", token: GenericToken).ConfigureAwait(false) + '|' +
+                dlgSaveFile.Filter = await LanguageManager.GetStringAsync("DialogFilter_Chum5", token: GenericToken).ConfigureAwait(false) + "|" +
+                                     await LanguageManager.GetStringAsync("DialogFilter_Chum5lz", token: GenericToken).ConfigureAwait(false) + "|" +
                                      await LanguageManager.GetStringAsync("DialogFilter_All", token: GenericToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -419,7 +427,7 @@ namespace Chummer
                                                 .ConfigureAwait(false))
                                         {
                                             Log.Info("Autosave failed for character " + strCharacterName + " (" +
-                                                     strAutosaveFileName + ')');
+                                                     strAutosaveFileName + ")");
                                         }
                                         else
                                             _intAutosaveTimeoutsCount =
@@ -436,12 +444,12 @@ namespace Chummer
                                                 if (intAutosaveTimeoutsCount >= MaximumAutosaveTimeouts)
                                                 {
                                                     Log.Error(ex, "Autosave timed out too many times for character " +
-                                                              strCharacterName + " (" + strAutosaveFileName + ')');
+                                                              strCharacterName + " (" + strAutosaveFileName + ")");
                                                 }
                                                 else
                                                 {
                                                     Log.Info(ex, "Autosave timed out for character " + strCharacterName +
-                                                             " (" + strAutosaveFileName + ')');
+                                                             " (" + strAutosaveFileName + ")");
                                                 }
                                             }
                                         }
@@ -1015,9 +1023,9 @@ namespace Chummer
                 if (objNode == null)
                     return;
                 TreeNode objParentNode;
-                switch (objSpell.Category)
+                switch (objSpell.Category.ToUpperInvariant())
                 {
-                    case "Combat":
+                    case "COMBAT":
                         if (objCombatNode == null)
                         {
                             objCombatNode = new TreeNode
@@ -1035,7 +1043,7 @@ namespace Chummer
                         objParentNode = objCombatNode;
                         break;
 
-                    case "Detection":
+                    case "DETECTION":
                         if (objDetectionNode == null)
                         {
                             objDetectionNode = new TreeNode
@@ -1053,7 +1061,7 @@ namespace Chummer
                         objParentNode = objDetectionNode;
                         break;
 
-                    case "Health":
+                    case "HEALTH":
                         if (objHealthNode == null)
                         {
                             objHealthNode = new TreeNode
@@ -1072,7 +1080,7 @@ namespace Chummer
                         objParentNode = objHealthNode;
                         break;
 
-                    case "Illusion":
+                    case "ILLUSION":
                         if (objIllusionNode == null)
                         {
                             objIllusionNode = new TreeNode
@@ -1092,7 +1100,7 @@ namespace Chummer
                         objParentNode = objIllusionNode;
                         break;
 
-                    case "Manipulation":
+                    case "MANIPULATION":
                         if (objManipulationNode == null)
                         {
                             objManipulationNode = new TreeNode
@@ -1113,7 +1121,7 @@ namespace Chummer
                         objParentNode = objManipulationNode;
                         break;
 
-                    case "Rituals":
+                    case "RITUALS":
                         if (objRitualsNode == null)
                         {
                             objRitualsNode = new TreeNode
@@ -1135,7 +1143,7 @@ namespace Chummer
                         objParentNode = objRitualsNode;
                         break;
 
-                    case "Enchantments":
+                    case "ENCHANTMENTS":
                         if (objEnchantmentsNode == null)
                         {
                             objEnchantmentsNode = new TreeNode
@@ -1608,7 +1616,7 @@ namespace Chummer
                                 (x.SelectedNode?.Tag as IHasInternalId)?.InternalId ?? string.Empty;
                             TreeNodeCollection lstReturn = x.Nodes;
                             lstReturn.Clear();
-                            return new Tuple<string, TreeNodeCollection>(strReturn, lstReturn);
+                            return new ValueTuple<string, TreeNodeCollection>(strReturn, lstReturn);
                         }, token).ConfigureAwait(false);
 
                     await CharacterObject.InitiationGrades.ForEachAsync(objGrade => AddToTree(objGrade), token)
@@ -1782,13 +1790,14 @@ namespace Chummer
                 {
                     if (objComplexForm.Grade == objInitiationGrade.Grade)
                     {
-                        TreeNode objNode = await objComplexForm.CreateTreeNode(cmsInitiationNotes, true).ConfigureAwait(false);
+                        TreeNode objNode = await objComplexForm.CreateTreeNode(cmsInitiationNotes, true, token).ConfigureAwait(false);
                         if (objNode == null)
                             return;
                         int intNodesCount = lstParentNodeChildren.Count;
                         int intTargetIndex = 0;
                         for (; intTargetIndex < intNodesCount; ++intTargetIndex)
                         {
+                            token.ThrowIfCancellationRequested();
                             if (CompareTreeNodes.CompareText(lstParentNodeChildren[intTargetIndex], objNode) >= 0)
                             {
                                 break;
@@ -2376,7 +2385,7 @@ namespace Chummer
                 TreeNode objParentNode;
                 switch (objPower.Category)
                 {
-                    case "Weakness":
+                    case "WEAKNESS":
                         if (objWeaknessesNode == null)
                         {
                             objWeaknessesNode = new TreeNode
@@ -2478,20 +2487,20 @@ namespace Chummer
                     {
                         await CharacterObject.Qualities.ForEachAsync(async objQuality =>
                         {
-                            setQualitiesToPrint.Add(objQuality.SourceIDString + '|' +
+                            setQualitiesToPrint.Add(objQuality.SourceIDString + "|" +
                                                     await objQuality.DisplaySourceNameAsync(GlobalSettings.Language, token)
-                                                                    .ConfigureAwait(false) + '|' +
+                                                                    .ConfigureAwait(false) + "|" +
                                                     objQuality.Extra);
                         }, token).ConfigureAwait(false);
 
                         // Add Qualities
                         await CharacterObject.Qualities.ForEachAsync(async objQuality =>
                         {
-                            if (!setQualitiesToPrint.Remove(objQuality.SourceIDString + '|' +
+                            if (!setQualitiesToPrint.Remove(objQuality.SourceIDString + "|" +
                                                             await objQuality
                                                                   .DisplaySourceNameAsync(GlobalSettings.Language, token)
                                                                   .ConfigureAwait(false)
-                                                            + '|' +
+                                                            + "|" +
                                                             objQuality.Extra))
                                 return;
 
@@ -2742,7 +2751,7 @@ namespace Chummer
             SkipUpdate = true;
             try
             {
-                List<Tuple<TreeNode, Task<string>>> lstNames = new List<Tuple<TreeNode, Task<string>>>(intTopLevelNodeCount);
+                List<ValueTuple<TreeNode, Task<string>>> lstNames = new List<ValueTuple<TreeNode, Task<string>>>(intTopLevelNodeCount);
                 TreeNode objSelectedNode = await treQualities.DoThreadSafeFuncAsync(x =>
                 {
                     foreach (TreeNode objQualityTypeNode in x.Nodes)
@@ -2750,7 +2759,7 @@ namespace Chummer
                         foreach (TreeNode objQualityNode in objQualityTypeNode.Nodes)
                         {
                             if (objQualityNode.Tag is Quality objLoopQuality)
-                                lstNames.Add(new Tuple<TreeNode, Task<string>>(
+                                lstNames.Add(new ValueTuple<TreeNode, Task<string>>(
                                                  objQualityNode,
                                                  objLoopQuality.GetCurrentDisplayNameAsync(token)));
                         }
@@ -2758,7 +2767,7 @@ namespace Chummer
 
                     return x.SelectedNode;
                 }, token).ConfigureAwait(false);
-                foreach (Tuple<TreeNode, Task<string>> tupLoop in lstNames)
+                foreach (ValueTuple<TreeNode, Task<string>> tupLoop in lstNames)
                 {
                     string strLoopText = await tupLoop.Item2.ConfigureAwait(false);
                     await treQualities.DoThreadSafeAsync(() => tupLoop.Item1.Text = strLoopText, token).ConfigureAwait(false);
@@ -3036,8 +3045,8 @@ namespace Chummer
 
                     case NotifyCollectionChangedAction.Move:
                         {
-                            List<Tuple<string, TreeNode>> lstMoveNodes =
-                                new List<Tuple<string, TreeNode>>(e.OldItems.Count);
+                            List<ValueTuple<string, TreeNode>> lstMoveNodes =
+                                new List<ValueTuple<string, TreeNode>>(e.OldItems.Count);
                             foreach (string strLocation in e.OldItems)
                             {
                                 TreeNode objLocation
@@ -3045,7 +3054,7 @@ namespace Chummer
                                         x => x.FindNode(strLocation, false), token).ConfigureAwait(false);
                                 if (objLocation != null)
                                 {
-                                    lstMoveNodes.Add(new Tuple<string, TreeNode>(strLocation, objLocation));
+                                    lstMoveNodes.Add(new ValueTuple<string, TreeNode>(strLocation, objLocation));
                                     objLocation.Remove();
                                 }
                             }
@@ -3053,9 +3062,9 @@ namespace Chummer
                             int intNewIndex = e.NewStartingIndex;
                             foreach (string strLocation in e.NewItems)
                             {
-                                Tuple<string, TreeNode> objLocationTuple =
+                                ValueTuple<string, TreeNode> objLocationTuple =
                                     lstMoveNodes.Find(x => x.Item1 == strLocation);
-                                if (objLocationTuple != null)
+                                if (objLocationTuple != default)
                                 {
                                     int index = Interlocked.Increment(ref intNewIndex) - 1;
                                     await treImprovements.DoThreadSafeAsync(
@@ -3230,8 +3239,8 @@ namespace Chummer
 
                     case NotifyCollectionChangedAction.Move:
                         {
-                            List<Tuple<Location, TreeNode>> lstMoveNodes =
-                                new List<Tuple<Location, TreeNode>>(e.OldItems.Count);
+                            List<ValueTuple<Location, TreeNode>> lstMoveNodes =
+                                new List<ValueTuple<Location, TreeNode>>(e.OldItems.Count);
                             foreach (Location objLocation in e.OldItems)
                             {
                                 TreeNode objNode
@@ -3239,7 +3248,7 @@ namespace Chummer
                                         x => x.FindNodeByTag(objLocation, false), token).ConfigureAwait(false);
                                 if (objNode != null)
                                 {
-                                    lstMoveNodes.Add(new Tuple<Location, TreeNode>(objLocation, objNode));
+                                    lstMoveNodes.Add(new ValueTuple<Location, TreeNode>(objLocation, objNode));
                                     await treSelected.DoThreadSafeAsync(() => objNode.Remove(), token).ConfigureAwait(false);
                                 }
                             }
@@ -3249,9 +3258,9 @@ namespace Chummer
                                 Interlocked.Add(ref intNewIndex, await funcOffset.Invoke().ConfigureAwait(false));
                             foreach (Location objLocation in e.NewItems)
                             {
-                                Tuple<Location, TreeNode> objLocationTuple =
+                                ValueTuple<Location, TreeNode> objLocationTuple =
                                     lstMoveNodes.Find(x => x.Item1 == objLocation);
-                                if (objLocationTuple != null)
+                                if (objLocationTuple != default)
                                 {
                                     int index = Interlocked.Increment(ref intNewIndex) - 1;
                                     await treSelected.DoThreadSafeAsync(
@@ -7339,10 +7348,10 @@ namespace Chummer
                                                  await LanguageManager.GetStringAsync("String_Space", token: token)
                                                      .ConfigureAwait(false);
                                 if (objImprovement.Value > 0)
-                                    strName += '+';
+                                    strName += "+";
                                 strName += objImprovement.Value.ToString(GlobalSettings.CultureInfo);
                                 if (!string.IsNullOrEmpty(objImprovement.Condition))
-                                    strName += ',' + await LanguageManager.GetStringAsync("String_Space", token: token)
+                                    strName += "," + await LanguageManager.GetStringAsync("String_Space", token: token)
                                                        .ConfigureAwait(false)
                                                    + objImprovement.Condition;
                                 if (objParentNode?.Nodes.ContainsKey(strName) == false)
@@ -8782,6 +8791,7 @@ namespace Chummer
 
                         if (!await CommonFunctions.ConfirmDeleteAsync(
                                     string.Format(
+                                        GlobalSettings.CultureInfo,
                                         await LanguageManager.GetStringAsync("Message_DeleteSustainedSpell",
                                             token: token).ConfigureAwait(false),
                                         await objSustainedObject.GetCurrentDisplayNameAsync(token)
@@ -8883,9 +8893,11 @@ namespace Chummer
         protected async Task CopyObject(object selectedObject, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            using (await CursorWait.NewAsync(this, token: token).ConfigureAwait(false))
+            CursorWait objCursorWait = await CursorWait.NewAsync(this, token: token).ConfigureAwait(false);
+            try
             {
-                IAsyncDisposable objLocker = await GlobalSettings.EnterClipboardUpgradeableReadLockAsync(token).ConfigureAwait(false);
+                IAsyncDisposable objLocker = await GlobalSettings.EnterClipboardUpgradeableReadLockAsync(token)
+                    .ConfigureAwait(false);
                 try
                 {
                     token.ThrowIfCancellationRequested();
@@ -8893,258 +8905,47 @@ namespace Chummer
                     {
                         case Armor objCopyArmor:
                             {
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
                                 {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
                                     {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
-
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
-
-                                        objCopyArmor.Save(objWriter);
-
-                                        if (!objCopyArmor.WeaponID.IsEmptyGuid())
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
                                         {
-                                            // <weapons>
-                                            objWriter.WriteStartElement("weapons");
-                                            // Copy any Weapon that comes with the Gear.
-                                            foreach (Weapon objCopyWeapon in await CharacterObject.Weapons.DeepWhereAsync(
-                                                             x => x.Children,
-                                                             x => x.ParentID == objCopyArmor.InternalId, token)
-                                                         .ConfigureAwait(false))
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token)
+                                                .ConfigureAwait(false);
+
+                                            objCopyArmor.Save(objWriter);
+
+                                            if (!objCopyArmor.WeaponID.IsEmptyGuid())
                                             {
-                                                objCopyWeapon.Save(objWriter);
-                                            }
-
-                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-                                        }
-
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
-                                    }
-
-                                    // Read the stream.
-                                    objStream.Position = 0;
-
-                                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                                    using (XmlReader objXmlReader =
-                                           XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                                        // Put the stream into an XmlDocument
-                                        await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
-                                }
-
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.Armor, GenericToken)
-                                    .ConfigureAwait(false);
-                                break;
-                            }
-                        case ArmorMod objCopyArmorMod:
-                            {
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
-                                {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
-                                    {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
-
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
-
-                                        objCopyArmorMod.Save(objWriter);
-
-                                        if (!objCopyArmorMod.WeaponID.IsEmptyGuid())
-                                        {
-                                            // <weapons>
-                                            objWriter.WriteStartElement("weapons");
-                                            // Copy any Weapon that comes with the Gear.
-                                            foreach (Weapon objCopyWeapon in await CharacterObject.Weapons.DeepWhereAsync(
-                                                             x => x.Children,
-                                                             x => x.ParentID == objCopyArmorMod.InternalId, token)
-                                                         .ConfigureAwait(false))
-                                            {
-                                                objCopyWeapon.Save(objWriter);
-                                            }
-
-                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-                                        }
-
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
-                                    }
-
-                                    // Read the stream.
-                                    objStream.Position = 0;
-
-                                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                                    using (XmlReader objXmlReader =
-                                           XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                                        // Put the stream into an XmlDocument
-                                        await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
-                                }
-
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.ArmorMod, GenericToken)
-                                    .ConfigureAwait(false);
-                                break;
-                            }
-                        case Cyberware objCopyCyberware:
-                            {
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
-                                {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
-                                    {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
-
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
-
-                                        objCopyCyberware.Save(objWriter);
-
-                                        if (!objCopyCyberware.WeaponID.IsEmptyGuid())
-                                        {
-                                            // <weapons>
-                                            objWriter.WriteStartElement("weapons");
-                                            // Copy any Weapon that comes with the Gear.
-                                            foreach (Weapon objCopyWeapon in await CharacterObject.Weapons.DeepWhereAsync(
-                                                             x => x.Children,
-                                                             x => x.ParentID == objCopyCyberware.InternalId, token)
-                                                         .ConfigureAwait(false))
-                                            {
-                                                objCopyWeapon.Save(objWriter);
-                                            }
-
-                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-                                        }
-
-                                        if (!objCopyCyberware.VehicleID.IsEmptyGuid())
-                                        {
-                                            // <vehicles>
-                                            objWriter.WriteStartElement("vehicles");
-                                            // Copy any Vehicle that comes with the Gear.
-                                            await CharacterObject.Vehicles.ForEachAsync(objCopyVehicle =>
-                                            {
-                                                if (objCopyVehicle.ParentID == objCopyCyberware.InternalId)
+                                                // <weapons>
+                                                await objWriter.WriteStartElementAsync("weapons", token)
+                                                    .ConfigureAwait(false);
+                                                // Copy any Weapon that comes with the Gear.
+                                                foreach (Weapon objCopyWeapon in await CharacterObject.Weapons
+                                                             .DeepWhereAsync(
+                                                                 x => x.Children,
+                                                                 x => x.ParentID == objCopyArmor.InternalId, token)
+                                                             .ConfigureAwait(false))
                                                 {
-                                                    // ReSharper disable once AccessToDisposedClosure
-                                                    objCopyVehicle.Save(objWriter);
+                                                    objCopyWeapon.Save(objWriter);
                                                 }
-                                            }, GenericToken).ConfigureAwait(false);
 
-                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-                                        }
-
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
-                                    }
-
-                                    // Read the stream.
-                                    objStream.Position = 0;
-
-                                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                                    using (XmlReader objXmlReader =
-                                           XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                                        // Put the stream into an XmlDocument
-                                        await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
-                                }
-
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.Cyberware, GenericToken)
-                                    .ConfigureAwait(false);
-                                break;
-                            }
-                        case Gear objCopyGear:
-                            {
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
-                                {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
-                                    {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
-
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
-
-                                        objCopyGear.Save(objWriter);
-
-                                        if (!objCopyGear.WeaponID.IsEmptyGuid())
-                                        {
-                                            // <weapons>
-                                            objWriter.WriteStartElement("weapons");
-                                            // Copy any Weapon that comes with the Gear.
-                                            foreach (Weapon objCopyWeapon in await CharacterObject.Weapons.DeepWhereAsync(
-                                                             x => x.Children,
-                                                             x => x.ParentID == objCopyGear.InternalId, token)
-                                                         .ConfigureAwait(false))
-                                            {
-                                                objCopyWeapon.Save(objWriter);
+                                                await objWriter.WriteEndElementAsync().ConfigureAwait(false);
                                             }
 
+                                            // </characters>
                                             await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
                                         }
-
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
-                                    }
-
-                                    // Read the stream.
-                                    objStream.Position = 0;
-
-                                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                                    using (XmlReader objXmlReader =
-                                           XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                                        // Put the stream into an XmlDocument
-                                        await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
-                                }
-
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.Gear, GenericToken)
-                                    .ConfigureAwait(false);
-                                break;
-                            }
-                        case Lifestyle objCopyLifestyle:
-                            {
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
-                                {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
-                                    {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
-
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
-
-                                        objCopyLifestyle.Save(objWriter);
-
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
-
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
 
                                         // Read the stream.
                                         objStream.Position = 0;
@@ -9153,51 +8954,311 @@ namespace Chummer
                                         using (XmlReader objXmlReader =
                                                XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
                                             // Put the stream into an XmlDocument
-                                            await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
+                                            await TaskExtensions
+                                                .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                .ConfigureAwait(false);
                                     }
+
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.Armor, GenericToken)
+                                        .ConfigureAwait(false);
                                 }
 
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.Lifestyle, GenericToken)
-                                    .ConfigureAwait(false);
+                                break;
+                            }
+                        case ArmorMod objCopyArmorMod:
+                            {
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
+                                {
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                    {
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                        {
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token)
+                                                .ConfigureAwait(false);
+
+                                            objCopyArmorMod.Save(objWriter);
+
+                                            if (!objCopyArmorMod.WeaponID.IsEmptyGuid())
+                                            {
+                                                // <weapons>
+                                                await objWriter.WriteStartElementAsync("weapons", token)
+                                                    .ConfigureAwait(false);
+                                                // Copy any Weapon that comes with the Gear.
+                                                foreach (Weapon objCopyWeapon in await CharacterObject.Weapons
+                                                             .DeepWhereAsync(
+                                                                 x => x.Children,
+                                                                 x => x.ParentID == objCopyArmorMod.InternalId, token)
+                                                             .ConfigureAwait(false))
+                                                {
+                                                    objCopyWeapon.Save(objWriter);
+                                                }
+
+                                                await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+                                            }
+
+                                            // </characters>
+                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
+                                        }
+
+                                        // Read the stream.
+                                        objStream.Position = 0;
+
+                                        using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
+                                        using (XmlReader objXmlReader =
+                                               XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                                            // Put the stream into an XmlDocument
+                                            await TaskExtensions
+                                                .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                .ConfigureAwait(false);
+                                    }
+
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.ArmorMod, GenericToken)
+                                        .ConfigureAwait(false);
+                                }
+
+                                break;
+                            }
+                        case Cyberware objCopyCyberware:
+                            {
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
+                                {
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                    {
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                        {
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token)
+                                                .ConfigureAwait(false);
+
+                                            objCopyCyberware.Save(objWriter);
+
+                                            if (!objCopyCyberware.WeaponID.IsEmptyGuid())
+                                            {
+                                                // <weapons>
+                                                objWriter.WriteStartElement("weapons");
+                                                // Copy any Weapon that comes with the Gear.
+                                                foreach (Weapon objCopyWeapon in await CharacterObject.Weapons
+                                                             .DeepWhereAsync(
+                                                                 x => x.Children,
+                                                                 x => x.ParentID == objCopyCyberware.InternalId, token)
+                                                             .ConfigureAwait(false))
+                                                {
+                                                    objCopyWeapon.Save(objWriter);
+                                                }
+
+                                                await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+                                            }
+
+                                            if (!objCopyCyberware.VehicleID.IsEmptyGuid())
+                                            {
+                                                // <vehicles>
+                                                objWriter.WriteStartElement("vehicles");
+                                                // Copy any Vehicle that comes with the Gear.
+                                                await CharacterObject.Vehicles.ForEachAsync(objCopyVehicle =>
+                                                {
+                                                    if (objCopyVehicle.ParentID == objCopyCyberware.InternalId)
+                                                    {
+                                                        // ReSharper disable once AccessToDisposedClosure
+                                                        objCopyVehicle.Save(objWriter);
+                                                    }
+                                                }, GenericToken).ConfigureAwait(false);
+
+                                                await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+                                            }
+
+                                            // </characters>
+                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
+                                        }
+
+                                        // Read the stream.
+                                        objStream.Position = 0;
+
+                                        using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
+                                        using (XmlReader objXmlReader =
+                                               XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                                            // Put the stream into an XmlDocument
+                                            await TaskExtensions
+                                                .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                .ConfigureAwait(false);
+                                    }
+
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.Cyberware, GenericToken)
+                                        .ConfigureAwait(false);
+                                }
+
+                                break;
+                            }
+                        case Gear objCopyGear:
+                            {
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
+                                {
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                    {
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                        {
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token)
+                                                .ConfigureAwait(false);
+
+                                            objCopyGear.Save(objWriter);
+
+                                            if (!objCopyGear.WeaponID.IsEmptyGuid())
+                                            {
+                                                // <weapons>
+                                                objWriter.WriteStartElement("weapons");
+                                                // Copy any Weapon that comes with the Gear.
+                                                foreach (Weapon objCopyWeapon in await CharacterObject.Weapons
+                                                             .DeepWhereAsync(
+                                                                 x => x.Children,
+                                                                 x => x.ParentID == objCopyGear.InternalId, token)
+                                                             .ConfigureAwait(false))
+                                                {
+                                                    objCopyWeapon.Save(objWriter);
+                                                }
+
+                                                await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+                                            }
+
+                                            // </characters>
+                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
+                                        }
+
+                                        // Read the stream.
+                                        objStream.Position = 0;
+
+                                        using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
+                                        using (XmlReader objXmlReader =
+                                               XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                                            // Put the stream into an XmlDocument
+                                            await TaskExtensions
+                                                .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                .ConfigureAwait(false);
+                                    }
+
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.Gear, GenericToken)
+                                        .ConfigureAwait(false);
+                                }
+
+                                break;
+                            }
+                        case Lifestyle objCopyLifestyle:
+                            {
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
+                                {
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                    {
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                        {
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token)
+                                                .ConfigureAwait(false);
+
+                                            objCopyLifestyle.Save(objWriter);
+
+                                            // </characters>
+                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
+
+                                            // Read the stream.
+                                            objStream.Position = 0;
+
+                                            using (StreamReader objReader =
+                                                   new StreamReader(objStream, Encoding.UTF8, true))
+                                            using (XmlReader objXmlReader =
+                                                   XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                                                // Put the stream into an XmlDocument
+                                                await TaskExtensions
+                                                    .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                    .ConfigureAwait(false);
+                                        }
+                                    }
+
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.Lifestyle, GenericToken)
+                                        .ConfigureAwait(false);
+                                }
+
                                 break;
                             }
                         case Vehicle objCopyVehicle:
                             {
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
                                 {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
                                     {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                        {
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
 
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token)
+                                                .ConfigureAwait(false);
 
-                                        objCopyVehicle.Save(objWriter);
+                                            objCopyVehicle.Save(objWriter);
 
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+                                            // </characters>
+                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
 
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
+                                        }
+
+                                        // Read the stream.
+                                        objStream.Position = 0;
+
+                                        using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
+                                        using (XmlReader objXmlReader =
+                                               XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                                            // Put the stream into an XmlDocument
+                                            await TaskExtensions
+                                                .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                .ConfigureAwait(false);
                                     }
 
-                                    // Read the stream.
-                                    objStream.Position = 0;
-
-                                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                                    using (XmlReader objXmlReader =
-                                           XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                                        // Put the stream into an XmlDocument
-                                        await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.Vehicle, GenericToken)
+                                        .ConfigureAwait(false);
                                 }
 
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.Vehicle, GenericToken)
-                                    .ConfigureAwait(false);
                                 break;
                             }
                         case Weapon objCopyWeapon:
@@ -9206,40 +9267,47 @@ namespace Chummer
                                 if (objCopyWeapon.Category == "Gear" || objCopyWeapon.Cyberware)
                                     return;
 
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
                                 {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
                                     {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                        {
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
 
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token)
+                                                .ConfigureAwait(false);
 
-                                        objCopyWeapon.Save(objWriter);
+                                            objCopyWeapon.Save(objWriter);
 
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+                                            // </characters>
+                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
 
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
+                                        }
+
+                                        // Read the stream.
+                                        objStream.Position = 0;
+
+                                        using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
+                                        using (XmlReader objXmlReader =
+                                               XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                                            // Put the stream into an XmlDocument
+                                            await TaskExtensions
+                                                .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                .ConfigureAwait(false);
                                     }
 
-                                    // Read the stream.
-                                    objStream.Position = 0;
-
-                                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                                    using (XmlReader objXmlReader =
-                                           XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                                        // Put the stream into an XmlDocument
-                                        await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.Weapon, GenericToken)
+                                        .ConfigureAwait(false);
                                 }
 
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.Weapon, GenericToken)
-                                    .ConfigureAwait(false);
                                 break;
                             }
                         case WeaponAccessory objCopyAccessory:
@@ -9248,40 +9316,47 @@ namespace Chummer
                                 if (objCopyAccessory.IncludedInWeapon)
                                     return;
 
-                                XmlDocument objCharacterXml = new XmlDocument { XmlResolver = null };
-                                using (RecyclableMemoryStream objStream =
-                                       new RecyclableMemoryStream(Utils.MemoryStreamManager))
+                                using (new FetchSafelyFromSafeObjectPool<XmlDocument>(Utils.XmlDocumentPool,
+                                           out XmlDocument objCharacterXml))
                                 {
-                                    using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                    using (RecyclableMemoryStream objStream =
+                                           new RecyclableMemoryStream(Utils.MemoryStreamManager))
                                     {
-                                        await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
+                                        using (XmlWriter objWriter = Utils.GetStandardXmlWriter(objStream))
+                                        {
+                                            await objWriter.WriteStartDocumentAsync().ConfigureAwait(false);
 
-                                        // </characters>
-                                        objWriter.WriteStartElement("character");
+                                            // </characters>
+                                            await objWriter.WriteStartElementAsync("character", token).ConfigureAwait(false);
 
-                                        objCopyAccessory.Save(objWriter);
+                                            objCopyAccessory.Save(objWriter);
 
-                                        // </characters>
-                                        await objWriter.WriteEndElementAsync().ConfigureAwait(false);
+                                            // </characters>
+                                            await objWriter.WriteEndElementAsync().ConfigureAwait(false);
 
-                                        // Finish the document and flush the Writer and Stream.
-                                        await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
-                                        await objWriter.FlushAsync().ConfigureAwait(false);
+                                            // Finish the document and flush the Writer and Stream.
+                                            await objWriter.WriteEndDocumentAsync().ConfigureAwait(false);
+                                            await objWriter.FlushAsync().ConfigureAwait(false);
+                                        }
+
+                                        // Read the stream.
+                                        objStream.Position = 0;
+
+                                        using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
+                                        using (XmlReader objXmlReader =
+                                               XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
+                                            // Put the stream into an XmlDocument
+                                            await TaskExtensions
+                                                .RunWithoutEC(() => objCharacterXml.Load(objXmlReader), GenericToken)
+                                                .ConfigureAwait(false);
                                     }
 
-                                    // Read the stream.
-                                    objStream.Position = 0;
-
-                                    using (StreamReader objReader = new StreamReader(objStream, Encoding.UTF8, true))
-                                    using (XmlReader objXmlReader =
-                                           XmlReader.Create(objReader, GlobalSettings.SafeXmlReaderSettings))
-                                        // Put the stream into an XmlDocument
-                                        await Task.Run(() => objCharacterXml.Load(objXmlReader), GenericToken).ConfigureAwait(false);
+                                    await GlobalSettings
+                                        .SetClipboardAsync(objCharacterXml, ClipboardContentType.WeaponAccessory,
+                                            GenericToken)
+                                        .ConfigureAwait(false);
                                 }
 
-                                await GlobalSettings
-                                    .SetClipboardAsync(objCharacterXml, ClipboardContentType.WeaponAccessory, GenericToken)
-                                    .ConfigureAwait(false);
                                 break;
                             }
                     }
@@ -9290,6 +9365,10 @@ namespace Chummer
                 {
                     await objLocker.DisposeAsync().ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                await objCursorWait.DisposeAsync().ConfigureAwait(false);
             }
         }
 
@@ -9505,7 +9584,7 @@ namespace Chummer
                     XPathDocument xmlDoc;
                     string strFileName = string.Empty;
                     string strFilter = await LanguageManager.GetStringAsync("DialogFilter_Xml", token: token)
-                                           .ConfigureAwait(false) + '|' +
+                                           .ConfigureAwait(false) + "|" +
                                        await LanguageManager.GetStringAsync("DialogFilter_All", token: token)
                                            .ConfigureAwait(false);
                     // Displays an OpenFileDialog so the user can select the XML to read.
@@ -10170,11 +10249,11 @@ namespace Chummer
                         await LanguageManager.GetStringAsync("DialogFilter_ImagesPrefix", token: token)
                             .ConfigureAwait(false) + "({1})|{1}|{0}|" +
                         await LanguageManager.GetStringAsync("DialogFilter_All", token: token).ConfigureAwait(false),
-                        string.Join("|",
+                        StringExtensions.JoinFast("|",
                             lstCodecs.Select(codec => string.Format(GlobalSettings.CultureInfo,
                                 strFormat, codec.CodecName,
                                 codec.FilenameExtension))),
-                        string.Join(";", lstCodecs.Select(codec => codec.FilenameExtension)));
+                        StringExtensions.JoinFast(";", lstCodecs.Select(codec => codec.FilenameExtension)));
                     string strInitialDirectory = string.Empty;
                     if (!string.IsNullOrWhiteSpace(GlobalSettings.RecentImageFolder) &&
                         Directory.Exists(GlobalSettings.RecentImageFolder))
@@ -10216,7 +10295,7 @@ namespace Chummer
                             if (!File.Exists(strFileName))
                             {
                                 await Program
-                                    .ShowScrollableMessageBoxAsync(string.Format(strErrorString, strFileName),
+                                    .ShowScrollableMessageBoxAsync(string.Format(GlobalSettings.CultureInfo, strErrorString, strFileName),
                                         icon: MessageBoxIcon.Error,
                                         token: token)
                                     .ConfigureAwait(false);
@@ -10238,7 +10317,7 @@ namespace Chummer
                                     {
                                         bmpMugshot = null;
                                         await Program
-                                            .ShowScrollableMessageBoxAsync(string.Format(strFormatErrorString, strFileName),
+                                            .ShowScrollableMessageBoxAsync(string.Format(GlobalSettings.CultureInfo, strFormatErrorString, strFileName),
                                                 icon: MessageBoxIcon.Error,
                                                 token: token)
                                             .ConfigureAwait(false);
@@ -10338,7 +10417,6 @@ namespace Chummer
         /// <summary>
         /// Remove a mugshot of a character.
         /// </summary>
-        /// <param name="intCurrentMugshotIndexInList"></param>
         protected async Task RemoveMugshot(int intCurrentMugshotIndexInList, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -10496,6 +10574,9 @@ namespace Chummer
         /// Whether the character has changes that can be saved
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether the character has changes that can be saved
+        /// </summary>
         public bool IsDirty
         {
             get => _intIsDirty > 0;
@@ -10520,6 +10601,9 @@ namespace Chummer
         /// Whether the form is currently in the middle of refreshing some UI elements
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether the form is currently in the middle of refreshing some UI elements
+        /// </summary>
         public bool IsRefreshing
         {
             get => _intRefreshingCount > 0;
@@ -10907,9 +10991,8 @@ namespace Chummer
                 }
 
                 tskNew = blnAlsoProcessUpdate
-                    ? Task.Run(() => DoUpdateCharacterInfo(objNewToken), objNewToken)
-                    : Utils.RunInEmptyExecutionContext(
-                        () => Task.Run(() => DoUpdateCharacterInfo(objNewToken), objNewToken));
+                    ? DoUpdateCharacterInfo(objNewToken)
+                    : Utils.RunInEmptyExecutionContext(() => DoUpdateCharacterInfo(objNewToken));
 
                 if (Interlocked.CompareExchange(ref _tskUpdateCharacterInfo, tskNew, tskTemp) != tskTemp)
                 {
@@ -10977,7 +11060,7 @@ namespace Chummer
 
         private Task _tskUpdateCharacterInfo = Task.CompletedTask;
 
-        private CancellationTokenSource _objUpdateCharacterInfoCancellationTokenSource;
+
 
         protected virtual Task DoUpdateCharacterInfo(CancellationToken token = default)
         {
@@ -11011,6 +11094,13 @@ namespace Chummer
 
         protected virtual string FormMode => string.Empty;
 
+        protected virtual Task<string> GetFormModeAsync(CancellationToken token = default)
+        {
+            if (token.IsCancellationRequested)
+                return Task.FromCanceled<string>(token);
+            return Task.FromResult(string.Empty);
+        }
+
         /// <summary>
         /// Update the Window title to show the Character's name and unsaved changes status.
         /// </summary>
@@ -11020,9 +11110,9 @@ namespace Chummer
                 return;
 
             string strSpace = LanguageManager.GetString("String_Space", token: GenericToken);
-            string strTitle = CharacterObject.CharacterName + strSpace + '-' + strSpace + FormMode + strSpace + '(' + CharacterObjectSettings.Name + ')';
+            string strTitle = CharacterObject.CharacterName + strSpace + "-" + strSpace + FormMode + strSpace + "(" + CharacterObjectSettings.Name + ")";
             if (IsDirty)
-                strTitle += '*';
+                strTitle += "*";
             this.DoThreadSafe((x, y) => x.Text = strTitle, token: GenericToken);
         }
 
@@ -11046,13 +11136,14 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (Text.EndsWith('*') == IsDirty && blnCanSkip)
+                if (blnCanSkip && (await this.DoThreadSafeFuncAsync(x => x.Text, token).ConfigureAwait(false)).EndsWith('*') == IsDirty)
                     return;
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
-                string strTitle = CharacterObject.CharacterName + strSpace + '-' + strSpace + FormMode + strSpace + '('
-                                  + CharacterObjectSettings.Name + ')';
+                string strTitle = await CharacterObject.GetCharacterNameAsync(token).ConfigureAwait(false) + strSpace + "-" + strSpace
+                    + await GetFormModeAsync(token).ConfigureAwait(false) + strSpace
+                    + "(" + await CharacterObjectSettings.GetNameAsync(token).ConfigureAwait(false) + ")";
                 if (IsDirty)
-                    strTitle += '*';
+                    strTitle += "*";
                 await this.DoThreadSafeAsync(x => x.Text = strTitle, token).ConfigureAwait(false);
             }
             finally
@@ -11463,7 +11554,7 @@ namespace Chummer
 
                                 // Reduce the cost for Do It Yourself components.
                                 if (frmPickGear.MyForm.DoItYourself)
-                                    objGear.Cost = '(' + objGear.Cost + ") * 0.5";
+                                    objGear.Cost = "(" + objGear.Cost + ") * 0.5";
                                 // If the item was marked as free, change its cost.
                                 if (frmPickGear.MyForm.FreeCost)
                                     objGear.Cost = "0";

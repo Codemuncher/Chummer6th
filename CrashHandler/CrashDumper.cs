@@ -32,6 +32,7 @@ using Chummer;
 using Microsoft.Win32.SafeHandles;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using TaskExtensions = Chummer.TaskExtensions;
 
 namespace CrashHandler
 {
@@ -53,6 +54,8 @@ namespace CrashHandler
         private readonly uint _threadId;
         private volatile CrashDumperProgress _eProgress;
         private readonly BackgroundWorker _worker = new BackgroundWorker();
+        private readonly CancellationTokenSource _objDisposeSource = new CancellationTokenSource();
+        private readonly CancellationToken _objToken;
 
         private readonly StreamWriter CrashLogWriter;
         private bool _blnDumpCreationSuccessful;
@@ -65,6 +68,7 @@ namespace CrashHandler
         /// <param name="strDateString">String for the Utc Date and Time at which the crash happened.</param>
         public CrashDumper(string strJsonPath, string strDateString)
         {
+            _objToken = _objDisposeSource.Token;
             CrashDumpName = "chummer_crash_" + strDateString;
             CrashDumpLogName = Path.Combine(Utils.GetStartupPath, CrashDumpName + ".log");
 
@@ -76,8 +80,8 @@ namespace CrashHandler
 
             CrashLogWriter = new StreamWriter(CrashDumpLogName, false, Encoding.UTF8);
 
-            CrashLogWriter.WriteLine("This file contains information on a crash report for Chummer5A.");
-            CrashLogWriter.WriteLine("You can safely delete this file, but a developer might want to look at it.");
+            CrashLogWriter.WriteLine("This file contains information on a crash report generation for Chummer5A.");
+            CrashLogWriter.WriteLine("You can safely delete this file once the report has been assembled, though if that could not happen, a developer can look at this file to see where the crash reporter failed.");
 
             if (_dicPretendFilePaths.TryGetValue("exception.txt", out string exception))
             {
@@ -96,11 +100,11 @@ namespace CrashHandler
 
             Attributes["visible-crashhandler-major-minor"] = "v3_0";
 
-            CrashLogWriter.WriteLine("Crash working directory is " + WorkingDirectory);
+            CrashLogWriter.WriteLine("Crash working directory is " + WorkingDirectory.AnonymizePath());
             CrashLogWriter.Flush();
 
             _worker.WorkerReportsProgress = false;
-            _worker.WorkerSupportsCancellation = false;
+            _worker.WorkerSupportsCancellation = true;
             _worker.DoWork += CollectCrashDump;
             _worker.RunWorkerCompleted += SetProgressFinishedIfAppropriate;
         }
@@ -137,58 +141,114 @@ namespace CrashHandler
 
         private async void CollectCrashDump(object sender, DoWorkEventArgs e)
         {
-            _blnDumpCreationSuccessful = false;
+            if (e.Cancel)
+                return;
+            bool blnSuccess = _blnDumpCreationSuccessful = false;
+            if (e.Cancel)
+                return;
             SetProgress(CrashDumperProgress.Started);
+            if (e.Cancel)
+                return;
             await CrashLogWriter.WriteLineAsync("Starting dump collection").ConfigureAwait(false);
             await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+            if (e.Cancel)
+                return;
             try
             {
+                if (e.Cancel)
+                    return;
                 Process = Process.GetProcessById(_procId);
+                if (e.Cancel)
+                    return;
 #if DEBUG
                 SetProgress(CrashDumperProgress.Debugger);
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Attempting to attach debugger").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 AttemptDebug(Process);
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Debugger handled").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
 #endif
                 SetProgress(CrashDumperProgress.CreateDmp);
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Creating minidump").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
-                if (!await CreateDump(Process, _exceptionPrt, _threadId, Attributes.TryGetValue("debugger-attached-success", out string strTemp) && strTemp == bool.TrueString).ConfigureAwait(false))
+                if (e.Cancel)
+                    return;
+                if (!await CreateDump(Process, _exceptionPrt, _threadId, Attributes.TryGetValue("debugger-attached-success", out string strTemp) && strTemp == bool.TrueString, token: _objToken).ConfigureAwait(false))
                 {
                     Utils.BreakIfDebug();
                     await CrashLogWriter.WriteLineAsync("Failed to create minidump, aborting").ConfigureAwait(false);
                     await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                    if (e.Cancel)
+                        return;
                     e.Result = false;
                     return;
                 }
 
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Successfully created minidump").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 SetProgress(CrashDumperProgress.CreateFiles);
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Creating files containing crash information").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 GetValue();
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Successfully created files containing crash information").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 SetProgress(CrashDumperProgress.CopyFiles);
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Copying all needed files to working directory").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 CopyFiles();
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Files collected").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 SetProgress(CrashDumperProgress.Compressing);
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Creating .zip file").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
-                await Task.Run(() => ZipFile.CreateFromDirectory(WorkingDirectory,
-                                                                 Path.Combine(Utils.GetStartupPath, CrashDumpName)
-                                                                 + ".zip",
-                                                                 CompressionLevel.Optimal, false, Encoding.UTF8)).ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
+                string strFileName = Path.Combine(Utils.GetStartupPath, CrashDumpName + ".zip");
+                if (e.Cancel)
+                    return;
+                await TaskExtensions.RunWithoutEC(() => ZipFile.CreateFromDirectory(WorkingDirectory,
+                                                                 strFileName,
+                                                                 CompressionLevel.Optimal, false, Encoding.UTF8), token: _objToken).ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 await CrashLogWriter.WriteLineAsync("Zip file created").ConfigureAwait(false);
                 await CrashLogWriter.FlushAsync().ConfigureAwait(false);
+                if (e.Cancel)
+                    return;
                 e.Result = true;
-                _blnDumpCreationSuccessful = true;
+                blnSuccess = _blnDumpCreationSuccessful = true;
             }
             catch (Exception ex)
             {
@@ -201,13 +261,13 @@ namespace CrashHandler
             }
             finally
             {
-                if (_blnDumpCreationSuccessful)
+                if (blnSuccess)
                     SetProgress(CrashDumperProgress.Cleanup);
                 try
                 {
                     await CrashLogWriter.WriteLineAsync("Cleaning up working directory").ConfigureAwait(false);
                     await CrashLogWriter.FlushAsync().ConfigureAwait(false);
-                    if (await Utils.SafeDeleteDirectoryAsync(WorkingDirectory).ConfigureAwait(false))
+                    if (await Utils.SafeDeleteDirectoryAsync(WorkingDirectory, token: _objToken).ConfigureAwait(false))
                         await CrashLogWriter.WriteLineAsync("Cleanup done").ConfigureAwait(false);
                     else
                         await CrashLogWriter.WriteLineAsync("Encountered an erro while cleaning up working directory, skipping cleanup").ConfigureAwait(false);
@@ -220,7 +280,7 @@ namespace CrashHandler
                     await CrashLogWriter.WriteLineAsync(ex.ToString()).ConfigureAwait(false);
                     await CrashLogWriter.FlushAsync().ConfigureAwait(false);
                 }
-                if (_blnDumpCreationSuccessful)
+                if (blnSuccess)
                     SetProgress(CrashDumperProgress.Finished);
             }
         }
@@ -251,11 +311,7 @@ namespace CrashHandler
                 };
 
                 const NativeMethods.MINIDUMP_TYPE dtype = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
+                                                          NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs;
 
                 bool extraInfo = !(exceptionInfo == IntPtr.Zero || threadId == 0 || !debugger);
 
@@ -418,6 +474,9 @@ namespace CrashHandler
             {
                 if (Interlocked.CompareExchange(ref _intIsDisposed, 1, 0) > 0)
                     return;
+                _worker.CancelAsync();
+                _objDisposeSource.Cancel(false);
+                _objDisposeSource.Dispose();
                 CrashLogWriter?.Close();
                 if (_blnDumpCreationSuccessful && File.Exists(CrashDumpLogName))
                 {

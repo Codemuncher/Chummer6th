@@ -34,7 +34,7 @@ namespace Chummer
         private bool _blnLoading = true;
         private int _intSkipRefresh;
         private readonly Character _objCharacter;
-        private Spell _objSpell = null;
+        private Spell _objSpell;
 
         #region Control Events
 
@@ -44,6 +44,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = objCharacter.LoadDataXPath("spells.xml");
         }
 
@@ -1029,7 +1030,7 @@ namespace Chummer
             if (strCategory == "Health" && await chkModifier1.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false))
             {
                 // Health Spells use (Damage Value) as their base.
-                strBase = '(' + await LanguageManager.GetStringAsync("String_SpellDamageValue", token: token).ConfigureAwait(false) + ')';
+                strBase = "(" + await LanguageManager.GetStringAsync("String_SpellDamageValue", token: token).ConfigureAwait(false) + ")";
             }
             else
             {
@@ -1039,7 +1040,7 @@ namespace Chummer
 
             string strDV = intDV.ToString(GlobalSettings.InvariantCultureInfo);
             if (intDV > 0)
-                strDV = '+' + strDV;
+                strDV = "+" + strDV;
             if (intDV == 0)
                 strDV = string.Empty;
             string strText = await (strBase + strDV).Replace('/', '÷').Replace('*', '×')

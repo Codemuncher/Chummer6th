@@ -100,15 +100,15 @@ namespace Chummer.Backend.Equipment
         /// <param name="strValue">String value to convert.</param>
         public static LifestyleType ConvertToLifestyleType(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "BoltHole":
+                case "BOLTHOLE":
                     return LifestyleType.BoltHole;
 
-                case "Safehouse":
+                case "SAFEHOUSE":
                     return LifestyleType.Safehouse;
 
-                case "Advanced":
+                case "ADVANCED":
                     return LifestyleType.Advanced;
 
                 default:
@@ -122,14 +122,12 @@ namespace Chummer.Backend.Equipment
         /// <param name="strValue">String value to convert.</param>
         public static LifestyleIncrement ConvertToLifestyleIncrement(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "day":
-                case "Day":
+                case "DAY":
                     return LifestyleIncrement.Day;
 
-                case "week":
-                case "Week":
+                case "WEEK":
                     return LifestyleIncrement.Week;
 
                 default:
@@ -202,21 +200,21 @@ namespace Chummer.Backend.Equipment
                 XPathNavigator xmlLifestyleXPathDocument = _objCharacter.LoadDataXPath("lifestyles.xml");
                 XPathNavigator xmlLifestyleNode =
                     xmlLifestyleXPathDocument.SelectSingleNode(
-                        "/chummer/comforts/comfort[name = " + BaseLifestyle.CleanXPath() + ']');
+                        "/chummer/comforts/comfort[name = " + BaseLifestyle.CleanXPath() + "]");
                 xmlLifestyleNode.TryGetInt32FieldQuickly("minimum", ref _intBaseComforts);
                 xmlLifestyleNode.TryGetInt32FieldQuickly("limit", ref _intComfortsMaximum);
 
                 // Area.
                 xmlLifestyleNode =
                     xmlLifestyleXPathDocument.SelectSingleNode(
-                        "/chummer/neighborhoods/neighborhood[name = " + BaseLifestyle.CleanXPath() + ']');
+                        "/chummer/neighborhoods/neighborhood[name = " + BaseLifestyle.CleanXPath() + "]");
                 xmlLifestyleNode.TryGetInt32FieldQuickly("minimum", ref _intBaseArea);
                 xmlLifestyleNode.TryGetInt32FieldQuickly("limit", ref _intAreaMaximum);
 
                 // Security.
                 xmlLifestyleNode =
                     xmlLifestyleXPathDocument.SelectSingleNode(
-                        "/chummer/securities/security[name = " + BaseLifestyle.CleanXPath() + ']');
+                        "/chummer/securities/security[name = " + BaseLifestyle.CleanXPath() + "]");
                 xmlLifestyleNode.TryGetInt32FieldQuickly("minimum", ref _intBaseSecurity);
                 xmlLifestyleNode.TryGetInt32FieldQuickly("limit", ref _intSecurityMaximum);
                 if (_objCharacter.Settings.BookEnabled("HT") || _objCharacter.Settings.AllowFreeGrids)
@@ -236,7 +234,7 @@ namespace Chummer.Backend.Equipment
                         {
                             XmlNode xmlQuality
                                 = xmlLifestyleDocument.TryGetNodeByNameOrId(
-                                    "/chummer/qualities/quality", xmlNode.InnerText);
+                                    "/chummer/qualities/quality", xmlNode.InnerTextViaPool());
                             string strPush = xmlNode.SelectSingleNodeAndCacheExpressionAsNavigator("@select")?.Value;
                             if (!string.IsNullOrWhiteSpace(strPush))
                             {
@@ -318,21 +316,21 @@ namespace Chummer.Backend.Equipment
                     await _objCharacter.LoadDataXPathAsync("lifestyles.xml", token: token).ConfigureAwait(false);
                 XPathNavigator xmlLifestyleNode =
                     xmlLifestyleXPathDocument.SelectSingleNode(
-                        "/chummer/comforts/comfort[name = " + _strBaseLifestyle.CleanXPath() + ']');
+                        "/chummer/comforts/comfort[name = " + _strBaseLifestyle.CleanXPath() + "]");
                 xmlLifestyleNode.TryGetInt32FieldQuickly("minimum", ref _intBaseComforts);
                 xmlLifestyleNode.TryGetInt32FieldQuickly("limit", ref _intComfortsMaximum);
 
                 // Area.
                 xmlLifestyleNode =
                     xmlLifestyleXPathDocument.SelectSingleNode(
-                        "/chummer/neighborhoods/neighborhood[name = " + _strBaseLifestyle.CleanXPath() + ']');
+                        "/chummer/neighborhoods/neighborhood[name = " + _strBaseLifestyle.CleanXPath() + "]");
                 xmlLifestyleNode.TryGetInt32FieldQuickly("minimum", ref _intBaseArea);
                 xmlLifestyleNode.TryGetInt32FieldQuickly("limit", ref _intAreaMaximum);
 
                 // Security.
                 xmlLifestyleNode =
                     xmlLifestyleXPathDocument.SelectSingleNode(
-                        "/chummer/securities/security[name = " + _strBaseLifestyle.CleanXPath() + ']');
+                        "/chummer/securities/security[name = " + _strBaseLifestyle.CleanXPath() + "]");
                 xmlLifestyleNode.TryGetInt32FieldQuickly("minimum", ref _intBaseSecurity);
                 xmlLifestyleNode.TryGetInt32FieldQuickly("limit", ref _intSecurityMaximum);
                 CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false);
@@ -355,7 +353,7 @@ namespace Chummer.Backend.Equipment
                         {
                             XmlNode xmlQuality
                                 = xmlLifestyleDocument.TryGetNodeByNameOrId(
-                                    "/chummer/qualities/quality", xmlNode.InnerText);
+                                    "/chummer/qualities/quality", xmlNode.InnerTextViaPool(token));
                             string strPush = xmlNode.SelectSingleNodeAndCacheExpressionAsNavigator("@select", token)
                                 ?.Value;
                             if (!string.IsNullOrWhiteSpace(strPush))
@@ -530,6 +528,7 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
         /// <param name="blnCopy">Whether we are loading a copy of an existing lifestyle.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, bool blnCopy = false, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, blnCopy, token);
@@ -559,7 +558,7 @@ namespace Chummer.Backend.Equipment
                 Lazy<XmlNode> objMyNode = null;
                 Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode> objMyNodeAsync = null;
                 if (blnSync)
-                    objMyNode = new Lazy<XmlNode>(() => this.GetNode());
+                    objMyNode = new Lazy<XmlNode>(() => this.GetNode(token));
                 else
                     objMyNodeAsync = new Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode>(() => this.GetNodeAsync(token), Utils.JoinableTaskFactory);
                 if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
@@ -599,6 +598,7 @@ namespace Chummer.Backend.Equipment
                 objNode.TryGetStringFieldQuickly("baselifestyle", ref _strBaseLifestyle);
                 objNode.TryGetInt32FieldQuickly("sortorder", ref _intSortOrder);
                 XPathNavigator xmlLifestyles = blnSync
+                    // ReSharper disable once MethodHasAsyncOverload
                     ? _objCharacter.LoadDataXPath("lifestyles.xml", token: token)
                     : await _objCharacter.LoadDataXPathAsync("lifestyles.xml", token: token).ConfigureAwait(false);
                 if (xmlLifestyles.TryGetNodeByNameOrId("/chummer/lifestyles/lifestyle", BaseLifestyle) == null
@@ -620,7 +620,8 @@ namespace Chummer.Backend.Equipment
                             {
                                 string strName = xmlLifestyle.SelectSingleNodeAndCacheExpression("name", token)?.Value
                                                  ?? (blnSync
-                                                    ? LanguageManager.GetString("String_Error", token: token)
+                                                     // ReSharper disable once MethodHasAsyncOverload
+                                                     ? LanguageManager.GetString("String_Error", token: token)
                                                     : await LanguageManager.GetStringAsync("String_Error", token: token).ConfigureAwait(false));
                                 lstQualities.Add(
                                     new ListItem(
@@ -630,9 +631,11 @@ namespace Chummer.Backend.Equipment
                             }
 
                             string strDescription = string.Format(GlobalSettings.CultureInfo, blnSync
+                                // ReSharper disable once MethodHasAsyncOverload
                                 ? LanguageManager.GetString("String_CannotFindLifestyle", token: token)
                                 : await LanguageManager.GetStringAsync("String_CannotFindLifestyle", token: token).ConfigureAwait(false), _strName);
                             using (ThreadSafeForm<SelectItem> frmSelect = blnSync
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 ? ThreadSafeForm<SelectItem>.Get(
                                        () => new SelectItem
                                        {
@@ -645,8 +648,9 @@ namespace Chummer.Backend.Equipment
                                        }, token).ConfigureAwait(false))
                             {
                                 frmSelect.MyForm.SetGeneralItemsMode(lstQualities);
+                                // ReSharper disable once MethodHasAsyncOverload
                                 if ((blnSync ? frmSelect.ShowDialogSafe(_objCharacter, token) : await frmSelect.ShowDialogSafeAsync(_objCharacter, token).ConfigureAwait(false))
-                                        == DialogResult.Cancel)
+                                    == DialogResult.Cancel)
                                 {
                                     _guiID = Guid.Empty;
                                     return;
@@ -677,7 +681,8 @@ namespace Chummer.Backend.Equipment
                 if (!objNode.TryGetBoolFieldQuickly("allowbonuslp", ref _blnAllowBonusLP))
                     (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?.TryGetBoolFieldQuickly("allowbonuslp", ref _blnAllowBonusLP);
                 if (!objNode.TryGetInt32FieldQuickly("bonuslp", ref _intBonusLP) && _strBaseLifestyle == "Traveler")
-                    _intBonusLP = blnSync ? GlobalSettings.RandomGenerator.NextD6ModuloBiasRemoved() : await GlobalSettings.RandomGenerator.NextD6ModuloBiasRemovedAsync(token).ConfigureAwait(false);
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                    _intBonusLP = blnSync ? Utils.GlobalRandom.NextD6ModuloBiasRemoved() : await Utils.GlobalRandom.NextD6ModuloBiasRemovedAsync(token).ConfigureAwait(false);
 
                 if (!objNode.TryGetInt32FieldQuickly("lp", ref _intLP))
                 {
@@ -736,11 +741,14 @@ namespace Chummer.Backend.Equipment
                                 LifestyleQuality objQuality = new LifestyleQuality(_objCharacter);
                                 try
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objQuality.Load(xmlQuality, this);
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     LifestyleQualities.Add(objQuality);
                                 }
                                 catch
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objQuality.Remove(false);
                                     throw;
                                 }
@@ -779,12 +787,15 @@ namespace Chummer.Backend.Equipment
                                 LifestyleQuality objQuality = new LifestyleQuality(_objCharacter);
                                 try
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objQuality.Load(xmlQuality, this);
                                     objQuality.IsFreeGrid = true;
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     LifestyleQualities.Add(objQuality);
                                 }
                                 catch
                                 {
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objQuality.Remove(false);
                                     throw;
                                 }
@@ -833,6 +844,7 @@ namespace Chummer.Backend.Equipment
                     _eIncrement = ConvertToLifestyleIncrement(strTemp);
 
                 if (blnSync)
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     LegacyShim(objNode);
                 else
                     await LegacyShimAsync(objNode, token).ConfigureAwait(false);
@@ -4111,8 +4123,8 @@ namespace Chummer.Backend.Equipment
                             && (string.IsNullOrEmpty(x.ImprovedName) || x.ImprovedName == strBaseLifestyle));
                     if (lstOnceOffImprovements.Count > 0)
                     {
-                        Dictionary<string, List<Improvement>> dicGenericOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>();
-                        Dictionary<string, List<Improvement>> dicSpecificOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>();
+                        Dictionary<string, List<Improvement>> dicGenericOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>(lstOnceOffImprovements.Count);
+                        Dictionary<string, List<Improvement>> dicSpecificOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>(lstOnceOffImprovements.Count);
                         foreach (Improvement objImprovement in lstOnceOffImprovements)
                         {
                             string strUnique = objImprovement.UniqueName;
@@ -4123,7 +4135,7 @@ namespace Chummer.Backend.Equipment
                                 lstLoop.Add(objImprovement);
                             else
                             {
-                                lstLoop = new List<Improvement>
+                                lstLoop = new List<Improvement>(lstOnceOffImprovements.Count)
                                     {
                                         objImprovement
                                     };
@@ -4297,7 +4309,7 @@ namespace Chummer.Backend.Equipment
                 }
                 if (blnIncorporateOnceOffAdjustments)
                 {
-                    List<Improvement> lstOnceOffImprovements = new List<Improvement>();
+                    List<Improvement> lstOnceOffImprovements = new List<Improvement>(await _objCharacter.Improvements.GetCountAsync(token).ConfigureAwait(false));
                     if (StyleType == LifestyleType.Standard)
                     {
                         await _objCharacter.Improvements.ForEachAsync(x =>
@@ -4320,8 +4332,8 @@ namespace Chummer.Backend.Equipment
                     }
                     if (lstOnceOffImprovements.Count > 0)
                     {
-                        Dictionary<string, List<Improvement>> dicGenericOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>();
-                        Dictionary<string, List<Improvement>> dicSpecificOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>();
+                        Dictionary<string, List<Improvement>> dicGenericOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>(lstOnceOffImprovements.Count);
+                        Dictionary<string, List<Improvement>> dicSpecificOnceOffImprovementsByUnique = new Dictionary<string, List<Improvement>>(lstOnceOffImprovements.Count);
                         foreach (Improvement objImprovement in lstOnceOffImprovements)
                         {
                             string strUnique = objImprovement.UniqueName;
@@ -4332,7 +4344,7 @@ namespace Chummer.Backend.Equipment
                                 lstLoop.Add(objImprovement);
                             else
                             {
-                                lstLoop = new List<Improvement>
+                                lstLoop = new List<Improvement>(lstOnceOffImprovements.Count)
                                     {
                                         objImprovement
                                     };
@@ -4513,17 +4525,18 @@ namespace Chummer.Backend.Equipment
                 return string.Empty;
             switch (strLifestyle)
             {
-                case "Bolt Hole":
+                case "BOLTHOLE":
+                case "BOLT HOLE":
                     return "Squatter";
 
-                case "Traveler":
+                case "TRAVELER":
                     return "Low";
 
-                case "Commercial":
+                case "COMMERCIAL":
                     return "Medium";
 
                 default:
-                    return strLifestyle.StartsWith("Hospitalized", StringComparison.Ordinal) ? "High" : strLifestyle;
+                    return strLifestyle.StartsWith("Hospitalized", StringComparison.OrdinalIgnoreCase) ? "High" : strLifestyle;
             }
         }
 
@@ -4571,7 +4584,7 @@ namespace Chummer.Backend.Equipment
                     token.ThrowIfCancellationRequested();
                     ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
                     objExpense.Create(decAmount * -1,
-                        await LanguageManager.GetStringAsync("String_ExpenseLifestyle", token: token).ConfigureAwait(false) + ' ' +
+                        await LanguageManager.GetStringAsync("String_ExpenseLifestyle", token: token).ConfigureAwait(false) + " " +
                         await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false),
                         ExpenseType.Nuyen, DateTime.Now);
                     await (await _objCharacter.GetExpenseEntriesAsync(token).ConfigureAwait(false))
@@ -5009,13 +5022,13 @@ namespace Chummer.Backend.Equipment
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                                lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
                         await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
@@ -5162,6 +5175,11 @@ namespace Chummer.Backend.Equipment
                 _lstLifestyleQualities.CollectionChangedAsync -= LifestyleQualitiesCollectionChanged;
                 _lstLifestyleQualities.BeforeClearCollectionChangedAsync -= LifestyleQualitiesOnBeforeClearCollectionChanged;
                 _lstLifestyleQualities.Dispose();
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
         }
 
@@ -5175,6 +5193,11 @@ namespace Chummer.Backend.Equipment
                 _lstLifestyleQualities.CollectionChangedAsync -= LifestyleQualitiesCollectionChanged;
                 _lstLifestyleQualities.BeforeClearCollectionChangedAsync -= LifestyleQualitiesOnBeforeClearCollectionChanged;
                 await _lstLifestyleQualities.DisposeAsync().ConfigureAwait(false);
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
             finally
             {

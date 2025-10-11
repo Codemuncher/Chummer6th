@@ -546,6 +546,8 @@ namespace Chummer
                     return objImprovementAdder.knowledgeskillkarmacost;
                 case "KNOWLEDGESKILLKARMACOSTMIN":
                     return objImprovementAdder.knowledgeskillkarmacostmin;
+                case "SKILLENABLEMOVEMENT":
+                    return objImprovementAdder.skillenablemovement;
                 case "SKILLDISABLE":
                     return objImprovementAdder.skilldisable;
                 case "SKILLGROUPDISABLE":
@@ -669,7 +671,7 @@ namespace Chummer
                 case "REPLACESKILLSPELL":
                     return objImprovementAdder.replaceskillspell;
                 case "QUALITYLEVEL":
-                    return AddImprovementCollection.qualitylevel;
+                    return objImprovementAdder.qualitylevel;
                 case "SELECTTEXT":
                     return AddImprovementCollection.selecttext;
                 // No method matches, return a null pointer
@@ -1193,6 +1195,8 @@ namespace Chummer
                     return objImprovementAsyncAdder.knowledgeskillkarmacost;
                 case "KNOWLEDGESKILLKARMACOSTMIN":
                     return objImprovementAsyncAdder.knowledgeskillkarmacostmin;
+                case "SKILLENABLEMOVEMENT":
+                    return objImprovementAsyncAdder.skillenablemovement;
                 case "SKILLDISABLE":
                     return objImprovementAsyncAdder.skilldisable;
                 case "SKILLGROUPDISABLE":
@@ -1316,7 +1320,7 @@ namespace Chummer
                 case "REPLACESKILLSPELL":
                     return objImprovementAsyncAdder.replaceskillspell;
                 case "QUALITYLEVEL":
-                    return AddImprovementAsyncCollection.qualitylevel;
+                    return objImprovementAsyncAdder.qualitylevel;
                 case "SELECTTEXT":
                     return AddImprovementAsyncCollection.selecttext;
                 // No method matches, return a null pointer

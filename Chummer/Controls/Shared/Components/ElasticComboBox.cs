@@ -18,47 +18,22 @@
  */
 
 using System;
-using System.Threading;
 using System.Windows.Forms;
-using System.ComponentModel;
 
 namespace Chummer
 {
     public class ElasticComboBox : ComboBox
     {
-        private readonly int _intToolTipWrap;
-
-        private readonly ToolTip _objToolTip;
-
-        private string _strToolTipText = string.Empty;
-
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public string TooltipText
+        protected override void OnSelectedIndexChanged(EventArgs e)
         {
-            get => _strToolTipText;
-            set
-            {
-                value = _intToolTipWrap > 0 ? value.WordWrap(_intToolTipWrap) : value.WordWrap();
-                if (Interlocked.Exchange(ref _strToolTipText, value) == value)
-                    return;
-                _objToolTip.SetToolTip(this, value.CleanForHtml());
-            }
+            base.OnSelectedIndexChanged(e);
+            if (DropDownStyle != ComboBoxStyle.DropDownList && IsHandleCreated)
+                ClearSelection();
         }
 
-        public ElasticComboBox() : this(ToolTipFactory.ToolTip)
+        protected override void OnResize(EventArgs e)
         {
-        }
-
-        public ElasticComboBox(ToolTip objToolTip, int intToolTipWrap = -1)
-        {
-            _objToolTip = objToolTip;
-            _intToolTipWrap = intToolTipWrap;
-            SelectedIndexChanged += ClearUnintendedHighlight;
-            Resize += ClearUnintendedHighlight;
-        }
-
-        private void ClearUnintendedHighlight(object sender, EventArgs e)
-        {
+            base.OnResize(e);
             if (DropDownStyle != ComboBoxStyle.DropDownList && IsHandleCreated)
                 ClearSelection();
         }
@@ -104,15 +79,6 @@ namespace Chummer
             if (objActiveControl == null || objActiveControl == this)
                 return;
             SelectionLength = 0;
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && _objToolTip != null && _objToolTip != ToolTipFactory.ToolTip)
-            {
-                _objToolTip.Dispose();
-            }
-            base.Dispose(disposing);
         }
     }
 }

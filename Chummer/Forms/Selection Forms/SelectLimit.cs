@@ -19,8 +19,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -38,6 +38,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private void cmdOK_Click(object sender, EventArgs e)
@@ -55,7 +56,7 @@ namespace Chummer
         private async void SelectLimit_Load(object sender, EventArgs e)
         {
             // Build the list of Limits.
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstLimitItems))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstLimitItems))
             {
                 foreach (string strLimit in _lstLimits)
                 {
@@ -73,7 +74,7 @@ namespace Chummer
                     {
                         _strReturnValue = strSelectedLimit;
                         _strSelectedDisplayLimit
-                            = ((ListItem) await cboLimit.DoThreadSafeFuncAsync(x => x.SelectedItem).ConfigureAwait(false)).Name;
+                            = ((ListItem)await cboLimit.DoThreadSafeFuncAsync(x => x.SelectedItem).ConfigureAwait(false)).Name;
                         DialogResult = DialogResult.OK;
                         Close();
                     }
@@ -107,6 +108,9 @@ namespace Chummer
         /// Description to display on the form.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Description to display on the form.
+        /// </summary>
         public string Description
         {
             set => lblDescription.Text = value;

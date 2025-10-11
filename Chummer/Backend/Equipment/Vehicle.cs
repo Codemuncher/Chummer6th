@@ -262,7 +262,7 @@ namespace Chummer.Backend.Equipment
             _blnSkipEvents = blnForSelectForm;
             objXmlVehicle.TryGetStringFieldQuickly("name", ref _strName);
             objXmlVehicle.TryGetStringFieldQuickly("category", ref _strCategory);
-            string strTemp = objXmlVehicle["handling"]?.InnerText;
+            string strTemp = objXmlVehicle["handling"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strTemp))
             {
                 //Some vehicles have different Offroad Handling speeds. If so, we want to split this up for use with mods and such later.
@@ -288,7 +288,7 @@ namespace Chummer.Backend.Equipment
                     _intOffroadHandling = _intHandling;
                 }
             }
-            strTemp = objXmlVehicle["accel"]?.InnerText;
+            strTemp = objXmlVehicle["accel"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strTemp))
             {
                 if (strTemp.Contains('/'))
@@ -313,7 +313,7 @@ namespace Chummer.Backend.Equipment
                     _intOffroadAccel = _intAccel;
                 }
             }
-            strTemp = objXmlVehicle["speed"]?.InnerText;
+            strTemp = objXmlVehicle["speed"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strTemp))
             {
                 if (strTemp.Contains('/'))
@@ -362,7 +362,7 @@ namespace Chummer.Backend.Equipment
                 _colNotes = ColorTranslator.FromHtml(sNotesColor);
             }
 
-            _strCost = objXmlVehicle["cost"]?.InnerText ?? string.Empty;
+            _strCost = objXmlVehicle["cost"]?.InnerTextViaPool(token) ?? string.Empty;
             if (!blnForSelectForm && !blnSkipCost && _strCost.StartsWith("Variable(", StringComparison.Ordinal))
             {
                 string strFirstHalf = _strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
@@ -518,11 +518,11 @@ namespace Chummer.Backend.Equipment
                         {
                             foreach (XmlNode objXmlVehicleMod in objXmlModList)
                             {
-                                XmlNode objXmlMod = objXmlDocument.TryGetNodeByNameOrId("/chummer/mods/mod", objXmlVehicleMod.InnerText);
+                                XmlNode objXmlMod = objXmlDocument.TryGetNodeByNameOrId("/chummer/mods/mod", objXmlVehicleMod.InnerTextViaPool(token));
                                 if (objXmlMod != null)
                                 {
-                                    string strForcedValue = objXmlVehicleMod.Attributes?["select"]?.InnerText ?? string.Empty;
-                                    if (!int.TryParse(objXmlVehicleMod.Attributes?["rating"]?.InnerText, out int intRating))
+                                    string strForcedValue = objXmlVehicleMod.Attributes?["select"]?.InnerTextViaPool(token) ?? string.Empty;
+                                    if (!int.TryParse(objXmlVehicleMod.Attributes?["rating"]?.InnerTextViaPool(token), out int intRating))
                                         intRating = 0;
                                     VehicleMod objMod = new VehicleMod(_objCharacter);
                                     try
@@ -550,6 +550,7 @@ namespace Chummer.Backend.Equipment
                                     catch
                                     {
                                         if (blnSync)
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                             objMod.DeleteVehicleMod();
                                         else
                                             await objMod.DeleteVehicleModAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -566,14 +567,14 @@ namespace Chummer.Backend.Equipment
                         {
                             foreach (XmlNode objXmlVehicleMod in objXmlModList)
                             {
-                                string strName = objXmlVehicleMod["name"]?.InnerText;
+                                string strName = objXmlVehicleMod["name"]?.InnerTextViaPool(token);
                                 if (string.IsNullOrEmpty(strName))
                                     continue;
                                 XmlNode objXmlMod = objXmlDocument.TryGetNodeByNameOrId("/chummer/mods/mod", strName);
                                 if (objXmlMod != null)
                                 {
                                     string strForcedValue = objXmlVehicleMod.SelectSingleNodeAndCacheExpressionAsNavigator("name/@select", token)?.Value ?? string.Empty;
-                                    if (!int.TryParse(objXmlVehicleMod["rating"]?.InnerText, out int intRating))
+                                    if (!int.TryParse(objXmlVehicleMod["rating"]?.InnerTextViaPool(token), out int intRating))
                                         intRating = 0;
                                     VehicleMod objMod = new VehicleMod(_objCharacter);
                                     try
@@ -603,7 +604,7 @@ namespace Chummer.Backend.Equipment
                                                         : await _objCharacter.LoadDataAsync("cyberware.xml", token: token).ConfigureAwait(false);
                                                     foreach (XmlNode objXmlSubsystemNode in objXmlSubSystemNameList)
                                                     {
-                                                        string strSubsystemName = objXmlSubsystemNode["name"]?.InnerText;
+                                                        string strSubsystemName = objXmlSubsystemNode["name"]?.InnerTextViaPool(token);
                                                         if (string.IsNullOrEmpty(strSubsystemName))
                                                             continue;
                                                         XmlNode objXmlSubsystem
@@ -611,7 +612,7 @@ namespace Chummer.Backend.Equipment
                                                                 "/chummer/cyberwares/cyberware", strSubsystemName);
                                                         if (objXmlSubsystem == null)
                                                             continue;
-                                                        int.TryParse(objXmlSubsystemNode["rating"]?.InnerText, NumberStyles.Any,
+                                                        int.TryParse(objXmlSubsystemNode["rating"]?.InnerTextViaPool(token), NumberStyles.Any,
                                                             GlobalSettings.InvariantCultureInfo, out int intSubSystemRating);
                                                         Cyberware objSubsystem = new Cyberware(_objCharacter);
                                                         try
@@ -624,7 +625,7 @@ namespace Chummer.Backend.Equipment
                                                                     Improvement.ImprovementSource.Cyberware,
                                                                     intSubSystemRating, _lstWeapons, _objCharacter.Vehicles,
                                                                     false, true,
-                                                                    objXmlSubsystemNode["forced"]?.InnerText ?? string.Empty,
+                                                                    objXmlSubsystemNode["forced"]?.InnerTextViaPool(token) ?? string.Empty,
                                                                     token: token);
                                                             else
                                                                 await objSubsystem.CreateAsync(objXmlSubsystem,
@@ -633,7 +634,7 @@ namespace Chummer.Backend.Equipment
                                                                     Improvement.ImprovementSource.Cyberware,
                                                                     intSubSystemRating, _lstWeapons, _objCharacter.Vehicles,
                                                                     false, true,
-                                                                    objXmlSubsystemNode["forced"]?.InnerText ?? string.Empty,
+                                                                    objXmlSubsystemNode["forced"]?.InnerTextViaPool(token) ?? string.Empty,
                                                                     token: token).ConfigureAwait(false);
                                                             objSubsystem.ParentID = InternalId;
                                                             objSubsystem.Cost = "0";
@@ -646,6 +647,7 @@ namespace Chummer.Backend.Equipment
                                                         catch
                                                         {
                                                             if (blnSync)
+                                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                                 objSubsystem.DeleteCyberware();
                                                             else
                                                                 await objSubsystem.DeleteCyberwareAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -664,6 +666,7 @@ namespace Chummer.Backend.Equipment
                                     catch
                                     {
                                         if (blnSync)
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                             objMod.DeleteVehicleMod();
                                         else
                                             await objMod.DeleteVehicleModAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -698,6 +701,7 @@ namespace Chummer.Backend.Equipment
                             }
                             catch
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objWeaponMount.DeleteWeaponMount();
                                 throw;
                             }
@@ -758,6 +762,7 @@ namespace Chummer.Backend.Equipment
                                             await GearChildren.AddAsync(objGear, token).ConfigureAwait(false);
                                     }
                                     else if (blnSync)
+                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                         objGear.DeleteGear();
                                     else
                                         await objGear.DeleteGearAsync(token: token).ConfigureAwait(false);
@@ -765,6 +770,7 @@ namespace Chummer.Backend.Equipment
                                 catch
                                 {
                                     if (blnSync)
+                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                         objGear.DeleteGear();
                                     else
                                         await objGear.DeleteGearAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -801,7 +807,7 @@ namespace Chummer.Backend.Equipment
 
                     foreach (XmlNode objXmlWeapon in xmlWeapons.SelectNodes("weapon"))
                     {
-                        string strWeaponName = objXmlWeapon["name"]?.InnerText;
+                        string strWeaponName = objXmlWeapon["name"]?.InnerTextViaPool(token);
                         if (string.IsNullOrEmpty(strWeaponName))
                             continue;
                         Weapon objWeapon = new Weapon(_objCharacter);
@@ -897,7 +903,7 @@ namespace Chummer.Backend.Equipment
                             {
                                 foreach (XmlNode objXmlAccessory in xmlAccessories.SelectNodes("accessory"))
                                 {
-                                    string strAccessoryName = objXmlWeapon["name"]?.InnerText;
+                                    string strAccessoryName = objXmlWeapon["name"]?.InnerTextViaPool(token);
                                     if (string.IsNullOrEmpty(strAccessoryName))
                                         continue;
                                     XmlNode objXmlAccessoryNode = objXmlWeaponDocument.TryGetNodeByNameOrId("/chummer/accessories/accessory", strAccessoryName);
@@ -911,11 +917,11 @@ namespace Chummer.Backend.Equipment
                                         if (blnSync)
                                             // ReSharper disable once MethodHasAsyncOverload
                                             objMod.Create(objXmlAccessoryNode,
-                                                new Tuple<string, string>(strMount, strExtraMount), 0, blnSkipCost,
+                                                new ValueTuple<string, string>(strMount, strExtraMount), 0, blnSkipCost,
                                                 blnCreateChildren, !blnSkipSelectForms && blnCreateImprovements, token);
                                         else
                                             await objMod.CreateAsync(objXmlAccessoryNode,
-                                                new Tuple<string, string>(strMount, strExtraMount), 0, blnSkipCost,
+                                                new ValueTuple<string, string>(strMount, strExtraMount), 0, blnSkipCost,
                                                 blnCreateChildren, !blnSkipSelectForms && blnCreateImprovements, token).ConfigureAwait(false);
                                         objMod.Cost = "0";
                                         if (blnSync)
@@ -927,6 +933,7 @@ namespace Chummer.Backend.Equipment
                                     catch
                                     {
                                         if (blnSync)
+                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                             objMod.DeleteWeaponAccessory();
                                         else
                                             await objMod.DeleteWeaponAccessoryAsync(token: CancellationToken.None).ConfigureAwait(false);
@@ -940,7 +947,9 @@ namespace Chummer.Backend.Equipment
                             if (blnSync)
                             {
                                 foreach (Weapon objSubWeapon in lstSubWeapons)
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objSubWeapon.DeleteWeapon();
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objWeapon.DeleteWeapon();
                             }
                             else
@@ -1102,7 +1111,7 @@ namespace Chummer.Backend.Equipment
             Lazy<XmlNode> objMyNode = null;
             Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode> objMyNodeAsync = null;
             if (blnSync)
-                objMyNode = new Lazy<XmlNode>(() => this.GetNode());
+                objMyNode = new Lazy<XmlNode>(() => this.GetNode(token));
             else
                 objMyNodeAsync = new Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode>(() => this.GetNodeAsync(token), Utils.JoinableTaskFactory);
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
@@ -1114,6 +1123,7 @@ namespace Chummer.Backend.Equipment
             {
                 if (blnCopy)
                 {
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     this.SetHomeNode(_objCharacter, false);
                 }
                 else
@@ -1121,11 +1131,13 @@ namespace Chummer.Backend.Equipment
                     bool blnIsHomeNode = false;
                     if (objNode.TryGetBoolFieldQuickly("homenode", ref blnIsHomeNode) && blnIsHomeNode)
                     {
+                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                         this.SetHomeNode(_objCharacter, true);
                     }
                 }
                 bool blnIsActive = false;
                 if (objNode.TryGetBoolFieldQuickly("active", ref blnIsActive) && blnIsActive)
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     this.SetActiveCommlink(_objCharacter, true);
             }
             else
@@ -1148,7 +1160,7 @@ namespace Chummer.Backend.Equipment
             }
 
             objNode.TryGetStringFieldQuickly("category", ref _strCategory);
-            string strTemp = objNode["handling"]?.InnerText;
+            string strTemp = objNode["handling"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strTemp))
             {
                 //Some vehicles have different Offroad Handling speeds. If so, we want to split this up for use with mods and such later.
@@ -1168,14 +1180,14 @@ namespace Chummer.Backend.Equipment
                 else
                 {
                     int.TryParse(strTemp, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _intHandling);
-                    strTemp = objNode["offroadhandling"]?.InnerText;
+                    strTemp = objNode["offroadhandling"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strTemp))
                     {
                         int.TryParse(strTemp, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _intOffroadHandling);
                     }
                 }
             }
-            strTemp = objNode["accel"]?.InnerText;
+            strTemp = objNode["accel"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strTemp))
             {
                 if (strTemp.Contains('/'))
@@ -1194,14 +1206,14 @@ namespace Chummer.Backend.Equipment
                 else
                 {
                     int.TryParse(strTemp, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _intAccel);
-                    strTemp = objNode["offroadaccel"]?.InnerText;
+                    strTemp = objNode["offroadaccel"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strTemp))
                     {
                         int.TryParse(strTemp, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _intOffroadAccel);
                     }
                 }
             }
-            strTemp = objNode["speed"]?.InnerText;
+            strTemp = objNode["speed"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strTemp))
             {
                 if (strTemp.Contains('/'))
@@ -1220,7 +1232,7 @@ namespace Chummer.Backend.Equipment
                 else
                 {
                     int.TryParse(strTemp, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _intSpeed);
-                    strTemp = objNode["offroadspeed"]?.InnerText;
+                    strTemp = objNode["offroadspeed"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strTemp))
                     {
                         int.TryParse(strTemp, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out _intOffroadSpeed);
@@ -1250,12 +1262,11 @@ namespace Chummer.Backend.Equipment
             objNode.TryGetStringFieldQuickly("vehiclename", ref _strVehicleName);
             objNode.TryGetInt32FieldQuickly("sortorder", ref _intSortOrder);
             objNode.TryGetBoolFieldQuickly("stolen", ref _blnStolen);
-            string strNodeInnerXml = objNode.InnerXml;
 
-            if (strNodeInnerXml.Contains("<mods>"))
+            if (objNode.HasChildWithName("mods"))
             {
                 XmlNodeList nodChildren = objNode.SelectNodes("mods/mod");
-                if (nodChildren.Count > 0)
+                if (nodChildren != null && nodChildren.Count > 0)
                 {
                     if (blnSync)
                     {
@@ -1265,11 +1276,14 @@ namespace Chummer.Backend.Equipment
                             try
                             {
                                 objMod.Parent = this;
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objMod.Load(nodChild, blnCopy);
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 _lstVehicleMods.Add(objMod);
                             }
                             catch
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objMod.DeleteVehicleMod();
                                 throw;
                             }
@@ -1299,7 +1313,7 @@ namespace Chummer.Backend.Equipment
             // Load gear before weapons so that ammo stuff can load in properly
             // We cannot load it before vehicle mods because that will mess up things like sensor arrays, even though it means that ammo loaded into weapons in vehicle mods won't load properly
             // ... but that is not supposed to happen anyway, weapons are only supposed to go into weapon mounts (or directly into the vehicle).
-            if (strNodeInnerXml.Contains("<gears>"))
+            if (objNode.HasChildWithName("gears"))
             {
                 XmlNodeList nodChildren = objNode.SelectNodes("gears/gear");
                 if (nodChildren.Count > 0)
@@ -1311,12 +1325,15 @@ namespace Chummer.Backend.Equipment
                             Gear objGear = new Gear(_objCharacter);
                             try
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objGear.Load(nodChild, blnCopy);
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 _lstGear.Add(objGear);
                                 objGear.Parent = this;
                             }
                             catch
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objGear.DeleteGear();
                                 throw;
                             }
@@ -1343,7 +1360,7 @@ namespace Chummer.Backend.Equipment
                 }
             }
 
-            if (strNodeInnerXml.Contains("<weapons>"))
+            if (objNode.HasChildWithName("weapons"))
             {
                 XmlNodeList nodChildren = objNode.SelectNodes("weapons/weapon");
                 if (blnSync)
@@ -1354,11 +1371,14 @@ namespace Chummer.Backend.Equipment
                         try
                         {
                             objWeapon.ParentVehicle = this;
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             objWeapon.Load(nodChild, blnCopy);
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             _lstWeapons.Add(objWeapon);
                         }
                         catch
                         {
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             objWeapon.DeleteWeapon();
                             throw;
                         }
@@ -1384,7 +1404,7 @@ namespace Chummer.Backend.Equipment
                 }
             }
 
-            if (strNodeInnerXml.Contains("<weaponmounts>"))
+            if (objNode.HasChildWithName("weaponmounts"))
             {
                 bool blnKrakePassDone = false;
                 XmlNodeList nodChildren = objNode.SelectNodes("weaponmounts/weaponmount");
@@ -1395,7 +1415,9 @@ namespace Chummer.Backend.Equipment
                     {
                         try
                         {
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             if (wm.Load(nodChild, blnCopy))
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 WeaponMounts.Add(wm);
                             else
                             {
@@ -1419,12 +1441,15 @@ namespace Chummer.Backend.Equipment
                                                 WeaponMount objWeaponMount = new WeaponMount(_objCharacter, this);
                                                 try
                                                 {
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                     objWeaponMount.CreateByName(objXmlVehicleMod);
                                                     objWeaponMount.IncludedInVehicle = true;
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                     WeaponMounts.Add(objWeaponMount);
                                                 }
                                                 catch
                                                 {
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                     objWeaponMount.DeleteWeaponMount();
                                                     throw;
                                                 }
@@ -1434,11 +1459,12 @@ namespace Chummer.Backend.Equipment
                                         xmlDataNodesForMissingKrakeStuff = xmlVehicleDataNode["weapons"];
                                         if (xmlDataNodesForMissingKrakeStuff != null)
                                         {
+                                            // ReSharper disable once MethodHasAsyncOverload
                                             XmlDocument objXmlWeaponDocument = XmlManager.Load("weapons.xml", token: token);
 
                                             foreach (XmlNode objXmlWeapon in xmlDataNodesForMissingKrakeStuff.SelectNodes("weapon"))
                                             {
-                                                string strWeaponName = objXmlWeapon["name"]?.InnerText;
+                                                string strWeaponName = objXmlWeapon["name"]?.InnerTextViaPool(token);
                                                 if (string.IsNullOrEmpty(strWeaponName))
                                                     continue;
                                                 bool blnAttached = false;
@@ -1448,6 +1474,7 @@ namespace Chummer.Backend.Equipment
                                                 try
                                                 {
                                                     objWeapon.ParentVehicle = this;
+                                                    // ReSharper disable once MethodHasAsyncOverload
                                                     objWeapon.Create(objXmlWeaponNode, lstSubWeapons, token: token);
                                                     objWeapon.ParentID = InternalId;
                                                     objWeapon.Cost = "0";
@@ -1463,8 +1490,10 @@ namespace Chummer.Backend.Equipment
                                                             !string.IsNullOrEmpty(objWeaponMount.AllowedWeaponCategories))
                                                             continue;
                                                         blnAttached = true;
+                                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                         objWeaponMount.Weapons.Add(objWeapon);
                                                         foreach (Weapon objSubWeapon in lstSubWeapons)
+                                                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                             objWeaponMount.Weapons.Add(objSubWeapon);
                                                         break;
                                                     }
@@ -1480,8 +1509,10 @@ namespace Chummer.Backend.Equipment
                                                                 objMod.Weapons.Count == 0)
                                                             {
                                                                 blnAttached = true;
+                                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                                 objMod.Weapons.Add(objWeapon);
                                                                 foreach (Weapon objSubWeapon in lstSubWeapons)
+                                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                                     objMod.Weapons.Add(objSubWeapon);
                                                                 break;
                                                             }
@@ -1494,8 +1525,10 @@ namespace Chummer.Backend.Equipment
                                                                     !string.IsNullOrEmpty(objMod.WeaponMountCategories) &&
                                                                     objMod.WeaponMountCategories.Contains(objWeapon.SizeCategory))
                                                                 {
+                                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                                     objMod.Weapons.Add(objWeapon);
                                                                     foreach (Weapon objSubWeapon in lstSubWeapons)
+                                                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                                         objMod.Weapons.Add(objSubWeapon);
                                                                     break;
                                                                 }
@@ -1509,7 +1542,7 @@ namespace Chummer.Backend.Equipment
                                                     {
                                                         foreach (XmlNode objXmlAccessory in xmlAccessories.SelectNodes("accessory"))
                                                         {
-                                                            string strAccessoryName = objXmlWeapon["name"]?.InnerText;
+                                                            string strAccessoryName = objXmlWeapon["name"]?.InnerTextViaPool(token);
                                                             if (string.IsNullOrEmpty(strAccessoryName))
                                                                 continue;
                                                             XmlNode objXmlAccessoryNode = objXmlWeaponDocument.TryGetNodeByNameOrId("/chummer/accessories/accessory", strAccessoryName);
@@ -1520,12 +1553,15 @@ namespace Chummer.Backend.Equipment
                                                             WeaponAccessory objMod = new WeaponAccessory(_objCharacter);
                                                             try
                                                             {
-                                                                objMod.Create(objXmlAccessoryNode, new Tuple<string, string>(strMount, strExtraMount), 0, token: token);
+                                                                // ReSharper disable once MethodHasAsyncOverload
+                                                                objMod.Create(objXmlAccessoryNode, new ValueTuple<string, string>(strMount, strExtraMount), 0, token: token);
                                                                 objMod.Cost = "0";
+                                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                                 objWeapon.WeaponAccessories.Add(objMod);
                                                             }
                                                             catch
                                                             {
+                                                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                                 objMod.DeleteWeaponAccessory();
                                                                 throw;
                                                             }
@@ -1535,7 +1571,9 @@ namespace Chummer.Backend.Equipment
                                                 catch
                                                 {
                                                     foreach (Weapon objSubWeapon in lstSubWeapons)
+                                                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                         objSubWeapon.DeleteWeapon();
+                                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                                     objWeapon.DeleteWeapon();
                                                     throw;
                                                 }
@@ -1547,6 +1585,7 @@ namespace Chummer.Backend.Equipment
                         }
                         catch
                         {
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             wm.DeleteWeaponMount();
                             throw;
                         }
@@ -1600,7 +1639,7 @@ namespace Chummer.Backend.Equipment
                                             foreach (XmlNode objXmlWeapon in xmlDataNodesForMissingKrakeStuff.SelectNodes("weapon"))
                                             {
                                                 token.ThrowIfCancellationRequested();
-                                                string strWeaponName = objXmlWeapon["name"]?.InnerText;
+                                                string strWeaponName = objXmlWeapon["name"]?.InnerTextViaPool(token);
                                                 if (string.IsNullOrEmpty(strWeaponName))
                                                     continue;
                                                 bool blnAttached = false;
@@ -1677,7 +1716,7 @@ namespace Chummer.Backend.Equipment
                                                         foreach (XmlNode objXmlAccessory in xmlAccessories.SelectNodes("accessory"))
                                                         {
                                                             token.ThrowIfCancellationRequested();
-                                                            string strAccessoryName = objXmlWeapon["name"]?.InnerText;
+                                                            string strAccessoryName = objXmlWeapon["name"]?.InnerTextViaPool(token);
                                                             if (string.IsNullOrEmpty(strAccessoryName))
                                                                 continue;
                                                             XmlNode objXmlAccessoryNode = objXmlWeaponDocument.TryGetNodeByNameOrId("/chummer/accessories/accessory", strAccessoryName);
@@ -1688,7 +1727,7 @@ namespace Chummer.Backend.Equipment
                                                             WeaponAccessory objMod = new WeaponAccessory(_objCharacter);
                                                             try
                                                             {
-                                                                await objMod.CreateAsync(objXmlAccessoryNode, new Tuple<string, string>(strMount, strExtraMount), 0, token: token).ConfigureAwait(false);
+                                                                await objMod.CreateAsync(objXmlAccessoryNode, new ValueTuple<string, string>(strMount, strExtraMount), 0, token: token).ConfigureAwait(false);
                                                                 objMod.Cost = "0";
                                                                 await objWeapon.WeaponAccessories.AddAsync(objMod, token).ConfigureAwait(false);
                                                             }
@@ -1722,7 +1761,7 @@ namespace Chummer.Backend.Equipment
                 }
             }
 
-            string strLocation = objNode["location"]?.InnerText;
+            string strLocation = objNode["location"]?.InnerTextViaPool(token);
             if (!string.IsNullOrEmpty(strLocation))
             {
                 if (blnSync)
@@ -1741,6 +1780,7 @@ namespace Chummer.Backend.Equipment
                             _objCharacter.VehicleLocations.FirstOrDefault(location =>
                                 location.Name == strLocation);
                     }
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     _objLocation?.Children.Add(this);
                 }
                 else
@@ -1773,6 +1813,7 @@ namespace Chummer.Backend.Equipment
             objNode.TryGetBoolFieldQuickly("discountedcost", ref _blnDiscountCost);
             if (!objNode.TryGetBoolFieldQuickly("dealerconnection", ref _blnDealerConnectionDiscount))
             {
+                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                 _blnDealerConnectionDiscount = blnSync ? DoesDealerConnectionCurrentlyApply() : await DoesDealerConnectionCurrentlyApplyAsync(token).ConfigureAwait(false);
             }
 
@@ -1810,6 +1851,7 @@ namespace Chummer.Backend.Equipment
                     foreach (XmlNode objXmlLocation in objNode.SelectNodes("locations/location"))
                     {
                         Location objLocation = new Location(_objCharacter, _lstLocations);
+                        // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                         objLocation.Load(objXmlLocation);
                     }
                 }
@@ -2112,8 +2154,8 @@ namespace Chummer.Backend.Equipment
                     if (!objMod.IncludedInVehicle && objMod.Equipped && !ReferenceEquals(objMod, objExcludeMod))
                     {
                         string strBonusPilot = objMod.WirelessOn
-                            ? objMod.WirelessBonus?["pilot"]?.InnerText ?? objMod.Bonus?["pilot"]?.InnerText
-                            : objMod.Bonus?["pilot"]?.InnerText;
+                            ? objMod.WirelessBonus?["pilot"]?.InnerTextViaPool() ?? objMod.Bonus?["pilot"]?.InnerTextViaPool()
+                            : objMod.Bonus?["pilot"]?.InnerTextViaPool();
                         intReturn = Math.Max(ParseBonus(strBonusPilot, objMod, BasePilot, "Pilot", false),
                             intReturn);
                     }
@@ -2144,8 +2186,8 @@ namespace Chummer.Backend.Equipment
                     if (!objMod.IncludedInVehicle && objMod.Equipped && !ReferenceEquals(objMod, objExcludeMod))
                     {
                         string strBonusPilot = objMod.WirelessOn
-                            ? objMod.WirelessBonus?["pilot"]?.InnerText ?? objMod.Bonus?["pilot"]?.InnerText
-                            : objMod.Bonus?["pilot"]?.InnerText;
+                            ? objMod.WirelessBonus?["pilot"]?.InnerTextViaPool(token) ?? objMod.Bonus?["pilot"]?.InnerTextViaPool(token)
+                            : objMod.Bonus?["pilot"]?.InnerTextViaPool(token);
                         intReturn = Math.Max(
                             await ParseBonusAsync(strBonusPilot, objMod, BasePilot, "Pilot", false, token)
                                 .ConfigureAwait(false),
@@ -2576,12 +2618,12 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         continue;
 
-                    string strLoop = objMod.Bonus?["sensor"]?.InnerText;
+                    string strLoop = objMod.Bonus?["sensor"]?.InnerTextViaPool();
                     intTotalSensor = Math.Max(intTotalSensor,
                         ParseBonus(strLoop, objMod, intTotalSensor, "Sensor", false));
                     if (!objMod.WirelessOn || objMod.WirelessBonus == null)
                         continue;
-                    strLoop = objMod.WirelessBonus?["sensor"]?.InnerText;
+                    strLoop = objMod.WirelessBonus?["sensor"]?.InnerTextViaPool();
                     intTotalSensor = Math.Max(intTotalSensor,
                         ParseBonus(strLoop, objMod, intTotalSensor, "Sensor", false));
                 }
@@ -2592,12 +2634,12 @@ namespace Chummer.Backend.Equipment
                 {
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         continue;
-                    intTotalBonusSensor += ParseBonus(objMod.Bonus?["sensor"]?.InnerText, objMod,
+                    intTotalBonusSensor += ParseBonus(objMod.Bonus?["sensor"]?.InnerTextViaPool(), objMod,
                         intTotalSensor, "Sensor");
 
                     if (objMod.WirelessOn)
                     {
-                        intTotalBonusSensor += ParseBonus(objMod.WirelessBonus?["sensor"]?.InnerText, objMod,
+                        intTotalBonusSensor += ParseBonus(objMod.WirelessBonus?["sensor"]?.InnerTextViaPool(), objMod,
                             intTotalSensor, "Sensor");
                     }
                 }
@@ -2628,13 +2670,13 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         return;
 
-                    string strLoop = objMod.Bonus?["sensor"]?.InnerText;
+                    string strLoop = objMod.Bonus?["sensor"]?.InnerTextViaPool(token);
                     intTotalSensor = Math.Max(intTotalSensor,
                         await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", false, token)
                             .ConfigureAwait(false));
                     if (!objMod.WirelessOn || objMod.WirelessBonus == null)
                         return;
-                    strLoop = objMod.WirelessBonus?["sensor"]?.InnerText;
+                    strLoop = objMod.WirelessBonus?["sensor"]?.InnerTextViaPool(token);
                     intTotalSensor = Math.Max(intTotalSensor,
                         await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", false, token)
                             .ConfigureAwait(false));
@@ -2644,12 +2686,12 @@ namespace Chummer.Backend.Equipment
                 int intTotalBonusSensor = await Mods.SumAsync(objMod => !objMod.IncludedInVehicle && objMod.Equipped && !ReferenceEquals(objMod, objExcludeMod),
                     async objMod =>
                     {
-                        string strLoop = objMod.Bonus?["sensor"]?.InnerText;
+                        string strLoop = objMod.Bonus?["sensor"]?.InnerTextViaPool(token);
                         int intTemp = await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", token: token)
                             .ConfigureAwait(false);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strLoop = objMod.WirelessBonus?["sensor"]?.InnerText;
+                            strLoop = objMod.WirelessBonus?["sensor"]?.InnerTextViaPool(token);
                             intTemp += await ParseBonusAsync(strLoop, objMod, intTotalSensor, "Sensor", token: token)
                                 .ConfigureAwait(false);
                         }
@@ -2669,11 +2711,10 @@ namespace Chummer.Backend.Equipment
         /// Parse a given string from a Mod's bonus node to calculate new bonus or base value.
         /// </summary>
         /// <param name="strBonus">String that will be parsed, replacing values.</param>
-        /// <param name="intModRating">Current Rating of the relevant Mod.</param>
+        /// <param name="objMod">Mod whose bonus is to be processed.</param>
         /// <param name="intTotalRating">Total current Rating of the value that is being improved.</param>
         /// <param name="strReplaceRating">String value that will be replaced by intModRating.</param>
         /// <param name="blnBonus">Whether the value must be prefixed with + or - to return a value.</param>
-        /// <returns></returns>
         private static int ParseBonus(string strBonus, VehicleMod objMod, int intTotalRating, string strReplaceRating, bool blnBonus = true)
         {
             if (strBonus.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
@@ -2684,13 +2725,13 @@ namespace Chummer.Backend.Equipment
                 {
                     // If the bonus is determined by the existing number, evaluate the expression.
                     string strReplaceValue = intTotalRating.ToString(GlobalSettings.InvariantCultureInfo);
-                    return objMod.ProcessRatingString(strBonus.Replace('{' + strReplaceRating + '}', strReplaceValue).Replace(strReplaceRating, strReplaceValue), () => objMod.Rating);
+                    return objMod.ProcessRatingString(strBonus.Replace("{" + strReplaceRating + "}", strReplaceValue).Replace(strReplaceRating, strReplaceValue), () => objMod.Rating);
                 }
                 if (chrFirstCharacter != '+' && chrFirstCharacter != '-' && !blnBonus)
                 {
                     // If the bonus is determined by the existing number, evaluate the expression.
                     string strReplaceValue = intTotalRating.ToString(GlobalSettings.InvariantCultureInfo);
-                    return objMod.ProcessRatingString(strBonus.Replace('{' + strReplaceRating + '}', strReplaceValue).Replace(strReplaceRating, strReplaceValue), () => objMod.Rating);
+                    return objMod.ProcessRatingString(strBonus.Replace("{" + strReplaceRating + "}", strReplaceValue).Replace(strReplaceRating, strReplaceValue), () => objMod.Rating);
                 }
             }
             return decValue.StandardRound();
@@ -2700,12 +2741,11 @@ namespace Chummer.Backend.Equipment
         /// Parse a given string from a Mod's bonus node to calculate new bonus or base value.
         /// </summary>
         /// <param name="strBonus">String that will be parsed, replacing values.</param>
-        /// <param name="intModRating">Current Rating of the relevant Mod.</param>
+        /// <param name="objMod">Mod whose bonus is to be processed.</param>
         /// <param name="intTotalRating">Total current Rating of the value that is being improved.</param>
         /// <param name="strReplaceRating">String value that will be replaced by intModRating.</param>
         /// <param name="blnBonus">Whether the value must be prefixed with + or - to return a value.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        /// <returns></returns>
         private static async Task<int> ParseBonusAsync(string strBonus, VehicleMod objMod, int intTotalRating, string strReplaceRating, bool blnBonus = true, CancellationToken token = default)
         {
             if (strBonus.DoesNeedXPathProcessingToBeConvertedToNumber(out decimal decValue))
@@ -2716,14 +2756,14 @@ namespace Chummer.Backend.Equipment
                 {
                     // If the bonus is determined by the existing number, evaluate the expression.
                     string strReplaceValue = intTotalRating.ToString(GlobalSettings.InvariantCultureInfo);
-                    return await objMod.ProcessRatingStringAsync(strBonus.Replace('{' + strReplaceRating + '}', strReplaceValue).Replace(strReplaceRating, strReplaceValue),
+                    return await objMod.ProcessRatingStringAsync(strBonus.Replace("{" + strReplaceRating + "}", strReplaceValue).Replace(strReplaceRating, strReplaceValue),
                         () => objMod.GetRatingAsync(token), token).ConfigureAwait(false);
                 }
                 if (chrFirstCharacter != '+' && chrFirstCharacter != '-' && !blnBonus)
                 {
                     // If the bonus is determined by the existing number, evaluate the expression.
                     string strReplaceValue = intTotalRating.ToString(GlobalSettings.InvariantCultureInfo);
-                    return await objMod.ProcessRatingStringAsync(strBonus.Replace('{' + strReplaceRating + '}', strReplaceValue).Replace(strReplaceRating, strReplaceValue),
+                    return await objMod.ProcessRatingStringAsync(strBonus.Replace("{" + strReplaceRating + "}", strReplaceValue).Replace(strReplaceRating, strReplaceValue),
                         () => objMod.GetRatingAsync(token), token).ConfigureAwait(false);
                 }
             }
@@ -3328,8 +3368,8 @@ namespace Chummer.Backend.Equipment
                         continue;
 
                     string strBonusSeats = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["seats"]?.InnerText ?? objMod.Bonus?["seats"]?.InnerText
-                        : objMod.Bonus?["seats"]?.InnerText;
+                        ? objMod.WirelessBonus?["seats"]?.InnerTextViaPool() ?? objMod.Bonus?["seats"]?.InnerTextViaPool()
+                        : objMod.Bonus?["seats"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonusSeats))
                         intTotalSeats = Math.Max(ParseBonus(strBonusSeats, objMod, Seats, "Seats", false),
                             intTotalSeats);
@@ -3341,14 +3381,14 @@ namespace Chummer.Backend.Equipment
                 {
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         continue;
-                    string strText = objMod.Bonus?["seats"]?.InnerText;
+                    string strText = objMod.Bonus?["seats"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strText))
                         intTotalBonusSeats += ParseBonus(strText, objMod,
                             intTotalSeats, "Seats");
 
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        strText = objMod.WirelessBonus?["seats"]?.InnerText;
+                        strText = objMod.WirelessBonus?["seats"]?.InnerTextViaPool();
                         if (!string.IsNullOrEmpty(strText))
                             intTotalBonusSeats += ParseBonus(strText, objMod,
                                 intTotalSeats, "Seats");
@@ -3382,8 +3422,8 @@ namespace Chummer.Backend.Equipment
                         return;
 
                     string strBonusSeats = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["seats"]?.InnerText ?? objMod.Bonus?["seats"]?.InnerText
-                        : objMod.Bonus?["seats"]?.InnerText;
+                        ? objMod.WirelessBonus?["seats"]?.InnerTextViaPool(token) ?? objMod.Bonus?["seats"]?.InnerTextViaPool(token)
+                        : objMod.Bonus?["seats"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strBonusSeats))
                         intTotalSeats =
                             Math.Max(
@@ -3398,14 +3438,14 @@ namespace Chummer.Backend.Equipment
                     objMod => !objMod.IncludedInVehicle && objMod.Equipped && !ReferenceEquals(objMod, objExcludeMod), async objMod =>
                     {
                         int intTemp = 0;
-                        string strText = objMod.Bonus?["seats"]?.InnerText;
+                        string strText = objMod.Bonus?["seats"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strText))
                             intTemp += await ParseBonusAsync(strText, objMod, intTotalSeats,
                                 "Seats", token: token).ConfigureAwait(false);
 
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strText = objMod.WirelessBonus?["seats"]?.InnerText;
+                            strText = objMod.WirelessBonus?["seats"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strText))
                                 intTemp += await ParseBonusAsync(strText, objMod,
                                     intTotalSeats, "Seats", token: token).ConfigureAwait(false);
@@ -3446,30 +3486,30 @@ namespace Chummer.Backend.Equipment
                         continue;
 
                     string strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["speed"]?.InnerText ?? objMod.Bonus?["speed"]?.InnerText
-                        : objMod.Bonus?["speed"]?.InnerText;
+                        ? objMod.WirelessBonus?["speed"]?.InnerTextViaPool() ?? objMod.Bonus?["speed"]?.InnerTextViaPool()
+                        : objMod.Bonus?["speed"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonus))
                         intTotalSpeed = Math.Max(ParseBonus(strBonus, objMod, Speed, "Speed", false),
                             intTotalSpeed);
 
                     strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["offroadspeed"]?.InnerText ??
-                            objMod.Bonus?["offroadspeed"]?.InnerText
-                        : objMod.Bonus?["offroadspeed"]?.InnerText;
+                        ? objMod.WirelessBonus?["offroadspeed"]?.InnerTextViaPool() ??
+                            objMod.Bonus?["offroadspeed"]?.InnerTextViaPool()
+                        : objMod.Bonus?["offroadspeed"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseOffroadSpeed =
                             Math.Max(ParseBonus(strBonus, objMod, OffroadSpeed, "OffroadSpeed", false),
                                 intTotalSpeed);
                     if (IsDrone && _objCharacter.Settings.DroneMods)
                     {
-                        strBonus = objMod.Bonus?["armor"]?.InnerText;
+                        strBonus = objMod.Bonus?["armor"]?.InnerTextViaPool();
                         if (!string.IsNullOrEmpty(strBonus))
                             intTotalArmor = Math.Max(
                                 ParseBonus(strBonus, objMod, intTotalArmor, "Armor", false),
                                 intTotalArmor);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strBonus = objMod.WirelessBonus["armor"]?.InnerText;
+                            strBonus = objMod.WirelessBonus["armor"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strBonus))
                                 intTotalArmor =
                                     Math.Max(ParseBonus(strBonus, objMod, intTotalArmor, "Armor", false),
@@ -3487,23 +3527,23 @@ namespace Chummer.Backend.Equipment
                         continue;
                     if (objMod.Bonus != null)
                     {
-                        intTotalBonusSpeed += ParseBonus(objMod.Bonus["speed"]?.InnerText, objMod,
+                        intTotalBonusSpeed += ParseBonus(objMod.Bonus["speed"]?.InnerTextViaPool(), objMod,
                             intTotalSpeed, "Speed");
-                        intTotalBonusOffroadSpeed += ParseBonus(objMod.Bonus["offroadspeed"]?.InnerText,
+                        intTotalBonusOffroadSpeed += ParseBonus(objMod.Bonus["offroadspeed"]?.InnerTextViaPool(),
                             objMod, intTotalSpeed, "OffroadSpeed");
                         if (IsDrone && _objCharacter.Settings.DroneMods)
-                            intModArmor += ParseBonus(objMod.Bonus["armor"]?.InnerText, objMod,
+                            intModArmor += ParseBonus(objMod.Bonus["armor"]?.InnerTextViaPool(), objMod,
                                 intTotalArmor, "Armor");
                     }
 
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        intTotalBonusSpeed += ParseBonus(objMod.WirelessBonus["speed"]?.InnerText, objMod,
+                        intTotalBonusSpeed += ParseBonus(objMod.WirelessBonus["speed"]?.InnerTextViaPool(), objMod,
                             intTotalSpeed, "Speed");
-                        intTotalBonusOffroadSpeed += ParseBonus(objMod.WirelessBonus["offroadspeed"]?.InnerText,
+                        intTotalBonusOffroadSpeed += ParseBonus(objMod.WirelessBonus["offroadspeed"]?.InnerTextViaPool(),
                             objMod, intTotalSpeed, "OffroadSpeed");
                         if (IsDrone && _objCharacter.Settings.DroneMods)
-                            intModArmor += ParseBonus(objMod.WirelessBonus["armor"]?.InnerText, objMod,
+                            intModArmor += ParseBonus(objMod.WirelessBonus["armor"]?.InnerTextViaPool(), objMod,
                                 intTotalArmor, "Armor");
                     }
                 }
@@ -3515,7 +3555,7 @@ namespace Chummer.Backend.Equipment
                     intBaseOffroadSpeed + intTotalBonusOffroadSpeed)
                 {
                     return (intTotalSpeed + intTotalBonusSpeed - intPenalty).ToString(GlobalSettings
-                                .InvariantCultureInfo) + '/' +
+                                .InvariantCultureInfo) + "/" +
                             (intBaseOffroadSpeed + intTotalBonusOffroadSpeed - intPenalty).ToString(GlobalSettings
                                 .InvariantCultureInfo);
                 }
@@ -3550,8 +3590,8 @@ namespace Chummer.Backend.Equipment
                         return;
 
                     string strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["speed"]?.InnerText ?? objMod.Bonus?["speed"]?.InnerText
-                        : objMod.Bonus?["speed"]?.InnerText;
+                        ? objMod.WirelessBonus?["speed"]?.InnerTextViaPool(token) ?? objMod.Bonus?["speed"]?.InnerTextViaPool(token)
+                        : objMod.Bonus?["speed"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strBonus))
                         intTotalSpeed = Math.Max(
                             await ParseBonusAsync(strBonus, objMod, Speed, "Speed", false,
@@ -3560,8 +3600,8 @@ namespace Chummer.Backend.Equipment
                             intTotalSpeed);
 
                     strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["offroadspeed"]?.InnerText ?? objMod.Bonus?["offroadspeed"]?.InnerText
-                        : objMod.Bonus?["offroadspeed"]?.InnerText;
+                        ? objMod.WirelessBonus?["offroadspeed"]?.InnerTextViaPool(token) ?? objMod.Bonus?["offroadspeed"]?.InnerTextViaPool(token)
+                        : objMod.Bonus?["offroadspeed"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseOffroadSpeed =
                             Math.Max(
@@ -3571,7 +3611,7 @@ namespace Chummer.Backend.Equipment
                                 intTotalSpeed);
                     if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
                     {
-                        strBonus = objMod.Bonus?["armor"]?.InnerText;
+                        strBonus = objMod.Bonus?["armor"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strBonus))
                             intTotalArmor =
                                 Math.Max(
@@ -3581,7 +3621,7 @@ namespace Chummer.Backend.Equipment
                                     intTotalArmor);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strBonus = objMod.WirelessBonus["armor"]?.InnerText;
+                            strBonus = objMod.WirelessBonus["armor"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strBonus))
                                 intTotalArmor =
                                     Math.Max(
@@ -3601,26 +3641,26 @@ namespace Chummer.Backend.Equipment
                     int intTemp = 0;
                     if (objMod.Bonus != null)
                     {
-                        intTotalBonusSpeed += await ParseBonusAsync(objMod.Bonus["speed"]?.InnerText,
+                        intTotalBonusSpeed += await ParseBonusAsync(objMod.Bonus["speed"]?.InnerTextViaPool(token),
                             objMod, intTotalSpeed, "Speed", token: token).ConfigureAwait(false);
-                        intTotalBonusOffroadSpeed += await ParseBonusAsync(objMod.Bonus["offroadspeed"]?.InnerText,
+                        intTotalBonusOffroadSpeed += await ParseBonusAsync(objMod.Bonus["offroadspeed"]?.InnerTextViaPool(token),
                                 objMod, intTotalSpeed, "OffroadSpeed", token: token)
                             .ConfigureAwait(false);
                         if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
-                            intTemp += await ParseBonusAsync(objMod.Bonus["armor"]?.InnerText,
+                            intTemp += await ParseBonusAsync(objMod.Bonus["armor"]?.InnerTextViaPool(token),
                                 objMod, intTotalArmor, "Armor", token: token).ConfigureAwait(false);
                     }
 
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        intTotalBonusSpeed += await ParseBonusAsync(objMod.WirelessBonus["speed"]?.InnerText,
+                        intTotalBonusSpeed += await ParseBonusAsync(objMod.WirelessBonus["speed"]?.InnerTextViaPool(token),
                             objMod, intTotalSpeed, "Speed", token: token).ConfigureAwait(false);
                         intTotalBonusOffroadSpeed += await ParseBonusAsync(
-                                objMod.WirelessBonus["offroadspeed"]?.InnerText,
+                                objMod.WirelessBonus["offroadspeed"]?.InnerTextViaPool(token),
                                 objMod, intTotalSpeed, "OffroadSpeed", token: token)
                             .ConfigureAwait(false);
                         if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
-                            intTemp += await ParseBonusAsync(objMod.WirelessBonus["armor"]?.InnerText,
+                            intTemp += await ParseBonusAsync(objMod.WirelessBonus["armor"]?.InnerTextViaPool(token),
                                 objMod, intTotalArmor, "Armor", token: token).ConfigureAwait(false);
                     }
 
@@ -3637,7 +3677,7 @@ namespace Chummer.Backend.Equipment
                     intTotalSpeed + intTotalBonusSpeed != intBaseOffroadSpeed + intTotalBonusOffroadSpeed)
                 {
                     return (intTotalSpeed + intTotalBonusSpeed - intPenalty).ToString(GlobalSettings
-                               .InvariantCultureInfo) + '/' +
+                               .InvariantCultureInfo) + "/" +
                            (intBaseOffroadSpeed + intTotalBonusOffroadSpeed - intPenalty).ToString(GlobalSettings
                                .InvariantCultureInfo);
                 }
@@ -3673,30 +3713,30 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         continue;
                     string strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["accel"]?.InnerText ?? objMod.Bonus?["accel"]?.InnerText
-                        : objMod.Bonus?["accel"]?.InnerText;
+                        ? objMod.WirelessBonus?["accel"]?.InnerTextViaPool() ?? objMod.Bonus?["accel"]?.InnerTextViaPool()
+                        : objMod.Bonus?["accel"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonus))
                         intTotalAccel = Math.Max(ParseBonus(strBonus, objMod, Accel, "Accel", false),
                             intTotalAccel);
 
                     strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["offroadaccel"]?.InnerText ??
-                            objMod.Bonus?["offroadaccel"]?.InnerText
-                        : objMod.Bonus?["offroadaccel"]?.InnerText;
+                        ? objMod.WirelessBonus?["offroadaccel"]?.InnerTextViaPool() ??
+                            objMod.Bonus?["offroadaccel"]?.InnerTextViaPool()
+                        : objMod.Bonus?["offroadaccel"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseOffroadAccel =
                             Math.Max(ParseBonus(strBonus, objMod, OffroadAccel, "OffroadAccel", false),
                                 intTotalAccel);
                     if (IsDrone && _objCharacter.Settings.DroneMods)
                     {
-                        strBonus = objMod.Bonus?["armor"]?.InnerText;
+                        strBonus = objMod.Bonus?["armor"]?.InnerTextViaPool();
                         if (!string.IsNullOrEmpty(strBonus))
                             intTotalArmor = Math.Max(
                                 ParseBonus(strBonus, objMod, intTotalArmor, "Armor", false),
                                 intTotalArmor);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strBonus = objMod.WirelessBonus["armor"]?.InnerText;
+                            strBonus = objMod.WirelessBonus["armor"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strBonus))
                                 intTotalArmor =
                                     Math.Max(ParseBonus(strBonus, objMod, intTotalArmor, "Armor", false),
@@ -3714,23 +3754,23 @@ namespace Chummer.Backend.Equipment
                         continue;
                     if (objMod.Bonus != null)
                     {
-                        intTotalBonusAccel += ParseBonus(objMod.Bonus["accel"]?.InnerText, objMod,
+                        intTotalBonusAccel += ParseBonus(objMod.Bonus["accel"]?.InnerTextViaPool(), objMod,
                             intTotalAccel, "Accel");
-                        intTotalBonusOffroadAccel += ParseBonus(objMod.Bonus["offroadaccel"]?.InnerText,
+                        intTotalBonusOffroadAccel += ParseBonus(objMod.Bonus["offroadaccel"]?.InnerTextViaPool(),
                             objMod, intTotalAccel, "OffroadAccel");
                         if (IsDrone && _objCharacter.Settings.DroneMods)
-                            intModArmor += ParseBonus(objMod.Bonus["armor"]?.InnerText, objMod,
+                            intModArmor += ParseBonus(objMod.Bonus["armor"]?.InnerTextViaPool(), objMod,
                                 intTotalArmor, "Armor");
                     }
 
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        intTotalBonusAccel += ParseBonus(objMod.WirelessBonus["accel"]?.InnerText, objMod,
+                        intTotalBonusAccel += ParseBonus(objMod.WirelessBonus["accel"]?.InnerTextViaPool(), objMod,
                             intTotalAccel, "Accel");
-                        intTotalBonusOffroadAccel += ParseBonus(objMod.WirelessBonus["offroadaccel"]?.InnerText,
+                        intTotalBonusOffroadAccel += ParseBonus(objMod.WirelessBonus["offroadaccel"]?.InnerTextViaPool(),
                             objMod, intTotalAccel, "OffroadAccel");
                         if (IsDrone && _objCharacter.Settings.DroneMods)
-                            intModArmor += ParseBonus(objMod.WirelessBonus["armor"]?.InnerText, objMod,
+                            intModArmor += ParseBonus(objMod.WirelessBonus["armor"]?.InnerTextViaPool(), objMod,
                                 intTotalArmor, "Armor");
                     }
                 }
@@ -3742,7 +3782,7 @@ namespace Chummer.Backend.Equipment
                     intBaseOffroadAccel + intTotalBonusOffroadAccel)
                 {
                     return (intTotalAccel + intTotalBonusAccel - intPenalty).ToString(GlobalSettings
-                                .InvariantCultureInfo) + '/' +
+                                .InvariantCultureInfo) + "/" +
                             (intBaseOffroadAccel + intTotalBonusOffroadAccel - intPenalty).ToString(GlobalSettings
                                 .InvariantCultureInfo);
                 }
@@ -3776,8 +3816,8 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         return;
                     string strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["accel"]?.InnerText ?? objMod.Bonus?["accel"]?.InnerText
-                        : objMod.Bonus?["accel"]?.InnerText;
+                        ? objMod.WirelessBonus?["accel"]?.InnerTextViaPool(token) ?? objMod.Bonus?["accel"]?.InnerTextViaPool(token)
+                        : objMod.Bonus?["accel"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strBonus))
                         intTotalAccel = Math.Max(
                             await ParseBonusAsync(strBonus, objMod, Accel, "Accel", false, token)
@@ -3785,8 +3825,8 @@ namespace Chummer.Backend.Equipment
                             intTotalAccel);
 
                     strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["offroadaccel"]?.InnerText ?? objMod.Bonus?["offroadaccel"]?.InnerText
-                        : objMod.Bonus?["offroadaccel"]?.InnerText;
+                        ? objMod.WirelessBonus?["offroadaccel"]?.InnerTextViaPool(token) ?? objMod.Bonus?["offroadaccel"]?.InnerTextViaPool(token)
+                        : objMod.Bonus?["offroadaccel"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseOffroadAccel =
                             Math.Max(
@@ -3796,7 +3836,7 @@ namespace Chummer.Backend.Equipment
                                 intTotalAccel);
                     if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
                     {
-                        strBonus = objMod.Bonus?["armor"]?.InnerText;
+                        strBonus = objMod.Bonus?["armor"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strBonus))
                             intTotalArmor =
                                 Math.Max(
@@ -3805,7 +3845,7 @@ namespace Chummer.Backend.Equipment
                                     intTotalArmor);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strBonus = objMod.WirelessBonus["armor"]?.InnerText;
+                            strBonus = objMod.WirelessBonus["armor"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strBonus))
                                 intTotalArmor =
                                     Math.Max(
@@ -3825,25 +3865,25 @@ namespace Chummer.Backend.Equipment
                     int intTemp = 0;
                     if (objMod.Bonus != null)
                     {
-                        intTotalBonusAccel += await ParseBonusAsync(objMod.Bonus["accel"]?.InnerText, objMod,
+                        intTotalBonusAccel += await ParseBonusAsync(objMod.Bonus["accel"]?.InnerTextViaPool(token), objMod,
                             intTotalAccel, "Accel", token: token).ConfigureAwait(false);
-                        intTotalBonusOffroadAccel += await ParseBonusAsync(objMod.Bonus["offroadaccel"]?.InnerText,
+                        intTotalBonusOffroadAccel += await ParseBonusAsync(objMod.Bonus["offroadaccel"]?.InnerTextViaPool(token),
                             objMod, intTotalAccel, "OffroadAccel", token: token).ConfigureAwait(false);
                         if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
-                            intTemp += await ParseBonusAsync(objMod.Bonus["armor"]?.InnerText, objMod,
+                            intTemp += await ParseBonusAsync(objMod.Bonus["armor"]?.InnerTextViaPool(token), objMod,
                                 intTotalArmor, "Armor", token: token).ConfigureAwait(false);
                     }
 
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        intTotalBonusAccel += await ParseBonusAsync(objMod.WirelessBonus["accel"]?.InnerText,
+                        intTotalBonusAccel += await ParseBonusAsync(objMod.WirelessBonus["accel"]?.InnerTextViaPool(token),
                             objMod,
                             intTotalAccel, "Accel", token: token).ConfigureAwait(false);
                         intTotalBonusOffroadAccel += await ParseBonusAsync(
-                            objMod.WirelessBonus["offroadaccel"]?.InnerText,
+                            objMod.WirelessBonus["offroadaccel"]?.InnerTextViaPool(token),
                             objMod, intTotalAccel, "OffroadAccel", token: token).ConfigureAwait(false);
                         if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
-                            intTemp += await ParseBonusAsync(objMod.WirelessBonus["armor"]?.InnerText, objMod,
+                            intTemp += await ParseBonusAsync(objMod.WirelessBonus["armor"]?.InnerTextViaPool(token), objMod,
                                 intTotalArmor, "Armor", token: token).ConfigureAwait(false);
                     }
 
@@ -3860,7 +3900,7 @@ namespace Chummer.Backend.Equipment
                     intTotalAccel + intTotalBonusAccel != intBaseOffroadAccel + intTotalBonusOffroadAccel)
                 {
                     return (intTotalAccel + intTotalBonusAccel - intPenalty).ToString(GlobalSettings
-                               .InvariantCultureInfo) + '/' +
+                               .InvariantCultureInfo) + "/" +
                            (intBaseOffroadAccel + intTotalBonusOffroadAccel - intPenalty).ToString(GlobalSettings
                                .InvariantCultureInfo);
                 }
@@ -3886,12 +3926,12 @@ namespace Chummer.Backend.Equipment
                 {
                     int intTemp = 0;
                     // Add the Modification's Body to the Vehicle's base Body.
-                    string strBonus = objMod.Bonus?["body"]?.InnerText;
+                    string strBonus = objMod.Bonus?["body"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonus))
                         intTemp += ParseBonus(strBonus, objMod, Body, "Body");
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        strBonus = objMod.WirelessBonus?["body"]?.InnerText;
+                        strBonus = objMod.WirelessBonus?["body"]?.InnerTextViaPool();
                         if (!string.IsNullOrEmpty(strBonus))
                             intTemp += ParseBonus(strBonus, objMod, Body,
                                 "Body");
@@ -3921,13 +3961,13 @@ namespace Chummer.Backend.Equipment
                     {
                         int intTemp = 0;
                         // Add the Modification's Body to the Vehicle's base Body.
-                        string strBonus = objMod.Bonus?["body"]?.InnerText;
+                        string strBonus = objMod.Bonus?["body"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strBonus))
                             intTemp += await ParseBonusAsync(strBonus, objMod, Body, "Body",
                                 token: token).ConfigureAwait(false);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strBonus = objMod.WirelessBonus?["body"]?.InnerText;
+                            strBonus = objMod.WirelessBonus?["body"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strBonus))
                                 intTemp += await ParseBonusAsync(strBonus,
                                     objMod, Body, "Body", token: token).ConfigureAwait(false);
@@ -3965,30 +4005,30 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         continue;
                     string strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["handling"]?.InnerText ?? objMod.Bonus?["handling"]?.InnerText
-                        : objMod.Bonus?["handling"]?.InnerText;
+                        ? objMod.WirelessBonus?["handling"]?.InnerTextViaPool() ?? objMod.Bonus?["handling"]?.InnerTextViaPool()
+                        : objMod.Bonus?["handling"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseHandling = Math.Max(ParseBonus(strBonus, objMod, Handling, "Handling", false),
                             intBaseHandling);
 
                     strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["offroadhandling"]?.InnerText ??
-                            objMod.Bonus?["offroadhandling"]?.InnerText
-                        : objMod.Bonus?["offroadhandling"]?.InnerText;
+                        ? objMod.WirelessBonus?["offroadhandling"]?.InnerTextViaPool() ??
+                            objMod.Bonus?["offroadhandling"]?.InnerTextViaPool()
+                        : objMod.Bonus?["offroadhandling"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseOffroadHandling =
                             Math.Max(ParseBonus(strBonus, objMod, OffroadHandling, "OffroadHandling", false),
                                 intBaseOffroadHandling);
                     if (IsDrone && _objCharacter.Settings.DroneMods)
                     {
-                        strBonus = objMod.Bonus?["armor"]?.InnerText;
+                        strBonus = objMod.Bonus?["armor"]?.InnerTextViaPool();
                         if (!string.IsNullOrEmpty(strBonus))
                             intTotalArmor = Math.Max(
                                 ParseBonus(strBonus, objMod, intTotalArmor, "Armor", false),
                                 intTotalArmor);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strBonus = objMod.WirelessBonus["armor"]?.InnerText;
+                            strBonus = objMod.WirelessBonus["armor"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strBonus))
                                 intTotalArmor =
                                     Math.Max(ParseBonus(strBonus, objMod, intTotalArmor, "Armor", false),
@@ -4006,24 +4046,24 @@ namespace Chummer.Backend.Equipment
                         continue;
                     if (objMod.Bonus != null)
                     {
-                        intTotalBonusHandling += ParseBonus(objMod.Bonus["handling"]?.InnerText, objMod,
+                        intTotalBonusHandling += ParseBonus(objMod.Bonus["handling"]?.InnerTextViaPool(), objMod,
                             intBaseOffroadHandling, "Handling");
-                        intTotalBonusOffroadHandling += ParseBonus(objMod.Bonus["offroadhandling"]?.InnerText,
+                        intTotalBonusOffroadHandling += ParseBonus(objMod.Bonus["offroadhandling"]?.InnerTextViaPool(),
                             objMod, intBaseOffroadHandling, "OffroadHandling");
                         if (IsDrone && _objCharacter.Settings.DroneMods)
-                            intModArmor += ParseBonus(objMod.Bonus["armor"]?.InnerText, objMod,
+                            intModArmor += ParseBonus(objMod.Bonus["armor"]?.InnerTextViaPool(), objMod,
                                 intTotalArmor, "Armor");
                     }
 
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        intTotalBonusHandling += ParseBonus(objMod.WirelessBonus["handling"]?.InnerText,
+                        intTotalBonusHandling += ParseBonus(objMod.WirelessBonus["handling"]?.InnerTextViaPool(),
                             objMod, intBaseOffroadHandling, "Handling");
                         intTotalBonusOffroadHandling +=
-                            ParseBonus(objMod.WirelessBonus["offroadhandling"]?.InnerText, objMod,
+                            ParseBonus(objMod.WirelessBonus["offroadhandling"]?.InnerTextViaPool(), objMod,
                                 intBaseOffroadHandling, "OffroadHandling");
                         if (IsDrone && _objCharacter.Settings.DroneMods)
-                            intModArmor += ParseBonus(objMod.WirelessBonus["armor"]?.InnerText, objMod,
+                            intModArmor += ParseBonus(objMod.WirelessBonus["armor"]?.InnerTextViaPool(), objMod,
                                 intTotalArmor, "Armor");
                     }
                 }
@@ -4037,7 +4077,7 @@ namespace Chummer.Backend.Equipment
                 {
                     return (intBaseHandling + intTotalBonusHandling - intPenalty).ToString(GlobalSettings
                                 .InvariantCultureInfo)
-                            + '/'
+                            + "/"
                             + (intBaseOffroadHandling + intTotalBonusOffroadHandling - intPenalty).ToString(
                                 GlobalSettings.InvariantCultureInfo);
                 }
@@ -4071,8 +4111,8 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         return;
                     string strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["handling"]?.InnerText ?? objMod.Bonus?["handling"]?.InnerText
-                        : objMod.Bonus?["handling"]?.InnerText;
+                        ? objMod.WirelessBonus?["handling"]?.InnerTextViaPool(token) ?? objMod.Bonus?["handling"]?.InnerTextViaPool(token)
+                        : objMod.Bonus?["handling"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseHandling =
                             Math.Max(
@@ -4081,9 +4121,9 @@ namespace Chummer.Backend.Equipment
                                 intBaseHandling);
 
                     strBonus = objMod.WirelessOn
-                        ? objMod.WirelessBonus?["offroadhandling"]?.InnerText ??
-                          objMod.Bonus?["offroadhandling"]?.InnerText
-                        : objMod.Bonus?["offroadhandling"]?.InnerText;
+                        ? objMod.WirelessBonus?["offroadhandling"]?.InnerTextViaPool(token) ??
+                          objMod.Bonus?["offroadhandling"]?.InnerTextViaPool(token)
+                        : objMod.Bonus?["offroadhandling"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strBonus))
                         intBaseOffroadHandling =
                             Math.Max(
@@ -4092,7 +4132,7 @@ namespace Chummer.Backend.Equipment
                                     token).ConfigureAwait(false), intBaseOffroadHandling);
                     if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
                     {
-                        strBonus = objMod.Bonus?["armor"]?.InnerText;
+                        strBonus = objMod.Bonus?["armor"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strBonus))
                             intTotalArmor =
                                 Math.Max(
@@ -4101,7 +4141,7 @@ namespace Chummer.Backend.Equipment
                                     intTotalArmor);
                         if (objMod.WirelessOn && objMod.WirelessBonus != null)
                         {
-                            strBonus = objMod.WirelessBonus["armor"]?.InnerText;
+                            strBonus = objMod.WirelessBonus["armor"]?.InnerTextViaPool(token);
                             if (!string.IsNullOrEmpty(strBonus))
                                 intTotalArmor =
                                     Math.Max(
@@ -4121,26 +4161,26 @@ namespace Chummer.Backend.Equipment
                     int intTemp = 0;
                     if (objMod.Bonus != null)
                     {
-                        intTotalBonusHandling += await ParseBonusAsync(objMod.Bonus["handling"]?.InnerText,
+                        intTotalBonusHandling += await ParseBonusAsync(objMod.Bonus["handling"]?.InnerTextViaPool(token),
                             objMod, intBaseOffroadHandling, "Handling", token: token).ConfigureAwait(false);
                         intTotalBonusOffroadHandling += await ParseBonusAsync(
-                                objMod.Bonus["offroadhandling"]?.InnerText,
+                                objMod.Bonus["offroadhandling"]?.InnerTextViaPool(token),
                                 objMod, intBaseOffroadHandling, "OffroadHandling", token: token)
                             .ConfigureAwait(false);
                         if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
-                            intTemp += await ParseBonusAsync(objMod.Bonus["armor"]?.InnerText, objMod,
+                            intTemp += await ParseBonusAsync(objMod.Bonus["armor"]?.InnerTextViaPool(token), objMod,
                                 intTotalArmor, "Armor", token: token).ConfigureAwait(false);
                     }
 
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        intTotalBonusHandling += await ParseBonusAsync(objMod.WirelessBonus["handling"]?.InnerText,
+                        intTotalBonusHandling += await ParseBonusAsync(objMod.WirelessBonus["handling"]?.InnerTextViaPool(token),
                             objMod, intBaseOffroadHandling, "Handling", token: token).ConfigureAwait(false);
                         intTotalBonusOffroadHandling += await ParseBonusAsync(
-                            objMod.WirelessBonus["offroadhandling"]?.InnerText, objMod, intBaseOffroadHandling,
+                            objMod.WirelessBonus["offroadhandling"]?.InnerTextViaPool(token), objMod, intBaseOffroadHandling,
                             "OffroadHandling", token: token).ConfigureAwait(false);
                         if (IsDrone && await objSettings.GetDroneModsAsync(token).ConfigureAwait(false))
-                            intTemp += await ParseBonusAsync(objMod.WirelessBonus["armor"]?.InnerText, objMod,
+                            intTemp += await ParseBonusAsync(objMod.WirelessBonus["armor"]?.InnerTextViaPool(token), objMod,
                                 intTotalArmor, "Armor", token: token).ConfigureAwait(false);
                     }
 
@@ -4158,7 +4198,7 @@ namespace Chummer.Backend.Equipment
                 {
                     return (intBaseHandling + intTotalBonusHandling - intPenalty).ToString(GlobalSettings
                                .InvariantCultureInfo)
-                           + '/'
+                           + "/"
                            + (intBaseOffroadHandling + intTotalBonusOffroadHandling - intPenalty).ToString(
                                GlobalSettings.InvariantCultureInfo);
                 }
@@ -4192,12 +4232,12 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         continue;
 
-                    string strLoop = objMod.Bonus?["armor"]?.InnerText;
+                    string strLoop = objMod.Bonus?["armor"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strLoop))
                         intArmor = Math.Max(intArmor, ParseBonus(strLoop, objMod, intArmor, "Armor", false));
                     if (!objMod.WirelessOn || objMod.WirelessBonus == null)
                         continue;
-                    strLoop = objMod.WirelessBonus?["armor"]?.InnerText;
+                    strLoop = objMod.WirelessBonus?["armor"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strLoop))
                         intArmor = Math.Max(intArmor, ParseBonus(strLoop, objMod, intArmor, "Armor", false));
                 }
@@ -4210,12 +4250,12 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         continue;
 
-                    string strLoop = objMod.Bonus?["armor"]?.InnerText;
+                    string strLoop = objMod.Bonus?["armor"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strLoop))
                         intModArmor += ParseBonus(strLoop, objMod, intArmor, "Armor");
                     if (!objMod.WirelessOn || objMod.WirelessBonus == null)
                         continue;
-                    strLoop = objMod.WirelessBonus?["armor"]?.InnerText;
+                    strLoop = objMod.WirelessBonus?["armor"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strLoop))
                         intModArmor += ParseBonus(strLoop, objMod, intArmor, "Armor");
                 }
@@ -4247,7 +4287,7 @@ namespace Chummer.Backend.Equipment
                     if (objMod.IncludedInVehicle || !objMod.Equipped || ReferenceEquals(objMod, objExcludeMod))
                         return;
 
-                    string strLoop = objMod.Bonus?["armor"]?.InnerText;
+                    string strLoop = objMod.Bonus?["armor"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strLoop))
                         intArmor = Math.Max(intArmor,
                             await ParseBonusAsync(strLoop, objMod, intArmor, "Armor", false,
@@ -4255,7 +4295,7 @@ namespace Chummer.Backend.Equipment
                                 .ConfigureAwait(false));
                     if (!objMod.WirelessOn || objMod.WirelessBonus == null)
                         return;
-                    strLoop = objMod.WirelessBonus?["armor"]?.InnerText;
+                    strLoop = objMod.WirelessBonus?["armor"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strLoop))
                         intArmor = Math.Max(intArmor,
                             await ParseBonusAsync(strLoop, objMod, intArmor, "Armor", false,
@@ -4266,7 +4306,7 @@ namespace Chummer.Backend.Equipment
                 // Add the Modification's Armor to the Vehicle's base Armor.
                 int intModArmor = await Mods.SumAsync(x => !x.IncludedInVehicle && x.Equipped && !ReferenceEquals(x, objExcludeMod), async objMod =>
                 {
-                    string strLoop = objMod.Bonus?["armor"]?.InnerText;
+                    string strLoop = objMod.Bonus?["armor"]?.InnerTextViaPool(token);
                     int intTemp = 0;
                     if (!string.IsNullOrEmpty(strLoop))
                         intTemp += await ParseBonusAsync(strLoop, objMod, intArmor,
@@ -4274,7 +4314,7 @@ namespace Chummer.Backend.Equipment
                             .ConfigureAwait(false);
                     if (objMod.WirelessOn && objMod.WirelessBonus != null)
                     {
-                        strLoop = objMod.WirelessBonus?["armor"]?.InnerText;
+                        strLoop = objMod.WirelessBonus?["armor"]?.InnerTextViaPool(token);
                         if (!string.IsNullOrEmpty(strLoop))
                             intTemp += await ParseBonusAsync(strLoop, objMod, intArmor,
                                     "Armor", token: token)
@@ -4916,7 +4956,7 @@ namespace Chummer.Backend.Equipment
                 }
                 foreach (VehicleMod objMod in Mods)
                 {
-                    string strBonusBoxes = objMod.Bonus?["matrixcmbonus"]?.InnerText;
+                    string strBonusBoxes = objMod.Bonus?["matrixcmbonus"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strBonusBoxes) && int.TryParse(strBonusBoxes, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
                     {
                         // Add the Modification's Device Rating to the Vehicle's base Device Rating.
@@ -4924,7 +4964,7 @@ namespace Chummer.Backend.Equipment
                     }
                     if (objMod.WirelessOn)
                     {
-                        strBonusBoxes = objMod.WirelessBonus?["matrixcmbonus"]?.InnerText;
+                        strBonusBoxes = objMod.WirelessBonus?["matrixcmbonus"]?.InnerTextViaPool();
                         if (!string.IsNullOrEmpty(strBonusBoxes) && int.TryParse(strBonusBoxes, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
                         {
                             intReturn += intLoop2;
@@ -5139,13 +5179,13 @@ namespace Chummer.Backend.Equipment
                         if (intLowestValidRestrictedGearAvail >= 0 && dicRestrictedGearLimits[intLowestValidRestrictedGearAvail] > 0)
                         {
                             --dicRestrictedGearLimits[intLowestValidRestrictedGearAvail];
-                            sbdRestrictedItems.AppendLine().Append("\t\t").Append(await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
+                            sbdRestrictedItems.AppendLine().Append("\t\t", await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
                         }
                         else
                         {
                             dicRestrictedGearLimits.Remove(intLowestValidRestrictedGearAvail);
                             ++intRestrictedCount;
-                            sbdAvailItems.AppendLine().Append("\t\t").Append(await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
+                            sbdAvailItems.AppendLine().Append("\t\t", await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
                         }
                     }
                 }
@@ -5425,7 +5465,7 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="funcPredicate">Predicate to locate the Cyberware.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public async Task<Tuple<Cyberware, VehicleMod>> FindVehicleCyberwareAsync([NotNull] Func<Cyberware, bool> funcPredicate, CancellationToken token = default)
+        public async Task<ValueTuple<Cyberware, VehicleMod>> FindVehicleCyberwareAsync([NotNull] Func<Cyberware, bool> funcPredicate, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             Cyberware objReturn = null;
@@ -5439,7 +5479,7 @@ namespace Chummer.Backend.Equipment
                 return false;
             }, token).ConfigureAwait(false);
             if (objReturn != null)
-                return new Tuple<Cyberware, VehicleMod>(objReturn, objReturnMod);
+                return new ValueTuple<Cyberware, VehicleMod>(objReturn, objReturnMod);
 
             await WeaponMounts.ForEachWithBreakAsync(async objMount =>
             {
@@ -5454,13 +5494,14 @@ namespace Chummer.Backend.Equipment
                 return objReturn == null;
             }, token).ConfigureAwait(false);
 
-            return new Tuple<Cyberware, VehicleMod>(objReturn, objReturnMod);
+            return new ValueTuple<Cyberware, VehicleMod>(objReturn, objReturnMod);
         }
 
         /// <summary>
         /// Locate a VehicleMod within this vehicle based on a predicate.
         /// </summary>
         /// <param name="funcPredicate">Predicate to locate the Cyberware.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public VehicleMod FindVehicleMod([NotNull] Func<VehicleMod, bool> funcPredicate, CancellationToken token = default)
         {
             return FindVehicleMod(funcPredicate, out WeaponMount _, token);
@@ -5471,6 +5512,7 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="funcPredicate">Predicate to locate the Cyberware.</param>
         /// <param name="objFoundWeaponMount">Weapon Mount that the VehicleMod was found in.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public VehicleMod FindVehicleMod([NotNull] Func<VehicleMod, bool> funcPredicate, out WeaponMount objFoundWeaponMount, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -5501,12 +5543,12 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="funcPredicate">Predicate to locate the Cyberware.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public async Task<Tuple<VehicleMod, WeaponMount>> FindVehicleModAsync([NotNull] Func<VehicleMod, bool> funcPredicate, CancellationToken token = default)
+        public async Task<ValueTuple<VehicleMod, WeaponMount>> FindVehicleModAsync([NotNull] Func<VehicleMod, bool> funcPredicate, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             VehicleMod objMod = await Mods.FirstOrDefaultAsync(funcPredicate, token).ConfigureAwait(false);
             if (objMod != null)
-                return new Tuple<VehicleMod, WeaponMount>(objMod, null);
+                return new ValueTuple<VehicleMod, WeaponMount>(objMod, null);
 
             WeaponMount objReturnMount = null;
             await WeaponMounts.ForEachWithBreakAsync(async objMount =>
@@ -5518,13 +5560,14 @@ namespace Chummer.Backend.Equipment
                 return false;
             }, token).ConfigureAwait(false);
 
-            return new Tuple<VehicleMod, WeaponMount>(objMod, objReturnMount);
+            return new ValueTuple<VehicleMod, WeaponMount>(objMod, objReturnMount);
         }
 
         /// <summary>
         /// Locate a piece of Gear within one of a character's Vehicles.
         /// </summary>
         /// <param name="strGuid">InternalId of the Gear to find.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Gear FindVehicleGear(string strGuid, CancellationToken token = default)
         {
             return FindVehicleGear(strGuid, out WeaponAccessory _, out Cyberware _, token);
@@ -5536,6 +5579,7 @@ namespace Chummer.Backend.Equipment
         /// <param name="strGuid">InternalId of the Gear to find.</param>
         /// <param name="objFoundWeaponAccessory">Weapon Accessory that the Gear was found in.</param>
         /// <param name="objFoundCyberware">Cyberware that the Gear was found in.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Gear FindVehicleGear(string strGuid, out WeaponAccessory objFoundWeaponAccessory, out Cyberware objFoundCyberware, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -5584,14 +5628,14 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="strGuid">InternalId of the Gear to find.</param>
         /// <param name="token">Cancellation token to listen to.</param>
-        public async Task<Tuple<Gear, WeaponAccessory, Cyberware>> FindVehicleGearAsync(string strGuid, CancellationToken token = default)
+        public async Task<ValueTuple<Gear, WeaponAccessory, Cyberware>> FindVehicleGearAsync(string strGuid, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
             if (string.IsNullOrEmpty(strGuid) || strGuid.IsEmptyGuid())
-                return new Tuple<Gear, WeaponAccessory, Cyberware>(null, null, null);
+                return new ValueTuple<Gear, WeaponAccessory, Cyberware>(null, null, null);
             Gear objReturn = await GearChildren.DeepFindByIdAsync(strGuid, token: token).ConfigureAwait(false);
             if (objReturn != null)
-                return new Tuple<Gear, WeaponAccessory, Cyberware>(objReturn, null, null);
+                return new ValueTuple<Gear, WeaponAccessory, Cyberware>(objReturn, null, null);
 
             WeaponAccessory objReturnAccessory = null;
             Cyberware objReturnCyberware = null;
@@ -5610,7 +5654,7 @@ namespace Chummer.Backend.Equipment
                 return objReturn == null;
             }, token).ConfigureAwait(false);
 
-            return new Tuple<Gear, WeaponAccessory, Cyberware>(objReturn, objReturnAccessory, objReturnCyberware);
+            return new ValueTuple<Gear, WeaponAccessory, Cyberware>(objReturn, objReturnAccessory, objReturnCyberware);
         }
 
         public int GetBaseMatrixAttribute(string strAttributeName)
@@ -5647,7 +5691,7 @@ namespace Chummer.Backend.Equipment
                         {
                             foreach (string strMatrixAttribute in MatrixAttributes.MatrixAttributeStrings)
                             {
-                                if (strExpression.Contains("{Children " + strMatrixAttribute + '}'))
+                                if (strExpression.Contains("{Children " + strMatrixAttribute + "}"))
                                 {
                                     int intTotalChildrenValue = 0;
                                     foreach (IHasMatrixAttributes objChild in ChildrenWithMatrixAttributes)
@@ -5659,7 +5703,7 @@ namespace Chummer.Backend.Equipment
                                         }
                                     }
 
-                                    sbdValue.Replace("{Children " + strMatrixAttribute + '}',
+                                    sbdValue.Replace("{Children " + strMatrixAttribute + "}",
                                                      intTotalChildrenValue.ToString(GlobalSettings.InvariantCultureInfo));
                                 }
                             }
@@ -5713,7 +5757,7 @@ namespace Chummer.Backend.Equipment
                         {
                             foreach (string strMatrixAttribute in MatrixAttributes.MatrixAttributeStrings)
                             {
-                                if (strExpression.Contains("{Children " + strMatrixAttribute + '}'))
+                                if (strExpression.Contains("{Children " + strMatrixAttribute + "}"))
                                 {
                                     int intTotalChildrenValue = await ChildrenWithMatrixAttributes.SumAsync(async objChild =>
                                     {
@@ -5726,7 +5770,7 @@ namespace Chummer.Backend.Equipment
                                         return 0;
                                     }, token).ConfigureAwait(false);
 
-                                    sbdValue.Replace("{Children " + strMatrixAttribute + '}',
+                                    sbdValue.Replace("{Children " + strMatrixAttribute + "}",
                                                      intTotalChildrenValue.ToString(GlobalSettings.InvariantCultureInfo));
                                 }
                             }
@@ -5767,12 +5811,12 @@ namespace Chummer.Backend.Equipment
                 foreach (VehicleMod objMod in Mods)
                 {
                     XmlElement objBonus = objMod.Bonus?[strAttributeNodeName];
-                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
+                    if (objBonus != null && int.TryParse(objBonus.InnerTextViaPool(), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
                     {
                         intReturn += intLoop;
                     }
                     objBonus = objMod.WirelessOn ? objMod.WirelessBonus?[strAttributeNodeName] : null;
-                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
+                    if (objBonus != null && int.TryParse(objBonus.InnerTextViaPool(), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
                     {
                         intReturn += intLoop2;
                     }
@@ -5817,13 +5861,13 @@ namespace Chummer.Backend.Equipment
                 {
                     int intInnerReturn = 0;
                     XmlElement objBonus = objMod.Bonus?[strAttributeNodeName];
-                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
+                    if (objBonus != null && int.TryParse(objBonus.InnerTextViaPool(token), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop))
                     {
                         intInnerReturn += intLoop;
                     }
 
                     objBonus = objMod.WirelessOn ? objMod.WirelessBonus?[strAttributeNodeName] : null;
-                    if (objBonus != null && int.TryParse(objBonus.InnerText, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
+                    if (objBonus != null && int.TryParse(objBonus.InnerTextViaPool(token), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out int intLoop2))
                     {
                         intInnerReturn += intLoop2;
                     }
@@ -5878,7 +5922,7 @@ namespace Chummer.Backend.Equipment
             decimal decAmount = TotalCost * decPercentage;
             decAmount += DeleteVehicle() * decPercentage;
             ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
-            objExpense.Create(decAmount, LanguageManager.GetString("String_ExpenseSoldVehicle") + ' ' + CurrentDisplayNameShort, ExpenseType.Nuyen, DateTime.Now);
+            objExpense.Create(decAmount, LanguageManager.GetString("String_ExpenseSoldVehicle") + " " + CurrentDisplayNameShort, ExpenseType.Nuyen, DateTime.Now);
             _objCharacter.ExpenseEntries.AddWithSort(objExpense);
             _objCharacter.Nuyen += decAmount;
             return true;
@@ -5904,7 +5948,7 @@ namespace Chummer.Backend.Equipment
             ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
             objExpense.Create(decAmount,
                 await LanguageManager.GetStringAsync("String_ExpenseSoldVehicle", token: token).ConfigureAwait(false) +
-                ' ' + await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false), ExpenseType.Nuyen,
+                " " + await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false), ExpenseType.Nuyen,
                 DateTime.Now);
             await _objCharacter.ExpenseEntries.AddWithSortAsync(objExpense, token: token).ConfigureAwait(false);
             await _objCharacter.ModifyNuyenAsync(decAmount, token).ConfigureAwait(false);
@@ -6176,8 +6220,8 @@ namespace Chummer.Backend.Equipment
                         return i.ToString(GlobalSettings.InvariantCultureInfo);
                     return "0.5";
                 })
-                : new Lazy<string>(() => GetTotalBody(objExcludeMod).ToString(GlobalSettings.InvariantCultureInfo));
-            Lazy<Tuple<string, string>> strHandlingValues = new Lazy<Tuple<string, string>>(() =>
+                : new Lazy<string>(() => GetTotalBody().ToString(GlobalSettings.InvariantCultureInfo));
+            Lazy<ValueTuple<string, string>> strHandlingValues = new Lazy<ValueTuple<string, string>>(() =>
             {
                 bool blnFirst = true;
                 string strReturn1 = string.Empty;
@@ -6195,9 +6239,9 @@ namespace Chummer.Backend.Equipment
                         break;
                     }
                 }
-                return new Tuple<string, string>(strReturn1, strReturn2);
+                return new ValueTuple<string, string>(strReturn1, strReturn2);
             });
-            Lazy<Tuple<string, string>> strSpeedValues = new Lazy<Tuple<string, string>>(() =>
+            Lazy<ValueTuple<string, string>> strSpeedValues = new Lazy<ValueTuple<string, string>>(() =>
             {
                 bool blnFirst = true;
                 string strReturn1 = string.Empty;
@@ -6215,9 +6259,9 @@ namespace Chummer.Backend.Equipment
                         break;
                     }
                 }
-                return new Tuple<string, string>(strReturn1, strReturn2);
+                return new ValueTuple<string, string>(strReturn1, strReturn2);
             });
-            Lazy<Tuple<string, string>> strAccelerationValues = new Lazy<Tuple<string, string>>(() =>
+            Lazy<ValueTuple<string, string>> strAccelerationValues = new Lazy<ValueTuple<string, string>>(() =>
             {
                 bool blnFirst = true;
                 string strReturn1 = string.Empty;
@@ -6235,7 +6279,7 @@ namespace Chummer.Backend.Equipment
                         break;
                     }
                 }
-                return new Tuple<string, string>(strReturn1, strReturn2);
+                return new ValueTuple<string, string>(strReturn1, strReturn2);
             });
             Lazy<string> strTotalSensor = new Lazy<string>(() => GetCalculatedSensor(objExcludeMod).ToString(GlobalSettings.InvariantCultureInfo));
             Lazy<string> strTotalArmor = new Lazy<string>(() => GetTotalArmor(objExcludeMod).ToString(GlobalSettings.InvariantCultureInfo));
@@ -6414,8 +6458,8 @@ namespace Chummer.Backend.Equipment
                         return i.ToString(GlobalSettings.InvariantCultureInfo);
                     return "0.5";
                 }, Utils.JoinableTaskFactory)
-                : new Microsoft.VisualStudio.Threading.AsyncLazy<string>(async () => (await GetTotalBodyAsync(objExcludeMod, token).ConfigureAwait(false)).ToString(GlobalSettings.InvariantCultureInfo), Utils.JoinableTaskFactory);
-            Microsoft.VisualStudio.Threading.AsyncLazy<Tuple<string, string>> strHandlingValues = new Microsoft.VisualStudio.Threading.AsyncLazy<Tuple<string, string>>(async () =>
+                : new Microsoft.VisualStudio.Threading.AsyncLazy<string>(async () => (await GetTotalBodyAsync(token: token).ConfigureAwait(false)).ToString(GlobalSettings.InvariantCultureInfo), Utils.JoinableTaskFactory);
+            Microsoft.VisualStudio.Threading.AsyncLazy<ValueTuple<string, string>> strHandlingValues = new Microsoft.VisualStudio.Threading.AsyncLazy<ValueTuple<string, string>>(async () =>
             {
                 bool blnFirst = true;
                 string strReturn1 = string.Empty;
@@ -6433,9 +6477,9 @@ namespace Chummer.Backend.Equipment
                         break;
                     }
                 }
-                return new Tuple<string, string>(strReturn1, strReturn2);
+                return new ValueTuple<string, string>(strReturn1, strReturn2);
             }, Utils.JoinableTaskFactory);
-            Microsoft.VisualStudio.Threading.AsyncLazy<Tuple<string, string>> strSpeedValues = new Microsoft.VisualStudio.Threading.AsyncLazy<Tuple<string, string>>(async () =>
+            Microsoft.VisualStudio.Threading.AsyncLazy<ValueTuple<string, string>> strSpeedValues = new Microsoft.VisualStudio.Threading.AsyncLazy<ValueTuple<string, string>>(async () =>
             {
                 bool blnFirst = true;
                 string strReturn1 = string.Empty;
@@ -6453,9 +6497,9 @@ namespace Chummer.Backend.Equipment
                         break;
                     }
                 }
-                return new Tuple<string, string>(strReturn1, strReturn2);
+                return new ValueTuple<string, string>(strReturn1, strReturn2);
             }, Utils.JoinableTaskFactory);
-            Microsoft.VisualStudio.Threading.AsyncLazy<Tuple<string, string>> strAccelerationValues = new Microsoft.VisualStudio.Threading.AsyncLazy<Tuple<string, string>>(async () =>
+            Microsoft.VisualStudio.Threading.AsyncLazy<ValueTuple<string, string>> strAccelerationValues = new Microsoft.VisualStudio.Threading.AsyncLazy<ValueTuple<string, string>>(async () =>
             {
                 bool blnFirst = true;
                 string strReturn1 = string.Empty;
@@ -6473,7 +6517,7 @@ namespace Chummer.Backend.Equipment
                         break;
                     }
                 }
-                return new Tuple<string, string>(strReturn1, strReturn2);
+                return new ValueTuple<string, string>(strReturn1, strReturn2);
             }, Utils.JoinableTaskFactory);
             Microsoft.VisualStudio.Threading.AsyncLazy<string> strTotalSensor = new Microsoft.VisualStudio.Threading.AsyncLazy<string>(async () => (await GetCalculatedSensorAsync(objExcludeMod, token).ConfigureAwait(false)).ToString(GlobalSettings.InvariantCultureInfo), Utils.JoinableTaskFactory);
             Microsoft.VisualStudio.Threading.AsyncLazy<string> strTotalArmor = new Microsoft.VisualStudio.Threading.AsyncLazy<string>(async () => (await GetTotalArmorAsync(objExcludeMod, token).ConfigureAwait(false)).ToString(GlobalSettings.InvariantCultureInfo), Utils.JoinableTaskFactory);

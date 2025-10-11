@@ -65,25 +65,6 @@ namespace Chummer.Controls.Shared
         public BindingListDisplay(ThreadSafeBindingList<TType> contents, Func<TType, Control> funcCreateControl, bool blnLoadVisibleOnly = true)
         {
             InitializeComponent();
-            Disposed += (sender, args) =>
-            {
-                CancellationTokenSource objOldSource = Interlocked.Exchange(ref _objFilterCancellationTokenSource, null);
-                if (objOldSource != null)
-                {
-                    objOldSource.Cancel(false);
-                    objOldSource.Dispose();
-                }
-                objOldSource = Interlocked.Exchange(ref _objSortCancellationTokenSource, null);
-                if (objOldSource != null)
-                {
-                    objOldSource.Cancel(false);
-                    objOldSource.Dispose();
-                }
-                foreach (ControlWithMetaData _objControlWithMetaData in _lstContentList)
-                {
-                    _objControlWithMetaData.Dispose();
-                }
-            };
             Contents = contents ?? throw new ArgumentNullException(nameof(contents));
             _funcCreateControl = funcCreateControl;
             _blnLoadVisibleOnly = blnLoadVisibleOnly;
@@ -107,17 +88,6 @@ namespace Chummer.Controls.Shared
                 _comparison = _comparison ?? _indexComparer;
                 _comparisonAsync = null;
                 Contents.ListChangedAsync += ContentsChanged;
-                Disposed += (sender, args) =>
-                {
-                    try
-                    {
-                        Contents.ListChangedAsync -= ContentsChanged;
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        //swallow this
-                    }
-                };
                 ComputeDisplayIndex();
                 LoadScreenContent();
                 BindingListDisplay_SizeChanged(null, null);
@@ -138,12 +108,14 @@ namespace Chummer.Controls.Shared
         /// <summary>
         /// Base BindingList that represents all possible contents of the display, not necessarily all visible.
         /// </summary>
-        public ThreadSafeBindingList<TType> Contents { get; }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public ThreadSafeBindingList<TType> Contents { get; private set; }
 
         public IEnumerable<Control> ContentControls => _lstContentList.Select(x => x.Control);
 
         public Panel DisplayPanel => pnlDisplay;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         private int ListItemControlHeight
         {
             get => _intListItemControlHeight;
@@ -238,13 +210,13 @@ namespace Chummer.Controls.Shared
         private void ComputeDisplayIndex(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            List<Tuple<TType, int>> objTTypeList = new List<Tuple<TType, int>>(_lstContentList.Count);
+            List<ValueTuple<TType, int>> objTTypeList = new List<ValueTuple<TType, int>>(_lstContentList.Count);
             for (int i = 0; i < _lstContentList.Count; ++i)
             {
                 ControlWithMetaData objLoopControl = _lstContentList[i];
                 if (objLoopControl.Visible)
                 {
-                    objTTypeList.Add(new Tuple<TType, int>(objLoopControl.Item, i));
+                    objTTypeList.Add(new ValueTuple<TType, int>(objLoopControl.Item, i));
                 }
             }
 
@@ -254,7 +226,7 @@ namespace Chummer.Controls.Shared
             int intDisplayIndexCount = _lstDisplayIndex.Count;
 
             // Array is temporary and of primitives, so stackalloc used instead of List.ToArray() (which would put the array on the heap) when possible
-            int[] aintSharedOldDisplayIndexes = intDisplayIndexCount > GlobalSettings.MaxStackLimit
+            int[] aintSharedOldDisplayIndexes = intDisplayIndexCount > Utils.MaxStackLimit32BitTypes
                 ? ArrayPool<int>.Shared.Rent(intDisplayIndexCount)
                 : null;
             try
@@ -292,13 +264,13 @@ namespace Chummer.Controls.Shared
         private async Task ComputeDisplayIndexAsync(CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
-            List<Tuple<TType, int>> objTTypeList = new List<Tuple<TType, int>>(_lstContentList.Count);
+            List<ValueTuple<TType, int>> objTTypeList = new List<ValueTuple<TType, int>>(_lstContentList.Count);
             for (int i = 0; i < _lstContentList.Count; ++i)
             {
                 ControlWithMetaData objLoopControl = _lstContentList[i];
                 if (objLoopControl.Visible)
                 {
-                    objTTypeList.Add(new Tuple<TType, int>(objLoopControl.Item, i));
+                    objTTypeList.Add(new ValueTuple<TType, int>(objLoopControl.Item, i));
                 }
             }
 
@@ -964,8 +936,7 @@ namespace Chummer.Controls.Shared
                     Utils.RunOnMainThread(() => _parent.ChildPropertyChanged?.Invoke(sender, e));
                 if (changes)
                 {
-                    using (TemporaryArray<ControlWithMetaData> objYielded = this.YieldAsPooled())
-                        _parent.RedrawControls(objYielded);
+                    _parent.RedrawControls(this.Yield());
                 }
             }
 
@@ -985,8 +956,7 @@ namespace Chummer.Controls.Shared
                     await Utils.RunOnMainThreadAsync(() => _parent.ChildPropertyChanged?.Invoke(sender, e), token).ConfigureAwait(false);
                 if (changes)
                 {
-                    using (TemporaryArray<ControlWithMetaData> objYielded = this.YieldAsPooled())
-                        await _parent.RedrawControlsAsync(objYielded, token).ConfigureAwait(false);
+                    await _parent.RedrawControlsAsync(this.Yield(), token).ConfigureAwait(false);
                 }
             }
 
@@ -1394,6 +1364,15 @@ namespace Chummer.Controls.Shared
             }
 
             await SetListItemControlHeightAsync(intMaxControlHeight).ConfigureAwait(false);
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
         }
     }
 }

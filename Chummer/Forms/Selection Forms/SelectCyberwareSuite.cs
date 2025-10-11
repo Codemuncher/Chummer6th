@@ -56,6 +56,7 @@ namespace Chummer
             }
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = objCharacter.LoadData(_strType + ".xml", string.Empty, true);
         }
 
@@ -94,10 +95,10 @@ namespace Chummer
                     {
                         foreach (XmlNode objXmlSuite in xmlSuiteList)
                         {
-                            string strName = objXmlSuite["name"]?.InnerText;
+                            string strName = objXmlSuite["name"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strName))
                             {
-                                string strGrade = objXmlSuite["grade"]?.InnerText ?? string.Empty;
+                                string strGrade = objXmlSuite["grade"]?.InnerTextViaPool() ?? string.Empty;
                                 if (!string.IsNullOrEmpty(strGrade))
                                 {
                                     if (lstGrades.TrueForAll(x => x.Name != strGrade))
@@ -117,7 +118,7 @@ namespace Chummer
                                     }
                                 }
 
-                                lstSuitesToAdd.Add(new ListItem(objXmlSuite["id"]?.InnerText ?? strName, objXmlSuite["translate"]?.InnerText ?? strName));
+                                lstSuitesToAdd.Add(new ListItem(objXmlSuite["id"]?.InnerTextViaPool() ?? strName, objXmlSuite["translate"]?.InnerTextViaPool() ?? strName));
                             }
                         }
 
@@ -133,15 +134,14 @@ namespace Chummer
         {
             string strSelectedSuite = await lstCyberware.DoThreadSafeFuncAsync(x => x.SelectedItem?.ToString()).ConfigureAwait(false);
             XmlNode xmlSuite = null;
-            string strGrade;
             Grade objGrade = null;
             if (strSelectedSuite != null)
             {
                 xmlSuite = _objXmlDocument.TryGetNodeByNameOrId("/chummer/suites/suite", strSelectedSuite);
-                string strSuiteGradeEntry = xmlSuite?["grade"]?.InnerText;
+                string strSuiteGradeEntry = xmlSuite?["grade"]?.InnerTextViaPool();
                 if (!string.IsNullOrEmpty(strSuiteGradeEntry))
                 {
-                    strGrade = CyberwareGradeName(strSuiteGradeEntry);
+                    string strGrade = CyberwareGradeName(strSuiteGradeEntry);
                     if (!string.IsNullOrEmpty(strGrade))
                     {
                         objGrade = await _objCharacter.GetGradeByNameAsync(_eSource, strGrade).ConfigureAwait(false);
@@ -223,43 +223,43 @@ namespace Chummer
         /// <param name="strValue">Grade from the Cyberware Suite.</param>
         private static string CyberwareGradeName(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "Alphaware":
+                case "ALPHAWARE":
                     return "Alphaware";
 
-                case "Betaware":
+                case "BETAWARE":
                     return "Betaware";
 
-                case "Deltaware":
+                case "DELTAWARE":
                     return "Deltaware";
 
-                case "Standard (Used)":
-                case "StandardSecondHand":
+                case "STANDARD (USED)":
+                case "STANDARDSECONDHAND":
                     return "Standard (Used)";
 
-                case "Alphaware (Used)":
-                case "AlphawareSecondHand":
+                case "ALPHAWARE (USED)":
+                case "ALPHAWARESECONDHAND":
                     return "Alphaware (Used)";
 
-                case "StandardAdapsin":
+                case "STANDARDADAPSIN":
                     return "Standard (Adapsin)";
 
-                case "AlphawareAdapsin":
+                case "ALPHAWAREADAPSIN":
                     return "Alphaware (Adapsin)";
 
-                case "BetawareAdapsin":
+                case "BETAWAREADAPSIN":
                     return "Betaware (Adapsin)";
 
-                case "DeltawareAdapsin":
+                case "DELTAWAREADAPSIN":
                     return "Deltaware (Adapsin)";
 
-                case "Standard (Used) (Adapsin)":
-                case "StandardSecondHandAdapsin":
+                case "STANDARD (USED) (ADAPSIN)":
+                case "STANDARDSECONDHANDADAPSIN":
                     return "Standard (Used) (Adapsin)";
 
-                case "Alphaware (Used) (Adapsin)":
-                case "AlphawareSecondHandAdapsin":
+                case "ALPHAWARE (USED) (ADAPSIN)":
+                case "ALPHAWARESECONDHANDADAPSIN":
                     return "Alphaware (Used) (Adapsin)";
 
                 default:
@@ -339,8 +339,9 @@ namespace Chummer
                 objCyberwareLabelString.Append("   ");
 
             objCyberwareLabelString.AppendLine(await objCyberware.GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
+            ++intDepth;
             await (await objCyberware.GetChildrenAsync(token).ConfigureAwait(false)).ForEachAsync(
-                objPlugin => WriteList(objCyberwareLabelString, objPlugin, intDepth + 1, token), token).ConfigureAwait(false);
+                objPlugin => WriteList(objCyberwareLabelString, objPlugin, intDepth, token), token).ConfigureAwait(false);
         }
 
         #endregion Methods

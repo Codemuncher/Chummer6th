@@ -26,6 +26,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
 using System.ComponentModel;
+
 namespace Chummer
 {
     public partial class SelectPower : Form
@@ -46,6 +47,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             // Load the Powers information.
             _xmlBasePowerDataNode = _objCharacter.LoadDataXPath("powers.xml").SelectSingleNodeAndCacheExpression("/chummer");
         }
@@ -80,12 +82,12 @@ namespace Chummer
                 string strPowerPointsText = objXmlPower.SelectSingleNodeAndCacheExpression("points")?.Value ?? string.Empty;
                 if (objXmlPower.SelectSingleNodeAndCacheExpression("levels")?.Value == bool.TrueString)
                 {
-                    strPowerPointsText += strSpace + '/' + strSpace + await LanguageManager.GetStringAsync("Label_Power_Level").ConfigureAwait(false);
+                    strPowerPointsText += strSpace + "/" + strSpace + await LanguageManager.GetStringAsync("Label_Power_Level").ConfigureAwait(false);
                 }
                 string strExtrPointCost = objXmlPower.SelectSingleNodeAndCacheExpression("extrapointcost")?.Value;
                 if (!string.IsNullOrEmpty(strExtrPointCost))
                 {
-                    strPowerPointsText = strExtrPointCost + strSpace + '+' + strSpace + strPowerPointsText;
+                    strPowerPointsText = strExtrPointCost + strSpace + "+" + strSpace + strPowerPointsText;
                 }
                 await lblPowerPoints.DoThreadSafeAsync(x => x.Text = strPowerPointsText).ConfigureAwait(false);
 
@@ -93,7 +95,7 @@ namespace Chummer
                 string strPage = objXmlPower.SelectSingleNodeAndCacheExpression("altpage")?.Value ?? objXmlPower.SelectSingleNodeAndCacheExpression("page")?.Value ?? await LanguageManager.GetStringAsync("String_Unknown").ConfigureAwait(false);
                 SourceString objSource = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language,
                     GlobalSettings.CultureInfo, _objCharacter).ConfigureAwait(false);
-                await objSource.SetControlAsync(lblSource).ConfigureAwait(false);
+                await objSource.SetControlAsync(lblSource, this).ConfigureAwait(false);
                 await lblPowerPointsLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strPowerPointsText)).ConfigureAwait(false);
                 await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSource.ToString())).ConfigureAwait(false);
                 await tlpRight.DoThreadSafeAsync(x => x.Visible = true).ConfigureAwait(false);
@@ -173,12 +175,18 @@ namespace Chummer
         /// Whether we should ignore how many of a given power may be taken. Generally used when bonding Qi Foci.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether we should ignore how many of a given power may be taken. Generally used when bonding Qi Foci.
+        /// </summary>
         public bool IgnoreLimits { get; set; }
 
         /// <summary>
         /// Whether this window is being shown to select a power for a bonus node or to just select a power for a character traditionally
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Whether this window is being shown to select a power for a bonus node or to just select a power for a character traditionally
+        /// </summary>
         public bool ForBonus { get; set; }
 
         /// <summary>
@@ -190,6 +198,9 @@ namespace Chummer
         /// Only the provided Powers should be shown in the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Only the provided Powers should be shown in the list.
+        /// </summary>
         public string LimitToPowers
         {
             set => _strLimitToPowers = value;
@@ -199,6 +210,9 @@ namespace Chummer
         /// Limit the selections based on the Rating of an external source, where 1 Rating = 0.25 PP.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Limit the selections based on the Rating of an external source, where 1 Rating = 0.25 PP.
+        /// </summary>
         public int LimitToRating
         {
             set => _decLimitToRating = value * PointsPerLevel;
@@ -208,6 +222,9 @@ namespace Chummer
         /// Value of the PP per level if using LimitToRating. Defaults to 0.25.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Value of the PP per level if using LimitToRating. Defaults to 0.25.
+        /// </summary>
         public decimal PointsPerLevel { set; get; } = 0.25m;
 
         #endregion Properties
@@ -219,18 +236,18 @@ namespace Chummer
             if (_blnLoading)
                 return;
 
-            string strFilter = '(' + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ')';
+            string strFilter = "(" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ")";
             if (!string.IsNullOrEmpty(_strLimitToPowers))
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                 {
                     foreach (string strPower in _strLimitToPowers.SplitNoAlloc(
                                  ',', StringSplitOptions.RemoveEmptyEntries))
-                        sbdFilter.Append("name = ").Append(strPower.CleanXPath()).Append(" or ");
+                        sbdFilter.Append("name = ", strPower.CleanXPath(), " or ");
                     if (sbdFilter.Length > 0)
                     {
                         sbdFilter.Length -= 4;
-                        strFilter += " and (" + sbdFilter + ')';
+                        strFilter = sbdFilter.Insert(0, strFilter, " and (", ')').ToString();
                     }
                 }
             }
@@ -241,7 +258,7 @@ namespace Chummer
 
             using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstPower))
             {
-                foreach (XPathNavigator objXmlPower in _xmlBasePowerDataNode.Select("powers/power[" + strFilter + ']'))
+                foreach (XPathNavigator objXmlPower in _xmlBasePowerDataNode.Select("powers/power[" + strFilter + "]"))
                 {
                     decimal.TryParse(objXmlPower.SelectSingleNodeAndCacheExpression("points", token: token)?.Value, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decPoints);
                     string strExtraPointCost = objXmlPower.SelectSingleNodeAndCacheExpression("extrapointcost", token: token)?.Value;
@@ -252,7 +269,7 @@ namespace Chummer
                                 async x => x.Name == strName
                                     && await x.GetTotalRatingAsync(token).ConfigureAwait(false) > 0, token).ConfigureAwait(false)
                         //If this power has already had its rating paid for with PP, we don't care about the extrapoints cost.
-                        && decimal.TryParse(strExtraPointCost, System.Globalization.NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decExtraCost))
+                        && decimal.TryParse(strExtraPointCost, NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decExtraCost))
                     {
                         decPoints += decExtraCost;
                     }

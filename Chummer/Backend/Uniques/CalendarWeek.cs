@@ -36,7 +36,7 @@ namespace Chummer
     public sealed class CalendarWeek : IHasInternalId, IComparable, INotifyMultiplePropertiesChangedAsync, IEquatable<CalendarWeek>, IComparable<CalendarWeek>, IHasNotes, IHasLockObject
     {
         private Guid _guiID;
-        private bool _blnIsLongYear = false;
+        private bool _blnIsLongYear;
         private bool _blnIsLeapYear = true;
         private int _intYear = 2072;
         private int _intWeek = 1;
@@ -189,13 +189,13 @@ namespace Chummer
                 {
                     List<PropertyChangedEventArgs> lstArgsList =
                         lstPropertyNames.Select(x => new PropertyChangedEventArgs(x)).ToList();
-                    List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                    List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                     foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                     {
                         foreach (PropertyChangedEventArgs objArg in lstArgsList)
                         {
-                            lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                            lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                         }
                     }
                     await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);
@@ -256,8 +256,6 @@ namespace Chummer
         {
             if (intYear <= 0)
                 --intYear; // Account for year 0 not existing
-            if (intWeek > 53 || intWeek < 1)
-                throw new ArgumentOutOfRangeException(nameof(intWeek));
             // Create the GUID for the new CalendarWeek.
             _guiID = Guid.NewGuid();
             _intYear = intYear;
@@ -328,6 +326,7 @@ namespace Chummer
         /// Load the Calendar Week from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public async Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -1055,12 +1054,22 @@ namespace Chummer
         /// <inheritdoc />
         public ValueTask DisposeAsync()
         {
+            // to help the GC
+            PropertyChanged = null;
+            MultiplePropertiesChanged = null;
+            _setPropertyChangedAsync.Clear();
+            _setMultiplePropertiesChangedAsync.Clear();
             return LockObject.DisposeAsync();
         }
 
         /// <inheritdoc />
         public void Dispose()
         {
+            // to help the GC
+            PropertyChanged = null;
+            MultiplePropertiesChanged = null;
+            _setPropertyChangedAsync.Clear();
+            _setMultiplePropertiesChangedAsync.Clear();
             LockObject.Dispose();
         }
 

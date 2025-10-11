@@ -231,6 +231,7 @@ namespace Chummer
         /// Load the Complex Form from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -259,6 +260,7 @@ namespace Chummer
                 _objCachedMyXPathNode = null;
                 if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
                 {
+                    // ReSharper disable once MethodHasAsyncOverload
                     (blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID);
                 }
 
@@ -532,7 +534,7 @@ namespace Chummer
                     string strExtra = Extra;
                     if (!strLanguage.Equals(GlobalSettings.DefaultLanguage, StringComparison.OrdinalIgnoreCase))
                         strExtra = _objCharacter.TranslateExtra(Extra, strLanguage);
-                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + '(' + strExtra + ')';
+                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + "(" + strExtra + ")";
                 }
                 return strReturn;
             }
@@ -547,7 +549,7 @@ namespace Chummer
                 string strExtra = Extra;
                 if (!strLanguage.Equals(GlobalSettings.DefaultLanguage, StringComparison.OrdinalIgnoreCase))
                     strExtra = await _objCharacter.TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false);
-                strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + '(' + strExtra + ')';
+                strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + "(" + strExtra + ")";
             }
             return strReturn;
         }
@@ -568,7 +570,7 @@ namespace Chummer
         /// </summary>
         public string DisplayDuration(string strLanguage)
         {
-            switch (Duration)
+            switch (Duration.ToUpperInvariant())
             {
                 case "P":
                     return LanguageManager.GetString("String_SpellDurationPermanent", strLanguage);
@@ -579,7 +581,7 @@ namespace Chummer
                 case "I":
                     return LanguageManager.GetString("String_SpellDurationInstant", strLanguage);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetString("String_SpellDurationSpecial", strLanguage);
 
                 default:
@@ -592,7 +594,7 @@ namespace Chummer
         /// </summary>
         public Task<string> DisplayDurationAsync(string strLanguage, CancellationToken token = default)
         {
-            switch (Duration)
+            switch (Duration.ToUpperInvariant())
             {
                 case "P":
                     return LanguageManager.GetStringAsync("String_SpellDurationPermanent", strLanguage, token: token);
@@ -603,7 +605,7 @@ namespace Chummer
                 case "I":
                     return LanguageManager.GetStringAsync("String_SpellDurationInstant", strLanguage, token: token);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetStringAsync("String_SpellDurationSpecial", strLanguage, token: token);
 
                 default:
@@ -708,11 +710,9 @@ namespace Chummer
                         {
                             // Fading is always minimum 2
                             int intFv = Math.Max(((double)xprResult).StandardRound(), 2);
-                            sbdTip.AppendLine().Append(await LanguageManager.GetStringAsync("String_Level", token: token).ConfigureAwait(false)).Append(strSpace)
-                                    .Append(
-                                        i.ToString(GlobalSettings.CultureInfo))
-                                    .Append(await LanguageManager.GetStringAsync("String_Colon", token: token).ConfigureAwait(false))
-                                    .Append(strSpace).Append(intFv.ToString(GlobalSettings.CultureInfo));
+                            sbdTip.AppendLine()
+                                .Append(await LanguageManager.GetStringAsync("String_Level", token: token).ConfigureAwait(false), strSpace, i.ToString(GlobalSettings.CultureInfo))
+                                .Append(await LanguageManager.GetStringAsync("String_Colon", token: token).ConfigureAwait(false), strSpace, intFv.ToString(GlobalSettings.CultureInfo));
                         }
                         else
                         {
@@ -722,12 +722,13 @@ namespace Chummer
                         }
                     }
 
-                    sbdTip.AppendLine().Append(await LanguageManager.GetStringAsync("Tip_ComplexFormFadingBase", token: token).ConfigureAwait(false)).Append(strSpace).Append('(').Append(FvBase).Append(')');
+                    sbdTip.AppendLine().Append(await LanguageManager.GetStringAsync("Tip_ComplexFormFadingBase", token: token).ConfigureAwait(false), strSpace).Append('(', FvBase, ')');
                     foreach (Improvement objLoopImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
                                     _objCharacter, Improvement.ImprovementType.FadingValue, Name, true, token))
                     {
-                        sbdTip.Append(strSpace).Append('+').Append(strSpace).Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false)).Append(strSpace)
-                                .Append('(').Append(objLoopImprovement.Value.ToString("#,0.##;-#,0.##;#,0.##", GlobalSettings.CultureInfo)).Append(')');
+                        sbdTip.Append(strSpace, '+', strSpace)
+                            .Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false), strSpace)
+                                .Append('(', objLoopImprovement.Value.ToString("#,0.##;-#,0.##;#,0.##", GlobalSettings.CultureInfo), ')');
                     }
                     // Minimum Fading of 2
                     sbdTip.AppendLine().AppendFormat(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("String_MinimumAttribute", token: token), 2);
@@ -758,14 +759,7 @@ namespace Chummer
                         bool blnForce = strReturn.StartsWith('L');
                         string strFv = blnForce ? strReturn.TrimStartOnce("L", true) : strReturn;
                         //Navigator can't do math on a single value, so inject a mathable value.
-                        if (string.IsNullOrEmpty(strFv))
-                        {
-                            strFv = "0";
-                        }
-                        else
-                        {
-                            strFv = strFv.TrimStart('+');
-                        }
+                        strFv = string.IsNullOrEmpty(strFv) ? "0" : strFv.TrimStart('+');
 
                         string strToAppend = string.Empty;
                         int intFadingDv = 0;
@@ -776,10 +770,10 @@ namespace Chummer
                                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdReturn))
                                 {
-                                    sbdReturn.Append('(').Append(strFv).Append(')');
+                                    sbdReturn.Append('(', strFv, ')');
                                     foreach (Improvement objImprovement in lstImprovements)
                                     {
-                                        sbdReturn.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                                        sbdReturn.Append("+(", objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo), ')');
                                     }
                                     _objCharacter.ProcessAttributesInXPath(sbdReturn);
                                     strFv = sbdReturn.ToString();
@@ -810,8 +804,6 @@ namespace Chummer
                         else
                             // Fading always minimum 2
                             strReturn = Math.Max(intFadingDv, 2).ToString(GlobalSettings.InvariantCultureInfo);
-
-                        return strReturn;
                     }
                     return strReturn;
                 }
@@ -837,14 +829,7 @@ namespace Chummer
                     bool blnForce = strReturn.StartsWith('L');
                     string strFv = blnForce ? strReturn.TrimStartOnce("L", true) : strReturn;
                     //Navigator can't do math on a single value, so inject a mathable value.
-                    if (string.IsNullOrEmpty(strFv))
-                    {
-                        strFv = "0";
-                    }
-                    else
-                    {
-                        strFv = strFv.TrimStart('+');
-                    }
+                    strFv = string.IsNullOrEmpty(strFv) ? "0" : strFv.TrimStart('+');
 
                     string strToAppend = string.Empty;
                     int intFadingDv = 0;
@@ -855,10 +840,10 @@ namespace Chummer
                             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdReturn))
                             {
-                                sbdReturn.Append('(').Append(strFv).Append(')');
+                                sbdReturn.Append('(', strFv, ')');
                                 foreach (Improvement objImprovement in lstImprovements)
                                 {
-                                    sbdReturn.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                                    sbdReturn.Append("+(", objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo), ')');
                                 }
                                 await _objCharacter.ProcessAttributesInXPathAsync(sbdReturn, token: token).ConfigureAwait(false);
                                 strFv = sbdReturn.ToString();
@@ -889,8 +874,6 @@ namespace Chummer
                     else
                         // Fading always minimum 2
                         strReturn = Math.Max(intFadingDv, 2).ToString(GlobalSettings.InvariantCultureInfo);
-
-                    return strReturn;
                 }
                 return strReturn;
             }
@@ -919,33 +902,33 @@ namespace Chummer
         /// </summary>
         public string DisplayTarget(string strLanguage)
         {
-            switch (Target)
+            switch (Target.ToUpperInvariant())
             {
-                case "Persona":
+                case "PERSONA":
                     return LanguageManager.GetString("String_ComplexFormTargetPersona", strLanguage);
 
-                case "Device":
+                case "DEVICE":
                     return LanguageManager.GetString("String_ComplexFormTargetDevice", strLanguage);
 
-                case "File":
+                case "FILE":
                     return LanguageManager.GetString("String_ComplexFormTargetFile", strLanguage);
 
-                case "Self":
+                case "SELF":
                     return LanguageManager.GetString("String_SpellRangeSelf", strLanguage);
 
-                case "Sprite":
+                case "SPRITE":
                     return LanguageManager.GetString("String_ComplexFormTargetSprite", strLanguage);
 
-                case "Host":
+                case "HOST":
                     return LanguageManager.GetString("String_ComplexFormTargetHost", strLanguage);
 
                 case "IC":
                     return LanguageManager.GetString("String_ComplexFormTargetIC", strLanguage);
 
-                case "Icon":
+                case "ICON":
                     return LanguageManager.GetString("String_ComplexFormTargetIcon", strLanguage);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetString("String_Special", strLanguage);
 
                 default:
@@ -958,33 +941,33 @@ namespace Chummer
         /// </summary>
         public Task<string> DisplayTargetAsync(string strLanguage, CancellationToken token = default)
         {
-            switch (Target)
+            switch (Target.ToUpperInvariant())
             {
-                case "Persona":
+                case "PERSONA":
                     return LanguageManager.GetStringAsync("String_ComplexFormTargetPersona", strLanguage, token: token);
 
-                case "Device":
+                case "DEVICE":
                     return LanguageManager.GetStringAsync("String_ComplexFormTargetDevice", strLanguage, token: token);
 
-                case "File":
+                case "FILE":
                     return LanguageManager.GetStringAsync("String_ComplexFormTargetFile", strLanguage, token: token);
 
-                case "Self":
+                case "SELF":
                     return LanguageManager.GetStringAsync("String_SpellRangeSelf", strLanguage, token: token);
 
-                case "Sprite":
+                case "SPRITE":
                     return LanguageManager.GetStringAsync("String_ComplexFormTargetSprite", strLanguage, token: token);
 
-                case "Host":
+                case "HOST":
                     return LanguageManager.GetStringAsync("String_ComplexFormTargetHost", strLanguage, token: token);
 
                 case "IC":
                     return LanguageManager.GetStringAsync("String_ComplexFormTargetIC", strLanguage, token: token);
 
-                case "Icon":
+                case "ICON":
                     return LanguageManager.GetStringAsync("String_ComplexFormTargetIcon", strLanguage, token: token);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetStringAsync("String_Special", strLanguage, token: token);
 
                 default:
@@ -1347,7 +1330,7 @@ namespace Chummer
                         if (objSkill != null)
                         {
                             if (sbdReturn.Length > 0)
-                                sbdReturn.Append(strSpace).Append('+').Append(strSpace);
+                                sbdReturn.Append(strSpace, '+', strSpace);
                             sbdReturn.Append(objSkill.FormattedDicePool(objSkill.PoolOtherAttribute("RES") -
                                                                         (objResonanceAttrib?.TotalValue ?? 0),
                                                                         CurrentDisplayName));
@@ -1358,7 +1341,7 @@ namespace Chummer
                                      _objCharacter, Improvement.ImprovementType.ActionDicePool, "Threading"))
                         {
                             if (sbdReturn.Length > 0)
-                                sbdReturn.Append(strSpace).Append('+').Append(strSpace);
+                                sbdReturn.Append(strSpace, '+', strSpace);
                             sbdReturn.AppendFormat(GlobalSettings.CultureInfo, strFormat,
                                                    _objCharacter.GetObjectName(objImprovement), objImprovement.Value);
                         }
@@ -1396,7 +1379,7 @@ namespace Chummer
                     if (objSkill != null)
                     {
                         if (sbdReturn.Length > 0)
-                            sbdReturn.Append(strSpace).Append('+').Append(strSpace);
+                            sbdReturn.Append(strSpace, '+', strSpace);
                         sbdReturn.Append(await objSkill.FormattedDicePoolAsync(
                             await objSkill.PoolOtherAttributeAsync("RES", token: token).ConfigureAwait(false)
                             - (objResonanceAttrib != null ? await objResonanceAttrib.GetTotalValueAsync(token).ConfigureAwait(false) : 0),
@@ -1408,7 +1391,7 @@ namespace Chummer
                                  _objCharacter, Improvement.ImprovementType.ActionDicePool, "Threading", token: token).ConfigureAwait(false))
                     {
                         if (sbdReturn.Length > 0)
-                            sbdReturn.Append(strSpace).Append('+').Append(strSpace);
+                            sbdReturn.Append(strSpace, '+', strSpace);
                         sbdReturn.AppendFormat(GlobalSettings.CultureInfo, strFormat,
                                                await _objCharacter.GetObjectNameAsync(objImprovement, token: token).ConfigureAwait(false), objImprovement.Value);
                     }

@@ -44,6 +44,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void cmdOK_Click(object sender, EventArgs e)
@@ -71,18 +72,18 @@ namespace Chummer
                 // Build the list of Exotic Active Skills from the Skills file.
                 using (XmlNodeList objXmlSkillList = (await _objCharacter.LoadDataAsync("skills.xml").ConfigureAwait(false))
                                                                   .SelectNodes(
-                                                                      "/chummer/skills/skill[exotic = " + bool.TrueString.CleanXPath() + ']'))
+                                                                      "/chummer/skills/skill[exotic = " + bool.TrueString.CleanXPath() + "]"))
                 {
                     if (objXmlSkillList?.Count > 0)
                     {
                         foreach (XmlNode objXmlSkill in objXmlSkillList)
                         {
-                            string strName = objXmlSkill["name"]?.InnerText;
+                            string strName = objXmlSkill["name"]?.InnerTextViaPool();
                             if (!string.IsNullOrEmpty(strName) && (string.IsNullOrEmpty(_strForceSkill)
                                                                    || strName.Equals(
                                                                        _strForceSkill,
                                                                        StringComparison.OrdinalIgnoreCase)))
-                                lstSkills.Add(new ListItem(strName, objXmlSkill["translate"]?.InnerText ?? strName));
+                                lstSkills.Add(new ListItem(strName, objXmlSkill["translate"]?.InnerTextViaPool() ?? strName));
                         }
                     }
                 }
@@ -153,7 +154,7 @@ namespace Chummer
             CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false);
             XPathNodeIterator xmlWeaponList = (await _objCharacter.LoadDataXPathAsync("weapons.xml", token: token).ConfigureAwait(false))
                                                            .Select("/chummer/weapons/weapon[(category = "
-                                                                   + (strSelectedCategory + 's').CleanXPath()
+                                                                   + (strSelectedCategory + "s").CleanXPath()
                                                                    + " or useskill = "
                                                                    + strSelectedCategory.CleanXPath() + ") and ("
                                                                    + await objSettings.BookXPathAsync(false, token).ConfigureAwait(false) + ")]");

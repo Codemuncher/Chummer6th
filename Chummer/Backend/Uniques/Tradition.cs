@@ -97,6 +97,11 @@ namespace Chummer.Backend.Uniques
                         //swallow this
                     }
                 }
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
             finally
             {
@@ -120,6 +125,11 @@ namespace Chummer.Backend.Uniques
                         //swallow this
                     }
                 }
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
         }
 
@@ -466,7 +476,7 @@ namespace Chummer.Backend.Uniques
 
                 objWriter.WriteEndElement();
                 if (_nodBonus != null)
-                    objWriter.WriteRaw(_nodBonus.OuterXml);
+                    objWriter.WriteRaw(_nodBonus.OuterXmlViaPool());
                 else
                     objWriter.WriteElementString("bonus", string.Empty);
                 objWriter.WriteEndElement();
@@ -486,6 +496,7 @@ namespace Chummer.Backend.Uniques
         /// Load the Tradition from the XmlNode.
         /// </summary>
         /// <param name="xmlNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode xmlNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, xmlNode, token);
@@ -522,7 +533,7 @@ namespace Chummer.Backend.Uniques
                 Lazy<XPathNavigator> objMyNode = null;
                 Microsoft.VisualStudio.Threading.AsyncLazy<XPathNavigator> objMyNodeAsync = null;
                 if (blnSync)
-                    objMyNode = new Lazy<XPathNavigator>(() => this.GetNodeXPath());
+                    objMyNode = new Lazy<XPathNavigator>(() => this.GetNodeXPath(token));
                 else
                     objMyNodeAsync = new Microsoft.VisualStudio.Threading.AsyncLazy<XPathNavigator>(() => this.GetNodeXPathAsync(token), Utils.JoinableTaskFactory);
                 if (!xmlNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID)
@@ -543,7 +554,7 @@ namespace Chummer.Backend.Uniques
                     if (IsCustomTradition)
                     {
                         foreach (string strAttribute in AttributeSection.AttributeStrings)
-                            _strDrainExpression = _strDrainExpression.Replace(strAttribute, '{' + strAttribute + '}');
+                            _strDrainExpression = _strDrainExpression.Replace(strAttribute, "{" + strAttribute + "}");
                         _strDrainExpression = _strDrainExpression.Replace("{MAG}Adept", "{MAGAdept}");
                     }
                     else
@@ -563,7 +574,7 @@ namespace Chummer.Backend.Uniques
                     {
                         foreach (XmlNode xmlSpiritNode in xmlSpiritList)
                         {
-                            _lstAvailableSpirits.Add(xmlSpiritNode.InnerText);
+                            _lstAvailableSpirits.Add(xmlSpiritNode.InnerTextViaPool(token));
                         }
                     }
                 }
@@ -615,7 +626,7 @@ namespace Chummer.Backend.Uniques
                 if (blnDoDrainSweep)
                 {
                     foreach (string strAttribute in AttributeSection.AttributeStrings)
-                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, '{' + strAttribute + '}');
+                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, "{" + strAttribute + "}");
                     _strDrainExpression = _strDrainExpression.Replace("{MAG}Adept", "{MAGAdept}");
                 }
             }
@@ -661,7 +672,7 @@ namespace Chummer.Backend.Uniques
                 if (blnDoDrainSweep)
                 {
                     foreach (string strAttribute in AttributeSection.AttributeStrings)
-                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, '{' + strAttribute + '}');
+                        _strDrainExpression = _strDrainExpression.Replace(strAttribute, "{" + strAttribute + "}");
                     _strDrainExpression = _strDrainExpression.Replace("{MAG}Adept", "{MAGAdept}");
                 }
             }
@@ -1252,8 +1263,8 @@ namespace Chummer.Backend.Uniques
                 string strReturn = DisplayNameShort(strLanguage);
 
                 if (!string.IsNullOrEmpty(Extra))
-                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + '('
-                        + _objCharacter.TranslateExtra(Extra, strLanguage) + ')';
+                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + "("
+                        + _objCharacter.TranslateExtra(Extra, strLanguage) + ")";
 
                 return strReturn;
             }
@@ -1273,8 +1284,8 @@ namespace Chummer.Backend.Uniques
                 if (!string.IsNullOrEmpty(Extra))
                     strReturn
                         += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token)
-                                                .ConfigureAwait(false) + '(' + await _objCharacter
-                            .TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false) + ')';
+                                                .ConfigureAwait(false) + "(" + await _objCharacter
+                            .TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false) + ")";
 
                 return strReturn;
             }
@@ -1583,13 +1594,14 @@ namespace Chummer.Backend.Uniques
                 {
                     if (Type == TraditionType.None)
                         return string.Empty;
+                    string strDrainExpression = DrainExpression;
                     string strSpace = LanguageManager.GetString("String_Space");
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdToolTip))
                     {
-                        sbdToolTip.Append(DrainExpression);
+                        sbdToolTip.Append(strDrainExpression);
                         // Update the Fading CharacterAttribute Value.
-                        _objCharacter.ProcessAttributesInXPathForTooltip(sbdToolTip, DrainExpression);
+                        _objCharacter.ProcessAttributesInXPathForTooltip(sbdToolTip, strDrainExpression);
 
                         List<Improvement> lstUsedImprovements
                             = ImprovementManager.GetCachedImprovementListForValueOf(
@@ -1599,11 +1611,9 @@ namespace Chummer.Backend.Uniques
                                     : Improvement.ImprovementType.DrainResistance);
                         foreach (Improvement objLoopImprovement in lstUsedImprovements)
                         {
-                            sbdToolTip.Append(strSpace).Append('+').Append(strSpace)
-                                      .Append(_objCharacter.GetObjectName(objLoopImprovement)).Append(strSpace)
-                                      .Append('(')
-                                      .Append(objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo))
-                                      .Append(')');
+                            sbdToolTip.Append(strSpace, '+', strSpace)
+                                      .Append(_objCharacter.GetObjectName(objLoopImprovement), strSpace)
+                                      .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
                         }
 
                         return sbdToolTip.ToString();
@@ -1622,15 +1632,16 @@ namespace Chummer.Backend.Uniques
                 TraditionType eType = await GetTypeAsync(token).ConfigureAwait(false);
                 if (eType == TraditionType.None)
                     return string.Empty;
+                string strDrainExpression = await GetDrainExpressionAsync(token).ConfigureAwait(false);
                 string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token)
                     .ConfigureAwait(false);
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                            out StringBuilder sbdToolTip))
                 {
-                    sbdToolTip.Append(DrainExpression);
+                    sbdToolTip.Append(strDrainExpression);
                     // Update the Fading CharacterAttribute Value.
                     await _objCharacter
-                        .ProcessAttributesInXPathForTooltipAsync(sbdToolTip, DrainExpression, token: token)
+                        .ProcessAttributesInXPathForTooltipAsync(sbdToolTip, strDrainExpression, token: token)
                         .ConfigureAwait(false);
 
                     List<Improvement> lstUsedImprovements
@@ -1641,12 +1652,10 @@ namespace Chummer.Backend.Uniques
                                 : Improvement.ImprovementType.DrainResistance, token: token).ConfigureAwait(false);
                     foreach (Improvement objLoopImprovement in lstUsedImprovements)
                     {
-                        sbdToolTip.Append(strSpace).Append('+').Append(strSpace)
+                        sbdToolTip.Append(strSpace, '+', strSpace)
                             .Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token)
-                                .ConfigureAwait(false)).Append(strSpace)
-                            .Append('(')
-                            .Append(objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo))
-                            .Append(')');
+                                .ConfigureAwait(false), strSpace)
+                            .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
                     }
 
                     return sbdToolTip.ToString();
@@ -2657,13 +2666,13 @@ namespace Chummer.Backend.Uniques
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                                lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
                         await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);

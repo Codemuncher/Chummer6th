@@ -41,12 +41,13 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = XmlManager.LoadXPath("skills.xml", objCharacter?.Settings.EnabledCustomDataDirectoryPaths);
         }
 
         private async void SelectSkillGroup_Load(object sender, EventArgs e)
         {
-            using (new FetchSafelyFromPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGroups))
+            using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstGroups))
             {
                 if (string.IsNullOrEmpty(_strForceValue))
                 {
@@ -56,7 +57,7 @@ namespace Chummer
                     {
                         if (!string.IsNullOrEmpty(_strExcludeCategory))
                         {
-                            using (new FetchSafelyFromPool<StringBuilder>(Utils.StringBuilderPool,
+                            using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdExclude))
                             {
                                 string strExclude = string.Empty;
@@ -67,11 +68,11 @@ namespace Chummer
                                 if (sbdExclude.Length > 0)
                                 {
                                     sbdExclude.Length -= 5;
-                                    strExclude = '(' + sbdExclude.ToString() + ") and ";
+                                    strExclude = "(" + sbdExclude.Append(") and ").ToString();
                                 }
                                 if (_objXmlDocument.SelectSingleNode(
                                         "/chummer/skills/skill[" + strExclude + "skillgroup = "
-                                        + objXmlSkill.Value.CleanXPath() + ']') == null)
+                                        + objXmlSkill.Value.CleanXPath() + "]") == null)
                                     continue;
                             }
                         }

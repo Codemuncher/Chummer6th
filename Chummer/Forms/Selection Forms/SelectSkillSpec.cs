@@ -43,6 +43,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = XmlManager.LoadXPath("skills.xml", _objCharacter?.Settings.EnabledCustomDataDirectoryPaths);
         }
 
@@ -55,7 +56,7 @@ namespace Chummer
                 xmlParentSkill
                     = _objXmlDocument.TryGetNodeByNameOrId("/chummer/knowledgeskills/skill", strSkillName)
                       ?? _objXmlDocument.SelectSingleNode(
-                          "/chummer/knowledgeskills/skill[translate = " + strSkillName.CleanXPath() + ']');
+                          "/chummer/knowledgeskills/skill[translate = " + strSkillName.CleanXPath() + "]");
             }
             else
             {
@@ -89,12 +90,11 @@ namespace Chummer
                     string strXPathFilter;
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                     {
-                        sbdFilter.Append("category = ").Append(strSkillName.CleanXPath());
+                        sbdFilter.Append("category = ", strSkillName.CleanXPath());
                         foreach (ListItem objSpec in lstItems)
                         {
                             string strLoopValue = objSpec.Value.ToString().CleanXPath();
-                            sbdFilter.Append(" or spec = ").Append(strLoopValue)
-                                     .Append(" or spec2 = ").Append(strLoopValue);
+                            sbdFilter.Append(" or spec = ", strLoopValue, " or spec2 = ", strLoopValue);
                         }
                         strXPathFilter = sbdFilter.ToString();
                     }
@@ -189,7 +189,9 @@ namespace Chummer
         /// </summary>
         public bool AllowAutoSelect { get; } = true;
 
-       
+        /// <summary>
+        /// Type of skill that we're selecting. Used to differentiate knowledge skills.
+        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Type of skill that we're selecting. Used to differentiate knowledge skills.

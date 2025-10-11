@@ -19,7 +19,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
@@ -87,10 +86,9 @@ namespace Chummer
             _tmrHobbiesViceChangeTimer = new Timer { Interval = 1000 };
             _tmrHobbiesViceChangeTimer.Tick += UpdateHobbiesVice;
 
-            Disposed += (sender, args) => UnbindContactControl();
-
             this.UpdateLightDarkMode(objMyToken);
             this.TranslateWinForm(token: objMyToken);
+            this.UpdateParentForToolTipControls();
 
             foreach (ToolStripItem tssItem in cmsContact.Items)
             {
@@ -170,7 +168,7 @@ namespace Chummer
             _tmrPreferredPaymentChangeTimer.Dispose();
             _tmrHobbiesViceChangeTimer.Dispose();
             foreach (Control objControl in Controls)
-                objControl.DataBindings.Clear();
+                objControl.ResetBindings();
         }
 
         private async void cmdDelete_Click(object sender, EventArgs e)
@@ -603,11 +601,11 @@ namespace Chummer
                 string strFilter =
                     await LanguageManager.GetStringAsync("DialogFilter_Chummer", token: _objMyToken)
                         .ConfigureAwait(false) +
-                    '|' +
+                    "|" +
                     await LanguageManager.GetStringAsync("DialogFilter_Chum5", token: _objMyToken)
                         .ConfigureAwait(false) +
-                    '|' + await LanguageManager.GetStringAsync("DialogFilter_Chum5lz", token: _objMyToken)
-                        .ConfigureAwait(false) + '|' + await LanguageManager
+                    "|" + await LanguageManager.GetStringAsync("DialogFilter_Chum5lz", token: _objMyToken)
+                        .ConfigureAwait(false) + "|" + await LanguageManager
                         .GetStringAsync("DialogFilter_All", token: _objMyToken).ConfigureAwait(false);
                 IAsyncDisposable objLocker = await _objContact.LockObject.EnterUpgradeableReadLockAsync(_objMyToken).ConfigureAwait(false);
                 try
@@ -654,7 +652,7 @@ namespace Chummer
                     {
                         _objMyToken.ThrowIfCancellationRequested();
                         await _objContact.SetFileNameAsync(strFileName, _objMyToken).ConfigureAwait(false);
-                        await _objContact.SetRelativeFileNameAsync("../" + uriRelative, _objMyToken).ConfigureAwait(false);
+                        await _objContact.SetRelativeFileNameAsync("../" + uriRelative.ToString(), _objMyToken).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -744,6 +742,15 @@ namespace Chummer
             {
                 // swallow this
             }
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
         }
 
         #endregion Control Events
@@ -1357,6 +1364,7 @@ namespace Chummer
                         {
                             x.tlpMain.SetColumnSpan(x.tlpStatBlock, 13);
                             x.tlpMain.Controls.Add(x.tlpStatBlock, 0, 3);
+                            x.tlpStatBlock.UpdateParentForToolTipControls();
                         }
                         finally
                         {
@@ -1585,6 +1593,7 @@ namespace Chummer
                         {
                             x.tlpMain.SetColumnSpan(x.tlpStatBlock, 13);
                             x.tlpMain.Controls.Add(x.tlpStatBlock, 0, 3);
+                            x.tlpStatBlock.UpdateParentForToolTipControls();
                         }
                         finally
                         {

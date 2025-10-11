@@ -51,6 +51,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objXmlDocument = objCharacter.LoadData("drugcomponents.xml");
             XmlNodeList xmlComponentsNodeList = _objXmlDocument.SelectNodes("chummer/drugcomponents/drugcomponent");
             _dicDrugComponents = new Dictionary<string, DrugComponent>(xmlComponentsNodeList?.Count ?? 0);
@@ -65,12 +66,6 @@ namespace Chummer
             }
             _lstSelectedDrugComponents = new List<DrugNodeData>(5);
             _lstGrade = Utils.ListItemListPool.Get();
-            Disposed += (sender, args) =>
-            {
-                if (DialogResult != DialogResult.OK)
-                    Interlocked.Exchange(ref _objDrug, null)?.Dispose();
-                Utils.ListItemListPool.Return(ref _lstGrade);
-            };
         }
 
         private async void CreateCustomDrug_Load(object sender, EventArgs e)
@@ -248,7 +243,7 @@ namespace Chummer
 
             string strNodeText = await objNodeData.DrugComponent.GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
             if (objNodeData.DrugComponent.Level <= 0 && objNodeData.DrugComponent.DrugEffects.Count > 1)
-                strNodeText += strSpaceString + '(' + await LanguageManager.GetStringAsync("String_Level", token: token).ConfigureAwait(false) + strSpaceString + (objNodeData.Level + 1).ToString(GlobalSettings.CultureInfo) + ')';
+                strNodeText += strSpaceString + "(" + await LanguageManager.GetStringAsync("String_Level", token: token).ConfigureAwait(false) + strSpaceString + (objNodeData.Level + 1).ToString(GlobalSettings.CultureInfo) + ")";
             await treChosenComponents.DoThreadSafeAsync(() =>
             {
                 TreeNode objNewNode = nodCategoryNode.Nodes.Add(strNodeText);

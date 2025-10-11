@@ -33,9 +33,8 @@ using Chummer.Annotations;
 namespace Chummer
 {
     /// <summary>
-    /// Expanded version of ObservableCollection that has an extra event for processing items before a Clear() command is executed.
+    /// Expanded version of <see cref="ObservableCollection{T}"/> that has an extra event for processing items before a <see cref="ObservableCollection{T}.ClearItems()"/> command is executed.
     /// </summary>
-    /// <typeparam name="T"></typeparam>
     public class EnhancedObservableCollection<T> : ObservableCollection<T>, INotifyMultiplePropertiesChangedAsync, IAsyncList<T>
     {
         /// <summary>
@@ -288,13 +287,13 @@ namespace Chummer
             {
                 List<PropertyChangedEventArgs> lstArgsList = lstPropertyNames
                     .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                 foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                 {
                     foreach (PropertyChangedEventArgs objArg in lstArgsList)
                     {
-                        lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                        lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                     }
                 }
                 await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);

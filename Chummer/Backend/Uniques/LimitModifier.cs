@@ -123,6 +123,7 @@ namespace Chummer
             if (!objNode.TryGetBoolFieldQuickly("candelete", ref _blnCanDelete))
             {
                 _blnCanDelete = blnSync
+                    // ReSharper disable once MethodHasAsyncOverload
                     ? _objCharacter.Improvements.All(x => x.ImproveType != Improvement.ImprovementType.LimitModifier || x.ImprovedName != InternalId, token)
                     : await (await _objCharacter.GetImprovementsAsync(token).ConfigureAwait(false))
                         .AllAsync(x => x.ImproveType != Improvement.ImprovementType.LimitModifier || x.ImprovedName != InternalId, token).ConfigureAwait(false);
@@ -401,12 +402,12 @@ namespace Chummer
             string strSpace = LanguageManager.GetString("String_Space", strLanguage);
             string strReturn = DisplayNameShort(strLanguage);
             if (_intBonus >= 0)
-                strReturn += strSpace + "[+" + _intBonus.ToString(objCulture) + ']';
+                strReturn += strSpace + "[+" + _intBonus.ToString(objCulture) + "]";
             else
-                strReturn += strSpace + '[' + _intBonus.ToString(objCulture) + ']';
+                strReturn += strSpace + "[" + _intBonus.ToString(objCulture) + "]";
             string strCondition = DisplayCondition(strLanguage);
             if (!string.IsNullOrEmpty(strCondition))
-                strReturn += strSpace + '(' + strCondition + ')';
+                strReturn += strSpace + "(" + strCondition + ")";
             return strReturn;
         }
 
@@ -415,12 +416,12 @@ namespace Chummer
             string strReturn = await DisplayNameShortAsync(strLanguage, token).ConfigureAwait(false);
             string strSpace = await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false);
             if (_intBonus >= 0)
-                strReturn += strSpace + "[+" + _intBonus.ToString(objCulture) + ']';
+                strReturn += strSpace + "[+" + _intBonus.ToString(objCulture) + "]";
             else
-                strReturn += strSpace + '[' + _intBonus.ToString(objCulture) + ']';
+                strReturn += strSpace + "[" + _intBonus.ToString(objCulture) + "]";
             string strCondition = await DisplayConditionAsync(strLanguage, token).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(strCondition))
-                strReturn += strSpace + '(' + strCondition + ')';
+                strReturn += strSpace + "(" + strCondition + ")";
             return strReturn;
         }
 

@@ -17,15 +17,15 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using NLog;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using NLog;
-using System.ComponentModel;
 using TheArtOfDev.HtmlRenderer.WinForms;
 using Timer = System.Windows.Forms.Timer;
 
@@ -45,6 +45,8 @@ namespace Chummer
         private readonly List<string> _lstUsedTips = new List<string>();
         private Point _oldMousePos = new Point(-1, -1);
         private Character _characterObject;
+        private readonly Timer _tmrDraw;
+        private readonly Timer _tmrTip;
 
         private readonly HtmlToolTip _myToolTip = new HtmlToolTip
         {
@@ -68,35 +70,25 @@ namespace Chummer
 
             using (Graphics g = CreateGraphics())
             {
-                _eyeballCenter = new Point((int) (95 * g.DpiX / 96.0f), (int) (15 * g.DpiY / 96.0f));
-                _mouthCenter = new Point((int) (100 * g.DpiX / 96.0f), (int) (50 * g.DpiY / 96.0f));
-                _thickPen = new Pen(Color.Black, (int) (3 * g.DpiY / 96.0f));
+                _eyeballCenter = new Point((int)(95 * g.DpiX / 96.0f), (int)(15 * g.DpiY / 96.0f));
+                _mouthCenter = new Point((int)(100 * g.DpiX / 96.0f), (int)(50 * g.DpiY / 96.0f));
+                _thickPen = new Pen(Color.Black, (int)(3 * g.DpiY / 96.0f));
             }
-
-            Disposed += (sender, args) =>
-            {
-                _thickPen.Dispose();
-                _myToolTip.Dispose();
-            };
 
             Paint += panel1_Paint;
 
-            using (Timer tmrDraw = new Timer())
-            {
-                tmrDraw.Interval = 100;
-                tmrDraw.Tick += tmr_DrawTick;
-                tmrDraw.Start();
-            }
-
-            using (Timer tmrTip = new Timer())
-            {
-                tmrTip.Interval = 300000;
-                tmrTip.Tick += tmr_TipTick;
-                tmrTip.Start();
-            }
+            _tmrDraw = new Timer();
+            _tmrDraw.Interval = 100;
+            _tmrDraw.Tick += tmr_DrawTick;
+            _tmrTip = new Timer();
+            _tmrTip.Interval = 300000;
+            _tmrTip.Tick += tmr_TipTick;
 
             _myToolTip.Show(LanguageManager.GetString("Chummy_Intro").WordWrap().CleanForHtml(), this, _mouthCenter);
             _objXmlDocument = (objCharacter?.LoadDataXPath("tips.xml") ?? XmlManager.LoadXPath("tips.xml")).SelectSingleNodeAndCacheExpression("/chummer/tips");
+
+            _tmrDraw.Start();
+            _tmrTip.Start();
         }
 
         #region Event Handlers

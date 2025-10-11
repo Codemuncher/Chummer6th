@@ -64,6 +64,7 @@ namespace Chummer.Backend.Equipment
         private string _strCost = string.Empty;
         private string _strLocation = string.Empty;
         private string _strAllowedWeapons = string.Empty;
+        private string _strWeaponFilter = string.Empty;
         private int _intSortOrder;
         private bool _blnStolen;
         private XmlNode _objCachedMyXmlNode;
@@ -236,6 +237,7 @@ namespace Chummer.Backend.Equipment
             objXmlMod.TryGetStringFieldQuickly("limit", ref _strLimit);
             objXmlMod.TryGetInt32FieldQuickly("slots", ref _intSlots);
             objXmlMod.TryGetStringFieldQuickly("weaponcategories", ref _strAllowedWeaponCategories);
+            objXmlMod.TryGetStringFieldQuickly("weaponfilter", ref _strWeaponFilter);
             objXmlMod.TryGetStringFieldQuickly("avail", ref _strAvail);
             if (objXmlMod.TryGetInt32FieldQuickly("weaponcapacity", ref _intWeaponCapacity) && IsWeaponsFull)
                 // If you ever hit this, you done fucked up. Make sure that weapon mounts cannot actually equip more weapons than they're allowed in the first place
@@ -417,6 +419,7 @@ namespace Chummer.Backend.Equipment
             objWriter.WriteElementString("included", _blnIncludeInVehicle.ToString(GlobalSettings.InvariantCultureInfo));
             objWriter.WriteElementString("equipped", _blnEquipped.ToString(GlobalSettings.InvariantCultureInfo));
             objWriter.WriteElementString("weaponmountcategories", _strAllowedWeaponCategories);
+            objWriter.WriteElementString("weaponfilter", _strWeaponFilter);
             objWriter.WriteElementString("weaponcapacity", _intWeaponCapacity.ToString(GlobalSettings.InvariantCultureInfo));
             objWriter.WriteStartElement("weapons");
             foreach (Weapon objWeapon in _lstWeapons)
@@ -479,6 +482,7 @@ namespace Chummer.Backend.Equipment
             _objCachedMyXPathNode = null;
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
             {
+                // ReSharper disable once MethodHasAsyncOverload
                 XPathNavigator node = blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false);
                 if (node != null)
                     node.TryGetGuidFieldQuickly("id", ref _guiSourceID);
@@ -490,6 +494,7 @@ namespace Chummer.Backend.Equipment
             objNode.TryGetStringFieldQuickly("limit", ref _strLimit);
             objNode.TryGetInt32FieldQuickly("slots", ref _intSlots);
             objNode.TryGetStringFieldQuickly("weaponmountcategories", ref _strAllowedWeaponCategories);
+            objNode.TryGetStringFieldQuickly("weaponfilter", ref _strWeaponFilter);
             objNode.TryGetStringFieldQuickly("allowedweapons", ref _strAllowedWeapons);
             objNode.TryGetStringFieldQuickly("page", ref _strPage);
             objNode.TryGetStringFieldQuickly("avail", ref _strAvail);
@@ -515,7 +520,9 @@ namespace Chummer.Backend.Equipment
                         foreach (XmlNode xmlWeaponMountOptionNode in xmlWeaponMountOptionList)
                         {
                             WeaponMountOption objWeaponMountOption = new WeaponMountOption(_objCharacter);
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             objWeaponMountOption.Load(xmlWeaponMountOptionNode);
+                            // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                             WeaponMountOptions.Add(objWeaponMountOption);
                         }
                     }
@@ -543,11 +550,14 @@ namespace Chummer.Backend.Equipment
                             VehicleMod objMod = new VehicleMod(_objCharacter);
                             try
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objMod.Load(xmlModNode, blnCopy);
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 Mods.Add(objMod);
                             }
                             catch
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objMod.DeleteVehicleMod();
                                 throw;
                             }
@@ -588,18 +598,23 @@ namespace Chummer.Backend.Equipment
                                 if (Weapons.Count >= WeaponCapacity)
                                 {
                                     // Stop loading more weapons than we can actually mount and dump the rest into the character's basic inventory
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objWeapon.Load(xmlWeaponNode, blnCopy);
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     _objCharacter.Weapons.Add(objWeapon);
                                 }
                                 else
                                 {
                                     objWeapon.ParentMount = this;
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     objWeapon.Load(xmlWeaponNode, blnCopy);
+                                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                     Weapons.Add(objWeapon);
                                 }
                             }
                             catch
                             {
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objWeapon.DeleteWeapon();
                                 throw;
                             }
@@ -748,7 +763,7 @@ namespace Chummer.Backend.Equipment
             if (xmlNode == null)
                 throw new ArgumentNullException(nameof(xmlNode));
             XmlDocument xmlDoc = _objCharacter.LoadData("vehicles.xml");
-            string strSize = xmlNode["size"]?.InnerText;
+            string strSize = xmlNode["size"]?.InnerTextViaPool();
             if (string.IsNullOrEmpty(strSize))
                 return;
             XmlNode xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strSize, "category = \"Size\"");
@@ -756,7 +771,7 @@ namespace Chummer.Backend.Equipment
             {
                 Create(xmlDataNode);
 
-                string strFlexibility = xmlNode["flexibility"]?.InnerText;
+                string strFlexibility = xmlNode["flexibility"]?.InnerTextViaPool();
                 if (!string.IsNullOrEmpty(strFlexibility))
                 {
                     xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strFlexibility, "category = \"Flexibility\"");
@@ -769,7 +784,7 @@ namespace Chummer.Backend.Equipment
                     }
                 }
 
-                string strControl = xmlNode["control"]?.InnerText;
+                string strControl = xmlNode["control"]?.InnerTextViaPool();
                 if (!string.IsNullOrEmpty(strControl))
                 {
                     xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strControl, "category = \"Control\"");
@@ -782,7 +797,7 @@ namespace Chummer.Backend.Equipment
                     }
                 }
 
-                string strVisibility = xmlNode["visibility"]?.InnerText;
+                string strVisibility = xmlNode["visibility"]?.InnerTextViaPool();
                 if (!string.IsNullOrEmpty(strVisibility))
                 {
                     xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strVisibility, "category = \"Visibility\"");
@@ -795,8 +810,8 @@ namespace Chummer.Backend.Equipment
                     }
                 }
 
-                _strLocation = xmlNode["location"]?.InnerText ?? string.Empty;
-                _strAllowedWeapons = xmlNode["allowedweapons"]?.InnerText ?? string.Empty;
+                _strLocation = xmlNode["location"]?.InnerTextViaPool() ?? string.Empty;
+                _strAllowedWeapons = xmlNode["allowedweapons"]?.InnerTextViaPool() ?? string.Empty;
                 xmlDataNode = xmlNode["mods"];
                 if (xmlDataNode == null)
                     return;
@@ -810,7 +825,7 @@ namespace Chummer.Backend.Equipment
                             try
                             {
                                 objMod.IncludedInVehicle = true;
-                                xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerText);
+                                xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerTextViaPool());
                                 objMod.Load(xmlDataNode);
                                 Mods.Add(objMod);
                             }
@@ -836,7 +851,7 @@ namespace Chummer.Backend.Equipment
             if (xmlNode == null)
                 throw new ArgumentNullException(nameof(xmlNode));
             XmlDocument xmlDoc = await _objCharacter.LoadDataAsync("vehicles.xml", token: token).ConfigureAwait(false);
-            string strSize = xmlNode["size"]?.InnerText;
+            string strSize = xmlNode["size"]?.InnerTextViaPool(token);
             if (string.IsNullOrEmpty(strSize))
                 return;
             XmlNode xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strSize, "category = \"Size\"");
@@ -844,7 +859,7 @@ namespace Chummer.Backend.Equipment
             {
                 await CreateAsync(xmlDataNode, token).ConfigureAwait(false);
 
-                string strFlexibility = xmlNode["flexibility"]?.InnerText;
+                string strFlexibility = xmlNode["flexibility"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrEmpty(strFlexibility))
                 {
                     xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strFlexibility, "category = \"Flexibility\"");
@@ -857,7 +872,7 @@ namespace Chummer.Backend.Equipment
                     }
                 }
 
-                string strControl = xmlNode["control"]?.InnerText;
+                string strControl = xmlNode["control"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrEmpty(strControl))
                 {
                     xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strControl, "category = \"Control\"");
@@ -870,7 +885,7 @@ namespace Chummer.Backend.Equipment
                     }
                 }
 
-                string strVisibility = xmlNode["visibility"]?.InnerText;
+                string strVisibility = xmlNode["visibility"]?.InnerTextViaPool(token);
                 if (!string.IsNullOrEmpty(strVisibility))
                 {
                     xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmounts/weaponmount", strVisibility, "category = \"Visibility\"");
@@ -883,8 +898,8 @@ namespace Chummer.Backend.Equipment
                     }
                 }
 
-                _strLocation = xmlNode["location"]?.InnerText ?? string.Empty;
-                _strAllowedWeapons = xmlNode["allowedweapons"]?.InnerText ?? string.Empty;
+                _strLocation = xmlNode["location"]?.InnerTextViaPool(token) ?? string.Empty;
+                _strAllowedWeapons = xmlNode["allowedweapons"]?.InnerTextViaPool(token) ?? string.Empty;
                 xmlDataNode = xmlNode["mods"];
                 if (xmlDataNode == null)
                     return;
@@ -898,7 +913,7 @@ namespace Chummer.Backend.Equipment
                             try
                             {
                                 await objMod.SetIncludedInVehicleAsync(true, token).ConfigureAwait(false);
-                                xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerText);
+                                xmlDataNode = xmlDoc.TryGetNodeByNameOrId("/chummer/weaponmountmods/mod", xmlModNode.InnerTextViaPool(token));
                                 await objMod.LoadAsync(xmlDataNode, token: token).ConfigureAwait(false);
                                 await Mods.AddAsync(objMod, token).ConfigureAwait(false);
                             }
@@ -1037,6 +1052,16 @@ namespace Chummer.Backend.Equipment
         {
             set => _strAllowedWeaponCategories = value;
             get => _strAllowedWeaponCategories;
+        }
+
+        /// <summary>
+        /// XPath filter expression for additional weapon filtering beyond categories.
+        /// This allows for flexible filtering on any weapon property (reach, type, damage, etc.).
+        /// </summary>
+        public string WeaponFilter
+        {
+            get => _strWeaponFilter;
+            set => _strWeaponFilter = value;
         }
 
         public string AllowedWeapons
@@ -1450,16 +1475,15 @@ namespace Chummer.Backend.Equipment
             }
 
             // Run through the Accessories and add in their availability.
-            await WeaponMountOptions.ForEachAsync(async objLoopOption =>
+            intAvail += await WeaponMountOptions.SumAsync(async objLoopOption =>
             {
                 AvailabilityValue objLoopAvailTuple
                     = await objLoopOption.GetTotalAvailTupleAsync(token).ConfigureAwait(false);
-                //if (objLoopAvailTuple.Item3)
-                intAvail += await objLoopAvailTuple.GetValueAsync(token).ConfigureAwait(false);
                 if (objLoopAvailTuple.Suffix == 'F')
                     chrLastAvailChar = 'F';
                 else if (chrLastAvailChar != 'F' && objLoopAvailTuple.Suffix == 'R')
                     chrLastAvailChar = 'R';
+                return await objLoopAvailTuple.GetValueAsync(token).ConfigureAwait(false);
             }, token).ConfigureAwait(false);
 
             if (blnCheckChildren)
@@ -1695,16 +1719,15 @@ namespace Chummer.Backend.Equipment
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
                 {
-                    sbdReturn.Append(strReturn);
                     string strSpace = LanguageManager.GetString("String_Space", strLanguage);
-                    sbdReturn.Append(strSpace).Append('(');
+                    sbdReturn.Append(strReturn, strSpace, '(');
                     bool blnCloseParantheses = false;
                     foreach (WeaponMountOption objOption in WeaponMountOptions)
                     {
                         if (objOption.Name != "None")
                         {
                             blnCloseParantheses = true;
-                            sbdReturn.Append(objOption.DisplayName(strLanguage)).Append(',').Append(strSpace);
+                            sbdReturn.Append(objOption.DisplayName(strLanguage), ',', strSpace);
                         }
                     }
 
@@ -1712,7 +1735,7 @@ namespace Chummer.Backend.Equipment
                     if (blnCloseParantheses)
                         sbdReturn.Append(')');
                     if (!string.IsNullOrWhiteSpace(Location))
-                        sbdReturn.Append(strSpace).Append('-').Append(strSpace).Append(Location);
+                        sbdReturn.Append(strSpace, '-').Append(strSpace, Location);
                     strReturn = sbdReturn.ToString();
                 }
             }
@@ -1730,16 +1753,15 @@ namespace Chummer.Backend.Equipment
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdReturn))
                 {
-                    sbdReturn.Append(strReturn);
                     string strSpace = await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false);
-                    sbdReturn.Append(strSpace).Append('(');
+                    sbdReturn.Append(strReturn, strSpace, '(');
                     bool blnCloseParantheses = false;
                     await WeaponMountOptions.ForEachAsync(async objOption =>
                     {
                         if (objOption.Name != "None")
                         {
                             blnCloseParantheses = true;
-                            sbdReturn.Append(await objOption.DisplayNameAsync(strLanguage, token).ConfigureAwait(false)).Append(',').Append(strSpace);
+                            sbdReturn.Append(await objOption.DisplayNameAsync(strLanguage, token).ConfigureAwait(false), ',', strSpace);
                         }
                     }, token).ConfigureAwait(false);
 
@@ -1747,7 +1769,7 @@ namespace Chummer.Backend.Equipment
                     if (blnCloseParantheses)
                         sbdReturn.Append(')');
                     if (!string.IsNullOrWhiteSpace(Location))
-                        sbdReturn.Append(strSpace).Append('-').Append(strSpace).Append(Location);
+                        sbdReturn.Append(strSpace, '-').Append(strSpace, Location);
                     strReturn = sbdReturn.ToString();
                 }
             }
@@ -1851,7 +1873,7 @@ namespace Chummer.Backend.Equipment
         public decimal DeleteWeaponMount(bool blnDoRemoval = true)
         {
             if (blnDoRemoval)
-                Parent.WeaponMounts.Remove(this);
+                Parent?.WeaponMounts.Remove(this);
 
             decimal decReturn = Weapons.AsEnumerableWithSideEffects().Sum(x => x.DeleteWeapon(false))
                                 + Mods.AsEnumerableWithSideEffects().Sum(x => x.DeleteVehicleMod(false));
@@ -1864,7 +1886,7 @@ namespace Chummer.Backend.Equipment
         public async Task<decimal> DeleteWeaponMountAsync(bool blnDoRemoval = true,
                                                                CancellationToken token = default)
         {
-            if (blnDoRemoval)
+            if (blnDoRemoval && Parent != null)
                 await Parent.WeaponMounts.RemoveAsync(this, token).ConfigureAwait(false);
 
             decimal decReturn = await Weapons.SumWithSideEffectsAsync(x => x.DeleteWeaponAsync(false, token), token)
@@ -1905,19 +1927,19 @@ namespace Chummer.Backend.Equipment
 
                         string strNameToUse = await GetCurrentDisplayNameAsync(token).ConfigureAwait(false);
                         if (Parent != null)
-                            strNameToUse += await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + '(' + await Parent.GetCurrentDisplayNameAsync(token).ConfigureAwait(false) + ')';
+                            strNameToUse += await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + "(" + await Parent.GetCurrentDisplayNameAsync(token).ConfigureAwait(false) + ")";
 
                         if (intLowestValidRestrictedGearAvail >= 0
                             && dicRestrictedGearLimits[intLowestValidRestrictedGearAvail] > 0)
                         {
                             --dicRestrictedGearLimits[intLowestValidRestrictedGearAvail];
-                            sbdRestrictedItems.AppendLine().Append("\t\t").Append(strNameToUse);
+                            sbdRestrictedItems.AppendLine().Append("\t\t", strNameToUse);
                         }
                         else
                         {
                             dicRestrictedGearLimits.Remove(intLowestValidRestrictedGearAvail);
                             ++intRestrictedCount;
-                            sbdAvailItems.AppendLine().Append("\t\t").Append(strNameToUse);
+                            sbdAvailItems.AppendLine().Append("\t\t", strNameToUse);
                         }
                     }
                 }
@@ -2070,7 +2092,7 @@ namespace Chummer.Backend.Equipment
             // Create the Expense Log Entry for the sale.
             ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
             objExpense.Create(decAmount,
-                LanguageManager.GetString("String_ExpenseSoldVehicleWeaponMount") + ' ' + CurrentDisplayNameShort,
+                LanguageManager.GetString("String_ExpenseSoldVehicleWeaponMount") + " " + CurrentDisplayNameShort,
                 ExpenseType.Nuyen, DateTime.Now);
             _objCharacter.ExpenseEntries.AddWithSort(objExpense);
             _objCharacter.Nuyen += decAmount;
@@ -2108,7 +2130,7 @@ namespace Chummer.Backend.Equipment
             ExpenseLogEntry objExpense = new ExpenseLogEntry(_objCharacter);
             objExpense.Create(decAmount,
                 await LanguageManager.GetStringAsync("String_ExpenseSoldVehicleWeaponMount", token: token).ConfigureAwait(false) +
-                ' ' + await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false), ExpenseType.Nuyen,
+                " " + await GetCurrentDisplayNameShortAsync(token).ConfigureAwait(false), ExpenseType.Nuyen,
                 DateTime.Now);
             await _objCharacter.ExpenseEntries.AddWithSortAsync(objExpense, token: token).ConfigureAwait(false);
             await _objCharacter.ModifyNuyenAsync(decAmount, token).ConfigureAwait(false);
@@ -2214,8 +2236,6 @@ namespace Chummer.Backend.Equipment
         private string _strCost;
         private string _strCategory;
         private int _intSlots;
-        private string _strAllowedWeaponCategories;
-        private string _strAllowedWeapons;
         private bool _blnIncludedInParent;
         private WeaponMount _objMyMount;
 
@@ -2260,13 +2280,11 @@ namespace Chummer.Backend.Equipment
             objXmlMod.TryGetStringFieldQuickly("name", ref _strName);
             objXmlMod.TryGetStringFieldQuickly("category", ref _strCategory);
             objXmlMod.TryGetInt32FieldQuickly("slots", ref _intSlots);
-            objXmlMod.TryGetStringFieldQuickly("weaponcategories", ref _strAllowedWeaponCategories);
-            objXmlMod.TryGetStringFieldQuickly("weapons", ref _strAllowedWeapons);
             objXmlMod.TryGetStringFieldQuickly("avail", ref _strAvail);
 
             // Check for a Variable Cost.
             // ReSharper disable once PossibleNullReferenceException
-            _strCost = objXmlMod["cost"]?.InnerText ?? "0";
+            _strCost = objXmlMod["cost"]?.InnerTextViaPool(token) ?? "0";
             if (_strCost.StartsWith("Variable(", StringComparison.Ordinal))
             {
                 string strFirstHalf = _strCost.TrimStartOnce("Variable(", true).TrimEndOnce(')');
@@ -2423,8 +2441,6 @@ namespace Chummer.Backend.Equipment
             }
             objNode.TryGetStringFieldQuickly("category", ref _strCategory);
             objNode.TryGetInt32FieldQuickly("slots", ref _intSlots);
-            objNode.TryGetStringFieldQuickly("weaponmountcategories", ref _strAllowedWeaponCategories);
-            objNode.TryGetStringFieldQuickly("allowedweapons", ref _strAllowedWeapons);
             objNode.TryGetStringFieldQuickly("avail", ref _strAvail);
             objNode.TryGetStringFieldQuickly("cost", ref _strCost);
             objNode.TryGetBoolFieldQuickly("includedinparent", ref _blnIncludedInParent);
@@ -2434,6 +2450,7 @@ namespace Chummer.Backend.Equipment
         /// Load the Weapon Mount Option from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public async Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -2454,8 +2471,6 @@ namespace Chummer.Backend.Equipment
             }
             objNode.TryGetStringFieldQuickly("category", ref _strCategory);
             objNode.TryGetInt32FieldQuickly("slots", ref _intSlots);
-            objNode.TryGetStringFieldQuickly("weaponmountcategories", ref _strAllowedWeaponCategories);
-            objNode.TryGetStringFieldQuickly("allowedweapons", ref _strAllowedWeapons);
             objNode.TryGetStringFieldQuickly("avail", ref _strAvail);
             objNode.TryGetStringFieldQuickly("cost", ref _strCost);
             objNode.TryGetBoolFieldQuickly("includedinparent", ref _blnIncludedInParent);
@@ -2939,13 +2954,13 @@ namespace Chummer.Backend.Equipment
                             && dicRestrictedGearLimits[intLowestValidRestrictedGearAvail] > 0)
                         {
                             --dicRestrictedGearLimits[intLowestValidRestrictedGearAvail];
-                            sbdRestrictedItems.AppendLine().Append("\t\t").Append(await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
+                            sbdRestrictedItems.AppendLine().Append("\t\t", await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
                         }
                         else
                         {
                             dicRestrictedGearLimits.Remove(intLowestValidRestrictedGearAvail);
                             ++intRestrictedCount;
-                            sbdAvailItems.AppendLine().Append("\t\t").Append(await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
+                            sbdAvailItems.AppendLine().Append("\t\t", await GetCurrentDisplayNameAsync(token).ConfigureAwait(false));
                         }
                     }
                 }

@@ -177,9 +177,9 @@ namespace Chummer
             if (objNode == null)
                 return;
             if (objNode["karmatype"] != null)
-                KarmaType = ConvertToKarmaExpenseType(objNode["karmatype"].InnerText);
+                KarmaType = ConvertToKarmaExpenseType(objNode["karmatype"].InnerTextViaPool());
             if (objNode["nuyentype"] != null)
-                NuyenType = ConvertToNuyenExpenseType(objNode["nuyentype"].InnerText);
+                NuyenType = ConvertToNuyenExpenseType(objNode["nuyentype"].InnerTextViaPool());
             objNode.TryGetStringFieldQuickly("objectid", ref _strObjectId);
             objNode.TryGetDecFieldQuickly("qty", ref _decQty);
             objNode.TryGetStringFieldQuickly("extra", ref _strExtra);
@@ -254,10 +254,8 @@ namespace Chummer
         /// <param name="strValue">String value to convert.</param>
         public static ExpenseType ConvertToExpenseType(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "nuyen":
-                case "Nuyen":
                 case "NUYEN":
                     return ExpenseType.Nuyen;
 
@@ -328,6 +326,7 @@ namespace Chummer
         /// Load the KarmaLogEntry from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -339,12 +338,13 @@ namespace Chummer
             if (objNode == null)
                 return;
             objNode.TryGetField("guid", Guid.TryParse, out _guiID);
-            DateTime.TryParse(objNode["date"]?.InnerText, GlobalSettings.InvariantCultureInfo, DateTimeStyles.None, out _datDate);
+            DateTime.TryParse(objNode["date"]?.InnerTextViaPool(token), GlobalSettings.InvariantCultureInfo, DateTimeStyles.None, out _datDate);
             objNode.TryGetDecFieldQuickly("amount", ref _decAmount);
             if (objNode.TryGetStringFieldQuickly("reason", ref _strReason))
-                _strReason = _strReason.TrimEndOnce(" (" + (blnSync ? LanguageManager.GetString("String_Expense_Refund", token: token) : await LanguageManager.GetStringAsync("String_Expense_Refund", token: token).ConfigureAwait(false)) + ')').Replace("🡒", "->");
+                // ReSharper disable once MethodHasAsyncOverload
+                _strReason = _strReason.TrimEndOnce(" (" + (blnSync ? LanguageManager.GetString("String_Expense_Refund", token: token) : await LanguageManager.GetStringAsync("String_Expense_Refund", token: token).ConfigureAwait(false)) + ")").Replace("🡒", "->");
             if (objNode["type"] != null)
-                _eExpenseType = ConvertToExpenseType(objNode["type"].InnerText);
+                _eExpenseType = ConvertToExpenseType(objNode["type"].InnerTextViaPool(token));
             objNode.TryGetBoolFieldQuickly("refund", ref _blnRefund);
             objNode.TryGetBoolFieldQuickly("forcecareervisible", ref _blnForceCareerVisible);
 
@@ -456,7 +456,7 @@ namespace Chummer
         public string DisplayReason(string strLanguage)
         {
             if (Refund)
-                return Reason + LanguageManager.GetString("String_Space", strLanguage) + '(' + LanguageManager.GetString("String_Expense_Refund", strLanguage) + ')';
+                return Reason + LanguageManager.GetString("String_Space", strLanguage) + "(" + LanguageManager.GetString("String_Expense_Refund", strLanguage) + ")";
             return Reason;
         }
 
@@ -466,7 +466,7 @@ namespace Chummer
         public async Task<string> DisplayReasonAsync(string strLanguage, CancellationToken token = default)
         {
             if (Refund)
-                return Reason + await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + '(' + await LanguageManager.GetStringAsync("String_Expense_Refund", strLanguage, token: token).ConfigureAwait(false) + ')';
+                return Reason + await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + "(" + await LanguageManager.GetStringAsync("String_Expense_Refund", strLanguage, token: token).ConfigureAwait(false) + ")";
             return Reason;
         }
 

@@ -78,15 +78,15 @@ namespace Chummer.Backend.Equipment
         /// <param name="strValue">String value to convert.</param>
         public static QualityType ConvertToLifestyleQualityType(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "Negative":
+                case "NEGATIVE":
                     return QualityType.Negative;
 
-                case "Positive":
+                case "POSITIVE":
                     return QualityType.Positive;
 
-                case "Contracts":
+                case "CONTRACTS":
                     return QualityType.Contracts;
 
                 default:
@@ -100,15 +100,15 @@ namespace Chummer.Backend.Equipment
         /// <param name="strValue">String value to convert.</param>
         public static QualitySource ConvertToLifestyleQualitySource(string strValue)
         {
-            switch (strValue)
+            switch (strValue.ToUpperInvariant())
             {
-                case "BuiltIn":
+                case "BUILTIN":
                     return QualitySource.BuiltIn;
 
-                case "Heritage":
+                case "HERITAGE":
                     return QualitySource.Heritage;
 
-                case "Improvement":
+                case "IMPROVEMENT":
                     return QualitySource.Improvement;
 
                 default:
@@ -442,10 +442,10 @@ namespace Chummer.Backend.Equipment
                 objWriter.WriteElementString("source", _strSource);
                 objWriter.WriteElementString("page", _strPage);
                 objWriter.WriteElementString("allowed", _setAllowedFreeLifestyles.Count > 0
-                                                 ? string.Join(",", _setAllowedFreeLifestyles)
+                                                 ? StringExtensions.JoinFast(",", _setAllowedFreeLifestyles)
                                                  : string.Empty);
-                if (Bonus != null)
-                    objWriter.WriteRaw("<bonus>" + Bonus.InnerXml + "</bonus>");
+                if (!Bonus.IsNullOrInnerTextIsEmpty())
+                    objWriter.WriteRaw("<bonus>" + Bonus.InnerXmlViaPool() + "</bonus>");
                 else
                     objWriter.WriteElementString("bonus", string.Empty);
                 objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
@@ -469,6 +469,7 @@ namespace Chummer.Backend.Equipment
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
         /// <param name="objParentLifestyle">Lifestyle object to which this LifestyleQuality belongs.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, Lifestyle objParentLifestyle, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, objParentLifestyle, token);
@@ -477,8 +478,6 @@ namespace Chummer.Backend.Equipment
         /// <summary>
         /// Load the Lifestyle quality from the XmlNode.
         /// </summary>
-        /// <param name="objNode">XmlNode to load.</param>
-        /// <param name="objParentLifestyle">Lifestyle object to which this LifestyleQuality belongs.</param>
         private async Task LoadCoreAsync(bool blnSync, XmlNode objNode, Lifestyle objParentLifestyle, CancellationToken token = default)
         {
             token.ThrowIfCancellationRequested();
@@ -501,7 +500,7 @@ namespace Chummer.Backend.Equipment
                 Lazy<XmlNode> objMyNode = null;
                 Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode> objMyNodeAsync = null;
                 if (blnSync)
-                    objMyNode = new Lazy<XmlNode>(() => this.GetNode());
+                    objMyNode = new Lazy<XmlNode>(() => this.GetNode(token));
                 else
                     objMyNodeAsync = new Microsoft.VisualStudio.Threading.AsyncLazy<XmlNode>(() => this.GetNodeAsync(token), Utils.JoinableTaskFactory);
                 if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
@@ -530,9 +529,9 @@ namespace Chummer.Backend.Equipment
                     (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?.TryGetInt32FieldQuickly("comfortsmaximum", ref _intComfortsMaximum);
                 objNode.TryGetBoolFieldQuickly("print", ref _blnPrint);
                 if (objNode["lifestylequalitytype"] != null)
-                    _eType = ConvertToLifestyleQualityType(objNode["lifestylequalitytype"].InnerText);
+                    _eType = ConvertToLifestyleQualityType(objNode["lifestylequalitytype"].InnerTextViaPool(token));
                 if (objNode["lifestylequalitysource"] != null)
-                    OriginSource = ConvertToLifestyleQualitySource(objNode["lifestylequalitysource"].InnerText);
+                    OriginSource = ConvertToLifestyleQualitySource(objNode["lifestylequalitysource"].InnerTextViaPool(token));
                 if (!objNode.TryGetStringFieldQuickly("category", ref _strCategory)
                     && (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?.TryGetStringFieldQuickly("category", ref _strCategory) != true)
                     _strCategory = string.Empty;
@@ -559,6 +558,7 @@ namespace Chummer.Backend.Equipment
                 _colNotes = ColorTranslator.FromHtml(sNotesColor);
 
                 if (blnSync)
+                    // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                     LegacyShim();
                 else
                     await LegacyShimAsync(token).ConfigureAwait(false);
@@ -589,7 +589,7 @@ namespace Chummer.Backend.Equipment
                 XPathNavigator objLifestyleQualityNode = this.GetNodeXPath()
                                                          ?? objXmlDocument.SelectSingleNode(
                                                              "/chummer/qualities/quality[name = " + Name.CleanXPath()
-                                                             + ']');
+                                                             + "]");
                 if (objLifestyleQualityNode == null)
                 {
                     using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
@@ -671,7 +671,7 @@ namespace Chummer.Backend.Equipment
                 XPathNavigator objLifestyleQualityNode = await this.GetNodeXPathAsync(token).ConfigureAwait(false)
                                                          ?? objXmlDocument.SelectSingleNode(
                                                              "/chummer/qualities/quality[name = " + (await GetNameAsync(token).ConfigureAwait(false)).CleanXPath()
-                                                             + ']');
+                                                             + "]");
                 if (objLifestyleQualityNode == null)
                 {
                     using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool,
@@ -809,7 +809,7 @@ namespace Chummer.Backend.Equipment
                                     .ConfigureAwait(false))
                                 .SelectSingleNodeAndCacheExpression("/chummer/categories/category[. = " +
                                                                     strLifestyleQualityType.CleanXPath()
-                                                                    + ']', token: token);
+                                                                    + "]", token: token);
                         if (objNode != null)
                             strLifestyleQualityType
                                 = objNode.SelectSingleNodeAndCacheExpression("@translate", token)?.Value ?? strLifestyleQualityType;
@@ -1302,8 +1302,8 @@ namespace Chummer.Backend.Equipment
 
                 if (!string.IsNullOrEmpty(Extra))
                     // Attempt to retrieve the CharacterAttribute name.
-                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + '(' +
-                                 _objCharacter.TranslateExtra(Extra, strLanguage) + ')';
+                    strReturn += LanguageManager.GetString("String_Space", strLanguage) + "(" +
+                                 _objCharacter.TranslateExtra(Extra, strLanguage) + ")";
                 return strReturn;
             }
         }
@@ -1322,9 +1322,9 @@ namespace Chummer.Backend.Equipment
                 if (!string.IsNullOrEmpty(Extra))
                     // Attempt to retrieve the CharacterAttribute name.
                     strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token)
-                                                      .ConfigureAwait(false) + '(' +
+                                                      .ConfigureAwait(false) + "(" +
                                  await _objCharacter.TranslateExtraAsync(Extra, strLanguage, token: token)
-                                                    .ConfigureAwait(false) + ')';
+                                                    .ConfigureAwait(false) + ")";
                 return strReturn;
             }
             finally
@@ -1343,7 +1343,7 @@ namespace Chummer.Backend.Equipment
             {
                 return DisplayName(strLanguage)
                     + LanguageManager.GetString("String_Space", strLanguage)
-                    + '[' + DisplayCost(objCulture, strLanguage) + ']';
+                    + "[" + DisplayCost(objCulture, strLanguage) + "]";
             }
         }
 
@@ -1355,7 +1355,7 @@ namespace Chummer.Backend.Equipment
                 token.ThrowIfCancellationRequested();
                 return await DisplayNameAsync(strLanguage, token).ConfigureAwait(false)
                        + await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false)
-                       + '[' + await DisplayCostAsync(objCulture, strLanguage, token).ConfigureAwait(false) + ']';
+                       + "[" + await DisplayCostAsync(objCulture, strLanguage, token).ConfigureAwait(false) + "]";
             }
             finally
             {
@@ -1609,21 +1609,21 @@ namespace Chummer.Backend.Equipment
                     if (decMultiplier != 0)
                     {
                         if (sbdReturn.Length > 0)
-                            sbdReturn.Append(',').Append(LanguageManager.GetString("String_Space", strLanguage));
+                            sbdReturn.Append(',', LanguageManager.GetString("String_Space", strLanguage));
                         if (decMultiplier > 0)
                             sbdReturn.Append('+');
-                        sbdReturn.Append(decMultiplier.ToString(objCulture)).Append('%');
+                        sbdReturn.Append(decMultiplier.ToString(objCulture), '%');
                     }
 
                     decimal decCost = Cost;
                     if (decCost != 0)
                     {
                         if (sbdReturn.Length > 0)
-                            sbdReturn.Append(',').Append(LanguageManager.GetString("String_Space", strLanguage));
+                            sbdReturn.Append(',', LanguageManager.GetString("String_Space", strLanguage));
                         if (decCost > 0)
                             sbdReturn.Append('+');
-                        sbdReturn.Append(decCost.ToString(_objCharacter.Settings.NuyenFormat, objCulture))
-                            .Append(LanguageManager.GetString("String_NuyenSymbol", strLanguage));
+                        sbdReturn.Append(decCost.ToString(_objCharacter.Settings.NuyenFormat, objCulture),
+                            LanguageManager.GetString("String_NuyenSymbol", strLanguage));
                     }
                     strReturn = sbdReturn.ToString();
                 }
@@ -1657,21 +1657,21 @@ namespace Chummer.Backend.Equipment
                     if (decMultiplier != 0)
                     {
                         if (sbdReturn.Length > 0)
-                            sbdReturn.Append(',').Append(await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false));
+                            sbdReturn.Append(',', await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false));
                         if (decMultiplier > 0)
                             sbdReturn.Append('+');
-                        sbdReturn.Append(decMultiplier.ToString(objCulture)).Append('%');
+                        sbdReturn.Append(decMultiplier.ToString(objCulture), '%');
                     }
 
                     decimal decCost = await GetCostAsync(token).ConfigureAwait(false);
                     if (decCost != 0)
                     {
                         if (sbdReturn.Length > 0)
-                            sbdReturn.Append(',').Append(await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false));
+                            sbdReturn.Append(',', await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false));
                         if (decCost > 0)
                             sbdReturn.Append('+');
-                        sbdReturn.Append(decCost.ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token: token).ConfigureAwait(false), objCulture))
-                            .Append(await LanguageManager.GetStringAsync("String_NuyenSymbol", strLanguage, token: token).ConfigureAwait(false));
+                        sbdReturn.Append(decCost.ToString(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetNuyenFormatAsync(token: token).ConfigureAwait(false), objCulture),
+                            await LanguageManager.GetStringAsync("String_NuyenSymbol", strLanguage, token: token).ConfigureAwait(false));
                     }
                     strReturn = sbdReturn.ToString();
                 }
@@ -2629,7 +2629,14 @@ namespace Chummer.Backend.Equipment
             if (Interlocked.CompareExchange(ref _intIsDisposed, 1, 0) > 0)
                 return;
             using (LockObject.EnterWriteLock())
+            {
                 Utils.StringHashSetPool.Return(ref _setAllowedFreeLifestyles);
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
+            }
         }
 
         /// <inheritdoc />
@@ -2641,6 +2648,11 @@ namespace Chummer.Backend.Equipment
             try
             {
                 Utils.StringHashSetPool.Return(ref _setAllowedFreeLifestyles);
+                // to help the GC
+                PropertyChanged = null;
+                MultiplePropertiesChanged = null;
+                _setPropertyChangedAsync.Clear();
+                _setMultiplePropertiesChangedAsync.Clear();
             }
             finally
             {
@@ -3040,13 +3052,13 @@ namespace Chummer.Backend.Equipment
                     {
                         List<PropertyChangedEventArgs> lstArgsList = setNamesOfChangedProperties
                             .Select(x => new PropertyChangedEventArgs(x)).ToList();
-                        List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
-                            = new List<Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
+                        List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>> lstAsyncEventsList
+                            = new List<ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>>(lstArgsList.Count * _setPropertyChangedAsync.Count);
                         foreach (PropertyChangedAsyncEventHandler objEvent in _setPropertyChangedAsync)
                         {
                             foreach (PropertyChangedEventArgs objArg in lstArgsList)
                             {
-                                lstAsyncEventsList.Add(new Tuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
+                                lstAsyncEventsList.Add(new ValueTuple<PropertyChangedAsyncEventHandler, PropertyChangedEventArgs>(objEvent, objArg));
                             }
                         }
                         await ParallelExtensions.ForEachAsync(lstAsyncEventsList, tupEvent => tupEvent.Item1.Invoke(this, tupEvent.Item2, token), token).ConfigureAwait(false);

@@ -42,24 +42,16 @@ namespace Chummer
 
         public HeroLabImporter()
         {
-            Disposed += (sender, args) =>
-            {
-                _lstCharacterCache.Dispose();
-                List<Bitmap> lstImages = _dicImages.GetValuesToListSafe();
-                _dicImages.Clear();
-                foreach (Bitmap objImage in lstImages)
-                    objImage.Dispose();
-                dlgOpenFile?.Dispose();
-            };
             InitializeComponent();
             tabCharacterText.MouseWheel += CommonFunctions.ShiftTabsOnMouseScroll;
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void HeroLabImporter_Load(object sender, EventArgs e)
         {
-            dlgOpenFile.Filter = await LanguageManager.GetStringAsync("DialogFilter_HeroLab").ConfigureAwait(false) + '|'
+            dlgOpenFile.Filter = await LanguageManager.GetStringAsync("DialogFilter_HeroLab").ConfigureAwait(false) + "|"
                 + await LanguageManager.GetStringAsync("DialogFilter_All").ConfigureAwait(false);
         }
 
@@ -121,7 +113,7 @@ namespace Chummer
                             // If we run into any problems loading the character cache, fail out early.
                             try
                             {
-                                await Task.Run(() =>
+                                await TaskExtensions.RunWithoutEC(() =>
                                 {
                                     XPathDocument xmlSourceDoc;
                                     using (Stream objStream = objEntry.Open())
@@ -209,7 +201,7 @@ namespace Chummer
 
             string strFileText
                 = await strFile
-                        .CheapReplaceAsync(Utils.GetStartupPath, () => '<' + Application.ProductName + '>',
+                        .CheapReplaceAsync(Utils.GetStartupPath, () => "<" + Application.ProductName + ">",
                                            token: token).ConfigureAwait(false);
             TreeNode nodRootNode = new TreeNode
             {
@@ -381,7 +373,7 @@ namespace Chummer
                     {
                         Text = await CalculatedName(objCache, token).ConfigureAwait(false),
                         ToolTipText = await strFile.CheapReplaceAsync(Utils.GetStartupPath,
-                                                                      () => '<' + Application.ProductName + '>',
+                                                                      () => "<" + Application.ProductName + ">",
                                                                       token: token).ConfigureAwait(false)
                     };
                     nodRootNode.Nodes.Add(objNode);
@@ -439,8 +431,8 @@ namespace Chummer
             if (string.IsNullOrEmpty(strBuildMethod))
                 strBuildMethod = await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
             string strSpace = await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false);
-            strName += strSpace + '(' + strBuildMethod + strSpace + '-' + strSpace
-                       + await LanguageManager.GetStringAsync(objCache.Created ? "Title_CareerMode" : "Title_CreateMode", token: token).ConfigureAwait(false) + ')';
+            strName += strSpace + "(" + strBuildMethod + strSpace + "-" + strSpace
+                       + await LanguageManager.GetStringAsync(objCache.Created ? "Title_CareerMode" : "Title_CreateMode", token: token).ConfigureAwait(false) + ")";
             return strName;
         }
 
@@ -526,7 +518,7 @@ namespace Chummer
                     strMetatype += " (" + (objMetatypeNode != null
                         ? objMetatypeNode.SelectSingleNodeAndCacheExpression("translate", token: token)?.Value
                           ?? objCache.Metavariant
-                        : objCache.Metavariant) + ')';
+                        : objCache.Metavariant) + ")";
                 }
 
                 await lblMetatype.DoThreadSafeAsync(x =>

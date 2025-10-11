@@ -19,14 +19,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -45,7 +44,6 @@ namespace Chummer
         private string _strForceSpell = string.Empty;
         private bool _blnCanGenericSpellBeFree;
         private bool _blnCanTouchOnlySpellBeFree;
-        private bool _blnAllowLimitedSpellsForBareHandedAdept;
         private static string _strSelectCategory = string.Empty;
 
         private readonly XPathNavigator _xmlBaseSpellDataNode;
@@ -61,17 +59,17 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
 
             // Load the Spells information.
             _xmlBaseSpellDataNode = _objCharacter.LoadDataXPath("spells.xml").SelectSingleNodeAndCacheExpression("/chummer");
             _lstCategory = Utils.ListItemListPool.Get();
-            Disposed += (sender, args) => Utils.ListItemListPool.Return(ref _lstCategory);
         }
 
         private async void SelectSpell_Load(object sender, EventArgs e)
         {
-            await chkLimited.SetToolTipAsync(await LanguageManager.GetStringAsync("Tip_SelectSpell_LimitedSpell").ConfigureAwait(false)).ConfigureAwait(false);
-            await chkExtended.SetToolTipAsync(await LanguageManager.GetStringAsync("Tip_SelectSpell_ExtendedSpell").ConfigureAwait(false)).ConfigureAwait(false);
+            await chkLimited.SetToolTipTextAsync(await LanguageManager.GetStringAsync("Tip_SelectSpell_LimitedSpell").ConfigureAwait(false)).ConfigureAwait(false);
+            await chkExtended.SetToolTipTextAsync(await LanguageManager.GetStringAsync("Tip_SelectSpell_ExtendedSpell").ConfigureAwait(false)).ConfigureAwait(false);
             // If a value is forced, set the name of the spell and accept the form.
             if (!string.IsNullOrEmpty(_strForceSpell))
             {
@@ -85,7 +83,6 @@ namespace Chummer
             (bool blnCanTouchOnlySpellBeFree, bool blnCanGenericSpellBeFree) = await _objCharacter.AllowFreeSpellsAsync().ConfigureAwait(false);
             _blnCanTouchOnlySpellBeFree = blnCanTouchOnlySpellBeFree;
             _blnCanGenericSpellBeFree = blnCanGenericSpellBeFree;
-            _blnAllowLimitedSpellsForBareHandedAdept = await (await _objCharacter.GetSettingsAsync()).GetAllowLimitedSpellsForBareHandedAdeptAsync().ConfigureAwait(false);
 
             await txtSearch.DoThreadSafeAsync(x => x.Text = string.Empty).ConfigureAwait(false);
             // Populate the Category list.
@@ -242,6 +239,9 @@ namespace Chummer
         /// Limit the Spell list to a particular Category.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Limit the Spell list to a particular Category.
+        /// </summary>
         public string LimitCategory
         {
             set => _strLimitCategory = value;
@@ -251,6 +251,9 @@ namespace Chummer
         /// Force a particular Spell to be selected.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Force a particular Spell to be selected.
+        /// </summary>
         public string ForceSpellName
         {
             set => _strForceSpell = value;
@@ -310,11 +313,11 @@ namespace Chummer
                     string strFilter = string.Empty;
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                     {
-                        sbdFilter.Append('(').Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)).Append(')');
+                        sbdFilter.Append('(', await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false), ')');
                         if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"
                                                                && (GlobalSettings.SearchInCategoryOnly
                                                                    || !blnHasSearch))
-                            sbdFilter.Append(" and category = ").Append(strCategory.CleanXPath());
+                            sbdFilter.Append(" and category = ", strCategory.CleanXPath());
                         else
                         {
                             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
@@ -324,15 +327,14 @@ namespace Chummer
                                 {
                                     if (!string.IsNullOrEmpty(strItem))
                                     {
-                                        sbdCategoryFilter.Append("category = ").Append(strItem.CleanXPath())
-                                                         .Append(" or ");
+                                        sbdCategoryFilter.Append("category = ", strItem.CleanXPath(), " or ");
                                     }
                                 }
 
                                 if (sbdCategoryFilter.Length > 0)
                                 {
                                     sbdCategoryFilter.Length -= 4;
-                                    sbdFilter.Append(" and (").Append(sbdCategoryFilter).Append(')');
+                                    sbdFilter.Append(" and (", sbdCategoryFilter.ToString(), ')');
                                 }
                             }
                         }
@@ -340,7 +342,7 @@ namespace Chummer
                         if (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetExtendAnyDetectionSpellAsync(token).ConfigureAwait(false))
                             sbdFilter.Append(" and ((not(contains(name, \", Extended\"))))");
                         if (!string.IsNullOrEmpty(strSearch))
-                            sbdFilter.Append(" and ").Append(CommonFunctions.GenerateSearchXPath(strSearch));
+                            sbdFilter.Append(" and ", CommonFunctions.GenerateSearchXPath(strSearch));
 
                         // Populate the Spell list.
                         if (!_blnIgnoreRequirements)
@@ -359,7 +361,7 @@ namespace Chummer
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = '[' + sbdFilter.ToString() + ']';
+                            strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
                     }
 
                     foreach (XPathNavigator objXmlSpell in _xmlBaseSpellDataNode.Select("spells/spell" + strFilter))
@@ -444,7 +446,7 @@ namespace Chummer
                             = _lstCategory.Find(objFind => objFind.Value.ToString() == strSpellCategory);
                         if (!string.IsNullOrEmpty(objFoundItem.Name))
                         {
-                            strDisplayName += strSpace + '[' + objFoundItem.Name + ']';
+                            strDisplayName += strSpace + "[" + objFoundItem.Name + "]";
                         }
                     }
 
@@ -596,40 +598,41 @@ namespace Chummer
                     foreach (string strDescriptor in strDescriptors.SplitNoAlloc(
                                  ',', StringSplitOptions.RemoveEmptyEntries))
                     {
-                        switch (strDescriptor.Trim())
+                        string strTrimmedDescriptor = strDescriptor.Trim();
+                        switch (strTrimmedDescriptor.ToUpperInvariant())
                         {
-                            case "Alchemical Preparation":
+                            case "ALCHEMICAL PREPARATION":
                                 blnAlchemicalFound = true;
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescAlchemicalPreparation", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Extended Area":
+                            case "EXTENDED AREA":
                                 blnExtendedFound = true;
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescExtendedArea", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Material Link":
+                            case "MATERIAL LINK":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescMaterialLink", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Multi-Sense":
+                            case "MULTI-SENSE":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescMultiSense", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Organic Link":
+                            case "ORGANIC LINK":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescOrganicLink", token: token).ConfigureAwait(false));
                                 break;
 
-                            case "Single-Sense":
+                            case "SINGLE-SENSE":
                                 sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescSingleSense", token: token).ConfigureAwait(false));
                                 break;
 
                             default:
-                                sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_Desc" + strDescriptor.Trim(), token: token).ConfigureAwait(false));
+                                sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_Desc" + strTrimmedDescriptor, token: token).ConfigureAwait(false));
                                 break;
                         }
 
-                        sbdDescriptors.Append(',').Append(strSpace);
+                        sbdDescriptors.Append(',', strSpace);
                     }
                 }
 
@@ -681,8 +684,7 @@ namespace Chummer
                         return x.Checked;
                     }, token: token).ConfigureAwait(false))
                     {
-                        sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescExtendedArea", token: token).ConfigureAwait(false)).Append(',')
-                            .Append(strSpace);
+                        sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescExtendedArea", token: token).ConfigureAwait(false), ',', strSpace);
                     }
                 }
                 else
@@ -696,8 +698,7 @@ namespace Chummer
 
                 if (await chkAlchemical.DoThreadSafeFuncAsync(x => x.Checked, token: token).ConfigureAwait(false) && !blnAlchemicalFound)
                 {
-                    sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescAlchemicalPreparation", token: token).ConfigureAwait(false)).Append(',')
-                                  .Append(strSpace);
+                    sbdDescriptors.Append(await LanguageManager.GetStringAsync("String_DescAlchemicalPreparation", token: token).ConfigureAwait(false), ',', strSpace);
                 }
 
                 // Remove the trailing comma.
@@ -708,7 +709,7 @@ namespace Chummer
 
             string strSelectedSpellName = xmlSpell.SelectSingleNodeAndCacheExpression("name", token)?.Value ?? string.Empty;
             string strSelectedSpellCategory = xmlSpell.SelectSingleNodeAndCacheExpression("category", token)?.Value ?? string.Empty;
-            List<Improvement> lstDrainRelevantImprovements = new List<Improvement>();
+            List<Improvement> lstDrainRelevantImprovements = new List<Improvement>(await _objCharacter.Improvements.GetCountAsync(token).ConfigureAwait(false));
             using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(Utils.StringHashSetPool,
                                                               out HashSet<string> setDescriptors))
             {
@@ -779,7 +780,7 @@ namespace Chummer
             await lblDescriptorsLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strDescriptors), token: token).ConfigureAwait(false);
 
             string strType;
-            switch (xmlSpell.SelectSingleNodeAndCacheExpression("type", token)?.Value)
+            switch (xmlSpell.SelectSingleNodeAndCacheExpression("type", token)?.Value.ToUpperInvariant())
             {
                 case "M":
                     strType = await LanguageManager.GetStringAsync("String_SpellTypeMana", token: token).ConfigureAwait(false);
@@ -793,7 +794,7 @@ namespace Chummer
             await lblTypeLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strType), token: token).ConfigureAwait(false);
 
             string strDuration;
-            switch (xmlSpell.SelectSingleNodeAndCacheExpression("duration", token)?.Value)
+            switch (xmlSpell.SelectSingleNodeAndCacheExpression("duration", token)?.Value.ToUpperInvariant())
             {
                 case "P":
                     strDuration = await LanguageManager.GetStringAsync("String_SpellDurationPermanent", token: token).ConfigureAwait(false);
@@ -825,7 +826,7 @@ namespace Chummer
                 blnBarehandedAdept = true;
 
                 // Show/hide Limited checkbox based on settings
-                bool blnLimitedVisible = await (await _objCharacter.GetSettingsAsync()).GetAllowLimitedSpellsForBareHandedAdeptAsync().ConfigureAwait(false);
+                bool blnLimitedVisible = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetAllowLimitedSpellsForBareHandedAdeptAsync(token).ConfigureAwait(false);
 
                 await chkLimited.DoThreadSafeAsync(x =>
                 {
@@ -858,13 +859,13 @@ namespace Chummer
                                  .CheapReplaceAsync("LOI", () => LanguageManager.GetStringAsync("String_SpellRangeLineOfInfluence", token: token), token: token)
                                  .CheapReplaceAsync("Touch", () => LanguageManager.GetStringAsync("String_SpellRangeTouchLong", token: token), token: token)
                                  .CheapReplaceAsync("T", () => LanguageManager.GetStringAsync("String_SpellRangeTouch", token: token), token: token)
-                                 .CheapReplaceAsync("(A)", async () => '(' + await LanguageManager.GetStringAsync("String_SpellRangeArea", token: token).ConfigureAwait(false) + ')', token: token)
+                                 .CheapReplaceAsync("(A)", async () => "(" + await LanguageManager.GetStringAsync("String_SpellRangeArea", token: token).ConfigureAwait(false) + ")", token: token)
                                  .CheapReplaceAsync("MAG", () => LanguageManager.GetStringAsync("String_AttributeMAGShort", token: token), token: token).ConfigureAwait(false);
             }
             await lblRange.DoThreadSafeAsync(x => x.Text = strRange, token: token).ConfigureAwait(false);
             await lblRangeLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(strRange), token: token).ConfigureAwait(false);
 
-            switch (xmlSpell.SelectSingleNodeAndCacheExpression("damage", token)?.Value)
+            switch (xmlSpell.SelectSingleNodeAndCacheExpression("damage", token)?.Value.ToUpperInvariant())
             {
                 case "P":
                     {
@@ -903,26 +904,7 @@ namespace Chummer
             bool blnForce = strDv.StartsWith('F');
             strDv = blnForce ? strDv.TrimStartOnce("F", true) : strDv;
             //Navigator can't do math on a single value, so inject a mathable value.
-            if (string.IsNullOrEmpty(strDv))
-            {
-                strDv = "0";
-            }
-            else
-            {
-                int intPos = strDv.IndexOf('-');
-                if (intPos != -1)
-                {
-                    strDv = strDv.Substring(intPos);
-                }
-                else
-                {
-                    intPos = strDv.IndexOf('+');
-                    if (intPos != -1)
-                    {
-                        strDv = strDv.Substring(intPos);
-                    }
-                }
-            }
+            strDv = string.IsNullOrEmpty(strDv) ? "0" : strDv.TrimStart('+');
 
             string strToAppend = string.Empty;
             int intDrainDv = 0;
@@ -931,10 +913,10 @@ namespace Chummer
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdDv))
                 {
-                    sbdDv.Append('(').Append(strDv).Append(')');
+                    sbdDv.Append('(', strDv, ')');
                     foreach (Improvement objImprovement in lstDrainRelevantImprovements)
                     {
-                        sbdDv.Append(" + (").Append(objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo)).Append(')');
+                        sbdDv.Append("+(", objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo), ')');
                     }
 
                     if (await chkLimited.DoThreadSafeFuncAsync(x => x.Checked, token).ConfigureAwait(false))
@@ -948,7 +930,7 @@ namespace Chummer
 
                     if (blnBarehandedAdept && !blnForce)
                     {
-                        sbdDv.Insert(0, "2 * (").Append(')');
+                        sbdDv.Insert(0, "2*(", ')');
                     }
 
                     await _objCharacter.ProcessAttributesInXPathAsync(sbdDv, token: token).ConfigureAwait(false);
@@ -990,7 +972,7 @@ namespace Chummer
                 {
                     strDv += "F" + strToAppend;
                     if (blnBarehandedAdept)
-                        strDv = "2 * (" + strDv + ')';
+                        strDv = "2 * (" + strDv + ")";
                 }
                 else
                     strDv = string.Format(GlobalSettings.CultureInfo, blnBarehandedAdept ? "2 * (F{0:+0;-0;})" : "F{0:+0;-0;}", intDrainDv);
@@ -999,7 +981,7 @@ namespace Chummer
             {
                 strDv += strToAppend;
                 if (blnBarehandedAdept)
-                    strDv = "2 * (" + strDv + ')';
+                    strDv = "2 * (" + strDv + ")";
             }
             else
                 // Drain always minimum 2 (doubled for Barehanded Adept)
@@ -1012,7 +994,7 @@ namespace Chummer
             string strPage = xmlSpell.SelectSingleNodeAndCacheExpression("altpage", token: token)?.Value ?? xmlSpell.SelectSingleNodeAndCacheExpression("page", token)?.Value ?? await LanguageManager.GetStringAsync("String_Unknown", token: token).ConfigureAwait(false);
             SourceString objSource = await SourceString.GetSourceStringAsync(strSource, strPage, GlobalSettings.Language,
                                                                              GlobalSettings.CultureInfo, _objCharacter, token: token).ConfigureAwait(false);
-            await objSource.SetControlAsync(lblSource, token: token).ConfigureAwait(false);
+            await objSource.SetControlAsync(lblSource, this, token: token).ConfigureAwait(false);
             await lblSourceLabel.DoThreadSafeAsync(x => x.Visible = !string.IsNullOrEmpty(objSource.ToString()), token: token).ConfigureAwait(false);
             await tlpRight.DoThreadSafeAsync(x => x.Visible = true, token: token).ConfigureAwait(false);
             _blnRefresh = false;

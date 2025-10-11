@@ -42,6 +42,7 @@ namespace Chummer.UI.Shared
             InitializeComponent();
             this.UpdateLightDarkMode(objMyToken);
             this.TranslateWinForm(token: objMyToken);
+            this.UpdateParentForToolTipControls();
 
             foreach (ToolStripMenuItem tssItem in cmsLimitModifier.Items.OfType<ToolStripMenuItem>())
             {
@@ -410,10 +411,10 @@ namespace Chummer.UI.Shared
                                              + await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                     .ConfigureAwait(false);
                             if (objImprovement.Value > 0)
-                                strName += '+';
+                                strName += "+";
                             strName += objImprovement.Value.ToString(GlobalSettings.CultureInfo);
                             if (!string.IsNullOrEmpty(objImprovement.Condition))
-                                strName += ','
+                                strName += ","
                                            + await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                   .ConfigureAwait(false) + objImprovement.Condition;
                             TreeNodeCollection objParentNodeChildren = objParentNode.Nodes;
@@ -648,6 +649,15 @@ namespace Chummer.UI.Shared
             {
                 cmdDeleteLimitModifier.Enabled = false;
             }
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
         }
     }
 }

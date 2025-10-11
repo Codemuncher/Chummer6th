@@ -18,9 +18,9 @@
  */
 
 using System;
-using System.ComponentModel;
 using System.IO;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -35,6 +35,7 @@ namespace Chummer
             InitializeComponent();
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
         }
 
         private async void cmdOK_Click(object sender, EventArgs e)
@@ -88,6 +89,14 @@ namespace Chummer
         /// Value that was entered in the dialogue.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
+        #endregion Control Events
+
+        #region Properties
+
+        /// <summary>
+        /// Value that was entered in the dialogue.
+        /// </summary>
         public string SelectedValue
         {
             get => _strReturnValue;
@@ -106,12 +115,14 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool PreventXPathErrors { get; internal set; }
 
+
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool PreventFileNameCharErrors { get; internal set; }
 
         private bool _blnAllowEmptyString;
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+
         public bool AllowEmptyString
         {
             get => _blnAllowEmptyString;

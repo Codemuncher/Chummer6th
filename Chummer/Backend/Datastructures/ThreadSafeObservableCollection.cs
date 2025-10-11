@@ -469,14 +469,14 @@ namespace Chummer
             return false;
         }
 
-        public async Task<Tuple<bool, T>> TryTakeAsync(CancellationToken token = default)
+        public async Task<ValueTuple<bool, T>> TryTakeAsync(CancellationToken token = default)
         {
             IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
             try
             {
                 token.ThrowIfCancellationRequested();
                 if (await _lstData.GetCountAsync(token).ConfigureAwait(false) == 0)
-                    return new Tuple<bool, T>(false, default);
+                    return new ValueTuple<bool, T>(false, default);
             }
             finally
             {
@@ -502,7 +502,7 @@ namespace Chummer
                         await objLocker2.DisposeAsync().ConfigureAwait(false);
                     }
 
-                    return new Tuple<bool, T>(true, objReturn);
+                    return new ValueTuple<bool, T>(true, objReturn);
                 }
             }
             finally
@@ -510,7 +510,7 @@ namespace Chummer
                 await objLocker.DisposeAsync().ConfigureAwait(false);
             }
 
-            return new Tuple<bool, T>(false, default);
+            return new ValueTuple<bool, T>(false, default);
         }
 
         /// <inheritdoc />
@@ -625,11 +625,12 @@ namespace Chummer
 
             using (LockObject.EnterUpgradeableReadLock())
             {
-                if (_lstData.Count == 0)
+                int intCollectionSize = _lstData.Count;
+                if (intCollectionSize == 0)
                     return;
-                IDisposable[] aobjLockers = _lstData[0] is IHasLockObject ? new IDisposable[_lstData.Count] : null;
-                T[] aobjSorted = new T[_lstData.Count];
-                for (int i = 0; i < _lstData.Count; ++i)
+                IDisposable[] aobjLockers = _lstData[0] is IHasLockObject ? new IDisposable[intCollectionSize] : null;
+                T[] aobjSorted = new T[intCollectionSize];
+                for (int i = 0; i < intCollectionSize; ++i)
                 {
                     T objLoop = _lstData[i];
                     aobjSorted[i] = objLoop;
@@ -637,7 +638,7 @@ namespace Chummer
                         aobjLockers[i] = (objLoop as IHasLockObject)?.LockObject.EnterReadLock();
                 }
 
-                Array.Sort(aobjSorted);
+                Array.Sort(aobjSorted, 0, intCollectionSize);
 
                 if (aobjLockers != null)
                 {
@@ -649,7 +650,7 @@ namespace Chummer
 
                 using (LockObject.EnterWriteLock())
                 {
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCollectionSize; ++i)
                         _lstData.Move(_lstData.IndexOf(aobjSorted[i]), i);
                 }
             }
@@ -666,11 +667,12 @@ namespace Chummer
 
             using (LockObject.EnterUpgradeableReadLock())
             {
-                if (_lstData.Count == 0)
+                int intCollectionSize = _lstData.Count;
+                if (intCollectionSize == 0)
                     return;
-                IDisposable[] aobjLockers = _lstData[0] is IHasLockObject ? new IDisposable[_lstData.Count] : null;
-                T[] aobjSorted = new T[_lstData.Count];
-                for (int i = 0; i < _lstData.Count; ++i)
+                IDisposable[] aobjLockers = _lstData[0] is IHasLockObject ? new IDisposable[intCollectionSize] : null;
+                T[] aobjSorted = new T[intCollectionSize];
+                for (int i = 0; i < intCollectionSize; ++i)
                 {
                     T objLoop = _lstData[i];
                     aobjSorted[i] = objLoop;
@@ -678,7 +680,7 @@ namespace Chummer
                         aobjLockers[i] = (objLoop as IHasLockObject)?.LockObject.EnterReadLock();
                 }
 
-                Array.Sort(aobjSorted, comparer);
+                Array.Sort(aobjSorted, 0, intCollectionSize, comparer);
 
                 if (aobjLockers != null)
                 {
@@ -690,7 +692,7 @@ namespace Chummer
 
                 using (LockObject.EnterWriteLock())
                 {
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCollectionSize; ++i)
                         _lstData.Move(_lstData.IndexOf(aobjSorted[i]), i);
                 }
             }
@@ -703,16 +705,22 @@ namespace Chummer
                 return;
             using (LockObject.EnterReadLock())
             {
-                if (_lstData.Count == 0)
+                int intCount = _lstData.Count;
+                if (intCount == 0)
                     return;
+                if (intCount < index + count)
+                    throw new ArgumentOutOfRangeException(nameof(count));
             }
 
             using (LockObject.EnterUpgradeableReadLock())
             {
-                if (_lstData.Count == 0)
+                int intCount = _lstData.Count;
+                if (intCount == 0)
                     return;
+                if (intCount < index + count)
+                    throw new ArgumentOutOfRangeException(nameof(count));
                 IDisposable[] aobjLockers = _lstData[0] is IHasLockObject ? new IDisposable[count] : null;
-                T[] aobjSorted = new T[_lstData.Count];
+                T[] aobjSorted = new T[count];
                 for (int i = 0; i < count; ++i)
                 {
                     T objLoop = _lstData[index + i];
@@ -721,7 +729,7 @@ namespace Chummer
                         aobjLockers[i] = (objLoop as IHasLockObject)?.LockObject.EnterReadLock();
                 }
 
-                Array.Sort(aobjSorted, comparer);
+                Array.Sort(aobjSorted, 0, count, comparer);
 
                 if (aobjLockers != null)
                 {
@@ -733,7 +741,7 @@ namespace Chummer
 
                 using (LockObject.EnterWriteLock())
                 {
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < count; ++i)
                         _lstData.Move(_lstData.IndexOf(aobjSorted[i]), index + i);
                 }
             }
@@ -750,11 +758,12 @@ namespace Chummer
 
             using (LockObject.EnterUpgradeableReadLock())
             {
-                if (_lstData.Count == 0)
+                int intCollectionSize = _lstData.Count;
+                if (intCollectionSize == 0)
                     return;
-                IDisposable[] aobjLockers = _lstData[0] is IHasLockObject ? new IDisposable[_lstData.Count] : null;
-                T[] aobjSorted = new T[_lstData.Count];
-                for (int i = 0; i < _lstData.Count; ++i)
+                IDisposable[] aobjLockers = _lstData[0] is IHasLockObject ? new IDisposable[intCollectionSize] : null;
+                T[] aobjSorted = new T[intCollectionSize];
+                for (int i = 0; i < intCollectionSize; ++i)
                 {
                     T objLoop = _lstData[i];
                     aobjSorted[i] = objLoop;
@@ -774,7 +783,7 @@ namespace Chummer
 
                 using (LockObject.EnterWriteLock())
                 {
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCollectionSize; ++i)
                         _lstData.Move(_lstData.IndexOf(aobjSorted[i]), i);
                 }
             }
@@ -822,7 +831,7 @@ namespace Chummer
                     }
 
                     token.ThrowIfCancellationRequested();
-                    Array.Sort(aobjSorted);
+                    Array.Sort(aobjSorted, 0, intCount);
                 }
                 finally
                 {
@@ -841,7 +850,7 @@ namespace Chummer
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCount; ++i)
                         await _lstData.MoveAsync(await _lstData.IndexOfAsync(aobjSorted[i], token).ConfigureAwait(false), i, token).ConfigureAwait(false);
                 }
                 finally
@@ -897,7 +906,7 @@ namespace Chummer
                     }
 
                     token.ThrowIfCancellationRequested();
-                    Array.Sort(aobjSorted, comparer);
+                    Array.Sort(aobjSorted, 0, intCount, comparer);
                 }
                 finally
                 {
@@ -916,7 +925,7 @@ namespace Chummer
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCount; ++i)
                         await _lstData.MoveAsync(await _lstData.IndexOfAsync(aobjSorted[i], token).ConfigureAwait(false), i, token).ConfigureAwait(false);
                 }
                 finally
@@ -940,8 +949,11 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (_lstData.Count == 0)
+                int intCount = await _lstData.GetCountAsync(token).ConfigureAwait(false);
+                if (intCount == 0)
                     return;
+                if (intCount < index + count)
+                    throw new ArgumentOutOfRangeException(nameof(count));
             }
             finally
             {
@@ -955,11 +967,13 @@ namespace Chummer
                 int intCount = await _lstData.GetCountAsync(token).ConfigureAwait(false);
                 if (intCount == 0)
                     return;
+                if (intCount < index + count)
+                    throw new ArgumentOutOfRangeException(nameof(count));
                 Stack<IAsyncDisposable> stkLockers =
                     await _lstData.GetValueAtAsync(0, token).ConfigureAwait(false) is IHasLockObject
-                        ? new Stack<IAsyncDisposable>(intCount)
+                        ? new Stack<IAsyncDisposable>(count)
                         : null;
-                T[] aobjSorted = new T[intCount];
+                T[] aobjSorted = new T[count];
                 token.ThrowIfCancellationRequested();
                 try
                 {
@@ -974,7 +988,7 @@ namespace Chummer
                     }
 
                     token.ThrowIfCancellationRequested();
-                    Array.Sort(aobjSorted, comparer);
+                    Array.Sort(aobjSorted, 0, count, comparer);
                 }
                 finally
                 {
@@ -993,7 +1007,7 @@ namespace Chummer
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < count; ++i)
                         await _lstData.MoveAsync(await _lstData.IndexOfAsync(aobjSorted[i], token).ConfigureAwait(false), i, token).ConfigureAwait(false);
                 }
                 finally
@@ -1068,7 +1082,7 @@ namespace Chummer
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCount; ++i)
                         await _lstData.MoveAsync(await _lstData.IndexOfAsync(aobjSorted[i], token).ConfigureAwait(false), i, token).ConfigureAwait(false);
                 }
                 finally
@@ -1123,7 +1137,7 @@ namespace Chummer
                     }
 
                     token.ThrowIfCancellationRequested();
-                    await aobjSorted.SortAsync(comparer, token: token).ConfigureAwait(false);
+                    await aobjSorted.SortAsync(0, intCount, comparer, token: token).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -1142,7 +1156,7 @@ namespace Chummer
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCount; ++i)
                         await _lstData.MoveAsync(await _lstData.IndexOfAsync(aobjSorted[i], token).ConfigureAwait(false), i, token).ConfigureAwait(false);
                 }
                 finally
@@ -1165,8 +1179,11 @@ namespace Chummer
             try
             {
                 token.ThrowIfCancellationRequested();
-                if (_lstData.Count == 0)
+                int intCount = await _lstData.GetCountAsync(token).ConfigureAwait(false);
+                if (intCount == 0)
                     return;
+                if (intCount < index + count)
+                    throw new ArgumentOutOfRangeException(nameof(count));
             }
             finally
             {
@@ -1180,6 +1197,8 @@ namespace Chummer
                 int intCount = await _lstData.GetCountAsync(token).ConfigureAwait(false);
                 if (intCount == 0)
                     return;
+                if (intCount < index + count)
+                    throw new ArgumentOutOfRangeException(nameof(count));
                 Stack<IAsyncDisposable> stkLockers =
                     await _lstData.GetValueAtAsync(0, token).ConfigureAwait(false) is IHasLockObject
                         ? new Stack<IAsyncDisposable>(intCount)
@@ -1199,7 +1218,7 @@ namespace Chummer
                     }
 
                     token.ThrowIfCancellationRequested();
-                    await aobjSorted.SortAsync(comparer, token: token).ConfigureAwait(false);
+                    await aobjSorted.SortAsync(0, count, comparer, token: token).ConfigureAwait(false);
                 }
                 finally
                 {
@@ -1218,7 +1237,7 @@ namespace Chummer
                 try
                 {
                     token.ThrowIfCancellationRequested();
-                    for (int i = 0; i < aobjSorted.Length; ++i)
+                    for (int i = 0; i < intCount; ++i)
                         await _lstData.MoveAsync(await _lstData.IndexOfAsync(aobjSorted[i], token).ConfigureAwait(false), i, token).ConfigureAwait(false);
                 }
                 finally

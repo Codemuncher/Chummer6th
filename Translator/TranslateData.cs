@@ -37,8 +37,8 @@ namespace Translator
     public partial class TranslateData : Form
     {
         private int _intLoading;
-        private readonly XmlDocument _objDataDoc = new XmlDocument();
-        private readonly XmlDocument _objTranslationDoc = new XmlDocument();
+        private readonly XmlDocument _objDataDoc = new XmlDocument { XmlResolver = null };
+        private readonly XmlDocument _objTranslationDoc = new XmlDocument { XmlResolver = null };
         private readonly BackgroundWorker _workerSectionLoader = new BackgroundWorker();
         private int _intQueueSectionLoaderRun;
         private readonly string[] _strSectionLoaderArgs = new string[2];
@@ -229,8 +229,8 @@ namespace Translator
             string strBaseXPath = "/chummer/chummer[@file = " + cboFile.Text.CleanXPath() + "]/" + strSection;
             if (cboFile.Text == "tips.xml")
             {
-                XmlNode xmlNodeLocal = _objDataDoc.SelectSingleNode(strBaseXPath + "/*[id = " + strId.CleanXPath() + ']') ??
-                                       _objDataDoc.SelectSingleNode(strBaseXPath + "/*[text = " + strEnglish.CleanXPath() + ']');
+                XmlNode xmlNodeLocal = _objDataDoc.SelectSingleNode(strBaseXPath + "/*[id = " + strId.CleanXPath() + "]") ??
+                                       _objDataDoc.SelectSingleNode(strBaseXPath + "/*[text = " + strEnglish.CleanXPath() + "]");
                 if (xmlNodeLocal != null)
                 {
                     XmlElement element = xmlNodeLocal["translate"];
@@ -259,11 +259,11 @@ namespace Translator
             }
             else
             {
-                XmlNode xmlNodeLocal = _objDataDoc.SelectSingleNode(strBaseXPath + "/*[id = " + strId.CleanXPath() + ']') ??
-                                       _objDataDoc.SelectSingleNode(strBaseXPath + "/*[name = " + strEnglish.CleanXPath() + ']');
+                XmlNode xmlNodeLocal = _objDataDoc.SelectSingleNode(strBaseXPath + "/*[id = " + strId.CleanXPath() + "]") ??
+                                       _objDataDoc.SelectSingleNode(strBaseXPath + "/*[name = " + strEnglish.CleanXPath() + "]");
                 if (xmlNodeLocal == null)
                 {
-                    xmlNodeLocal = _objDataDoc.SelectSingleNode(strBaseXPath + "/*[. = " + strEnglish.CleanXPath() + ']');
+                    xmlNodeLocal = _objDataDoc.SelectSingleNode(strBaseXPath + "/*[. = " + strEnglish.CleanXPath() + "]");
                     XmlAttributeCollection objAttributes = xmlNodeLocal?.Attributes;
                     if (objAttributes != null)
                     {
@@ -369,7 +369,7 @@ namespace Translator
             string strEnglish = item.Cells["English"].Value.ToString();
             bool blnSetTranslatedAttribute = strTranslated != strEnglish && Convert.ToBoolean(item.Cells["Translated?"].Value);
             string strKey = item.Cells["Key"].Value.ToString();
-            XmlNode xmlNodeLocal = _objTranslationDoc.SelectSingleNode("/chummer/strings/string[key = " + strKey.CleanXPath() + ']');
+            XmlNode xmlNodeLocal = _objTranslationDoc.SelectSingleNode("/chummer/strings/string[key = " + strKey.CleanXPath() + "]");
             if (xmlNodeLocal != null)
             {
                 XmlElement xmlElement = xmlNodeLocal["text"];
@@ -491,7 +491,7 @@ namespace Translator
                 return;
             }
 
-            XmlDocument xmlDocument = new XmlDocument();
+            XmlDocument xmlDocument = new XmlDocument { XmlResolver = null };
             xmlDocument.Load(Path.Combine(Utils.GetLanguageFolderPath, GlobalSettings.DefaultLanguage + ".xml"));
             if (_workerStringsLoader.CancellationPending)
             {
@@ -525,7 +525,7 @@ namespace Translator
                         string strEnglish = xmlNodeEnglish["text"]?.InnerText ?? string.Empty;
                         string strTranslated = strEnglish;
                         bool blnTranslated = false;
-                        XmlNode xmlNodeLocal = _objTranslationDoc.SelectSingleNode("/chummer/strings/string[key = " + strKey.CleanXPath() + ']');
+                        XmlNode xmlNodeLocal = _objTranslationDoc.SelectSingleNode("/chummer/strings/string[key = " + strKey.CleanXPath() + "]");
                         if (xmlNodeLocal != null)
                         {
                             strTranslated = xmlNodeLocal["text"]?.InnerText ?? string.Empty;
@@ -678,7 +678,7 @@ namespace Translator
                         }
 
                         XmlNodeList xmlChildNodes = xmlNodeToShow.ChildNodes;
-                        XmlDocument xmlDocument = new XmlDocument();
+                        XmlDocument xmlDocument = new XmlDocument { XmlResolver = null };
                         xmlDocument.Load(Path.Combine(Utils.GetDataFolderPath, strFileName));
                         object[][] arrayRowsToDisplay = new object[xmlChildNodes.Count][];
                         try
@@ -692,136 +692,136 @@ namespace Translator
                                 switch (strFileName)
                                 {
                                     case "tips.xml":
-                                    {
-                                        string strText = xmlChildNode["text"]?.InnerText ?? string.Empty;
-                                        strTranslated = xmlChildNode["translate"]?.InnerText ?? string.Empty;
-                                        blnTranslated = strText != strTranslated
-                                                        || xmlChildNode.Attributes?["translated"]?.InnerText
-                                                        == bool.TrueString;
-
-                                        if (!blnTranslated || !chkOnlyTranslation.Checked)
                                         {
-                                            object[] objArray = {strId, strText, strTranslated, blnTranslated};
-                                            Interlocked.Exchange(ref arrayRowsToDisplay[i], objArray);
-                                        }
-
-                                        break;
-                                    }
-                                    case "settings.xml":
-                                    {
-                                        string strText = xmlChildNode["name"]?.InnerText ?? string.Empty;
-                                        strTranslated = xmlChildNode["translate"]?.InnerText ?? string.Empty;
-                                        blnTranslated = strText != strTranslated
-                                                        || xmlChildNode.Attributes?["translated"]?.InnerText
-                                                        == bool.TrueString;
-
-                                        if (!blnTranslated || !chkOnlyTranslation.Checked)
-                                        {
-                                            object[] objArray = { strId, strText, strTranslated, blnTranslated };
-                                            Interlocked.Exchange(ref arrayRowsToDisplay[i], objArray);
-                                        }
-
-                                        break;
-                                    }
-                                    default:
-                                    {
-                                        string strName;
-                                        string strPage = string.Empty;
-                                        string strSource = string.Empty;
-                                        string strNameOnPage = string.Empty;
-                                        string strAdvantage = string.Empty;
-                                        string strAdvantageAlt = string.Empty;
-                                        string strDisadvantage = string.Empty;
-                                        string strDisadvantageAlt = string.Empty;
-
-                                        bool blnAdvantage = strFileName == "mentors.xml" || strFileName == "paragons.xml";
-                                        XmlNode xmlChildNameNode = xmlChildNode["name"];
-                                        if (xmlChildNameNode == null)
-                                        {
-                                            strName = xmlChildNode.InnerText;
-                                            strTranslated = xmlChildNode.Attributes?["translate"]?.InnerText
-                                                            ?? string.Empty;
-                                            blnTranslated = strName != strTranslated
-                                                            || xmlChildNode.Attributes?["translated"]?.InnerText
-                                                            == bool.TrueString;
-                                        }
-                                        else
-                                        {
-                                            strName = xmlChildNameNode.InnerText;
-                                            strPage = (strFileName == "books.xml"
-                                                ? xmlChildNode["altcode"]?.InnerText
-                                                : xmlChildNode["altpage"]?.InnerText) ?? string.Empty;
-                                            // if we have an Id get the Node using it
-                                            XmlNode xmlNodeLocal = !string.IsNullOrEmpty(strId)
-                                                ? xmlDocument.SelectSingleNode(
-                                                    "/chummer/" + strSection + "/*[id = " + strId.CleanXPath() + ']')
-                                                : xmlDocument.SelectSingleNode(
-                                                    "/chummer/" + strSection + "/*[name = " + strName.CleanXPath() + ']');
-#if DEBUG
-                                            if (xmlNodeLocal == null)
-                                                MessageBox.Show(strName);
-#endif
-                                            strSource = xmlNodeLocal?["source"]?.InnerText ?? string.Empty;
+                                            string strText = xmlChildNode["text"]?.InnerText ?? string.Empty;
                                             strTranslated = xmlChildNode["translate"]?.InnerText ?? string.Empty;
-                                            blnTranslated = strName != strTranslated
+                                            blnTranslated = strText != strTranslated
                                                             || xmlChildNode.Attributes?["translated"]?.InnerText
                                                             == bool.TrueString;
-                                            if (blnHasNameOnPage)
-                                                strNameOnPage = xmlChildNode["altnameonpage"]?.InnerText ?? string.Empty;
-                                            if (blnAdvantage)
-                                            {
-                                                strAdvantage = xmlNodeLocal?["advantage"]?.InnerText ?? string.Empty;
-                                                strDisadvantage = xmlNodeLocal?["disadvantage"]?.InnerText ?? string.Empty;
-                                                strAdvantageAlt = xmlChildNode["altadvantage"]?.InnerText ?? string.Empty;
-                                                strDisadvantageAlt = xmlChildNode["altdisadvantage"]?.InnerText
-                                                                     ?? string.Empty;
 
-                                                blnTranslated =
-                                                    strName != strTranslated ||
-                                                    xmlChildNode.Attributes?["translated"]?.InnerText == bool.TrueString ||
-                                                    strAdvantage != strAdvantageAlt
-                                                    || strDisadvantage != strDisadvantageAlt;
+                                            if (!blnTranslated || !chkOnlyTranslation.Checked)
+                                            {
+                                                object[] objArray = { strId, strText, strTranslated, blnTranslated };
+                                                Interlocked.Exchange(ref arrayRowsToDisplay[i], objArray);
                                             }
-                                        }
 
-                                        if (!blnTranslated || !chkOnlyTranslation.Checked)
+                                            break;
+                                        }
+                                    case "settings.xml":
                                         {
-                                            object[] objArray;
-                                            if (blnHasNameOnPage)
-                                                objArray = new object[]
-                                                {
-                                                    strId, strName, strTranslated, strSource, strPage, blnTranslated,
-                                                    strNameOnPage
-                                                };
-                                            else if (blnAdvantage)
+                                            string strText = xmlChildNode["name"]?.InnerText ?? string.Empty;
+                                            strTranslated = xmlChildNode["translate"]?.InnerText ?? string.Empty;
+                                            blnTranslated = strText != strTranslated
+                                                            || xmlChildNode.Attributes?["translated"]?.InnerText
+                                                            == bool.TrueString;
+
+                                            if (!blnTranslated || !chkOnlyTranslation.Checked)
                                             {
+                                                object[] objArray = { strId, strText, strTranslated, blnTranslated };
+                                                Interlocked.Exchange(ref arrayRowsToDisplay[i], objArray);
+                                            }
+
+                                            break;
+                                        }
+                                    default:
+                                        {
+                                            string strName;
+                                            string strPage = string.Empty;
+                                            string strSource = string.Empty;
+                                            string strNameOnPage = string.Empty;
+                                            string strAdvantage = string.Empty;
+                                            string strAdvantageAlt = string.Empty;
+                                            string strDisadvantage = string.Empty;
+                                            string strDisadvantageAlt = string.Empty;
+
+                                            bool blnAdvantage = strFileName == "mentors.xml" || strFileName == "paragons.xml";
+                                            XmlNode xmlChildNameNode = xmlChildNode["name"];
+                                            if (xmlChildNameNode == null)
+                                            {
+                                                strName = xmlChildNode.InnerText;
+                                                strTranslated = xmlChildNode.Attributes?["translate"]?.InnerText
+                                                                ?? string.Empty;
+                                                blnTranslated = strName != strTranslated
+                                                                || xmlChildNode.Attributes?["translated"]?.InnerText
+                                                                == bool.TrueString;
+                                            }
+                                            else
+                                            {
+                                                strName = xmlChildNameNode.InnerText;
+                                                strPage = (strFileName == "books.xml"
+                                                    ? xmlChildNode["altcode"]?.InnerText
+                                                    : xmlChildNode["altpage"]?.InnerText) ?? string.Empty;
+                                                // if we have an Id get the Node using it
+                                                XmlNode xmlNodeLocal = !string.IsNullOrEmpty(strId)
+                                                    ? xmlDocument.SelectSingleNode(
+                                                        "/chummer/" + strSection + "/*[id = " + strId.CleanXPath() + "]")
+                                                    : xmlDocument.SelectSingleNode(
+                                                        "/chummer/" + strSection + "/*[name = " + strName.CleanXPath() + "]");
+#if DEBUG
+                                                if (xmlNodeLocal == null)
+                                                    MessageBox.Show(strName);
+#endif
+                                                strSource = xmlNodeLocal?["source"]?.InnerText ?? string.Empty;
+                                                strTranslated = xmlChildNode["translate"]?.InnerText ?? string.Empty;
+                                                blnTranslated = strName != strTranslated
+                                                                || xmlChildNode.Attributes?["translated"]?.InnerText
+                                                                == bool.TrueString;
                                                 if (blnHasNameOnPage)
+                                                    strNameOnPage = xmlChildNode["altnameonpage"]?.InnerText ?? string.Empty;
+                                                if (blnAdvantage)
                                                 {
+                                                    strAdvantage = xmlNodeLocal?["advantage"]?.InnerText ?? string.Empty;
+                                                    strDisadvantage = xmlNodeLocal?["disadvantage"]?.InnerText ?? string.Empty;
+                                                    strAdvantageAlt = xmlChildNode["altadvantage"]?.InnerText ?? string.Empty;
+                                                    strDisadvantageAlt = xmlChildNode["altdisadvantage"]?.InnerText
+                                                                         ?? string.Empty;
+
+                                                    blnTranslated =
+                                                        strName != strTranslated ||
+                                                        xmlChildNode.Attributes?["translated"]?.InnerText == bool.TrueString ||
+                                                        strAdvantage != strAdvantageAlt
+                                                        || strDisadvantage != strDisadvantageAlt;
+                                                }
+                                            }
+
+                                            if (!blnTranslated || !chkOnlyTranslation.Checked)
+                                            {
+                                                object[] objArray;
+                                                if (blnHasNameOnPage)
                                                     objArray = new object[]
                                                     {
+                                                    strId, strName, strTranslated, strSource, strPage, blnTranslated,
+                                                    strNameOnPage
+                                                    };
+                                                else if (blnAdvantage)
+                                                {
+                                                    if (blnHasNameOnPage)
+                                                    {
+                                                        objArray = new object[]
+                                                        {
                                                         strId, strName, strTranslated, strSource, strPage, strAdvantage,
                                                         strAdvantageAlt, strDisadvantage, strDisadvantageAlt, blnTranslated,
                                                         strNameOnPage
-                                                    };
-                                                }
-                                                else
-                                                {
-                                                    objArray = new object[]
+                                                        };
+                                                    }
+                                                    else
                                                     {
+                                                        objArray = new object[]
+                                                        {
                                                         strId, strName, strTranslated, strSource, strPage, strAdvantage,
                                                         strAdvantageAlt, strDisadvantage, strDisadvantageAlt, blnTranslated
-                                                    };
+                                                        };
+                                                    }
                                                 }
+                                                else
+                                                    objArray = new object[]
+                                                        {strId, strName, strTranslated, strSource, strPage, blnTranslated};
+
+                                                Interlocked.Exchange(ref arrayRowsToDisplay[i], objArray);
                                             }
-                                            else
-                                                objArray = new object[]
-                                                    {strId, strName, strTranslated, strSource, strPage, blnTranslated};
 
-                                            Interlocked.Exchange(ref arrayRowsToDisplay[i], objArray);
+                                            break;
                                         }
-
-                                        break;
-                                    }
                                 }
 
                                 Interlocked.Increment(ref intSegmentsProcessed);
@@ -938,7 +938,7 @@ namespace Translator
             {
                 List<string> lstSectionStrings = null;
                 XmlNode xmlNode
-                    = _objDataDoc.SelectSingleNode("/chummer/chummer[@file = " + cboFile.Text.CleanXPath() + ']');
+                    = _objDataDoc.SelectSingleNode("/chummer/chummer[@file = " + cboFile.Text.CleanXPath() + "]");
                 if (xmlNode != null)
                 {
                     lstSectionStrings = new List<string>(xmlNode.ChildNodes.Count);

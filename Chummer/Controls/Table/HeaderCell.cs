@@ -22,7 +22,6 @@ using System.Drawing;
 using System.Threading;
 using System.Windows.Forms;
 using System.ComponentModel;
-using System.ComponentModel;
 
 namespace Chummer.UI.Table
 {
@@ -38,7 +37,6 @@ namespace Chummer.UI.Table
             InitializeComponent();
             this.UpdateLightDarkMode(token: token);
             Sortable = false;
-            Layout += ResizeControl;
         }
 
         public override string Text
@@ -47,12 +45,20 @@ namespace Chummer.UI.Table
             set
             {
                 _lblCellText.DoThreadSafe(x => x.Text = value);
-                ResizeControl(this, null);
+                ResizeControl();
             }
         }
 
-        private void ResizeControl(object sender, LayoutEventArgs e)
+        protected override void OnLayout(LayoutEventArgs e)
         {
+            ResizeControl();
+            base.OnLayout(e);
+        }
+
+        private void ResizeControl()
+        {
+            if (Disposing || IsDisposed)
+                return;
             this.DoThreadSafe(x => x.SuspendLayout());
             try
             {
@@ -101,7 +107,7 @@ namespace Chummer.UI.Table
                 }
 
                 if (Interlocked.Exchange(ref _intArrowSize, value) != value)
-                    ResizeControl(this, null);
+                    ResizeControl();
             }
         }
 
@@ -116,7 +122,7 @@ namespace Chummer.UI.Table
                 }
 
                 if (Interlocked.Exchange(ref _intArrowPadding, value) != value)
-                    ResizeControl(this, null);
+                    ResizeControl();
             }
         }
 
@@ -186,6 +192,15 @@ namespace Chummer.UI.Table
         public void Translate(CancellationToken token = default)
         {
             this.DoThreadSafe((x, y) => x.TranslateWinForm(token: y), token);
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
         }
     }
 }

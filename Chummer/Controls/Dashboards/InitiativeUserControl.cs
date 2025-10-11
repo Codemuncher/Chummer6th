@@ -53,12 +53,6 @@ namespace Chummer
         {
             InitializeComponent();
 
-            Disposed += (sender, args) =>
-            {
-                foreach (Character objCharacter in _lstCharacters)
-                    objCharacter.Dispose();
-            };
-
             lblRound.Text = LanguageManager.GetString("Label_Round") + LanguageManager.GetString("String_Space") + 1.ToString(GlobalSettings.CultureInfo);
             _intRound = 1;
 
@@ -321,7 +315,7 @@ namespace Chummer
                     int intInitRoll = intInitPasses;
                     for (int j = 0; j < intInitPasses; j++)
                     {
-                        intInitRoll += await GlobalSettings.RandomGenerator.NextD6ModuloBiasRemovedAsync().ConfigureAwait(false);
+                        intInitRoll += await Utils.GlobalRandom.NextD6ModuloBiasRemovedAsync().ConfigureAwait(false);
                     }
                     objLoopCharacter.InitRoll = intInitRoll + objLoopCharacter.InitialInit;
                 }
@@ -412,9 +406,9 @@ namespace Chummer
                     await Program.ShowMessageBoxAsync("Please select a chummer before right-clicking").ConfigureAwait(false);
 
                 using (ThreadSafeForm<InitiativeRoller> frmHits = await ThreadSafeForm<InitiativeRoller>.GetAsync(() => new InitiativeRoller
-                       {
-                           Dice = _lstCharacters[chkBoxChummer.SelectedIndex].InitPasses
-                       }).ConfigureAwait(false))
+                {
+                    Dice = _lstCharacters[chkBoxChummer.SelectedIndex].InitPasses
+                }).ConfigureAwait(false))
                 {
                     if (await frmHits.ShowDialogSafeAsync(this).ConfigureAwait(false) != DialogResult.OK)
                         return; // we decided not to actually change the initiative
@@ -451,9 +445,9 @@ namespace Chummer
             if (character.InitRoll == int.MinValue)
             {
                 using (ThreadSafeForm<InitiativeRoller> frmHits = await ThreadSafeForm<InitiativeRoller>.GetAsync(() => new InitiativeRoller
-                       {
-                           Dice = character.InitPasses
-                       }, token).ConfigureAwait(false))
+                {
+                    Dice = character.InitPasses
+                }, token).ConfigureAwait(false))
                 {
                     if (await frmHits.ShowDialogSafeAsync(this, token).ConfigureAwait(false) != DialogResult.OK)
                     {

@@ -67,7 +67,7 @@ namespace Chummer
             // 
             // cboSide
             // 
-            this.cboSide.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            this.cboSide.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.cboSide.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboSide.FormattingEnabled = true;
@@ -75,7 +75,6 @@ namespace Chummer
             this.cboSide.Name = "cboSide";
             this.cboSide.Size = new System.Drawing.Size(280, 21);
             this.cboSide.TabIndex = 1;
-            this.cboSide.TooltipText = "";
             // 
             // cmdCancel
             // 

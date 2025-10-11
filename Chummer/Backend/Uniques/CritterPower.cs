@@ -254,8 +254,8 @@ namespace Chummer
             objWriter.WriteElementString("karma", _intKarma.ToString(GlobalSettings.InvariantCultureInfo));
             objWriter.WriteElementString("points", _decPowerPoints.ToString(GlobalSettings.InvariantCultureInfo));
             objWriter.WriteElementString("counttowardslimit", _blnCountTowardsLimit.ToString(GlobalSettings.InvariantCultureInfo));
-            if (_nodBonus != null)
-                objWriter.WriteRaw("<bonus>" + _nodBonus.InnerXml + "</bonus>");
+            if (!_nodBonus.IsNullOrInnerTextIsEmpty())
+                objWriter.WriteRaw("<bonus>" + _nodBonus.InnerXmlViaPool() + "</bonus>");
             else
                 objWriter.WriteElementString("bonus", string.Empty);
             objWriter.WriteElementString("notes", _strNotes.CleanOfXmlInvalidUnicodeChars());
@@ -277,6 +277,7 @@ namespace Chummer
         /// Load the Critter Power from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -297,6 +298,7 @@ namespace Chummer
             _objCachedMyXPathNode = null;
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
             {
+                // ReSharper disable once MethodHasAsyncOverload
                 (blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID);
             }
             objNode.TryGetStringFieldQuickly("extra", ref _strExtra);
@@ -470,7 +472,7 @@ namespace Chummer
             if (!string.IsNullOrEmpty(Extra))
             {
                 // Attempt to retrieve the CharacterAttribute name.
-                strReturn += LanguageManager.GetString("String_Space", strLanguage) + '(' + _objCharacter.TranslateExtra(Extra, strLanguage) + ')';
+                strReturn += LanguageManager.GetString("String_Space", strLanguage) + "(" + _objCharacter.TranslateExtra(Extra, strLanguage) + ")";
             }
 
             return strReturn;
@@ -486,7 +488,7 @@ namespace Chummer
             if (!string.IsNullOrEmpty(Extra))
             {
                 // Attempt to retrieve the CharacterAttribute name.
-                strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + '(' + await _objCharacter.TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false) + ')';
+                strReturn += await LanguageManager.GetStringAsync("String_Space", strLanguage, token: token).ConfigureAwait(false) + "(" + await _objCharacter.TranslateExtraAsync(Extra, strLanguage, token: token).ConfigureAwait(false) + ")";
             }
 
             return strReturn;
@@ -628,7 +630,7 @@ namespace Chummer
         /// </summary>
         public string DisplayType(string strLanguage)
         {
-            switch (Type)
+            switch (Type.ToUpperInvariant())
             {
                 case "M":
                     return LanguageManager.GetString("String_SpellTypeMana", strLanguage);
@@ -645,7 +647,7 @@ namespace Chummer
         /// </summary>
         public Task<string> DisplayTypeAsync(string strLanguage, CancellationToken token = default)
         {
-            switch (Type)
+            switch (Type.ToUpperInvariant())
             {
                 case "M":
                     return LanguageManager.GetStringAsync("String_SpellTypeMana", strLanguage, token: token);
@@ -671,21 +673,21 @@ namespace Chummer
         /// </summary>
         public string DisplayAction(string strLanguage)
         {
-            switch (Action)
+            switch (Action.ToUpperInvariant())
             {
-                case "Auto":
+                case "AUTO":
                     return LanguageManager.GetString("String_ActionAutomatic", strLanguage);
 
-                case "Free":
+                case "FREE":
                     return LanguageManager.GetString("String_ActionFree", strLanguage);
 
-                case "Simple":
+                case "SIMPLE":
                     return LanguageManager.GetString("String_ActionSimple", strLanguage);
 
-                case "Complex":
+                case "COMPLEX":
                     return LanguageManager.GetString("String_ActionComplex", strLanguage);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetString("String_SpellDurationSpecial", strLanguage);
             }
 
@@ -697,21 +699,21 @@ namespace Chummer
         /// </summary>
         public Task<string> DisplayActionAsync(string strLanguage, CancellationToken token = default)
         {
-            switch (Action)
+            switch (Action.ToUpperInvariant())
             {
-                case "Auto":
+                case "AUTO":
                     return LanguageManager.GetStringAsync("String_ActionAutomatic", strLanguage, token: token);
 
-                case "Free":
+                case "FREE":
                     return LanguageManager.GetStringAsync("String_ActionFree", strLanguage, token: token);
 
-                case "Simple":
+                case "SIMPLE":
                     return LanguageManager.GetStringAsync("String_ActionSimple", strLanguage, token: token);
 
-                case "Complex":
+                case "COMPLEX":
                     return LanguageManager.GetStringAsync("String_ActionComplex", strLanguage, token: token);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetStringAsync("String_SpellDurationSpecial", strLanguage, token: token);
             }
 
@@ -738,7 +740,7 @@ namespace Chummer
                         .CheapReplace("LOI", () => LanguageManager.GetString("String_SpellRangeLineOfInfluence", strLanguage))
                         .CheapReplace("Touch", () => LanguageManager.GetString("String_SpellRangeTouch", strLanguage)) // Short form to remain export-friendly
                         .CheapReplace("T", () => LanguageManager.GetString("String_SpellRangeTouch", strLanguage))
-                        .CheapReplace("(A)", () => '(' + LanguageManager.GetString("String_SpellRangeArea", strLanguage) + ')')
+                        .CheapReplace("(A)", () => "(" + LanguageManager.GetString("String_SpellRangeArea", strLanguage) + ")")
                         .CheapReplace("MAG", () => LanguageManager.GetString("String_AttributeMAGShort", strLanguage));
         }
 
@@ -762,7 +764,7 @@ namespace Chummer
                                                             strLanguage, token: token), token: token) // Short form to remain export-friendly
                    .CheapReplaceAsync("T", () => LanguageManager.GetStringAsync("String_SpellRangeTouch", strLanguage, token: token), token: token)
                    .CheapReplaceAsync(
-                       "(A)", async () => '(' + await LanguageManager.GetStringAsync("String_SpellRangeArea", strLanguage, token: token).ConfigureAwait(false) + ')', token: token)
+                       "(A)", async () => "(" + await LanguageManager.GetStringAsync("String_SpellRangeArea", strLanguage, token: token).ConfigureAwait(false) + ")", token: token)
                    .CheapReplaceAsync(
                        "MAG", () => LanguageManager.GetStringAsync("String_AttributeMAGShort", strLanguage, token: token), token: token);
         }
@@ -783,18 +785,18 @@ namespace Chummer
         {
             string strReturn = Duration;
 
-            switch (strReturn)
+            switch (strReturn.ToUpperInvariant())
             {
-                case "Instant":
+                case "INSTANT":
                     return LanguageManager.GetString("String_SpellDurationInstantLong", strLanguage);
 
-                case "Sustained":
+                case "SUSTAINED":
                     return LanguageManager.GetString("String_SpellDurationSustained", strLanguage);
 
-                case "Always":
+                case "ALWAYS":
                     return LanguageManager.GetString("String_SpellDurationAlways", strLanguage);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetString("String_SpellDurationSpecial", strLanguage);
             }
 
@@ -808,18 +810,18 @@ namespace Chummer
         {
             string strReturn = Duration;
 
-            switch (strReturn)
+            switch (strReturn.ToUpperInvariant())
             {
-                case "Instant":
+                case "INSTANT":
                     return LanguageManager.GetStringAsync("String_SpellDurationInstantLong", strLanguage, token: token);
 
-                case "Sustained":
+                case "SUSTAINED":
                     return LanguageManager.GetStringAsync("String_SpellDurationSustained", strLanguage, token: token);
 
-                case "Always":
+                case "ALWAYS":
                     return LanguageManager.GetStringAsync("String_SpellDurationAlways", strLanguage, token: token);
 
-                case "Special":
+                case "SPECIAL":
                     return LanguageManager.GetStringAsync("String_SpellDurationSpecial", strLanguage, token: token);
             }
 

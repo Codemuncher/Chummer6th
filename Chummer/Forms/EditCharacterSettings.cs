@@ -66,6 +66,7 @@ namespace Chummer
             tabOptions.MouseWheel += CommonFunctions.ShiftTabsOnMouseScroll;
             this.UpdateLightDarkMode();
             this.TranslateWinForm();
+            this.UpdateParentForToolTipControls();
             _objReferenceCharacterSettings = objExistingSettings;
             if (_objReferenceCharacterSettings == null)
             {
@@ -85,14 +86,6 @@ namespace Chummer
             _objCharacterSettings.MultiplePropertiesChangedAsync += SettingsChanged;
             _lstSettings = Utils.ListItemListPool.Get();
             _setPermanentSourcebooks = Utils.StringHashSetPool.Get();
-            Disposed += (sender, args) =>
-            {
-                _dicEnabledCharacterCustomDataDirectorys.Dispose();
-                _objCharacterSettings.MultiplePropertiesChangedAsync -= SettingsChanged;
-                _objCharacterSettings.Dispose();
-                Utils.ListItemListPool.Return(ref _lstSettings);
-                Utils.StringHashSetPool.Return(ref _setPermanentSourcebooks);
-            };
         }
 
         private async void EditCharacterSettings_Load(object sender, EventArgs e)
@@ -321,6 +314,7 @@ namespace Chummer
                     {
                         DialogResult eCreateDuplicateSetting = await Program.ShowScrollableMessageBoxAsync(
                             string.Format(
+                                GlobalSettings.CultureInfo,
                                 await LanguageManager.GetStringAsync("Message_CharacterOptions_DuplicateSettingName")
                                     .ConfigureAwait(false),
                                 strSelectedName),
@@ -370,7 +364,7 @@ namespace Chummer
                     if (uintAccumulator == uint.MaxValue)
                         uintAccumulator = uint.MinValue;
                     else if (++uintAccumulator == 1)
-                        strSeparator += '_';
+                        strSeparator += "_";
                 }
             } while (string.IsNullOrWhiteSpace(strSelectedName));
 
@@ -461,7 +455,7 @@ namespace Chummer
                                         "Message_CharacterOptions_OpenCharacterOnBuildMethodChange")
                                     .ConfigureAwait(false)
                                 +
-                                sbdConflictingCharacters,
+                                sbdConflictingCharacters.ToString(),
                                 await LanguageManager.GetStringAsync(
                                         "MessageTitle_CharacterOptions_OpenCharacterOnBuildMethodChange")
                                     .ConfigureAwait(false),
@@ -713,9 +707,11 @@ namespace Chummer
                     return;
                 }
 
-                if (_blnForceMasterIndexRepopulateOnClose && Program.MainForm.MasterIndex != null)
+                if (_blnForceMasterIndexRepopulateOnClose)
                 {
-                    await Program.MainForm.MasterIndex.ForceRepopulateCharacterSettings().ConfigureAwait(false);
+                    MasterIndex frmMasterIndex = Program.MainForm?.MasterIndex;
+                    if (frmMasterIndex != null)
+                        await frmMasterIndex.ForceRepopulateCharacterSettings().ConfigureAwait(false);
                 }
 
                 // Now we close the original caller (weird async FormClosing event issue workaround)
@@ -1002,6 +998,13 @@ namespace Chummer
                     ? ColorManager.WindowText
                     : ColorManager.ErrorColor;
             await txtContactPoints.DoThreadSafeAsync(x => x.ForeColor = objColor).ConfigureAwait(false);
+        }
+
+        private void txtGameplayOptionName_TextChanged(object sender, EventArgs e)
+        {
+            if (_intLoading > 0)
+                return;
+            _objCharacterSettings.GameplayOptionName = txtGameplayOptionName.Text;
         }
 
         private async void txtKnowledgePoints_TextChanged(object sender, EventArgs e)
@@ -1564,7 +1567,7 @@ namespace Chummer
                                 = objXmlNode.SelectSingleNodeAndCacheExpression("exclude", token: token)?.Value
                                   ?? string.Empty;
                             if (!string.IsNullOrEmpty(strExclude))
-                                strExclude = '<' + strExclude;
+                                strExclude = "<" + strExclude;
                             lstLimbCount.Add(new ListItem(
                                                  objXmlNode
                                                      .SelectSingleNodeAndCacheExpression(
@@ -1585,7 +1588,7 @@ namespace Chummer
                             = (await _objCharacterSettings.GetLimbCountAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.InvariantCultureInfo);
                         string strExcludeLimbSlot = await _objCharacterSettings.GetExcludeLimbSlotAsync(token).ConfigureAwait(false);
                         if (!string.IsNullOrEmpty(strExcludeLimbSlot))
-                            strLimbSlot += '<' + strExcludeLimbSlot;
+                            strLimbSlot += "<" + strExcludeLimbSlot;
 
                         await cboLimbCount.PopulateWithListItemsAsync(lstLimbCount, token).ConfigureAwait(false);
                         await cboLimbCount.DoThreadSafeAsync(x =>
@@ -1749,39 +1752,39 @@ namespace Chummer
         private async Task SetToolTips(CancellationToken token = default)
         {
             await chkUnarmedSkillImprovements
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionsUnarmedSkillImprovements", token: token)
                                             .ConfigureAwait(false)).WordWrap(), token).ConfigureAwait(false);
             await chkIgnoreArt
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionsIgnoreArt", token: token).ConfigureAwait(false))
                       .WordWrap(), token).ConfigureAwait(false);
             await chkIgnoreComplexFormLimit
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionsIgnoreComplexFormLimit", token: token)
                                             .ConfigureAwait(false)).WordWrap(), token).ConfigureAwait(false);
             await chkCyberlegMovement
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionsCyberlegMovement", token: token)
                                             .ConfigureAwait(false)).WordWrap(), token).ConfigureAwait(false);
             await chkDontDoubleQualityPurchases
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionsDontDoubleQualityPurchases", token: token)
                                             .ConfigureAwait(false)).WordWrap(), token).ConfigureAwait(false);
             await chkDontDoubleQualityRefunds
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionsDontDoubleQualityRefunds", token: token)
                                             .ConfigureAwait(false)).WordWrap(), token).ConfigureAwait(false);
             await chkStrictSkillGroups
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionStrictSkillGroups", token: token)
                                             .ConfigureAwait(false)).WordWrap(), token).ConfigureAwait(false);
             await chkAllowInitiation
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_OptionsAllowInitiation", token: token)
                                             .ConfigureAwait(false)).WordWrap(), token).ConfigureAwait(false);
             await chkUseCalculatedPublicAwareness
-                  .SetToolTipAsync(
+                  .SetToolTipTextAsync(
                       (await LanguageManager.GetStringAsync("Tip_PublicAwareness", token: token).ConfigureAwait(false))
                       .WordWrap(), token).ConfigureAwait(false);
         }
@@ -1948,6 +1951,16 @@ namespace Chummer
                 (x, y) => x.TextChanged += y,
                 x => x.GetContactPointsExpressionAsync(token),
                 (x, y) => x.SetContactPointsExpressionAsync(y, token),
+                1000,
+                token,
+                token).ConfigureAwait(false);
+            await txtGameplayOptionName.RegisterAsyncDataBindingWithDelayAsync(
+                x => x.Text,
+                (x, y) => x.Text = y, _objCharacterSettings,
+                nameof(CharacterSettings.GameplayOptionName),
+                (x, y) => x.TextChanged += y,
+                x => x.GetGameplayOptionNameAsync(token),
+                (x, y) => x.SetGameplayOptionNameAsync(y, token),
                 1000,
                 token,
                 token).ConfigureAwait(false);
@@ -2581,6 +2594,13 @@ namespace Chummer
                 (x, y) => x.CheckedChanged += y,
                 x => x.GetExtendAnyDetectionSpellAsync(token),
                 (x, y) => x.SetExtendAnyDetectionSpellAsync(y, token), token).ConfigureAwait(false);
+            await chkAllowLimitedSpellsForBareHandedAdept.RegisterAsyncDataBindingAsync(x => x.Checked,
+                (x, y) => x.Checked = y,
+                _objCharacterSettings,
+                nameof(CharacterSettings.AllowLimitedSpellsForBareHandedAdept),
+                (x, y) => x.CheckedChanged += y,
+                x => x.GetAllowLimitedSpellsForBareHandedAdeptAsync(token),
+                (x, y) => x.SetAllowLimitedSpellsForBareHandedAdeptAsync(y, token), token).ConfigureAwait(false);
             await chkAllowCyberwareESSDiscounts.RegisterAsyncDataBindingAsync(x => x.Checked,
                 (x, y) => x.Checked = y,
                 _objCharacterSettings,

@@ -1,3 +1,5 @@
+using System.Threading;
+
 namespace Chummer
 {
     partial class CreateCustomDrug
@@ -13,9 +15,13 @@ namespace Chummer
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                if (DialogResult != System.Windows.Forms.DialogResult.OK)
+                    Interlocked.Exchange(ref _objDrug, null)?.Dispose();
+                Utils.ListItemListPool.Return(ref _lstGrade);
+                if (components != null)
+                    components.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -223,7 +229,6 @@ namespace Chummer
             this.cboGrade.Name = "cboGrade";
             this.cboGrade.Size = new System.Drawing.Size(315, 21);
             this.cboGrade.TabIndex = 27;
-            this.cboGrade.TooltipText = "";
             this.cboGrade.SelectedIndexChanged += new System.EventHandler(this.cboGrade_SelectedIndexChanged);
             // 
             // tlpMain
@@ -337,8 +342,8 @@ namespace Chummer
         private System.Windows.Forms.Label lblBlockDescription;
         private System.Windows.Forms.Label lblDrugNameLabel;
         private System.Windows.Forms.TextBox txtDrugName;
-		private System.Windows.Forms.Label lblGrade;
-		private ElasticComboBox cboGrade;
+        private System.Windows.Forms.Label lblGrade;
+        private ElasticComboBox cboGrade;
         private System.Windows.Forms.TableLayoutPanel tlpMain;
         private System.Windows.Forms.TableLayoutPanel tlpMiddle;
         private System.Windows.Forms.TableLayoutPanel bufferedTableLayoutPanel1;

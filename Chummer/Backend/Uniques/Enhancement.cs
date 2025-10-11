@@ -17,6 +17,8 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Uniques;
+using NLog;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -25,7 +27,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using NLog;
 
 namespace Chummer
 {
@@ -103,7 +104,7 @@ namespace Chummer
                 string strSelectedValue = ImprovementManager.GetSelectedValue(_objCharacter);
                 if (!string.IsNullOrEmpty(strSelectedValue))
                 {
-                    _strName += LanguageManager.GetString("String_Space") + '(' + strSelectedValue + ')';
+                    _strName += LanguageManager.GetString("String_Space") + "(" + strSelectedValue + ")";
                     _objCachedMyXmlNode = null;
                     _objCachedMyXPathNode = null;
                 }
@@ -163,8 +164,8 @@ namespace Chummer
                 if (!string.IsNullOrEmpty(strSelectedValue))
                 {
                     _strName +=
-                        await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + '(' +
-                        strSelectedValue + ')';
+                        await LanguageManager.GetStringAsync("String_Space", token: token).ConfigureAwait(false) + "(" +
+                        strSelectedValue + ")";
                     _objCachedMyXmlNode = null;
                     _objCachedMyXPathNode = null;
                 }
@@ -196,7 +197,7 @@ namespace Chummer
             objWriter.WriteElementString("page", _strPage);
             objWriter.WriteElementString("grade", _intGrade.ToString(GlobalSettings.InvariantCultureInfo));
             if (_nodBonus != null)
-                objWriter.WriteRaw(_nodBonus.OuterXml);
+                objWriter.WriteRaw(_nodBonus.OuterXmlViaPool());
             else
                 objWriter.WriteElementString("bonus", string.Empty);
             objWriter.WriteElementString("improvementsource", _objImprovementSource.ToString());
@@ -218,6 +219,7 @@ namespace Chummer
         /// Load the Metamagic from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -236,6 +238,7 @@ namespace Chummer
             _objCachedMyXPathNode = null;
             if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
             {
+                // ReSharper disable once MethodHasAsyncOverload
                 (blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID);
             }
 
@@ -243,7 +246,7 @@ namespace Chummer
             objNode.TryGetStringFieldQuickly("page", ref _strPage);
             _nodBonus = objNode["bonus"];
             if (objNode["improvementsource"] != null)
-                _objImprovementSource = Improvement.ConvertToImprovementSource(objNode["improvementsource"].InnerText);
+                _objImprovementSource = Improvement.ConvertToImprovementSource(objNode["improvementsource"].InnerTextViaPool(token));
 
             objNode.TryGetInt32FieldQuickly("grade", ref _intGrade);
             objNode.TryGetMultiLineStringFieldQuickly("notes", ref _strNotes);

@@ -207,7 +207,7 @@ namespace Chummer
                 objXmlArtNode.TryGetStringFieldQuickly("notesColor", ref sNotesColor);
                 _colNotes = ColorTranslator.FromHtml(sNotesColor);
 
-                _blnIsQuality = objXmlArtNode["isquality"]?.InnerText == bool.TrueString;
+                _blnIsQuality = objXmlArtNode["isquality"]?.InnerTextIsTrueString() == true;
 
                 if (objXmlArtNode["bonus"] != null)
                 {
@@ -258,7 +258,7 @@ namespace Chummer
                 objXmlArtNode.TryGetStringFieldQuickly("notesColor", ref sNotesColor);
                 _colNotes = ColorTranslator.FromHtml(sNotesColor);
 
-                _blnIsQuality = objXmlArtNode["isquality"]?.InnerText == bool.TrueString;
+                _blnIsQuality = objXmlArtNode["isquality"]?.InnerTextIsTrueString() == true;
 
                 if (objXmlArtNode["bonus"] != null)
                 {
@@ -363,6 +363,7 @@ namespace Chummer
         /// Load the Martial Art from the XmlNode.
         /// </summary>
         /// <param name="objNode">XmlNode to load.</param>
+        /// <param name="token">Cancellation token to listen to.</param>
         public Task LoadAsync(XmlNode objNode, CancellationToken token = default)
         {
             return LoadCoreAsync(false, objNode, token);
@@ -393,6 +394,7 @@ namespace Chummer
 
                 if (!objNode.TryGetGuidFieldQuickly("sourceid", ref _guiSourceID))
                 {
+                    // ReSharper disable once MethodHasAsyncOverload
                     (blnSync ? this.GetNodeXPath(token) : await this.GetNodeXPathAsync(token).ConfigureAwait(false))?.TryGetGuidFieldQuickly("id", ref _guiSourceID);
                 }
 
@@ -411,7 +413,9 @@ namespace Chummer
                             foreach (XmlNode nodTechnique in xmlLegacyTechniqueList)
                             {
                                 MartialArtTechnique objTechnique = new MartialArtTechnique(_objCharacter);
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objTechnique.Load(nodTechnique);
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 _lstTechniques.Add(objTechnique);
                             }
                         }
@@ -436,7 +440,9 @@ namespace Chummer
                             foreach (XmlNode nodTechnique in xmlTechniqueList)
                             {
                                 MartialArtTechnique objTechnique = new MartialArtTechnique(_objCharacter);
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 objTechnique.Load(nodTechnique);
+                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
                                 _lstTechniques.Add(objTechnique);
                             }
                         }
@@ -1123,7 +1129,7 @@ namespace Chummer
                                 objExpense.Create(intKarmaCost * -1,
                                     await LanguageManager.GetStringAsync(
                                         "String_ExpenseLearnMartialArt", token: token).ConfigureAwait(false)
-                                    + ' '
+                                    + " "
                                     + await objMartialArt.GetCurrentDisplayNameShortAsync(token)
                                         .ConfigureAwait(false),
                                     ExpenseType.Karma,

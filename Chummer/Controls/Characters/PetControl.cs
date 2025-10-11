@@ -19,7 +19,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Threading;
@@ -53,10 +52,9 @@ namespace Chummer
             _tmrMetatypeChangeTimer = new Timer { Interval = 1000 };
             _tmrMetatypeChangeTimer.Tick += UpdateMetatype;
 
-            Disposed += (sender, args) => UnbindPetControl();
-
             this.UpdateLightDarkMode(objMyToken);
             this.TranslateWinForm(token: objMyToken);
+            this.UpdateParentForToolTipControls();
             foreach (ToolStripItem tssItem in cmsContact.Items)
             {
                 tssItem.UpdateLightDarkMode(objMyToken);
@@ -87,7 +85,7 @@ namespace Chummer
         {
             _tmrMetatypeChangeTimer.Dispose();
             foreach (Control objControl in Controls)
-                objControl.DataBindings.Clear();
+                objControl.ResetBindings();
         }
 
         private void cboMetatype_TextChanged(object sender, EventArgs e)
@@ -252,12 +250,11 @@ namespace Chummer
                 string strOldFileName = await _objContact.GetFileNameAsync(_objMyToken).ConfigureAwait(false);
                 string strFileName = string.Empty;
                 string strFilter = await LanguageManager.GetStringAsync("DialogFilter_Chummer", token: _objMyToken).ConfigureAwait(false) +
-                                   '|'
-                                   +
+                                   "|" +
                                    await LanguageManager.GetStringAsync("DialogFilter_Chum5", token: _objMyToken).ConfigureAwait(false) +
-                                   '|' +
+                                   "|" +
                                    await LanguageManager.GetStringAsync("DialogFilter_Chum5lz", token: _objMyToken).ConfigureAwait(false) +
-                                   '|' +
+                                   "|" +
                                    await LanguageManager.GetStringAsync("DialogFilter_All", token: _objMyToken).ConfigureAwait(false);
                 // Prompt the user to select a save file to associate with this Contact.
                 DialogResult eResult = await this.DoThreadSafeFuncAsync(x =>
@@ -295,7 +292,7 @@ namespace Chummer
                     {
                         _objMyToken.ThrowIfCancellationRequested();
                         await _objContact.SetFileNameAsync(strFileName, _objMyToken).ConfigureAwait(false);
-                        await _objContact.SetRelativeFileNameAsync("../" + uriRelative, _objMyToken).ConfigureAwait(false);
+                        await _objContact.SetRelativeFileNameAsync("../" + uriRelative.ToString(), _objMyToken).ConfigureAwait(false);
                     }
                     finally
                     {
@@ -374,6 +371,15 @@ namespace Chummer
             {
                 // swallow this
             }
+        }
+
+        protected override void OnParentChanged(EventArgs e)
+        {
+            base.OnParentChanged(e);
+            // Note: because we cannot unsubscribe old parents from events if/when we change parents, we do not want to have this automatically update
+            // based on a subscription to our parent's ParentChanged (which we would need to be able to automatically update our parent form for nested controls)
+            // We therefore need to use the hacky workaround of calling UpdateParentForToolTipControls() for parent forms/controls as appropriate
+            this.UpdateParentForToolTipControls();
         }
 
         #endregion Control Events
