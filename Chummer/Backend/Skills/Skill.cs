@@ -5378,7 +5378,7 @@ namespace Chummer.Backend.Skills
                     if (intCyberwareRating > TotalBaseRating)
                     {
                         sbdReturn.Append(strExtraStart, LanguageManager.GetString("Tip_Skill_SkillsoftRating"), strSpace)
-                            .Append('(', intCyberwareRating.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intCyberwareRating.ToString(GlobalSettings.CultureInfo) + ")");
                     }
                     else
                     {
@@ -5393,7 +5393,7 @@ namespace Chummer.Backend.Skills
                             {
                                 first = false;
                                 sbdReturn.Append(strSpace, "(Base", strSpace)
-                                    .Append('(', LearnedRating.ToString(GlobalSettings.CultureInfo), ')');
+                                    .Append("(" + LearnedRating.ToString(GlobalSettings.CultureInfo) + ")");
                             }
 
                             sbdReturn.Append(strSpace, '+', strSpace)
@@ -5502,7 +5502,7 @@ namespace Chummer.Backend.Skills
                     {
                         sbdReturn.Append(strSpace, '-', strSpace)
                             .Append(LanguageManager.GetString("Tip_Skill_Wounds"), strSpace)
-                            .Append('(', wound.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + wound.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     int sustains = CharacterObject.SustainingPenalty;
@@ -5510,7 +5510,7 @@ namespace Chummer.Backend.Skills
                     {
                         sbdReturn.Append(strSpace, '-', strSpace)
                             .Append(LanguageManager.GetString("Tip_Skill_Sustain"), strSpace)
-                            .Append('(', sustains.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + sustains.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     if (!string.IsNullOrEmpty(strExtra))
@@ -5723,7 +5723,7 @@ namespace Chummer.Backend.Skills
                     {
                         sbdReturn.Append(strExtraStart, await LanguageManager
                                 .GetStringAsync("Tip_Skill_SkillsoftRating", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intCyberwareRating.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intCyberwareRating.ToString(GlobalSettings.CultureInfo) + ")");
                     }
                     else
                     {
@@ -5740,12 +5740,12 @@ namespace Chummer.Backend.Skills
                             {
                                 first = false;
                                 sbdReturn.Append(strSpace, "(Base", strSpace)
-                                    .Append('(', (await GetLearnedRatingAsync(token).ConfigureAwait(false)).ToString(
-                                        GlobalSettings.CultureInfo), ')');
+                                    .Append("(" + (await GetLearnedRatingAsync(token).ConfigureAwait(false)).ToString(
+                                        GlobalSettings.CultureInfo) + ")");
                             }
 
                             sbdReturn.Append(strSpace, '+').Append(strSpace, await CharacterObject.GetObjectNameAsync(objImprovement, token: token)
-                                    .ConfigureAwait(false), strSpace).Append('(', objImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                    .ConfigureAwait(false), strSpace).Append("(" + objImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
 
                         if (first)
@@ -5761,7 +5761,7 @@ namespace Chummer.Backend.Skills
                         sbdReturn.Append(strSpace, '+', strSpace)
                             .Append(await att.GetCurrentDisplayAbbrevAsync(token)
                                 .ConfigureAwait(false), strSpace)
-                            .Append('(', intAttTotalValue.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intAttTotalValue.ToString(GlobalSettings.CultureInfo) + ")");
                     else
                     {
                         sbdReturn.Append(strSpace, '+', strSpace)
@@ -5850,7 +5850,7 @@ namespace Chummer.Backend.Skills
                         sbdReturn.Append(strSpace, '-', strSpace)
                             .Append(await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token)
                                 .ConfigureAwait(false), strSpace)
-                            .Append('(', wound.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + wound.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     int sustains = await CharacterObject.GetSustainingPenaltyAsync(token).ConfigureAwait(false);
@@ -5859,7 +5859,7 @@ namespace Chummer.Backend.Skills
                         sbdReturn.Append(strSpace, '-', strSpace)
                             .Append(await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token)
                                 .ConfigureAwait(false), strSpace)
-                            .Append('(', sustains.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + sustains.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     if (!string.IsNullOrEmpty(strExtra))

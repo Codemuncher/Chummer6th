@@ -186,7 +186,7 @@ namespace Chummer
                         using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdFv))
                         {
-                            sbdFv.Append('(', strFv, ')');
+                            sbdFv.Append("(" + strFv + ")");
                             foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
                                 _objCharacter, Improvement.ImprovementType.FadingValue, strSelectedComplexFormName, true).ConfigureAwait(false))
                             {

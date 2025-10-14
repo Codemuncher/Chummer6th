@@ -110,7 +110,7 @@ namespace Chummer
                         // If we don't have a minimum rating, include exotic skills as normal because they'll just make the second dropdown appear when selected
                         if (_intMinimumRating > 0)
                             sbdFilter.Append("not(exotic = 'True') and ");
-                        sbdFilter.Append('(', await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false), ')');
+                        sbdFilter.Append("(" + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false) + ")");
                         if (!string.IsNullOrEmpty(_strIncludeCategory))
                         {
                             sbdFilter.Append(" and (");

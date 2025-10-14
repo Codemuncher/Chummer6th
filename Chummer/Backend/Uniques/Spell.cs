@@ -1147,7 +1147,7 @@ namespace Chummer
                     if (BarehandedAdept)
                         sbdTip.Append('(');
                     sbdTip.Append(await LanguageManager.GetStringAsync("Tip_SpellDrainBase", token: token).ConfigureAwait(false), strSpace)
-                        .Append('(', DvBase, ')');
+                        .Append("(" + DvBase + ")");
                     if (Limited)
                     {
                         sbdTip.Append(strSpace, '+', strSpace)
@@ -1167,7 +1167,7 @@ namespace Chummer
                     {
                         sbdTip.Append(strSpace, '+', strSpace)
                               .Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false), strSpace)
-                              .Append('(', objLoopImprovement.Value.ToString("#,0.##;-#,0.##;#,0.##", GlobalSettings.CultureInfo), ')');
+                              .Append("(" + objLoopImprovement.Value.ToString("#,0.##;-#,0.##;#,0.##", GlobalSettings.CultureInfo) + ")");
                     }
 
                     // Minimum drain of 2
@@ -1185,7 +1185,7 @@ namespace Chummer
                             ? await _objCharacter.GetObjectNameAsync(objBarehandedAdeptImprovement, token: token).ConfigureAwait(false)
                             : await _objCharacter.TranslateExtraAsync("Barehanded Adept", GlobalSettings.Language,
                                                            "qualities.xml", token).ConfigureAwait(false);
-                        sbdTip.Append(')', strSpace, '×').Append(strSpace, strBarehandedAdeptName, strSpace, "(×2)");
+                        sbdTip.Append("(" + strSpace + ")").Append(strSpace, strBarehandedAdeptName, strSpace, "(×2)");
                     }
 
                     return sbdTip.ToString();
@@ -1489,7 +1489,7 @@ namespace Chummer
                         using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                       out StringBuilder sbdReturn))
                         {
-                            sbdReturn.Append('(', strDv, ')');
+                            sbdReturn.Append("(" + strDv + ")");
                             foreach (Improvement objImprovement in RelevantImprovements(i =>
                                          i.ImproveType == Improvement.ImprovementType.DrainValue
                                          || i.ImproveType == Improvement.ImprovementType.SpellCategoryDrain
@@ -1595,7 +1595,7 @@ namespace Chummer
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdReturn))
                     {
-                        sbdReturn.Append('(', strDv, ')');
+                        sbdReturn.Append("(" + strDv + ")");
                         foreach (Improvement objImprovement in await RelevantImprovementsAsync(i =>
                                      i.ImproveType == Improvement.ImprovementType.DrainValue
                                      || i.ImproveType == Improvement.ImprovementType.SpellCategoryDrain

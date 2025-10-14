@@ -13948,7 +13948,7 @@ namespace Chummer
                                     sbdMartialArtsBPToolTip.AppendLine().Append(strSpace, '+', strSpace)
                                         .Append(await objTechnique.GetCurrentDisplayNameAsync(token)
                                             .ConfigureAwait(false), strSpace)
-                                        .Append('(', intLoopCost.ToString(GlobalSettings.CultureInfo), ')');
+                                        .Append("(" + intLoopCost.ToString(GlobalSettings.CultureInfo) + ")");
                                 }, token: token).ConfigureAwait(false);
                             }
                             else
@@ -14370,7 +14370,7 @@ namespace Chummer
                                     .Append(await objFocus.GearObject.GetCurrentDisplayNameAsync(token)
                                         .ConfigureAwait(false), strSpace);
                             sbdFociPointsTooltip
-                                .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intBindingCost.ToString(GlobalSettings.CultureInfo) + ")");
                             return true;
                         }, token).ConfigureAwait(false);
 
@@ -14396,7 +14396,7 @@ namespace Chummer
                                     sbdFociPointsTooltip
                                         .Append(await objFocus.GetCurrentDisplayNameAsync(token)
                                             .ConfigureAwait(false), strSpace)
-                                        .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
+                                        .Append("(" + intBindingCost.ToString(GlobalSettings.CultureInfo) + ")");
                                     return intBindingCost;
                                 }, token).ConfigureAwait(false);
 
@@ -18562,9 +18562,9 @@ namespace Chummer
                                                           .ConfigureAwait(false),
                                                           await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                          .ConfigureAwait(false))
-                                            .Append('[',
+                                            .Append("[" +
                                                 objImprovement.Value.ToString(
-                                                    "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
+                                                    "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
                             }
 
                             if (await objLifestyle.GetStyleTypeAsync(token).ConfigureAwait(false) == LifestyleType.Standard)
@@ -18582,9 +18582,9 @@ namespace Chummer
                                             .GetObjectNameAsync(objImprovement, token: token)
                                             .ConfigureAwait(false), await LanguageManager.GetStringAsync("String_Space", token: token)
                                             .ConfigureAwait(false))
-                                        .Append('[',
+                                        .Append("[" +
                                             objImprovement.Value.ToString(
-                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
+                                                "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
                                 }
                             }
 

@@ -24788,7 +24788,7 @@ namespace Chummer
                                                           .ConfigureAwait(false),
                                                           await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                          .ConfigureAwait(false))
-                                            .Append('[',
+                                            .Append("[" +
                                                 objImprovement.Value.ToString(
                                                     "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                             }
@@ -24808,9 +24808,8 @@ namespace Chummer
                                             .GetObjectNameAsync(objImprovement, token: token)
                                             .ConfigureAwait(false),
                                             await LanguageManager.GetStringAsync("String_Space", token: token)
-                                            .ConfigureAwait(false)).Append('[',
-                                            objImprovement.Value.ToString(
-                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
+                                            .ConfigureAwait(false)).Append("[" +                                            objImprovement.Value.ToString(
+                                                "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
                                 }
                             }
 

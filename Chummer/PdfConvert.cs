@@ -301,7 +301,7 @@ namespace Codaxy.WkHtmlToPdf
                     foreach (KeyValuePair<string, string> cookie in document.Cookies)
                     {
                         if (!string.IsNullOrEmpty(cookie.Key) && !string.IsNullOrEmpty(cookie.Value))
-                            sbdParams.Append("--cookie ", cookie.Key).Append(' ', cookie.Value, ' ');
+                            sbdParams.Append("--cookie ", cookie.Key).Append(" " + cookie.Value + " ");
                     }
                 }
 

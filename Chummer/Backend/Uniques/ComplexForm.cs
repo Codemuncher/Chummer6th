@@ -722,13 +722,13 @@ namespace Chummer
                         }
                     }
 
-                    sbdTip.AppendLine().Append(await LanguageManager.GetStringAsync("Tip_ComplexFormFadingBase", token: token).ConfigureAwait(false), strSpace).Append('(', FvBase, ')');
+                    sbdTip.AppendLine().Append(await LanguageManager.GetStringAsync("Tip_ComplexFormFadingBase", token: token).ConfigureAwait(false), strSpace).Append("(" + FvBase + ")");
                     foreach (Improvement objLoopImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
                                     _objCharacter, Improvement.ImprovementType.FadingValue, Name, true, token))
                     {
                         sbdTip.Append(strSpace, '+', strSpace)
                             .Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false), strSpace)
-                                .Append('(', objLoopImprovement.Value.ToString("#,0.##;-#,0.##;#,0.##", GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objLoopImprovement.Value.ToString("#,0.##;-#,0.##;#,0.##", GlobalSettings.CultureInfo) + ")");
                     }
                     // Minimum Fading of 2
                     sbdTip.AppendLine().AppendFormat(GlobalSettings.CultureInfo, await LanguageManager.GetStringAsync("String_MinimumAttribute", token: token), 2);
@@ -770,7 +770,7 @@ namespace Chummer
                                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdReturn))
                                 {
-                                    sbdReturn.Append('(', strFv, ')');
+                                    sbdReturn.Append("(" + strFv + ")");
                                     foreach (Improvement objImprovement in lstImprovements)
                                     {
                                         sbdReturn.Append("+(", objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo), ')');
@@ -840,7 +840,7 @@ namespace Chummer
                             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdReturn))
                             {
-                                sbdReturn.Append('(', strFv, ')');
+                                sbdReturn.Append("(" + strFv + ")");
                                 foreach (Improvement objImprovement in lstImprovements)
                                 {
                                     sbdReturn.Append("+(", objImprovement.Value.ToString(GlobalSettings.InvariantCultureInfo), ')');

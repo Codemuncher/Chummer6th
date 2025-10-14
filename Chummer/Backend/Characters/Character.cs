@@ -16439,7 +16439,7 @@ namespace Chummer
                 {
                     if (Settings != null)
                     {
-                        sbdFilter.Append('(', Settings.BookXPath(token: token), ") and ");
+                        sbdFilter.Append("(" + Settings.BookXPath(token: token) + ") and ");
                         if (!IgnoreRules && !Created && !blnIgnoreBannedGrades)
                         {
                             foreach (string strBannedGrade in Settings.BannedWareGrades)
@@ -16517,7 +16517,7 @@ namespace Chummer
                     CharacterSettings objSettings = await GetSettingsAsync(token).ConfigureAwait(false);
                     if (objSettings != null)
                     {
-                        sbdFilter.Append('(', await objSettings.BookXPathAsync(token: token).ConfigureAwait(false), ") and ");
+                        sbdFilter.Append("(" + await objSettings.BookXPathAsync(token: token).ConfigureAwait(false) + ") and ");
                         if (!await GetIgnoreRulesAsync(token).ConfigureAwait(false) && !await GetCreatedAsync(token).ConfigureAwait(false) && !blnIgnoreBannedGrades)
                         {
                             foreach (string strBannedGrade in objSettings.BannedWareGrades)
@@ -16592,7 +16592,7 @@ namespace Chummer
                 {
                     if (Settings != null)
                     {
-                        sbdFilter.Append('(', await (await GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false), ") and ");
+                        sbdFilter.Append("(" + await (await GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ") and ");
                         if (!blnIgnoreBannedGrades && !await GetCreatedAsync(token).ConfigureAwait(false) && !await GetIgnoreRulesAsync(token).ConfigureAwait(false))
                         {
                             foreach (string strBannedGrade in (await GetSettingsAsync(token).ConfigureAwait(false)).BannedWareGrades)
@@ -22199,7 +22199,7 @@ namespace Chummer
                         {
                             sbdReturn.Append(strSpace, '+')
                                 .Append(strSpace, GetObjectName(objImprovement), strSpace)
-                                .Append('(', objImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
                     }
 
@@ -22233,7 +22233,7 @@ namespace Chummer
                     {
                         sbdReturn.Append(strSpace, '+')
                             .Append(strSpace, await GetObjectNameAsync(objImprovement, token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', objImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + objImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                     }
                 }
                 finally
@@ -22361,7 +22361,7 @@ namespace Chummer
                                      this, Improvement.ImprovementType.AstralReputationWild))
                         {
                             sbdReturn.Append(strSpace, '+').Append(strSpace, GetObjectName(objImprovement), strSpace)
-                                .Append('(', objImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objImprovement.Value.ToString(GlobalSettings.CultureInfo)+ ")");
                         }
                     }
 
@@ -22393,7 +22393,7 @@ namespace Chummer
                                  .ConfigureAwait(false))
                     {
                         sbdReturn.Append(strSpace, '+').Append(strSpace, await GetObjectNameAsync(objImprovement, token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', objImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + objImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                     }
                 }
                 finally
@@ -30268,17 +30268,17 @@ namespace Chummer
                     using (LockObject.EnterReadLock())
                     {
                         sbdToolTip.Append(CHA.CurrentDisplayAbbrev).Append(strSpace)
-                            .Append('(', CHA.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + CHA.TotalValue.ToString(GlobalSettings.CultureInfo) + ")")
                             .Append(strSpace, '+').Append(strSpace, WIL.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', WIL.TotalValue.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + WIL.TotalValue.ToString(GlobalSettings.CultureInfo) + ")");
                         int intWoundModifier = WoundModifier;
                         if (intWoundModifier != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Wounds"), strSpace)
-                                .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo)+ ")");
                         int intSustainingPenalty = SustainingPenalty;
                         if (intSustainingPenalty != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Sustain"), strSpace)
-                                .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers = ImprovementManager.ValueOf(this, Improvement.ImprovementType.Composure)
                             .StandardRound();
@@ -30312,17 +30312,17 @@ namespace Chummer
                     CharacterAttrib objCha = await GetAttributeAsync("CHA", token: token).ConfigureAwait(false);
                     CharacterAttrib objWil = await GetAttributeAsync("WIL", token: token).ConfigureAwait(false);
                     sbdToolTip.Append(await objCha.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objCha.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')')
+                        .Append("(" + (await objCha.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")")
                         .Append(strSpace, '+').Append(strSpace, await objWil.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objWil.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
+                        .Append("(" + (await objWil.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")");
                     int intWoundModifier = await GetWoundModifierAsync(token).ConfigureAwait(false);
                     if (intWoundModifier != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                     int intSustainingPenalty = await GetSustainingPenaltyAsync(token).ConfigureAwait(false);
                     if (intSustainingPenalty != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.Composure, token: token).ConfigureAwait(false))
                         .StandardRound();
@@ -30400,17 +30400,17 @@ namespace Chummer
                     using (LockObject.EnterReadLock())
                     {
                         sbdToolTip.Append(CHA.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', CHA.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + CHA.TotalValue.ToString(GlobalSettings.CultureInfo) + ")")
                             .Append(strSpace, '+').Append(strSpace, INT.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', INT.TotalValue.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + INT.TotalValue.ToString(GlobalSettings.CultureInfo) + ")");
                         int intWoundModifier = WoundModifier;
                         if (intWoundModifier != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Wounds"), strSpace)
-                                .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                         int intSustainingPenalty = SustainingPenalty;
                         if (intSustainingPenalty != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Sustain"), strSpace)
-                                .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers =
                             (ImprovementManager.ValueOf(this, Improvement.ImprovementType.JudgeIntentions) +
@@ -30445,17 +30445,17 @@ namespace Chummer
                     CharacterAttrib objCha = await GetAttributeAsync("CHA", token: token).ConfigureAwait(false);
                     CharacterAttrib objInt = await GetAttributeAsync("INT", token: token).ConfigureAwait(false);
                     sbdToolTip.Append(await objCha.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objCha.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')')
+                        .Append("(" + (await objCha.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")")
                         .Append(strSpace, '+').Append(strSpace, await objInt.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objInt.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
+                        .Append("(" + (await objInt.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")");
                     int intWoundModifier = await GetWoundModifierAsync(token).ConfigureAwait(false);
                     if (intWoundModifier != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                     int intSustainingPenalty = await GetSustainingPenaltyAsync(token).ConfigureAwait(false);
                     if (intSustainingPenalty != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers =
                         (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.JudgeIntentions, token: token).ConfigureAwait(false) +
@@ -30536,15 +30536,15 @@ namespace Chummer
                     using (LockObject.EnterReadLock())
                     {
                         sbdToolTip.Append(CHA.CurrentDisplayAbbrev, strSpace)
-                                  .Append('(', CHA.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                                  .Append("(" + CHA.TotalValue.ToString(GlobalSettings.CultureInfo)+ ")")
                                   .Append(strSpace, '+').Append(strSpace, WIL.CurrentDisplayAbbrev, strSpace)
-                                  .Append('(', WIL.TotalValue.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + WIL.TotalValue.ToString(GlobalSettings.CultureInfo) + ")");
                         foreach (Improvement objLoopImprovement in
                                  ImprovementManager.GetCachedImprovementListForValueOf(
                                      this, Improvement.ImprovementType.JudgeIntentions))
                         {
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, GetObjectName(objLoopImprovement), strSpace)
-                                .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
 
                         foreach (Improvement objLoopImprovement in
@@ -30552,7 +30552,7 @@ namespace Chummer
                                      this, Improvement.ImprovementType.JudgeIntentionsDefense))
                         {
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, GetObjectName(objLoopImprovement), strSpace)
-                                .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
                     }
 
@@ -30613,17 +30613,17 @@ namespace Chummer
                     using (LockObject.EnterReadLock())
                     {
                         sbdToolTip.Append(BOD.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', BOD.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + BOD.TotalValue.ToString(GlobalSettings.CultureInfo)+ ")")
                             .Append(strSpace, '+').Append(strSpace, STR.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', STR.TotalValue.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + STR.TotalValue.ToString(GlobalSettings.CultureInfo) + ")");
                         int intWoundModifier = WoundModifier;
                         if (intWoundModifier != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Wounds"), strSpace)
-                                .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                         int intSustainingPenalty = SustainingPenalty;
                         if (intSustainingPenalty != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Sustain"), strSpace)
-                                .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers = ImprovementManager.ValueOf(this, Improvement.ImprovementType.LiftAndCarry)
                             .StandardRound();
@@ -30657,17 +30657,17 @@ namespace Chummer
                     CharacterAttrib objBod = await GetAttributeAsync("BOD", token: token).ConfigureAwait(false);
                     CharacterAttrib objStr = await GetAttributeAsync("STR", token: token).ConfigureAwait(false);
                     sbdToolTip.Append(await objBod.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objBod.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')')
-                        .Append(strSpace, '+').Append(strSpace, await objStr.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objStr.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
+                        .Append("(" + (await objBod.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")")
+                        .Append(strSpace + "+").Append(strSpace + await objStr.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false) + strSpace)
+                        .Append("(" + (await objStr.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")");
                     int intWoundModifier = await GetWoundModifierAsync(token).ConfigureAwait(false);
                     if (intWoundModifier != 0)
-                        sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                        sbdToolTip.Append(strSpace + "+").Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token).ConfigureAwait(false), strSpace)
+                            .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                     int intSustainingPenalty = await GetSustainingPenaltyAsync(token).ConfigureAwait(false);
                     if (intSustainingPenalty != 0)
-                        sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                        sbdToolTip.Append(strSpace + "+").Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token).ConfigureAwait(false), strSpace)
+                            .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.LiftAndCarry, token: token).ConfigureAwait(false))
                         .StandardRound();
@@ -30775,17 +30775,17 @@ namespace Chummer
                     using (LockObject.EnterReadLock())
                     {
                         sbdToolTip.Append(LOG.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', LOG.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + LOG.TotalValue.ToString(GlobalSettings.CultureInfo) + ")")
                             .Append(strSpace, '+').Append(strSpace, WIL.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', WIL.TotalValue.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + WIL.TotalValue.ToString(GlobalSettings.CultureInfo) + ")");
                         int intWoundModifier = WoundModifier;
                         if (intWoundModifier != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Wounds"), strSpace)
-                                .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                         int intSustainingPenalty = SustainingPenalty;
                         if (intSustainingPenalty != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Sustain"), strSpace)
-                                .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers = ImprovementManager.ValueOf(this, Improvement.ImprovementType.Memory)
                             .StandardRound();
@@ -30819,18 +30819,18 @@ namespace Chummer
                     CharacterAttrib objLog = await GetAttributeAsync("LOG", token: token).ConfigureAwait(false);
                     CharacterAttrib objWil = await GetAttributeAsync("WIL", token: token).ConfigureAwait(false);
                     sbdToolTip.Append(await objLog.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objLog.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')')
+                        .Append("(" + (await objLog.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")")
                         .Append(strSpace, '+')
                         .Append(strSpace, await objWil.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objWil.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
+                        .Append("(" + (await objWil.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")");
                     int intWoundModifier = await GetWoundModifierAsync(token).ConfigureAwait(false);
                     if (intWoundModifier != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                     int intSustainingPenalty = await GetSustainingPenaltyAsync(token).ConfigureAwait(false);
                     if (intSustainingPenalty != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.Memory, token: token).ConfigureAwait(false))
                         .StandardRound();
@@ -31795,7 +31795,7 @@ namespace Chummer
                                  .Append(LanguageManager.GetString("String_CareerKarma")).Append(strSpace, '÷', strSpace)
                                  .Append((10 + ImprovementManager.ValueOf(
                                              this, Improvement.ImprovementType.StreetCredMultiplier))
-                                         .ToString(GlobalSettings.CultureInfo)).Append(']', strSpace, '(')
+                                         .ToString(GlobalSettings.CultureInfo)).Append("]" + strSpace, '(')
                                  .Append(
                                      (CareerKarma
                                       / (10 + ImprovementManager.ValueOf(
@@ -31806,7 +31806,7 @@ namespace Chummer
                         if (intBurnedStreetCred != 0)
                             sbdReturn.Append(strSpace, '-', strSpace)
                                      .Append(LanguageManager.GetString("String_BurntStreetCred"), strSpace)
-                                     .Append('(', intBurnedStreetCred.ToString(GlobalSettings.CultureInfo), ')');
+                                     .Append("(" + intBurnedStreetCred.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     return sbdReturn.ToString();
@@ -31843,9 +31843,9 @@ namespace Chummer
                         .Append((10 + await ImprovementManager
                             .ValueOfAsync(this, Improvement.ImprovementType.StreetCredMultiplier, token: token)
                             .ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo)).Append(']', strSpace)
-                        .Append('(', (await GetCareerKarmaAsync(token).ConfigureAwait(false) / (10 + await ImprovementManager
+                        .Append("(" + (await GetCareerKarmaAsync(token).ConfigureAwait(false) / (10 + await ImprovementManager
                             .ValueOfAsync(this, Improvement.ImprovementType.StreetCredMultiplier, token: token)
-                            .ConfigureAwait(false))).ToString(GlobalSettings.CultureInfo), ')');
+                            .ConfigureAwait(false))).ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intBurnedStreetCred = await GetBurntStreetCredAsync(token).ConfigureAwait(false);
                     if (intBurnedStreetCred != 0)
@@ -32239,7 +32239,7 @@ namespace Chummer
                                 }
 
                                 sbdReturn.Append(strSpace, '-', strSpace).Append(strErasedString, strSpace)
-                                         .Append('(', (intTotalPublicAwareness - 1).ToString(GlobalSettings.CultureInfo), ')');
+                                         .Append("(" + (intTotalPublicAwareness - 1).ToString(GlobalSettings.CultureInfo) + ")");
                             }
                         }
                     }
@@ -33832,7 +33832,7 @@ namespace Chummer
                     sbdToolTip.Append(strBodyAbbrev, strSpace, '(')
                         .Append(intBody.ToString(GlobalSettings.CultureInfo), ')').Append(strSpace, '+')
                         .Append(strSpace, await LanguageManager.GetStringAsync("Tip_Armor", token: token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await GetTotalArmorRatingAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
+                        .Append("(" + (await GetTotalArmorRatingAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")");
 
                     foreach (Improvement objLoopImprovement in
                              await ImprovementManager.GetCachedImprovementListForValueOfAsync(
@@ -33840,7 +33840,7 @@ namespace Chummer
                     {
                         sbdToolTip.Append(strSpace, '+', strSpace)
                             .Append(await GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false)).Append(strSpace)
-                            .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     return sbdToolTip.ToString();
@@ -33998,13 +33998,13 @@ namespace Chummer
                                               out StringBuilder sbdToolTip))
                     {
                         sbdToolTip.Append(REA.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', REA.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + REA.TotalValue.ToString(GlobalSettings.CultureInfo) + ")")
                             .Append(strSpace, '+').Append(strSpace, INT.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', INT.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + INT.TotalValue.ToString(GlobalSettings.CultureInfo) + ")")
                             .Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Wounds"), strSpace)
-                            .Append('(', WoundModifier.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + WoundModifier.ToString(GlobalSettings.CultureInfo) + ")")
                             .Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Sustain"), strSpace)
-                            .Append('(', SustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + SustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers = TotalBonusDodgeRating;
 
@@ -34039,19 +34039,19 @@ namespace Chummer
                     sbdToolTip
                         .Append(
                             await objRea.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objRea.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
-                            .CultureInfo), ')').Append(strSpace, '+')
+                        .Append("(" + (await objRea.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
+                            .CultureInfo) + ")").Append(strSpace, '+')
                         .Append(strSpace, await objInt.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objInt.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
-                            .CultureInfo), ')').Append(strSpace, '+')
+                        .Append("(" + (await objInt.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
+                            .CultureInfo) + ")").Append(strSpace, '+')
                         .Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token)
                             .ConfigureAwait(false), strSpace)
-                        .Append('(', (await GetWoundModifierAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
-                            .CultureInfo), ')').Append(strSpace, '+')
+                        .Append("(" + (await GetWoundModifierAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
+                            .CultureInfo) + ") ").Append(strSpace, '+')
                         .Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token)
                             .ConfigureAwait(false), strSpace)
-                        .Append('(', (await GetSustainingPenaltyAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
-                            .CultureInfo), ')');
+                        .Append("(" + (await GetSustainingPenaltyAsync(token).ConfigureAwait(false)).ToString(GlobalSettings
+                            .CultureInfo) + ")");
 
                     int intModifiers = await GetTotalBonusDodgeRatingAsync(token).ConfigureAwait(false);
 
@@ -34291,13 +34291,13 @@ namespace Chummer
                                   .Append(intBody.ToString(GlobalSettings.CultureInfo), ')')
                                   .Append(strSpace, '+', strSpace)
                                   .Append(LanguageManager.GetString("Tip_Armor"), strSpace)
-                                  .Append('(', TotalArmorRating.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + TotalArmorRating.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intCounterspellingDice = CurrentCounterspellingDice;
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -34352,13 +34352,13 @@ namespace Chummer
                               .Append(intBody.ToString(GlobalSettings.CultureInfo), ')')
                               .Append(strSpace, '+', strSpace)
                               .Append(await LanguageManager.GetStringAsync("Tip_Armor", token: token).ConfigureAwait(false), strSpace)
-                              .Append('(', (await GetTotalArmorRatingAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
+                              .Append("(" + (await GetTotalArmorRatingAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ')');
 
                     int intCounterspellingDice = await GetCurrentCounterspellingDiceAsync(token).ConfigureAwait(false);
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -34477,7 +34477,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -34521,7 +34521,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -34675,7 +34675,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -34732,7 +34732,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -34854,7 +34854,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -34902,7 +34902,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -35060,7 +35060,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -35120,7 +35120,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -35240,7 +35240,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -35288,7 +35288,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -35408,7 +35408,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -35456,7 +35456,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -35608,7 +35608,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -35668,7 +35668,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -35788,7 +35788,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");                       
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -35836,7 +35836,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -35956,7 +35956,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -36004,7 +36004,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -36124,7 +36124,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -36172,7 +36172,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append( "(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -36284,16 +36284,16 @@ namespace Chummer
                     {
                         string strAbbrev = WIL.CurrentDisplayAbbrev;
                         string strValue = WIL.TotalValue.ToString(GlobalSettings.CultureInfo);
-                        sbdToolTip.Append(strAbbrev, strSpace, '(')
-                                  .Append(strValue, ')', strSpace)
-                                  .Append('+', strSpace, strAbbrev).Append(strSpace, '(')
+                        sbdToolTip.Append(strAbbrev + strSpace + "('")
+                                  .Append(strValue + "')" + strSpace)
+                                  .Append("+" +  strSpace + strAbbrev).Append(strSpace, '(')
                                   .Append(strValue, ')');
 
                         int intCounterspellingDice = CurrentCounterspellingDice;
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
@@ -36340,7 +36340,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -36462,7 +36462,7 @@ namespace Chummer
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
                                             + ImprovementManager.ValueOf(
@@ -36510,7 +36510,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -36632,7 +36632,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
                                         + ImprovementManager.ValueOf(
@@ -36678,7 +36678,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -36798,7 +36798,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance)
                                         + ImprovementManager.ValueOf(
@@ -36845,7 +36845,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -36994,13 +36994,13 @@ namespace Chummer
                         sbdToolTip.Append(strBodyAbbrev, strSpace, '(')
                                   .Append(intBody.ToString(GlobalSettings.CultureInfo), ')', strSpace)
                                   .Append('+', strSpace).Append(strStrengthAbbrev, strSpace)
-                                  .Append('(', intStrength.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intStrength.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intCounterspellingDice = CurrentCounterspellingDice;
                         if (intCounterspellingDice != 0)
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(LanguageManager.GetString("Label_CounterspellingDice"), strSpace)
-                                      .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers
                             = (ImprovementManager.ValueOf(this, Improvement.ImprovementType.SpellResistance) +
@@ -37065,7 +37065,7 @@ namespace Chummer
                     if (intCounterspellingDice != 0)
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(await LanguageManager.GetStringAsync("Label_CounterspellingDice", token: token).ConfigureAwait(false), strSpace)
-                                  .Append('(', intCounterspellingDice.ToString(GlobalSettings.CultureInfo), ')');
+                                  .Append("(" + intCounterspellingDice.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers
                         = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.SpellResistance, token: token).ConfigureAwait(false)
@@ -37148,18 +37148,18 @@ namespace Chummer
                                               out StringBuilder sbdToolTip))
                     {
                         sbdToolTip.Append(REA.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', REA.TotalValue.ToString(GlobalSettings.CultureInfo), ')')
+                            .Append("(" + REA.TotalValue.ToString(GlobalSettings.CultureInfo) + ")")
                             .Append(strSpace, '+')
                             .Append(strSpace, INT.CurrentDisplayAbbrev, strSpace)
-                            .Append('(', INT.TotalValue.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + INT.TotalValue.ToString(GlobalSettings.CultureInfo) + ")");
                         int intWoundModifier = WoundModifier;
                         if (intWoundModifier != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Wounds"), strSpace)
-                                .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                         int intSustainingPenalty = SustainingPenalty;
                         if (intSustainingPenalty != 0)
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, LanguageManager.GetString("Tip_Skill_Sustain"), strSpace)
-                                .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                         int intModifiers = ImprovementManager.ValueOf(this, Improvement.ImprovementType.Surprise)
                                                              .StandardRound();
@@ -37193,17 +37193,17 @@ namespace Chummer
                     CharacterAttrib objRea = await GetAttributeAsync("REA", token: token).ConfigureAwait(false);
                     CharacterAttrib objInt = await GetAttributeAsync("INT", token: token).ConfigureAwait(false);
                     sbdToolTip.Append(await objRea.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objRea.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')')
+                        .Append("(" + (await objRea.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")")
                         .Append(strSpace, '+').Append(strSpace, await objInt.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('(', (await objInt.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
+                        .Append("(" + (await objInt.GetTotalValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")");
                     int intWoundModifier = await GetWoundModifierAsync(token).ConfigureAwait(false);
                     if (intWoundModifier != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Wounds", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intWoundModifier.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intWoundModifier.ToString(GlobalSettings.CultureInfo) + ")");
                     int intSustainingPenalty = await GetSustainingPenaltyAsync(token).ConfigureAwait(false);
                     if (intSustainingPenalty != 0)
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await LanguageManager.GetStringAsync("Tip_Skill_Sustain", token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', intSustainingPenalty.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + intSustainingPenalty.ToString(GlobalSettings.CultureInfo) + ")");
 
                     int intModifiers = (await ImprovementManager.ValueOfAsync(this, Improvement.ImprovementType.Surprise, token: token).ConfigureAwait(false))
                         .StandardRound();
@@ -37296,7 +37296,7 @@ namespace Chummer
                             {
                                 sbdToolTip.Append(strSpace, '+', strSpace)
                                           .Append(GetObjectName(objLoopImprovement), strSpace)
-                                          .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                          .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                             }
                         }
 
@@ -37334,7 +37334,7 @@ namespace Chummer
                         {
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                 .Append(await GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false), strSpace)
-                                .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
                     }
 
@@ -39540,21 +39540,21 @@ namespace Chummer
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdToolTip))
                     {
-                        sbdToolTip.Append('(', STR.CurrentDisplayAbbrev, strSpace)
-                                  .Append('[', STR.TotalValue.ToString(GlobalSettings.CultureInfo), ']')
-                                  .Append(strSpace, '×', strSpace)
-                                  .Append(2.ToString(GlobalSettings.CultureInfo), strSpace, '+')
-                                  .Append(strSpace, BOD.CurrentDisplayAbbrev, strSpace)
-                                  .Append('[', BOD.TotalValue.ToString(GlobalSettings.CultureInfo), ']')
-                                  .Append(strSpace, '+', strSpace).Append(REA.CurrentDisplayAbbrev, strSpace, '[')
-                                  .Append(REA.TotalValue.ToString(GlobalSettings.CultureInfo), "])", strSpace)
-                                  .Append('/', strSpace, 3.ToString(GlobalSettings.CultureInfo));
+                        sbdToolTip.Append("(" + STR.CurrentDisplayAbbrev, strSpace)
+                                  .Append("[" + STR.TotalValue.ToString(GlobalSettings.CultureInfo)+  "]")
+                                  .Append(strSpace + "×" + strSpace)
+                                  .Append(2.ToString(GlobalSettings.CultureInfo)+ strSpace + "+")
+                                  .Append(strSpace + BOD.CurrentDisplayAbbrev + strSpace)
+                                  .Append("[" + BOD.TotalValue.ToString(GlobalSettings.CultureInfo) + "]")
+                                  .Append(strSpace + "+" + strSpace).Append(REA.CurrentDisplayAbbrev + strSpace + "[")
+                                  .Append(REA.TotalValue.ToString(GlobalSettings.CultureInfo) + "])", strSpace)
+                                  .Append("/" + strSpace + 3.ToString(GlobalSettings.CultureInfo));
                         foreach (Improvement objLoopImprovement in
                                  ImprovementManager.GetCachedImprovementListForValueOf(
                                      this, Improvement.ImprovementType.PhysicalLimit))
                         {
-                            sbdToolTip.Append(strSpace, '+').Append(strSpace, GetObjectName(objLoopImprovement), strSpace)
-                                .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            sbdToolTip.Append(strSpace + "+").Append(strSpace, GetObjectName(objLoopImprovement), strSpace)
+                                .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
 
                         return sbdToolTip.ToString();
@@ -39584,22 +39584,22 @@ namespace Chummer
                     int intStr = await STR.GetTotalValueAsync(token).ConfigureAwait(false);
                     int intBod = await BOD.GetTotalValueAsync(token).ConfigureAwait(false);
                     int intRea = await REA.GetTotalValueAsync(token).ConfigureAwait(false);
-                    sbdToolTip.Append('(', await STR.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('[', intStr.ToString(GlobalSettings.CultureInfo), ']')
-                        .Append(strSpace, '×', strSpace)
-                        .Append(2.ToString(GlobalSettings.CultureInfo), strSpace, '+')
-                        .Append(strSpace, await BOD.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('[', intBod.ToString(GlobalSettings.CultureInfo), ']')
-                        .Append(strSpace, '+', strSpace)
-                        .Append(await REA.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace, '[')
-                        .Append(intRea.ToString(GlobalSettings.CultureInfo), "])", strSpace)
-                        .Append('/', strSpace, 3.ToString(GlobalSettings.CultureInfo));
+                    sbdToolTip.Append("(" + await STR.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false) + strSpace)
+                        .Append("[" + intStr.ToString(GlobalSettings.CultureInfo) + "]")
+                        .Append(strSpace + "×" + strSpace)
+                        .Append(2.ToString(GlobalSettings.CultureInfo) + strSpace + "+")
+                        .Append(strSpace + await BOD.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false) + strSpace)
+                        .Append( "[" + intBod.ToString(GlobalSettings.CultureInfo) + "]")
+                        .Append(strSpace + "+" + strSpace)
+                        .Append(await REA.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false) + strSpace + "[")
+                        .Append(intRea.ToString(GlobalSettings.CultureInfo) + "])" + strSpace)
+                        .Append("/" + strSpace + 3.ToString(GlobalSettings.CultureInfo));                    
                     foreach (Improvement objLoopImprovement in
                              await ImprovementManager.GetCachedImprovementListForValueOfAsync(
                                  this, Improvement.ImprovementType.PhysicalLimit, token: token).ConfigureAwait(false))
                     {
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     return sbdToolTip.ToString();
@@ -39696,16 +39696,16 @@ namespace Chummer
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdToolTip))
                     {
-                        sbdToolTip.Append('(', LOG.CurrentDisplayAbbrev, strSpace)
-                                  .Append('[', LOG.TotalValue.ToString(GlobalSettings.CultureInfo), ']')
+                        sbdToolTip.Append("(" + LOG.CurrentDisplayAbbrev + strSpace)
+                                  .Append("[" + LOG.TotalValue.ToString(GlobalSettings.CultureInfo) + "]")
                                   .Append(strSpace, '×', strSpace)
                                   .Append(2.ToString(GlobalSettings.CultureInfo), strSpace, '+')
                                   .Append(strSpace, INT.CurrentDisplayAbbrev, strSpace)
-                                  .Append('[', INT.TotalValue.ToString(GlobalSettings.CultureInfo), ']')
+                                  .Append("[" + INT.TotalValue.ToString(GlobalSettings.CultureInfo) + "]")
                                   .Append(strSpace, '+', strSpace)
                                   .Append(WIL.CurrentDisplayAbbrev, strSpace, '[')
                                   .Append(WIL.TotalValue.ToString(GlobalSettings.CultureInfo), "])", strSpace)
-                                  .Append('/', strSpace, 3.ToString(GlobalSettings.CultureInfo));
+                                  .Append("/" + strSpace + 3.ToString(GlobalSettings.CultureInfo));
 
                         if (IsAI && HomeNode != null)
                         {
@@ -39718,7 +39718,7 @@ namespace Chummer
                                     intLimit = intHomeNodeSensor;
                                     sbdToolTip.Clear();
                                     sbdToolTip.Append(LanguageManager.GetString("String_Sensor"), strSpace)
-                                              .Append('[', intLimit.ToString(GlobalSettings.CultureInfo), ']');
+                                              .Append("[" + intLimit.ToString(GlobalSettings.CultureInfo) + "]");
                                 }
                             }
 
@@ -39728,7 +39728,7 @@ namespace Chummer
                                 intLimit = intHomeNodeDP;
                                 sbdToolTip.Clear();
                                 sbdToolTip.Append(LanguageManager.GetString("String_DataProcessing"), strSpace)
-                                          .Append('[', intLimit.ToString(GlobalSettings.CultureInfo), ']');
+                                          .Append("[" + intLimit.ToString(GlobalSettings.CultureInfo) + "]");
                             }
                         }
 
@@ -39737,7 +39737,7 @@ namespace Chummer
                                      this, Improvement.ImprovementType.MentalLimit))
                         {
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, GetObjectName(objLoopImprovement), strSpace)
-                                .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
 
                         return sbdToolTip.ToString();
@@ -39760,16 +39760,16 @@ namespace Chummer
                     int intLog = await LOG.GetTotalValueAsync(token).ConfigureAwait(false);
                     int intInt = await INT.GetTotalValueAsync(token).ConfigureAwait(false);
                     int intWil = await WIL.GetTotalValueAsync(token).ConfigureAwait(false);
-                    sbdToolTip.Append('(', await LOG.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                              .Append('[', intLog.ToString(GlobalSettings.CultureInfo), ']')
+                    sbdToolTip.Append("(" + await LOG.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false) + strSpace)
+                              .Append("[" + intLog.ToString(GlobalSettings.CultureInfo) + "]")
                               .Append(strSpace, '×', strSpace)
                               .Append(2.ToString(GlobalSettings.CultureInfo), strSpace, '+')
                               .Append(strSpace, await INT.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                              .Append('[', intInt.ToString(GlobalSettings.CultureInfo), ']')
+                              .Append("[" + intInt.ToString(GlobalSettings.CultureInfo) + "]")
                               .Append(strSpace, '+', strSpace)
                               .Append(await WIL.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace, '[')
                               .Append(intWil.ToString(GlobalSettings.CultureInfo), "])", strSpace)
-                              .Append('/', strSpace, 3.ToString(GlobalSettings.CultureInfo));
+                              .Append("/" + strSpace + 3.ToString(GlobalSettings.CultureInfo));
 
                     if (await GetIsAIAsync(token).ConfigureAwait(false) && await GetHomeNodeAsync(token).ConfigureAwait(false) is IHasMatrixAttributes objHomeNode)
                     {
@@ -39782,7 +39782,7 @@ namespace Chummer
                                 intLimit = intHomeNodeSensor;
                                 sbdToolTip.Clear();
                                 sbdToolTip.Append(await LanguageManager.GetStringAsync("String_Sensor", token: token).ConfigureAwait(false), strSpace)
-                                          .Append('[', intLimit.ToString(GlobalSettings.CultureInfo), ']');
+                                          .Append("[" + intLimit.ToString(GlobalSettings.CultureInfo) + "]");
                             }
                         }
 
@@ -39792,7 +39792,7 @@ namespace Chummer
                             intLimit = intHomeNodeDP;
                             sbdToolTip.Clear();
                             sbdToolTip.Append(await LanguageManager.GetStringAsync("String_DataProcessing", token: token).ConfigureAwait(false), strSpace)
-                                      .Append('[', intLimit.ToString(GlobalSettings.CultureInfo), ']');
+                                      .Append("[" + intLimit.ToString(GlobalSettings.CultureInfo) + "]");
                         }
                     }
 
@@ -39801,7 +39801,7 @@ namespace Chummer
                                  this, Improvement.ImprovementType.MentalLimit, token: token).ConfigureAwait(false))
                     {
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, await GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     return sbdToolTip.ToString();
@@ -39901,8 +39901,8 @@ namespace Chummer
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                   out StringBuilder sbdToolTip))
                     {
-                        sbdToolTip.Append('(', CHA.CurrentDisplayAbbrev, strSpace)
-                            .Append('[', CHA.TotalValue.ToString(GlobalSettings.CultureInfo), ']');
+                        sbdToolTip.Append("(" + CHA.CurrentDisplayAbbrev + strSpace)
+                            .Append("[" + CHA.TotalValue.ToString(GlobalSettings.CultureInfo) + "]");
                         if (IsAI && HomeNode != null)
                         {
                             int intHomeNodeDP = HomeNode.GetTotalMatrixAttribute("Data Processing");
@@ -39918,7 +39918,7 @@ namespace Chummer
                             }
 
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, strDPString, strSpace)
-                                      .Append('[', intHomeNodeDP.ToString(GlobalSettings.CultureInfo), ']');
+                                      .Append("[" + intHomeNodeDP.ToString(GlobalSettings.CultureInfo) + "]");
                         }
                         else
                         {
@@ -39928,7 +39928,7 @@ namespace Chummer
                         sbdToolTip.Append(strSpace, '+', strSpace)
                                   .Append(WIL.CurrentDisplayAbbrev, strSpace, '[')
                                   .Append(WIL.TotalValue.ToString(GlobalSettings.CultureInfo), ']', strSpace)
-                                  .Append('+', strSpace, ESS.CurrentDisplayAbbrev)
+                                  .Append("+" + strSpace + ESS.CurrentDisplayAbbrev)
                                   .Append(strSpace, '[', DisplayEssence).Append("])", strSpace, '/')
                                   .Append(strSpace, 3.ToString(GlobalSettings.CultureInfo));
 
@@ -39937,7 +39937,7 @@ namespace Chummer
                                      this, Improvement.ImprovementType.SocialLimit))
                         {
                             sbdToolTip.Append(strSpace, '+').Append(strSpace, GetObjectName(objLoopImprovement), strSpace)
-                                .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
 
                         return sbdToolTip.ToString();
@@ -39959,8 +39959,8 @@ namespace Chummer
                 {
                     int intCha = await CHA.GetTotalValueAsync(token).ConfigureAwait(false);
                     int intWil = await WIL.GetTotalValueAsync(token).ConfigureAwait(false);
-                    sbdToolTip.Append('(', await CHA.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace)
-                        .Append('[', intCha.ToString(GlobalSettings.CultureInfo), ']');
+                    sbdToolTip.Append("(" + await CHA.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false) + strSpace)
+                        .Append("[" + intCha.ToString(GlobalSettings.CultureInfo) + "]");
                     if (await GetIsAIAsync(token).ConfigureAwait(false) && await GetHomeNodeAsync(token).ConfigureAwait(false) is IHasMatrixAttributes objHomeNode)
                     {
                         int intHomeNodeDP = await objHomeNode.GetTotalMatrixAttributeAsync("Data Processing", token).ConfigureAwait(false);
@@ -39976,7 +39976,7 @@ namespace Chummer
                         }
 
                         sbdToolTip.Append(strSpace, '+').Append(strSpace, strDPString, strSpace)
-                                  .Append('[', intHomeNodeDP.ToString(GlobalSettings.CultureInfo), ']');
+                                  .Append("[" + intHomeNodeDP.ToString(GlobalSettings.CultureInfo) + "]");
                     }
                     else
                     {
@@ -39986,7 +39986,7 @@ namespace Chummer
                     sbdToolTip.Append(strSpace, '+', strSpace)
                         .Append(await WIL.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace, '[')
                         .Append(intWil.ToString(GlobalSettings.CultureInfo), ']', strSpace)
-                        .Append('+', strSpace, await ESS.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false))
+                        .Append("+" + strSpace + await ESS.GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false))
                         .Append(strSpace, '[', await GetDisplayEssenceAsync(token).ConfigureAwait(false))
                         .Append("])", strSpace, '/')
                         .Append(strSpace, 3.ToString(GlobalSettings.CultureInfo));
@@ -39996,7 +39996,7 @@ namespace Chummer
                                  this, Improvement.ImprovementType.SocialLimit, token: token).ConfigureAwait(false))
                     {
                         sbdToolTip.Append(strSpace, '+', strSpace).Append(await GetObjectNameAsync(objLoopImprovement, token: token).ConfigureAwait(false), strSpace)
-                            .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     return sbdToolTip.ToString();
