@@ -3758,6 +3758,7 @@ namespace Chummer
                                                                           .ConfigureAwait(false);
                                 QualitySource eOriginSource = await objQuality.GetOriginSourceAsync(token).ConfigureAwait(false);
                                 if (eOriginSource == QualitySource.Improvement
+                                    || eOriginSource == QualitySource.QualityLevelImprovement
                                     || eOriginSource == QualitySource.MetatypeRemovedAtChargen)
                                     continue;
                                 // We're only re-apply improvements a list of items, not all of them
@@ -3809,6 +3810,7 @@ namespace Chummer
                                                 && await objCheckQuality.GetSourceNameAsync(token).ConfigureAwait(false) == strCheckSourceName
                                                 && (k < j
                                                     || await objCheckQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.Improvement
+                                                    || await objCheckQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.QualityLevelImprovement
                                                     || lstInternalIdFilter?.Contains(objCheckQuality.InternalId)
                                                     == false))
                                             {
@@ -6439,6 +6441,7 @@ namespace Chummer
                     return false;
 
                 case QualitySource.Improvement:
+                case QualitySource.QualityLevelImprovement:
                     await Program.ShowScrollableMessageBoxAsync(
                         this,
                         string.Format(GlobalSettings.CultureInfo,
@@ -10485,6 +10488,8 @@ namespace Chummer
                 token.ThrowIfCancellationRequested();
                 if (await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
                     QualitySource.Improvement
+                    || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
+                    QualitySource.QualityLevelImprovement
                     || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
                     QualitySource.Metatype
                     || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
@@ -14769,7 +14774,7 @@ namespace Chummer
             string strTemp3 = strZeroKarma;
             int intSkillGroupPointsMaximum = CharacterObject.SkillsSection.SkillGroupPointsMaximum;
 
-        }
+            }
 
         private int _intFileUpdateQueued;
 
@@ -22498,8 +22503,8 @@ namespace Chummer
                                     continue;
                                 XmlNode objXmlSpellNode = objXmlSpellDocument.TryGetNodeByNameOrId(
                                     "/chummer/spells/spell", strName,
-                                    "category = " + strCategory.CleanXPath() + " and (" + await CharacterObjectSettings
-                                        .BookXPathAsync(token: token).ConfigureAwait(false) + ")");
+                                    "category = " + strCategory.CleanXPath() + " and " + await CharacterObjectSettings
+                                        .BookXPathAsync(token: token).ConfigureAwait(false));
 
                                 if (objXmlSpellNode == null)
                                     continue;
@@ -23890,8 +23895,8 @@ namespace Chummer
                 if (!string.IsNullOrEmpty(strCategory))
                     objXmlGearNode = objXmlGearDocument.TryGetNodeByNameOrId(
                         "/chummer/gears/gear", strName.CleanXPath(),
-                        "(" + await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false)
-                            + ") and category = " + strCategory.CleanXPath());
+                        await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false)
+                            + " and category = " + strCategory.CleanXPath());
                 else
                     objXmlGearNode = objXmlGearDocument.TryGetNodeByNameOrId(
                         "/chummer/gears/gear", strName.CleanXPath(),

@@ -168,11 +168,13 @@ namespace Chummer
         /// <summary>
         /// Whether the user wants to add another item after this one.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool AddAgain { get; private set; }
 
         /// <summary>
         /// Whether the selected Vehicle is used.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool BlackMarketDiscount { get; private set; }
 
         /// <summary>
@@ -183,6 +185,7 @@ namespace Chummer
         /// <summary>
         /// Rating that was selected in the dialogue.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public int SelectedRating { get; private set; }
 
         /// <summary>
@@ -485,8 +488,7 @@ namespace Chummer
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                 {
-                    sbdFilter.Append("(" +
-                        await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false)+ ")");
+                    sbdFilter.Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false));
                     using (new FetchSafelyFromObjectPool<StringBuilder>(
                                Utils.StringBuilderPool, out StringBuilder sbdCategoryFilter))
                     {
@@ -522,7 +524,7 @@ namespace Chummer
                     else if (decMinimumCost != 0 || decMaximumCost != 0)
                     {
                         // Range cost filtering
-                        sbdFilter.Append(" and (", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"), ')');
+                        sbdFilter.Append(" and ", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"));
                     }
 
                     if (sbdFilter.Length > 0)

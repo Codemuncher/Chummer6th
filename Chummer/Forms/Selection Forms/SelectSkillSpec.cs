@@ -87,26 +87,26 @@ namespace Chummer
                 {
                     // Look through the Weapons file and grab the names of items that are part of the appropriate Category or use the matching Skill.
                     XPathNavigator objXmlWeaponDocument = await _objCharacter.LoadDataXPathAsync("weapons.xml").ConfigureAwait(false);
-                    string strXPathFilter;
+                    string strXPathFilter = string.Empty;
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                     {
-                        sbdFilter.Append("category = ", strSkillName.CleanXPath());
+                        sbdFilter.Append("(category = ", strSkillName.CleanXPath());
                         foreach (ListItem objSpec in lstItems)
                         {
                             string strLoopValue = objSpec.Value.ToString().CleanXPath();
                             sbdFilter.Append(" or spec = ", strLoopValue, " or spec2 = ", strLoopValue);
                         }
-                        strXPathFilter = sbdFilter.ToString();
+                        strXPathFilter = sbdFilter.Append(") and ").ToString();
                     }
 
                     using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstWeaponItems))
                     {
                         //Might need to include skill name or might miss some values?
                         foreach (XPathNavigator objXmlWeapon in objXmlWeaponDocument.Select(
-                                     "/chummer/weapons/weapon[(" + strXPathFilter + ") and ("
+                                     "/chummer/weapons/weapon[" + strXPathFilter
                                      + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false))
                                              .BookXPathAsync().ConfigureAwait(false)
-                                     + ")]"))
+                                     + "]"))
                         {
                             string strName = objXmlWeapon.SelectSingleNodeAndCacheExpression("name")?.Value;
                             if (!string.IsNullOrEmpty(strName))

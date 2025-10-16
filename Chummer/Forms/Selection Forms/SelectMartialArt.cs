@@ -131,8 +131,8 @@ namespace Chummer
                             {
                                 XPathNavigator xmlTechniqueNode
                                     = _xmlBaseMartialArtsTechniquesNode.SelectSingleNode(
-                                        "technique[name = " + strLoopTechniqueName.CleanXPath() + " and ("
-                                        + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false) + ")]");
+                                        "technique[name = " + strLoopTechniqueName.CleanXPath() + " and "
+                                        + await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false) + "]");
                                 if (xmlTechniqueNode != null)
                                 {
                                     if (sbdTechniques.Length > 0)
@@ -248,7 +248,7 @@ namespace Chummer
         /// </summary>
         private async Task RefreshArtList(CancellationToken token = default)
         {
-            string strFilter = "(" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ")";
+            string strFilter = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false);
             if (ShowQualities)
                 strFilter += " and isquality = " + bool.TrueString.CleanXPath();
             else
@@ -256,8 +256,9 @@ namespace Chummer
             string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(strSearch))
                 strFilter += " and " + CommonFunctions.GenerateSearchXPath(strSearch);
-
-            XPathNodeIterator objArtList = _xmlBaseMartialArtsNode.Select("martialart[" + strFilter + "]");
+            if (!string.IsNullOrEmpty(strFilter))
+                strFilter = "[" + strFilter + "]";
+            XPathNodeIterator objArtList = _xmlBaseMartialArtsNode.Select("martialart" + strFilter);
 
             using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMartialArt))
             {

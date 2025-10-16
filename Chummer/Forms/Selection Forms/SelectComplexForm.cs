@@ -186,7 +186,7 @@ namespace Chummer
                         using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdFv))
                         {
-                            sbdFv.Append("(" + strFv + ")");
+                            sbdFv.Append('(', strFv, ')');
                             foreach (Improvement objImprovement in await ImprovementManager.GetCachedImprovementListForValueOfAsync(
                                 _objCharacter, Improvement.ImprovementType.FadingValue, strSelectedComplexFormName, true).ConfigureAwait(false))
                             {
@@ -331,7 +331,7 @@ namespace Chummer
             if (_blnLoading)
                 return;
 
-            string strFilter = "(" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ")";
+            string strFilter = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false);
             string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(strSearch))
                 strFilter += " and " + CommonFunctions.GenerateSearchXPath(strSearch);

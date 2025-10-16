@@ -157,14 +157,15 @@ namespace Chummer
                 {
                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdMount))
                     {
+                        sbdMount.Append("categories/category[");
                         foreach (string strAllowedMount in _setAllowedCategories)
                         {
                             if (!string.IsNullOrEmpty(strAllowedMount))
                                 sbdMount.Append(". = ", strAllowedMount.CleanXPath(), " or ");
                         }
 
-                        sbdMount.Append(". = \"General\"");
-                        objXmlCategoryList = _xmlBaseGearDataNode.Select(sbdMount.Insert(0, "categories/category[").Append(']').ToString());
+                        sbdMount.Append(". = \"General\"]");
+                        objXmlCategoryList = _xmlBaseGearDataNode.Select(sbdMount.ToString());
                     }
                 }
                 else
@@ -673,6 +674,7 @@ namespace Chummer
         /// <summary>
         /// Whether the user wants to add another item after this one.
         /// </summary>
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool AddAgain { get; private set; }
 
         /// <summary>
@@ -840,18 +842,12 @@ namespace Chummer
         /// Default text string to filter by.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Default text string to filter by.
-        /// </summary>
         public string DefaultSearchText { get; set; }
 
         /// <summary>
         /// What weapon type is our gear allowed to have
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// What weapon type is our gear allowed to have
-        /// </summary>
         public string ForceItemAmmoForWeaponType { get; set; }
 
         #endregion Properties
@@ -1240,7 +1236,7 @@ namespace Chummer
             string strFilter = string.Empty;
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
             {
-                sbdFilter.Append("(" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ")");
+                sbdFilter.Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false));
 
                 // Only add in category filter if we either are not searching or we have the option set to only search in categories
                 if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"
@@ -1313,7 +1309,7 @@ namespace Chummer
                 else if (decMinimumCost != 0 || decMaximumCost != 0)
                 {
                     // Range cost filtering
-                    sbdFilter.Append(" and (", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"), ')');
+                    sbdFilter.Append(" and ", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"));
                 }
 
                 if (sbdFilter.Length > 0)

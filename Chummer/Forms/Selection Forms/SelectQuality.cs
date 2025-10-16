@@ -362,9 +362,6 @@ namespace Chummer
         /// Forcefully add a Category to the list.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Forcefully add a Category to the list.
-        /// </summary>
         public string ForceCategory
         {
             set
@@ -546,7 +543,7 @@ namespace Chummer
             CharacterSettings objSettings = await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false);
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
             {
-                sbdFilter.Append("(" + await objSettings.BookXPathAsync(token: token).ConfigureAwait(false) + ")");
+                sbdFilter.Append(await objSettings.BookXPathAsync(token: token).ConfigureAwait(false));
                 if (!string.IsNullOrEmpty(strCategory) && strCategory != "Show All"
                                                        && (GlobalSettings.SearchInCategoryOnly
                                                            || await txtSearch
