@@ -17,18 +17,18 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
-using Chummer.Backend.Enums;
-using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
+using Chummer.Backend.Enums;
+using Chummer.Backend.Equipment;
 using Timer = System.Windows.Forms.Timer;
+using System.ComponentModel;
 
 namespace Chummer
 {
@@ -449,8 +449,10 @@ namespace Chummer
                 string strFilter = await (await _objCharacter.GetSettingsAsync().ConfigureAwait(false)).BookXPathAsync().ConfigureAwait(false);
                 if (await _objLifestyle.GetStyleTypeAsync().ConfigureAwait(false) == LifestyleType.Standard)
                     strFilter += " and (source = \"SR5\" or category = \"Contracts\")";
+                if (!string.IsNullOrEmpty(strFilter))
+                    strFilter = "[" + strFilter + "]";
                 using (XmlNodeList xmlLifestyleList
-                       = _xmlDocument.SelectNodes("/chummer/lifestyles/lifestyle[" + strFilter + "]"))
+                       = _xmlDocument.SelectNodes("/chummer/lifestyles/lifestyle" + strFilter))
                 {
                     if (xmlLifestyleList?.Count > 0)
                     {
@@ -973,6 +975,9 @@ namespace Chummer
         /// Lifestyle that was created in the dialogue.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Lifestyle that was created in the dialogue.
+        /// </summary>
         public Lifestyle SelectedLifestyle { get; set; }
 
         #endregion Properties

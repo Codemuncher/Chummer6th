@@ -17,6 +17,7 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftAntimalwareEngine;
 using System;
 using System.Buffers;
 using System.IO;
@@ -233,10 +234,12 @@ namespace Chummer
                                 num4 += 4;
                             }
 
-                            sbdChars.Append(ptr[(achrBuffer[0] & 0xFC) >> 2],
-                                ptr[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)],
-                                ptr[((achrBuffer[1] & 0xF) << 2) | ((achrBuffer[2] & 0xC0) >> 6)],
-                                ptr[achrBuffer[2] & 0x3F]);
+                            var str1 = ptr[(achrBuffer[0] & 0xFC) >> 2].ToString();
+                            var str2 = ptr[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)].ToString();
+                            var str3 = ptr[((achrBuffer[1] & 0xF) << 2) | ((achrBuffer[2] & 0xC0) >> 6)].ToString();
+                            var str4 = ptr[achrBuffer[2] & 0x3F].ToString();
+                            var combined = str1 + str2 + str3 + str4;
+                            sbdChars.Append(combined);
                             num3 += 4;
                         }
 
@@ -253,20 +256,22 @@ namespace Chummer
                             case 2:
                                 {
                                     _ = inData.Read(achrBuffer, 0, 2);
-                                    sbdChars.Append(ptr[(achrBuffer[0] & 0xFC) >> 2],
-                                        ptr[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)],
-                                        ptr[(achrBuffer[1] & 0xF) << 2],
-                                        ptr[64]);
+                                    var  str1 = ptr[(achrBuffer[0] & 0xFC) >> 2].ToString();
+                                    var  str2 = ptr[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)].ToString();
+                                    var  str3 = ptr[(achrBuffer[1] & 0xF) << 2].ToString();
+                                    var  str4 = ptr[64].ToString();
+                                    sbdChars.Append(str1 + str2 + str3 + str4);
                                     num3 += 4;
                                     break;
                                 }
                             case 1:
                                 {
                                     _ = inData.Read(achrBuffer, 0, 1);
-                                    sbdChars.Append(ptr[(achrBuffer[0] & 0xFC) >> 2],
-                                        ptr[(achrBuffer[0] & 3) << 4],
-                                        ptr[64],
-                                        ptr[64]);
+                                    var str1 = ptr[(achrBuffer[0] & 0xFC) >> 2].ToString();
+                                    var str2 = ptr[(achrBuffer[0] & 3) << 4].ToString();
+                                    var str3 = ptr[64].ToString();
+                                    var str4 = ptr[64].ToString();
+                                    sbdChars.Append(str1 + str2 + str3 + str4);
                                     num3 += 4;
                                     break;
                                 }
@@ -371,10 +376,12 @@ namespace Chummer
                             num4 += 4;
                         }
 
-                        sbdChars.Append(s_Base64Table[(achrBuffer[0] & 0xFC) >> 2],
-                            s_Base64Table[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)],
-                            s_Base64Table[((achrBuffer[1] & 0xF) << 2) | ((achrBuffer[2] & 0xC0) >> 6)],
-                            s_Base64Table[achrBuffer[2] & 0x3F]);
+                        var str1 = s_Base64Table[(achrBuffer[0] & 0xFC) >> 2].ToString();
+                        var str2 = s_Base64Table[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)].ToString();
+                        var str3 = s_Base64Table[((achrBuffer[1] & 0xF) << 2) | ((achrBuffer[2] & 0xC0) >> 6)].ToString();
+                        var str4 = s_Base64Table[achrBuffer[2] & 0x3F].ToString();
+                        var combined = str1 + str2 + str3 + str4;
+                        sbdChars.Append(combined);
                         num3 += 4;
                     }
 
@@ -391,20 +398,22 @@ namespace Chummer
                         case 2:
                             {
                                 _ = await inData.ReadAsync(achrBuffer, 0, 2, token).ConfigureAwait(false);
-                                sbdChars.Append(s_Base64Table[(achrBuffer[0] & 0xFC) >> 2],
-                                    s_Base64Table[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)],
-                                    s_Base64Table[(achrBuffer[1] & 0xF) << 2],
-                                    s_Base64Table[64]);
+                                var str1 = s_Base64Table[(achrBuffer[0] & 0xFC) >> 2].ToString();
+                                var str2 = s_Base64Table[((achrBuffer[0] & 3) << 4) | ((achrBuffer[1] & 0xF0) >> 4)].ToString();
+                                var str3 = s_Base64Table[(achrBuffer[1] & 0xF) << 2].ToString();
+                                var str4 = s_Base64Table[64].ToString();
+                                sbdChars.Append(str1 + str2 + str3 + str4);
                                 num3 += 4;
                                 break;
                             }
                         case 1:
                             {
                                 _ = await inData.ReadAsync(achrBuffer, 0, 1, token).ConfigureAwait(false);
-                                sbdChars.Append(s_Base64Table[(achrBuffer[0] & 0xFC) >> 2],
-                                    s_Base64Table[(achrBuffer[0] & 3) << 4],
-                                    s_Base64Table[64],
-                                    s_Base64Table[64]);
+                                var str1 = s_Base64Table[(achrBuffer[0] & 0xFC) >> 2].ToString();
+                                var str2 = s_Base64Table[(achrBuffer[0] & 3) << 4].ToString();
+                                var str3 = s_Base64Table[64].ToString();
+                                var str4 = s_Base64Table[64].ToString();
+                                sbdChars.Append(str1 + str2 + str3 + str4);
                                 num3 += 4;
                                 break;
                             }

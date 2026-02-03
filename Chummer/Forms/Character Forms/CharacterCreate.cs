@@ -3758,6 +3758,7 @@ namespace Chummer
                                                                           .ConfigureAwait(false);
                                 QualitySource eOriginSource = await objQuality.GetOriginSourceAsync(token).ConfigureAwait(false);
                                 if (eOriginSource == QualitySource.Improvement
+                                    || eOriginSource == QualitySource.QualityLevelImprovement
                                     || eOriginSource == QualitySource.MetatypeRemovedAtChargen)
                                     continue;
                                 // We're only re-apply improvements a list of items, not all of them
@@ -3809,6 +3810,7 @@ namespace Chummer
                                                 && await objCheckQuality.GetSourceNameAsync(token).ConfigureAwait(false) == strCheckSourceName
                                                 && (k < j
                                                     || await objCheckQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.Improvement
+                                                    || await objCheckQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.QualityLevelImprovement
                                                     || lstInternalIdFilter?.Contains(objCheckQuality.InternalId)
                                                     == false))
                                             {
@@ -6439,6 +6441,7 @@ namespace Chummer
                     return false;
 
                 case QualitySource.Improvement:
+                case QualitySource.QualityLevelImprovement:
                     await Program.ShowScrollableMessageBoxAsync(
                         this,
                         string.Format(GlobalSettings.CultureInfo,
@@ -10486,6 +10489,8 @@ namespace Chummer
                 if (await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
                     QualitySource.Improvement
                     || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
+                    QualitySource.QualityLevelImprovement
+                    || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
                     QualitySource.Metatype
                     || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) ==
                     QualitySource.Heritage
@@ -13948,7 +13953,7 @@ namespace Chummer
                                     sbdMartialArtsBPToolTip.AppendLine().Append(strSpace, '+', strSpace)
                                         .Append(await objTechnique.GetCurrentDisplayNameAsync(token)
                                             .ConfigureAwait(false), strSpace)
-                                        .Append('(', intLoopCost.ToString(GlobalSettings.CultureInfo), ')');
+                                        .Append("(" + intLoopCost.ToString(GlobalSettings.CultureInfo) + ")");
                                 }, token: token).ConfigureAwait(false);
                             }
                             else
@@ -14370,7 +14375,7 @@ namespace Chummer
                                     .Append(await objFocus.GearObject.GetCurrentDisplayNameAsync(token)
                                         .ConfigureAwait(false), strSpace);
                             sbdFociPointsTooltip
-                                .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
+                                .Append("(" + intBindingCost.ToString(GlobalSettings.CultureInfo) + ")");
                             return true;
                         }, token).ConfigureAwait(false);
 
@@ -14396,7 +14401,7 @@ namespace Chummer
                                     sbdFociPointsTooltip
                                         .Append(await objFocus.GetCurrentDisplayNameAsync(token)
                                             .ConfigureAwait(false), strSpace)
-                                        .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
+                                        .Append("(" + intBindingCost.ToString(GlobalSettings.CultureInfo) + ")");
                                     return intBindingCost;
                                 }, token).ConfigureAwait(false);
 
@@ -14769,7 +14774,7 @@ namespace Chummer
             string strTemp3 = strZeroKarma;
             int intSkillGroupPointsMaximum = CharacterObject.SkillsSection.SkillGroupPointsMaximum;
 
-        }
+            }
 
         private int _intFileUpdateQueued;
 
@@ -18562,9 +18567,9 @@ namespace Chummer
                                                           .ConfigureAwait(false),
                                                           await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                          .ConfigureAwait(false))
-                                            .Append('[',
+                                            .Append("[" +
                                                 objImprovement.Value.ToString(
-                                                    "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
+                                                    "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
                             }
 
                             if (await objLifestyle.GetStyleTypeAsync(token).ConfigureAwait(false) == LifestyleType.Standard)
@@ -18582,9 +18587,9 @@ namespace Chummer
                                             .GetObjectNameAsync(objImprovement, token: token)
                                             .ConfigureAwait(false), await LanguageManager.GetStringAsync("String_Space", token: token)
                                             .ConfigureAwait(false))
-                                        .Append('[',
+                                        .Append("[" +
                                             objImprovement.Value.ToString(
-                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
+                                                "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
                                 }
                             }
 
@@ -22498,8 +22503,8 @@ namespace Chummer
                                     continue;
                                 XmlNode objXmlSpellNode = objXmlSpellDocument.TryGetNodeByNameOrId(
                                     "/chummer/spells/spell", strName,
-                                    "category = " + strCategory.CleanXPath() + " and (" + await CharacterObjectSettings
-                                        .BookXPathAsync(token: token).ConfigureAwait(false) + ")");
+                                    "category = " + strCategory.CleanXPath() + " and " + await CharacterObjectSettings
+                                        .BookXPathAsync(token: token).ConfigureAwait(false));
 
                                 if (objXmlSpellNode == null)
                                     continue;
@@ -23890,8 +23895,8 @@ namespace Chummer
                 if (!string.IsNullOrEmpty(strCategory))
                     objXmlGearNode = objXmlGearDocument.TryGetNodeByNameOrId(
                         "/chummer/gears/gear", strName.CleanXPath(),
-                        "(" + await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false)
-                            + ") and category = " + strCategory.CleanXPath());
+                        await CharacterObjectSettings.BookXPathAsync(token: token).ConfigureAwait(false)
+                            + " and category = " + strCategory.CleanXPath());
                 else
                     objXmlGearNode = objXmlGearDocument.TryGetNodeByNameOrId(
                         "/chummer/gears/gear", strName.CleanXPath(),

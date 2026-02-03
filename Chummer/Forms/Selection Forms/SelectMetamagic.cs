@@ -78,7 +78,11 @@ namespace Chummer
                                             _objCharacter, Improvement.ImprovementType.MetamagicLimit).ConfigureAwait(false))
             {
                 if (imp.Rating == _intMyGrade)
-                    _lstMetamagicLimits.Add(imp.ImprovedName);
+                {
+                    string strName = imp.ImprovedName;
+                    if (!string.IsNullOrEmpty(strName))
+                        _lstMetamagicLimits.Add(strName);
+                }
             }
             string strText = string.Format(GlobalSettings.CultureInfo,
                                            await LanguageManager.GetStringAsync("Title_SelectGeneric").ConfigureAwait(false), _strType);
@@ -167,7 +171,7 @@ namespace Chummer
         /// </summary>
         private async Task BuildMetamagicList(CancellationToken token = default)
         {
-            string strFilter = "(" + await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false) + ")";
+            string strFilter = await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false);
             // If the character has MAG enabled, filter the list based on Adept/Magician availability.
             if (await _objCharacter.GetMAGEnabledAsync(token).ConfigureAwait(false))
             {
@@ -175,9 +179,9 @@ namespace Chummer
                 if (blnIsMagician != await _objCharacter.GetAdeptEnabledAsync(token).ConfigureAwait(false))
                 {
                     if (blnIsMagician)
-                        strFilter += "and magician = " + bool.TrueString.CleanXPath();
+                        strFilter += " and magician = " + bool.TrueString.CleanXPath();
                     else
-                        strFilter += "and adept = " + bool.TrueString.CleanXPath();
+                        strFilter += " and adept = " + bool.TrueString.CleanXPath();
                 }
             }
 
@@ -185,23 +189,24 @@ namespace Chummer
             {
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
                 {
+                    sbdFilter.Append(strFilter).Append(" and (");
                     foreach (string strMetamagic in _lstMetamagicLimits)
                         sbdFilter.Append("name = ", strMetamagic.CleanXPath(), " or ");
                     if (sbdFilter.Length > 0)
-                    {
                         sbdFilter.Length -= 4;
-                        strFilter = sbdFilter.Insert(0, strFilter, " and (", ')').ToString();
-                    }
+                    strFilter = sbdFilter.Append(')').ToString();
                 }
             }
 
             string strSearch = await txtSearch.DoThreadSafeFuncAsync(x => x.Text, token: token).ConfigureAwait(false);
             if (!string.IsNullOrEmpty(strSearch))
                 strFilter += " and " + CommonFunctions.GenerateSearchXPath(strSearch);
+            if (!string.IsNullOrEmpty(strFilter))
+                strFilter = "[" + strFilter + "]";
             using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstMetamagics))
             {
                 foreach (XPathNavigator objXmlMetamagic in
-                         _objXmlDocument.Select(_strRootXPath + "[" + strFilter + "]"))
+                         _objXmlDocument.Select(_strRootXPath + strFilter))
                 {
                     string strId = objXmlMetamagic.SelectSingleNodeAndCacheExpression("id", token: token)?.Value;
                     if (string.IsNullOrEmpty(strId))

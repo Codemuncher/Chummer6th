@@ -125,9 +125,9 @@ namespace Chummer
                                 catch (Exception e)
                                 {
                                     if (_blnAddExceptionInfoToErrors)
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                        _sbdOutputBuilder.AppendLine(strName+ " failed " + objProperty.Name + ". Exception: " + e.ToString());
                                     else
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                        _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                 }
                             }
                         }
@@ -135,9 +135,9 @@ namespace Chummer
                     catch (Exception e)
                     {
                         if (_blnAddExceptionInfoToErrors)
-                            _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                            _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                         else
-                            _sbdOutputBuilder.AppendLine(strName, " general failure");
+                            _sbdOutputBuilder.AppendLine(strName + " general failure");
                     }
                 }
             }
@@ -169,9 +169,9 @@ namespace Chummer
                                 catch (Exception e)
                                 {
                                     if (_blnAddExceptionInfoToErrors)
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                        _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name + ". Exception: " + e.ToString());
                                     else
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                        _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                 }
                             }
 
@@ -182,18 +182,18 @@ namespace Chummer
                             catch (Exception e)
                             {
                                 if (_blnAddExceptionInfoToErrors)
-                                    _sbdOutputBuilder.AppendLine(strName, " failed TotalAvail. Exception: ", e.ToString());
+                                    _sbdOutputBuilder.AppendLine(strName + " failed TotalAvail. Exception: " + e.ToString());
                                 else
-                                    _sbdOutputBuilder.AppendLine(strName, " failed TotalAvail");
+                                    _sbdOutputBuilder.AppendLine(strName + " failed TotalAvail");
                             }
                         }
                     }
                     catch (Exception e)
                     {
                         if (_blnAddExceptionInfoToErrors)
-                            _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                            _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                         else
-                            _sbdOutputBuilder.AppendLine(strName, " general failure");
+                            _sbdOutputBuilder.AppendLine(strName + " general failure");
                     }
                 }
             }
@@ -237,9 +237,9 @@ namespace Chummer
                                 catch (Exception e)
                                 {
                                     if (_blnAddExceptionInfoToErrors)
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                        _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name + ". Exception: " + e.ToString());
                                     else
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                        _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                 }
                             }
                         }
@@ -247,9 +247,9 @@ namespace Chummer
                     catch (Exception e)
                     {
                         if (_blnAddExceptionInfoToErrors)
-                            _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                            _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                         else
-                            _sbdOutputBuilder.AppendLine(strName, " general failure");
+                            _sbdOutputBuilder.AppendLine(strName + " general failure");
                     }
                 }
             }
@@ -281,9 +281,9 @@ namespace Chummer
                                 catch (Exception e)
                                 {
                                     if (_blnAddExceptionInfoToErrors)
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                        _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name + ". Exception: " + e.ToString());
                                     else
-                                        _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                        _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                 }
                             }
                         }
@@ -291,9 +291,9 @@ namespace Chummer
                     catch (Exception e)
                     {
                         if (_blnAddExceptionInfoToErrors)
-                            _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                            _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                         else
-                            _sbdOutputBuilder.AppendLine(strName, " general failure");
+                            _sbdOutputBuilder.AppendLine(strName + " general failure");
                     }
                 }
             }
@@ -340,9 +340,9 @@ namespace Chummer
                                     catch (Exception e)
                                     {
                                         if (_blnAddExceptionInfoToErrors)
-                                            _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                            _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name + ". Exception: " + e.ToString());
                                         else
-                                            _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                            _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                     }
                                 }
                             }
@@ -356,9 +356,9 @@ namespace Chummer
                     catch (Exception e)
                     {
                         if (_blnAddExceptionInfoToErrors)
-                            _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                            _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                         else
-                            _sbdOutputBuilder.AppendLine(strName, " general failure");
+                            _sbdOutputBuilder.AppendLine(strName + " general failure");
                     }
                 }
             }
@@ -393,9 +393,9 @@ namespace Chummer
                                     catch (Exception e)
                                     {
                                         if (_blnAddExceptionInfoToErrors)
-                                            _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                            _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name + ". Exception: " + e.ToString());
                                         else
-                                            _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                            _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                     }
                                 }
                             }
@@ -409,9 +409,9 @@ namespace Chummer
                     catch (Exception e)
                     {
                         if (_blnAddExceptionInfoToErrors)
-                            _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                            _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                         else
-                            _sbdOutputBuilder.AppendLine(strName, " general failure");
+                            _sbdOutputBuilder.AppendLine(strName + " general failure");
                     }
                 }
             }
@@ -457,9 +457,9 @@ namespace Chummer
                                         catch (Exception e)
                                         {
                                             if (_blnAddExceptionInfoToErrors)
-                                                _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                                _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name + ". Exception: " +     e.ToString());
                                             else
-                                                _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                                _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                         }
                                     }
                                 }
@@ -473,9 +473,9 @@ namespace Chummer
                         catch (Exception e)
                         {
                             if (_blnAddExceptionInfoToErrors)
-                                _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                                _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                             else
-                                _sbdOutputBuilder.AppendLine(strName, " general failure");
+                                _sbdOutputBuilder.AppendLine(strName + " general failure");
                         }
                     }
                 }
@@ -533,9 +533,9 @@ namespace Chummer
                                         catch (Exception e)
                                         {
                                             if (_blnAddExceptionInfoToErrors)
-                                                _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                                _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name + ". Exception: " + e.ToString());
                                             else
-                                                _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                                _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                         }
                                     }
                                 }
@@ -552,9 +552,9 @@ namespace Chummer
                         catch (Exception e)
                         {
                             if (_blnAddExceptionInfoToErrors)
-                                _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                                _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                             else
-                                _sbdOutputBuilder.AppendLine(strName, " general failure");
+                                _sbdOutputBuilder.AppendLine(strName +   " general failure");
                         }
                     }
                 }
@@ -602,9 +602,9 @@ namespace Chummer
                                         catch (Exception e)
                                         {
                                             if (_blnAddExceptionInfoToErrors)
-                                                _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name, ". Exception: ", e.ToString());
+                                                _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name +   ". Exception: " + e.ToString());
                                             else
-                                                _sbdOutputBuilder.AppendLine(strName, " failed ", objProperty.Name);
+                                                _sbdOutputBuilder.AppendLine(strName + " failed " + objProperty.Name);
                                         }
                                     }
                                 }
@@ -618,9 +618,9 @@ namespace Chummer
                         catch (Exception e)
                         {
                             if (_blnAddExceptionInfoToErrors)
-                                _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                                _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                             else
-                                _sbdOutputBuilder.AppendLine(strName, " general failure");
+                                _sbdOutputBuilder.AppendLine(strName + " general failure");
                         }
                     }
                 }
@@ -1035,9 +1035,9 @@ namespace Chummer
                         catch (Exception e)
                         {
                             if (_blnAddExceptionInfoToErrors)
-                                _sbdOutputBuilder.AppendLine(strName, " general failure. Exception: ", e.ToString());
+                                _sbdOutputBuilder.AppendLine(strName + " general failure. Exception: " + e.ToString());
                             else
-                                _sbdOutputBuilder.AppendLine(strName, " general failure");
+                                _sbdOutputBuilder.AppendLine(strName + " general failure");
                         }
                     }
                 }

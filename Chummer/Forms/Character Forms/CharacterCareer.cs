@@ -4623,6 +4623,7 @@ namespace Chummer
                                 Quality objQuality = await CharacterObject.Qualities.GetValueAtAsync(j, token).ConfigureAwait(false);
                                 QualitySource eOriginSource = await objQuality.GetOriginSourceAsync(token).ConfigureAwait(false);
                                 if (eOriginSource == QualitySource.Improvement
+                                    || eOriginSource == QualitySource.QualityLevelImprovement
                                     || eOriginSource == QualitySource.MetatypeRemovedAtChargen)
                                     continue;
                                 // We're only re-apply improvements a list of items, not all of them
@@ -4674,6 +4675,7 @@ namespace Chummer
                                                 && await objCheckQuality.GetSourceNameAsync(token).ConfigureAwait(false) == strCheckSourceName
                                                 && (k < j
                                                     || await objCheckQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.Improvement
+                                                    || await objCheckQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.QualityLevelImprovement
                                                     || lstInternalIdFilter?.Contains(objCheckQuality.InternalId)
                                                     == false))
                                             {
@@ -8958,6 +8960,7 @@ namespace Chummer
                         return;
                     // Neither can qualities from Improvements
                     case QualitySource.Improvement:
+                    case QualitySource.QualityLevelImprovement:
                         await Program.ShowScrollableMessageBoxAsync(
                             this,
                             string.Format(GlobalSettings.CultureInfo,
@@ -9053,6 +9056,7 @@ namespace Chummer
                         return false;
 
                     case QualitySource.Improvement:
+                    case QualitySource.QualityLevelImprovement:
                         await Program.ShowScrollableMessageBoxAsync(
                             this,
                             string.Format(GlobalSettings.CultureInfo,
@@ -9297,6 +9301,7 @@ namespace Chummer
             {
                 token.ThrowIfCancellationRequested();
                 if (await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.Improvement
+                    || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.QualityLevelImprovement
                     || await objSelectedQuality.GetOriginSourceAsync(token).ConfigureAwait(false) == QualitySource.Metatype
                     || await objSelectedQuality.GetLevelsAsync(token).ConfigureAwait(false) == 0)
                 {
@@ -24788,7 +24793,7 @@ namespace Chummer
                                                           .ConfigureAwait(false),
                                                           await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                          .ConfigureAwait(false))
-                                            .Append('[',
+                                            .Append("[" +
                                                 objImprovement.Value.ToString(
                                                     "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                             }
@@ -24808,9 +24813,8 @@ namespace Chummer
                                             .GetObjectNameAsync(objImprovement, token: token)
                                             .ConfigureAwait(false),
                                             await LanguageManager.GetStringAsync("String_Space", token: token)
-                                            .ConfigureAwait(false)).Append('[',
-                                            objImprovement.Value.ToString(
-                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
+                                            .ConfigureAwait(false)).Append("[" +                                            objImprovement.Value.ToString(
+                                                "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
                                 }
                             }
 

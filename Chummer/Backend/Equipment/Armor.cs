@@ -2911,7 +2911,7 @@ namespace Chummer.Backend.Equipment
                     if (string.IsNullOrEmpty(strCapacity) || strCapacity == "0")
                         sbdReturn.Append("(0)");
                     else
-                        sbdReturn.Append('(', strCapacity, ')');
+                        sbdReturn.Append("(" + strCapacity + ")");
 
                     foreach (ArmorMod objMod in ArmorMods)
                     {
@@ -2957,7 +2957,7 @@ namespace Chummer.Backend.Equipment
                     if (string.IsNullOrEmpty(strCapacity) || strCapacity == "0")
                         sbdReturn.Append("(0)");
                     else
-                        sbdReturn.Append('(', strCapacity, ')');
+                        sbdReturn.Append("(" + strCapacity + ")");
 
                     await ArmorMods.ForEachAsync(async objMod =>
                     {

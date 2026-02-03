@@ -1613,7 +1613,7 @@ namespace Chummer.Backend.Uniques
                         {
                             sbdToolTip.Append(strSpace, '+', strSpace)
                                       .Append(_objCharacter.GetObjectName(objLoopImprovement), strSpace)
-                                      .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                                      .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                         }
 
                         return sbdToolTip.ToString();
@@ -1655,7 +1655,7 @@ namespace Chummer.Backend.Uniques
                         sbdToolTip.Append(strSpace, '+', strSpace)
                             .Append(await _objCharacter.GetObjectNameAsync(objLoopImprovement, token: token)
                                 .ConfigureAwait(false), strSpace)
-                            .Append('(', objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo), ')');
+                            .Append("(" + objLoopImprovement.Value.ToString(GlobalSettings.CultureInfo) + ")");
                     }
 
                     return sbdToolTip.ToString();

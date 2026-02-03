@@ -1056,9 +1056,6 @@ namespace Chummer
         /// Set the maximum Capacity the piece of Cyberware is allowed to be.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Set the maximum Capacity the piece of Cyberware is allowed to be.
-        /// </summary>
         public decimal MaximumCapacity
         {
             get => _decMaximumCapacity;
@@ -1124,9 +1121,6 @@ namespace Chummer
         /// Manually set the Grade of the piece of Cyberware.
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        /// <summary>
-        /// Manually set the Grade of the piece of Cyberware.
-        /// </summary>
         public Grade ForcedGrade
         {
             get => _objForcedGrade;
@@ -1604,9 +1598,7 @@ namespace Chummer
             string strFilter = string.Empty;
             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool, out StringBuilder sbdFilter))
             {
-                sbdFilter.Append('(',
-                    await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false),
-                    ')');
+                sbdFilter.Append(await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).BookXPathAsync(token: token).ConfigureAwait(false));
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                               out StringBuilder sbdCategoryFilter))
                 {
@@ -1669,7 +1661,7 @@ namespace Chummer
                 else if (decMinimumCost != 0 || decMaximumCost != 0)
                 {
                     // Range cost filtering
-                    sbdFilter.Append(" and (", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"), ')');
+                    sbdFilter.Append(" and ", CommonFunctions.GenerateNumericRangeXPath(decMaximumCost, decMinimumCost, "cost"));
                 }
 
                 if (sbdFilter.Length > 0)
@@ -1990,6 +1982,9 @@ namespace Chummer
         /// Is a given piece of ware being Upgraded?
         /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Is a given piece of ware being Upgraded?
+        /// </summary>
         public bool Upgrading { get; set; }
 
         /// <summary>
