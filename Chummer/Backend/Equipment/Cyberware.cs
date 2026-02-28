@@ -90,8 +90,8 @@ namespace Chummer.Backend.Equipment
         private XmlNode _nodPairBonus;
         private XmlNode _nodWirelessBonus;
         private XmlNode _nodWirelessPairBonus;
-        private HashSet<string> _lstIncludeInPairBonus = Utils.StringHashSetPool.Get();
-        private HashSet<string> _lstIncludeInWirelessPairBonus = Utils.StringHashSetPool.Get();
+        private HashSet<string> _lstIncludeInPairBonus;
+        private HashSet<string> _lstIncludeInWirelessPairBonus;
         private bool _blnWirelessOn = true;
         private XmlNode _nodAllowGear;
         private Improvement.ImprovementSource _eImprovementSource = Improvement.ImprovementSource.Cyberware;
@@ -206,10 +206,28 @@ namespace Chummer.Backend.Equipment
             _guiID = Guid.NewGuid();
             _objCharacter = objCharacter ?? throw new ArgumentNullException(nameof(objCharacter));
             LockObject = objCharacter.LockObject;
-            _lstChildren = new TaggedObservableCollection<Cyberware>(LockObject);
-            _lstChildren.AddTaggedCollectionChanged(this, CyberwareChildrenOnCollectionChanged);
-            _lstGear = new TaggedObservableCollection<Gear>(LockObject);
-            _lstGear.AddTaggedCollectionChanged(this, GearChildrenOnCollectionChanged);
+            _lstIncludeInPairBonus = Utils.StringHashSetPool.Get();
+            try
+            {
+                _lstIncludeInWirelessPairBonus = Utils.StringHashSetPool.Get();
+                try
+                {
+                    _lstChildren = new TaggedObservableCollection<Cyberware>(LockObject);
+                    _lstChildren.AddTaggedCollectionChanged(this, CyberwareChildrenOnCollectionChanged);
+                    _lstGear = new TaggedObservableCollection<Gear>(LockObject);
+                    _lstGear.AddTaggedCollectionChanged(this, GearChildrenOnCollectionChanged);
+                }
+                catch
+                {
+                    Utils.StringHashSetPool.Return(ref _lstIncludeInWirelessPairBonus);
+                    throw;
+                }
+            }
+            catch
+            {
+                Utils.StringHashSetPool.Return(ref _lstIncludeInPairBonus);
+                throw;
+            }
         }
 
         private async Task CyberwareChildrenOnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e, CancellationToken token = default)
@@ -2546,12 +2564,13 @@ namespace Chummer.Backend.Equipment
                         SourceType == Improvement.ImprovementSource.Bioware)
                         objNode.TryGetBoolFieldQuickly("prototypetranshuman", ref _blnPrototypeTranshuman);
 
-                    _nodBonus = objNode["bonus"] ?? (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["bonus"];
-                    _nodPairBonus = objNode["pairbonus"] ?? (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["pairbonus"];
+                    XmlNode objSourceNode = blnSync ? objMyNode?.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false);
+                    objNode.TryGetNodeWithSourceFallback("bonus", ref _nodBonus, objSourceNode);
+                    objNode.TryGetNodeWithSourceFallback("pairbonus", ref _nodPairBonus, objSourceNode);
                     XmlElement xmlPairIncludeNode = objNode["pairinclude"];
                     if (xmlPairIncludeNode == null)
                     {
-                        xmlPairIncludeNode = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["pairinclude"];
+                        xmlPairIncludeNode = objSourceNode?["pairinclude"];
                         _lstIncludeInPairBonus.Add(Name);
                     }
 
@@ -2567,8 +2586,8 @@ namespace Chummer.Backend.Equipment
                         }
                     }
 
-                    _nodWirelessBonus = objNode["wirelessbonus"] ?? (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["wirelessbonus"];
-                    _nodWirelessPairBonus = objNode["wirelesspairbonus"] ?? (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["wirelesspairbonus"];
+                    objNode.TryGetNodeWithSourceFallback("wirelessbonus", ref _nodWirelessBonus, objSourceNode);
+                    objNode.TryGetNodeWithSourceFallback("wirelesspairbonus", ref _nodWirelessPairBonus, objSourceNode);
                     xmlPairIncludeNode = objNode["wirelesspairinclude"];
                     if (xmlPairIncludeNode == null)
                     {
@@ -10222,7 +10241,7 @@ namespace Chummer.Backend.Equipment
                     {
                         if (decimal.TryParse(objChild.Weight.TrimStart('*'), NumberStyles.Any, GlobalSettings.InvariantCultureInfo, out decimal decPluginWeight))
                         {
-                            decPluginWeight -= 1;
+                            --decPluginWeight;
                             decPluginWeight *= decWeight;
                             decReturn += decPluginWeight;
                         }

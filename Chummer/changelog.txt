@@ -126,8 +126,28 @@ Application Changes:
 - Added support for using <gameplayoption> as a requirement, based on the Character Settings used. This allows for items, qualities, powers, etc. to be made available or unavailable based on the selected gameplay option string. As an example, this restores the ability to make the Insect Free Spirit quality only available when the Prime Runner gameplay option is selected.
 - Implemented qualitylevel improvement to handle Life Modules and only taking the highest level of SIN. This maps an improvement to gaining a quality at a specific level of the value of the improvement, read in from qualitylevels.xml. This improvement type will add the quality if the character does not have it, or replace the quality with the highest version if the character already has it.
 - When searching in the Select Weapon Accessory window, an indicator will be shown for accessories that are not compatible with the currently selected weapon's mounts.
-- Implemented a bonus type (cyberlimbattributebonus) to provide AGI or STR bonuses to cyberware attribute bonuses. Example behaviour:
 - Fixed MysAdeptAllowPpCareer, MysAdeptSecondMAGAttribute and PrioritySpellsAsAdeptPowers not saving values correctly when being disabled.
+- Added support for Gear objects to use the 'sameparent' attribute in requirement and forbidden nodes. This allows for checking properties of the parent item of the gear item, such as checking whether the parent already has another gear object.
+- Removed Math.Max from gear Capacity calculation when using complex formulas that prevented using [-Rating] or similar.
+- Added new improvement types for Weapons:
+    - Added WeaponCategoryDice - applies dice pool bonuses to all weapons in a category
+    - Added WeaponCategoryAP - applies armor penetration bonuses to all weapons in a category
+    - Added WeaponCategoryAccuracy - applies accuracy bonuses to all weapons in a category
+    - Added WeaponCategoryReach - applies reach bonuses to all melee weapons in a category
+    - Added WeaponSpecificDice - applies dice pool bonuses to specific weapons
+    - Added WeaponSpecificDV - applies damage value bonuses to specific weapons
+    - Added WeaponSpecificAP - applies armor penetration bonuses to specific weapons
+    - Added WeaponSpecificAccuracy - applies accuracy bonuses to specific weapons
+    - Added WeaponSpecificRange - applies range bonuses to specific weapons
+- Consolidated weapon category improvement logic into reusable GetWeaponCategoryImprovements() methods
+- Refactored AP and damage calculations to use new consolidated improvement methods
+- Fixed custom books not being exposed to the UI for configuration of PDF parameters. Note that this requires that the custom book be mapped to a CharacterSettings file.
+- Fixed Cyrillic text not working correctly when searching due to case conversion.
+- Added functionality for the Drone Arm from Rigger 5 to use its own Agility for weapon skill tests rather than Pilot when using the DogBrain mode. This is controlled using the useownattributesforweapon element. Due to this, existing characters with the Drone Arm will need to remove and re-add the Drone Arm to have it function correctly, or manually edit the chum5 file.
+- Fixed a crash caused by using customdata amends to the priority table that would leave a metatype with no valid Talent choice at a given priority level.
+- Added addspirit and addsprite as custom improvement types to add spirits and sprites to a character via the custom improvement system in career mode.
+- Fixed crash caused by creating a vehicle that has a built-in cyberware subsystem attached to a vehicle mod that adds a weapon.
+- Implemented a bonus type (cyberlimbattributebonus) to provide AGI or STR bonuses to cyberware attribute bonuses. Example behaviour:
 
 <!-- Simple values -->
 <cyberlimbattributebonus>
@@ -226,6 +246,11 @@ Data Changes:
 - Added xpath filter using the new weaponfilter property for the Micro weapon accessory mount to only show Melee weapons that have Reach 0.
 - Added nuyen and essence filters in the equipment selection screen to allow filtering by maximum essence cost and by maximum nuyen cost.
 - Refactored life modules that grant SINs to use the new qualitylevel improvement type. Existing characters with life modules that grant SINs will need to reapply their improvements to see any changes and may find it preferable to remove and re-add the modules.
+- Fixed the additional optional powers for infected from Dark Terrors not having the correct filters.
+- Refactored Critical Strike to use updated structure. Should not affect existing characters.
+- Fixed incorrect cyberware names for the Aztechnology Cuanmiztli A.
+- Fixed an issue with SelectCyberware not updating grades correctly when switching between an item that uses ForceGrade and one that doesn't. 
+- Added safety check for if all cyberware grades are unavailable for a piece of cyberware in the SelectCyberware form.
 
 Fixes implemented by BM123499
 
@@ -460,7 +485,12 @@ Changed/New Strings:
 - Checkbox_UseCurrentEssence
 - Checkbox_UseCurrentNuyen
 - String_RestrictedItemsHiddenMount
-
+- Label_FilterByCapacity
+- Message_Metatype_NoTalentChoices
+- MessageTitle_Metatype_NoTalentChoices
+- Message_NoGradesAvailable
+- MessageTitle_NoGradesAvailable
+- String_NoGradesAvailable
 Removed Strings:
 - Label_SelectMetamagic_Disadvantage
 - Label_Options_Carryover

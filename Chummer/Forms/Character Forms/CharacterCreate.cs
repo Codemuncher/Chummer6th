@@ -606,7 +606,7 @@ namespace Chummer
                                             {
                                                 x.Minimum = 1;
                                                 x.Maximum = intMugshotCount;
-                                                x.Value = Math.Max(intMainMugshotIndex, 0) + 1;
+                                                x.ValueAsInt = Math.Max(intMainMugshotIndex, 0) + 1;
                                             }, GenericToken).ConfigureAwait(false);
                                         }
                                         else
@@ -615,7 +615,7 @@ namespace Chummer
                                             {
                                                 x.Minimum = 0;
                                                 x.Maximum = 0;
-                                                x.Value = 0;
+                                                x.ValueAsInt = 0;
                                             }, GenericToken).ConfigureAwait(false);
                                         }
 
@@ -2421,15 +2421,23 @@ namespace Chummer
 
                         string strPrimaryArm = await CharacterObject.GetPrimaryArmAsync(token).ConfigureAwait(false);
 
-                        await cboPrimaryArm.PopulateWithListItemsAsync(lstPrimaryArm, token)
-                            .ConfigureAwait(false);
-                        await cboPrimaryArm.DoThreadSafeAsync(x =>
+                        IsRefreshing = true;
+                        try
                         {
-                            if (!string.IsNullOrEmpty(strPrimaryArm))
-                                x.SelectedValue = strPrimaryArm;
-                            if (x.SelectedIndex == -1)
-                                x.SelectedIndex = 0;
-                        }, token).ConfigureAwait(false);
+                            await cboPrimaryArm.PopulateWithListItemsAsync(lstPrimaryArm, token)
+                                .ConfigureAwait(false);
+                            await cboPrimaryArm.DoThreadSafeAsync(x =>
+                            {
+                                if (!string.IsNullOrEmpty(strPrimaryArm))
+                                    x.SelectedValue = strPrimaryArm;
+                                if (x.SelectedIndex == -1)
+                                    x.SelectedIndex = 0;
+                            }, token).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            IsRefreshing = false;
+                        }
                     }
                 }
 
@@ -13953,7 +13961,7 @@ namespace Chummer
                                     sbdMartialArtsBPToolTip.AppendLine().Append(strSpace, '+', strSpace)
                                         .Append(await objTechnique.GetCurrentDisplayNameAsync(token)
                                             .ConfigureAwait(false), strSpace)
-                                        .Append("(" + intLoopCost.ToString(GlobalSettings.CultureInfo) + ")");
+                                        .Append('(', intLoopCost.ToString(GlobalSettings.CultureInfo), ')');
                                 }, token: token).ConfigureAwait(false);
                             }
                             else
@@ -13975,7 +13983,7 @@ namespace Chummer
                     await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false);
 
                 token.ThrowIfCancellationRequested();
-
+              
                 // ------------------------------------------------------------------------------
                 // Calculate the BP used by Active Skills.
                 int skillPointsKarma = await objSkillSection.Skills
@@ -14375,7 +14383,7 @@ namespace Chummer
                                     .Append(await objFocus.GearObject.GetCurrentDisplayNameAsync(token)
                                         .ConfigureAwait(false), strSpace);
                             sbdFociPointsTooltip
-                                .Append("(" + intBindingCost.ToString(GlobalSettings.CultureInfo) + ")");
+                                .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
                             return true;
                         }, token).ConfigureAwait(false);
 
@@ -14401,7 +14409,7 @@ namespace Chummer
                                     sbdFociPointsTooltip
                                         .Append(await objFocus.GetCurrentDisplayNameAsync(token)
                                             .ConfigureAwait(false), strSpace)
-                                        .Append("(" + intBindingCost.ToString(GlobalSettings.CultureInfo) + ")");
+                                        .Append('(', intBindingCost.ToString(GlobalSettings.CultureInfo), ')');
                                     return intBindingCost;
                                 }, token).ConfigureAwait(false);
 
@@ -14772,9 +14780,8 @@ namespace Chummer
             await lblKnowledgeSkillsBP.DoThreadSafeAsync(x => x.Text = strTemp2, token).ConfigureAwait(false);
             //Groups
             string strTemp3 = strZeroKarma;
-            int intSkillGroupPointsMaximum = CharacterObject.SkillsSection.SkillGroupPointsMaximum;
-
-            }
+            
+        }
 
         private int _intFileUpdateQueued;
 
@@ -18567,9 +18574,9 @@ namespace Chummer
                                                           .ConfigureAwait(false),
                                                           await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                          .ConfigureAwait(false))
-                                            .Append("[" +
+                                            .Append('[',
                                                 objImprovement.Value.ToString(
-                                                    "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
+                                                    "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                             }
 
                             if (await objLifestyle.GetStyleTypeAsync(token).ConfigureAwait(false) == LifestyleType.Standard)
@@ -18587,9 +18594,9 @@ namespace Chummer
                                             .GetObjectNameAsync(objImprovement, token: token)
                                             .ConfigureAwait(false), await LanguageManager.GetStringAsync("String_Space", token: token)
                                             .ConfigureAwait(false))
-                                        .Append("[" +
+                                        .Append('[',
                                             objImprovement.Value.ToString(
-                                                "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
+                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                                 }
                             }
 
@@ -19229,6 +19236,14 @@ namespace Chummer
                                                  + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                                 await lblVehicleCost.DoThreadSafeAsync(x => x.Text = strCost, token)
                                                     .ConfigureAwait(false);
+                                string strCapacity = await objMod.GetDisplayCapacityAsync(token).ConfigureAwait(false);
+                                bool blnShowCapacity = !string.IsNullOrEmpty(strCapacity);
+                                await lblVehicleCapacityLabel.DoThreadSafeAsync(x => x.Visible = blnShowCapacity, token).ConfigureAwait(false);
+                                await lblVehicleCapacity.DoThreadSafeAsync(x =>
+                                {
+                                    x.Visible = blnShowCapacity;
+                                    x.Text = strCapacity;
+                                }, token).ConfigureAwait(false);
                                 await lblVehicleSlotsLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                           .ConfigureAwait(false);
                                 string strSlots = (await objMod.GetCalculatedSlotsAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
@@ -21885,9 +21900,10 @@ namespace Chummer
 
                 if (!blnValid && sbdMessage.Length > 0)
                 {
-                    sbdMessage.Insert(0, await LanguageManager.GetStringAsync("Message_InvalidBeginning", token: token)
-                                                       .ConfigureAwait(false));
-                    await Program.ShowScrollableMessageBoxAsync(this, sbdMessage.ToString(),
+                    // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                    string strMessage = string.Concat(await LanguageManager.GetStringAsync("Message_InvalidBeginning", token: token)
+                                                       .ConfigureAwait(false), sbdMessage.ToString());
+                    await Program.ShowScrollableMessageBoxAsync(this, strMessage,
                         await LanguageManager
                             .GetStringAsync("MessageTitle_Invalid", token: token)
                             .ConfigureAwait(false),
@@ -25064,147 +25080,7 @@ namespace Chummer
                 if (!(await treCyberware.DoThreadSafeFuncAsync(x => x.SelectedNode?.Tag, GenericToken)
                                         .ConfigureAwait(false) is Cyberware objModularCyberware))
                     return;
-                GenericToken.ThrowIfCancellationRequested();
-                IAsyncDisposable objLocker = await CharacterObject.LockObject.EnterUpgradeableReadLockAsync(GenericToken).ConfigureAwait(false);
-                try
-                {
-                    GenericToken.ThrowIfCancellationRequested();
-                    string strSelectedParentID;
-                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(
-                               Utils.ListItemListPool, out List<ListItem> lstModularMounts))
-                    {
-                        List<ListItem> lstModularCyberlimbList = await CharacterObject
-                            .ConstructModularCyberlimbListAsync(
-                                objModularCyberware, true, GenericToken).ConfigureAwait(false);
-                        try
-                        {
-                            lstModularMounts.AddRange(lstModularCyberlimbList);
-                        }
-                        finally
-                        {
-                            Utils.ListItemListPool.Return(ref lstModularCyberlimbList);
-                        }
-                        //Mounted cyberware should always be allowed to be dismounted.
-                        //Unmounted cyberware requires that a valid mount be present.
-                        if (!await objModularCyberware.GetIsModularCurrentlyEquippedAsync(GenericToken)
-                                .ConfigureAwait(false)
-                            && (lstModularMounts.Count == 0 || lstModularMounts.TrueForAll(
-                                x => !string.Equals(x.Value.ToString(), "None", StringComparison.Ordinal))))
-                        {
-                            await Program.ShowScrollableMessageBoxAsync(this,
-                                    await LanguageManager.GetStringAsync("Message_NoValidModularMount",
-                                            token: GenericToken)
-                                        .ConfigureAwait(false),
-                                    await LanguageManager.GetStringAsync("MessageTitle_NoValidModularMount",
-                                            token: GenericToken)
-                                        .ConfigureAwait(false),
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information, token: GenericToken)
-                                .ConfigureAwait(false);
-                            return;
-                        }
-
-                        string strDescription = await LanguageManager
-                            .GetStringAsync("MessageTitle_SelectCyberware", token: GenericToken)
-                            .ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> frmPickMount = await ThreadSafeForm<SelectItem>.GetAsync(
-                                   () => new SelectItem(), GenericToken).ConfigureAwait(false))
-                        {
-                            await frmPickMount.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, GenericToken).ConfigureAwait(false);
-                            frmPickMount.MyForm.SetGeneralItemsMode(lstModularMounts);
-
-                            // Make sure the dialogue window was not canceled.
-                            if (await frmPickMount.ShowDialogSafeAsync(this, GenericToken).ConfigureAwait(false)
-                                == DialogResult.Cancel)
-                            {
-                                return;
-                            }
-
-                            strSelectedParentID = await frmPickMount.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, GenericToken).ConfigureAwait(false);
-                        }
-                    }
-
-                    Cyberware objOldParent = await objModularCyberware.GetParentAsync(GenericToken).ConfigureAwait(false);
-                    if (objOldParent != null)
-                        await objModularCyberware.ChangeModularEquipAsync(false, token: GenericToken)
-                            .ConfigureAwait(false);
-
-                    if (strSelectedParentID == "None")
-                    {
-                        if (objOldParent != null)
-                        {
-                            await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, token: GenericToken)
-                                .ConfigureAwait(false);
-
-                            await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, token: GenericToken)
-                                .ConfigureAwait(false);
-                        }
-                    }
-                    else
-                    {
-                        Cyberware objNewParent = await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false))
-                            .DeepFindByIdAsync(strSelectedParentID, GenericToken).ConfigureAwait(false);
-                        if (objNewParent != null)
-                        {
-                            if (objOldParent != null)
-                                await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, token: GenericToken)
-                                    .ConfigureAwait(false);
-                            else
-                                await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, token: GenericToken)
-                                    .ConfigureAwait(false);
-
-                            await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, token: GenericToken)
-                                .ConfigureAwait(false);
-
-                            await objModularCyberware.ChangeModularEquipAsync(true, token: GenericToken)
-                                .ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            ThreadSafeObservableCollection<Vehicle> lstVehicles
-                                = await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false);
-                            VehicleMod objNewVehicleModParent
-                                = (await lstVehicles
-                                    .FindVehicleModAsync(x => x.InternalId == strSelectedParentID, GenericToken)
-                                    .ConfigureAwait(false)).Item1;
-                            if (objNewVehicleModParent == null)
-                                (objNewParent, objNewVehicleModParent)
-                                    = await lstVehicles
-                                        .FindVehicleCyberwareAsync(x => x.InternalId == strSelectedParentID,
-                                            GenericToken).ConfigureAwait(false);
-
-                            if (objNewVehicleModParent != null || objNewParent != null)
-                            {
-                                if (objOldParent != null)
-                                    await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, token: GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false))
-                                        .RemoveAsync(objModularCyberware, token: GenericToken)
-                                        .ConfigureAwait(false);
-
-                                if (objNewParent != null)
-                                    await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, token: GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objNewVehicleModParent.Cyberware
-                                        .AddAsync(objModularCyberware, token: GenericToken)
-                                        .ConfigureAwait(false);
-                            }
-                            else if (objOldParent != null)
-                            {
-                                await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, token: GenericToken)
-                                    .ConfigureAwait(false);
-
-                                await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, token: GenericToken)
-                                    .ConfigureAwait(false);
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    await objLocker.DisposeAsync().ConfigureAwait(false);
-                }
+                await ChangeModularMountLocationAsync(objModularCyberware, GenericToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -25219,153 +25095,7 @@ namespace Chummer
                 if (!(await treVehicles.DoThreadSafeFuncAsync(x => x.SelectedNode?.Tag, GenericToken)
                                        .ConfigureAwait(false) is Cyberware objModularCyberware))
                     return;
-                GenericToken.ThrowIfCancellationRequested();
-                IAsyncDisposable objLocker = await CharacterObject.LockObject.EnterUpgradeableReadLockAsync(GenericToken).ConfigureAwait(false);
-                try
-                {
-                    GenericToken.ThrowIfCancellationRequested();
-                    string strSelectedParentID;
-                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(
-                               Utils.ListItemListPool, out List<ListItem> lstModularMounts))
-                    {
-                        List<ListItem> lstModularCyberlimbList = await CharacterObject
-                            .ConstructModularCyberlimbListAsync(
-                                objModularCyberware, true, GenericToken).ConfigureAwait(false);
-                        try
-                        {
-                            lstModularMounts.AddRange(lstModularCyberlimbList);
-                        }
-                        finally
-                        {
-                            Utils.ListItemListPool.Return(ref lstModularCyberlimbList);
-                        }
-                        //Mounted cyberware should always be allowed to be dismounted.
-                        //Unmounted cyberware requires that a valid mount be present.
-                        if (!await objModularCyberware.GetIsModularCurrentlyEquippedAsync(GenericToken)
-                                .ConfigureAwait(false)
-                            && (lstModularMounts.Count == 0 || lstModularMounts.TrueForAll(
-                                x => !string.Equals(x.Value.ToString(), "None", StringComparison.OrdinalIgnoreCase))))
-                        {
-                            await Program.ShowScrollableMessageBoxAsync(this,
-                                    await LanguageManager.GetStringAsync("Message_NoValidModularMount",
-                                            token: GenericToken)
-                                        .ConfigureAwait(false),
-                                    await LanguageManager.GetStringAsync("MessageTitle_NoValidModularMount",
-                                            token: GenericToken)
-                                        .ConfigureAwait(false),
-                                    MessageBoxButtons.OK, MessageBoxIcon.Information, token: GenericToken)
-                                .ConfigureAwait(false);
-                            return;
-                        }
-
-                        string strDescription = await LanguageManager
-                            .GetStringAsync("MessageTitle_SelectCyberware", token: GenericToken)
-                            .ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> frmPickMount = await ThreadSafeForm<SelectItem>.GetAsync(
-                                   () => new SelectItem(), GenericToken).ConfigureAwait(false))
-                        {
-                            await frmPickMount.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, GenericToken).ConfigureAwait(false);
-                            frmPickMount.MyForm.SetGeneralItemsMode(lstModularMounts);
-
-                            // Make sure the dialogue window was not canceled.
-                            if (await frmPickMount.ShowDialogSafeAsync(this, GenericToken).ConfigureAwait(false)
-                                == DialogResult.Cancel)
-                            {
-                                return;
-                            }
-
-                            strSelectedParentID = await frmPickMount.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, GenericToken).ConfigureAwait(false);
-                        }
-                    }
-
-                    VehicleMod objOldParentVehicleMod = (await (await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false))
-                        .FindVehicleCyberwareAsync(x => x.InternalId == objModularCyberware.InternalId, GenericToken)
-                        .ConfigureAwait(false)).Item2;
-                    Cyberware objOldParent = await objModularCyberware.GetParentAsync(GenericToken).ConfigureAwait(false);
-                    if (objOldParent != null)
-                        await objModularCyberware.ChangeModularEquipAsync(false, token: GenericToken)
-                            .ConfigureAwait(false);
-                    if (strSelectedParentID == "None")
-                    {
-                        if (objOldParent != null)
-                            await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-                        else
-                            await objOldParentVehicleMod.Cyberware.RemoveAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-
-                        await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                            .ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        Cyberware objNewParent = await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false))
-                            .DeepFindByIdAsync(strSelectedParentID, GenericToken).ConfigureAwait(false);
-                        if (objNewParent != null)
-                        {
-                            if (objOldParent != null)
-                                await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-                            else
-                                await objOldParentVehicleMod.Cyberware.RemoveAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-
-                            await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-
-                            await objModularCyberware.ChangeModularEquipAsync(true, token: GenericToken)
-                                .ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            ThreadSafeObservableCollection<Vehicle> lstVehicles
-                                = await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false);
-                            VehicleMod objNewVehicleModParent
-                                = (await lstVehicles
-                                    .FindVehicleModAsync(x => x.InternalId == strSelectedParentID, GenericToken)
-                                    .ConfigureAwait(false)).Item1;
-                            if (objNewVehicleModParent == null)
-                                (objNewParent, objNewVehicleModParent)
-                                    = await lstVehicles.FindVehicleCyberwareAsync(
-                                        x => x.InternalId == strSelectedParentID, GenericToken).ConfigureAwait(false);
-
-                            if (objNewVehicleModParent != null || objNewParent != null)
-                            {
-                                if (objOldParent != null)
-                                    await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objOldParentVehicleMod.Cyberware
-                                        .RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-
-                                if (objNewParent != null)
-                                    await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objNewVehicleModParent.Cyberware.AddAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                if (objOldParent != null)
-                                    await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objOldParentVehicleMod.Cyberware
-                                        .RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-
-                                await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    await objLocker.DisposeAsync().ConfigureAwait(false);
-                }
+                await ChangeVehicleModularMountLocationAsync(objModularCyberware, GenericToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

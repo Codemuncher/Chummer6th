@@ -1831,6 +1831,21 @@ namespace Chummer
                             }
                         }
 
+                        if (xmlNode.GetAttribute("sameparent", string.Empty) == bool.TrueString)
+                        {
+                            return new ValueTuple<bool, string>(objParent is IHasGear objGearParent && (blnSync
+                                    // ReSharper disable once MethodHasAsyncOverload
+                                    ? objGearParent.GearChildren.Any(
+                                        x => x.Name == strNodeInnerText
+                                             || string.Equals(x.SourceIDString, strNodeInnerText,
+                                                 StringComparison.OrdinalIgnoreCase), token)
+                                    : await objGearParent.GearChildren.AnyAsync(
+                                        x => x.Name == strNodeInnerText
+                                             || string.Equals(x.SourceIDString, strNodeInnerText,
+                                                 StringComparison.OrdinalIgnoreCase), token).ConfigureAwait(false)),
+                                strName);
+                        }
+
                         if (objGear != null)
                         {
                             if (blnShowMessage)
@@ -3324,29 +3339,20 @@ namespace Chummer
                         else
                         {
                             List<Weapon> lstWeapons = new List<Weapon>(2 * await (await objCharacter.GetWeaponsAsync(token)).GetCountAsync(token).ConfigureAwait(false));
-                            foreach (Weapon objWeapon in await (await objCharacter.GetWeaponsAsync(token)
+                            lstWeapons.AddRange(await (await objCharacter.GetWeaponsAsync(token)
                                          .ConfigureAwait(false)).GetAllDescendantsAsync(
-                                         x => x.UnderbarrelWeapons, token).ConfigureAwait(false))
-                            {
-                                lstWeapons.Add(objWeapon);
-                            }
+                                         x => x.UnderbarrelWeapons, token).ConfigureAwait(false));
 
                             await (await objCharacter.GetVehiclesAsync(token).ConfigureAwait(false)).ForEachAsync(async objVehicle =>
                             {
-                                foreach (Weapon objWeapon in await objVehicle.Weapons
+                                lstWeapons.AddRange(await objVehicle.Weapons
                                                 .GetAllDescendantsAsync(x => x.UnderbarrelWeapons, token)
-                                                .ConfigureAwait(false))
-                                {
-                                    lstWeapons.Add(objWeapon);
-                                }
+                                                .ConfigureAwait(false));
 
                                 await objVehicle.WeaponMounts.ForEachAsync(async objMount =>
                                 {
-                                    foreach (Weapon objWeapon in await objMount.Weapons.GetAllDescendantsAsync(
-                                                    x => x.UnderbarrelWeapons, token).ConfigureAwait(false))
-                                    {
-                                        lstWeapons.Add(objWeapon);
-                                    }
+                                    lstWeapons.AddRange(await objMount.Weapons.GetAllDescendantsAsync(
+                                                    x => x.UnderbarrelWeapons, token).ConfigureAwait(false));
                                 }, token).ConfigureAwait(false);
                             }, token).ConfigureAwait(false);
                             foreach (Weapon objWeapon in lstWeapons)
@@ -3683,17 +3689,17 @@ namespace Chummer
                 case "accessory" when objParent is Weapon objWeapon:
                     {
                         bool blnReturn = blnSync
-                            // ReSharper disable once MethodHasAsyncOverload
-                            ? objWeapon.WeaponAccessories.Any(x =>
-                                    x.Name == strNodeInnerText
-                                    || string.Equals(x.SourceIDString, strNodeInnerText,
-                                        StringComparison.OrdinalIgnoreCase),
-                                token)
-                            : await objWeapon.WeaponAccessories.AnyAsync(x =>
-                                    x.Name == strNodeInnerText
-                                    || string.Equals(x.SourceIDString, strNodeInnerText,
-                                        StringComparison.OrdinalIgnoreCase),
-                                token).ConfigureAwait(false);
+                        // ReSharper disable once MethodHasAsyncOverload
+                        ? objWeapon.WeaponAccessories.Any(x =>
+                                x.Name == strNodeInnerText
+                                || string.Equals(x.SourceIDString, strNodeInnerText,
+                                    StringComparison.OrdinalIgnoreCase),
+                            token)
+                        : await objWeapon.WeaponAccessories.AnyAsync(x =>
+                                x.Name == strNodeInnerText
+                                || string.Equals(x.SourceIDString, strNodeInnerText,
+                                    StringComparison.OrdinalIgnoreCase),
+                            token).ConfigureAwait(false);
                         if (!blnShowMessage)
                             return new ValueTuple<bool, string>(blnReturn, strName);
                         XPathNavigator objLoopDoc = blnSync

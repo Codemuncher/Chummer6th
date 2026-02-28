@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
     <OutputType>Library</OutputType>
@@ -39,57 +39,63 @@ Exit 0</PreBuildEvent>
     <AssemblyAttribute Include="System.Runtime.InteropServices.Guid">
       <_Parameter1>3c2fba71-eaa6-490e-9213-69eda4e64db0</_Parameter1>
     </AssemblyAttribute>
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.1" />
+    <PackageReference Include="AWSSDK.Core" Version="4.0.3.15" />
+    <PackageReference Include="Azure.Core" Version="1.51.1" />
+    <PackageReference Include="Duende.IdentityModel" Version="8.0.0" />
     <PackageReference Include="GroupControls" Version="1.9.0" />
-    <PackageReference Include="IdentityModel" Version="6.2.0" />
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.8" />
+    <PackageReference Include="itext" Version="9.5.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="3.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Core" Version="2.3.9" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.3" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.103">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Abstractions" Version="8.13.0" />
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.13.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Logging" Version="8.13.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.13.0" />
-    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.24" />
+    <PackageReference Include="Microsoft.IdentityModel.Abstractions" Version="8.16.0" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.16.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Logging" Version="8.16.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.16.0" />
     <PackageReference Include="Microsoft.VisualStudio.Threading" Version="17.14.15" />
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Validation" Version="17.8.8" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog" Version="6.0.2" />
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
-    <PackageReference Include="System.ComponentModel.Composition" Version="9.0.8" />
-    <PackageReference Include="System.Composition" Version="9.0.8" />
-    <PackageReference Include="System.Composition.AttributedModel" Version="9.0.8" />
-    <PackageReference Include="System.Composition.Convention" Version="9.0.8" />
-    <PackageReference Include="System.Composition.Hosting" Version="9.0.8" />
-    <PackageReference Include="System.Composition.Runtime" Version="9.0.8" />
-    <PackageReference Include="System.Composition.TypedParts" Version="9.0.8" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.8" />
-    <PackageReference Include="System.Reflection.Metadata" Version="9.0.8" />
+    <PackageReference Include="Microsoft.VisualStudio.Validation" Version="17.13.22" />
+    <PackageReference Include="NLog" Version="6.1.0" />
+    <PackageReference Include="System.CodeDom" Version="10.0.3" />
+    <PackageReference Include="System.Collections.Immutable" Version="10.0.3" />
+    <PackageReference Include="System.ComponentModel.Composition" Version="10.0.3" />
+    <PackageReference Include="System.Composition" Version="10.0.3" />
+    <PackageReference Include="System.Composition.AttributedModel" Version="10.0.3" />
+    <PackageReference Include="System.Composition.Convention" Version="10.0.3" />
+    <PackageReference Include="System.Composition.Hosting" Version="10.0.3" />
+    <PackageReference Include="System.Composition.Runtime" Version="10.0.3" />
+    <PackageReference Include="System.Composition.TypedParts" Version="10.0.3" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="10.0.3" />
+    <PackageReference Include="System.Reflection.Metadata" Version="10.0.3" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageReference Include="System.Security.AccessControl" Version="6.0.1" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.8" />
-    <PackageReference Include="System.Text.Encodings.Web" Version="9.0.8" />
-    <PackageReference Include="System.Text.Json" Version="9.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters" Version="2.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters.CoreServices" Version="2.0.0" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.8" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.3" />
+    <PackageReference Include="System.Text.Encodings.Web" Version="10.0.3" />
+    <PackageReference Include="System.Text.Json" Version="10.0.3" />
+    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SystemWebAdapters.CoreServices" Version="2.3.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.3" />
     <PackageReference Include="CoreWCF.Primitives" Version="1.8.0" />
     <PackageReference Include="CoreWCF.ConfigurationManager" Version="1.8.0" />
     <PackageReference Include="CoreWCF.Http" Version="1.8.0" />
     <PackageReference Include="CoreWCF.WebHttp" Version="1.8.0" />
     <PackageReference Include="CoreWCF.NetTcp" Version="1.8.0" />
+    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.23" />
+    <PackageReference Include="IdentityModel" Version="6.0.0" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <OutputPath>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutputPath>
@@ -155,6 +161,11 @@ Exit 0</PreBuildEvent>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(SolutionDir)Chummer\Chummer.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Temporarily exclude all source files from compilation to avoid plugin build errors
+         while main project is being migrated. Remove this once plugin code is updated. -->
+    <Compile Remove="**\*.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Update="OpenAPIs\swagger.json">

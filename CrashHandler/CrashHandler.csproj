@@ -33,23 +33,27 @@
     <AssemblyAttribute Include="System.Runtime.InteropServices.Guid">
       <_Parameter1>8c904468-f3a3-4034-b2de-ed532803ad38</_Parameter1>
     </AssemblyAttribute>
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.1" />
+    <PackageReference Include="Azure.Core" Version="1.51.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Core" Version="2.3.9" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="4.14.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" Version="5.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.103">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog" Version="6.0.2" />
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
-    <PackageReference Include="System.Reflection.Metadata" Version="9.0.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="NLog" Version="6.1.0" />
+    <PackageReference Include="System.CodeDom" Version="10.0.3" />
+    <PackageReference Include="System.Collections.Immutable" Version="10.0.3" />
+    <PackageReference Include="System.Reflection.Metadata" Version="10.0.3" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.8" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.8" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.3" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.3" />
     <PackageReference Include="CoreWCF.Primitives" Version="1.8.0" />
     <PackageReference Include="CoreWCF.ConfigurationManager" Version="1.8.0" />
     <PackageReference Include="CoreWCF.Http" Version="1.8.0" />

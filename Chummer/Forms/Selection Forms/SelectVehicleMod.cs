@@ -17,16 +17,16 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using Chummer.Backend.Equipment;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -268,9 +268,6 @@ namespace Chummer
         /// </summary>
         public bool BlackMarketDiscount => _blnBlackMarketDiscount;
 
-        /// <summary>
-        /// The slots taken up by a weapon mount to which the vehicle mod might be being added
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// The slots taken up by a weapon mount to which the vehicle mod might be being added
@@ -300,18 +297,12 @@ namespace Chummer
         /// </summary>
         public decimal Markup => _decMarkup;
 
-        /// <summary>
-        /// Is the mod being added to a vehicle weapon mount?
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Is the mod being added to a vehicle weapon mount?
         /// </summary>
         public bool VehicleMountMods { get; set; }
 
-        /// <summary>
-        /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// If the mod is being added to a vehicle weapon mount, the (prospective) cost of the weapon mount without any additional mods.
@@ -349,7 +340,8 @@ namespace Chummer
                         if (sbdCategoryFilter.Length > 0)
                         {
                             sbdCategoryFilter.Length -= 4;
-                            strFilter = sbdCategoryFilter.Insert(0, strFilter, " and (", ')').ToString();
+                            // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                            strFilter = string.Concat(strFilter, " and (", sbdCategoryFilter.Append(')').ToString());
                         }
                     }
                 }
@@ -375,7 +367,8 @@ namespace Chummer
                 }
 
                 if (sbdFilter.Length > 0)
-                    strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                    // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                    strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
             }
 
             // Retrieve the list of Mods for the selected Category.
@@ -725,7 +718,7 @@ namespace Chummer
                                                    .ConfigureAwait(false);
 
                     // Slots (part 2, if we do need a rating)
-                    if (strSlots.StartsWith("FixedValues(", StringComparison.Ordinal))
+                    if (strSlots.StartsWith("FixedValues(", StringComparison.Ordinal) || strSlots.Contains("Rating", StringComparison.OrdinalIgnoreCase))
                     {
                         intExtraSlots = (await ProcessInvariantXPathExpression(strSlots, intRating, token: token).ConfigureAwait(false)).Item1.StandardRound();
                         string strInnerText = intExtraSlots.ToString(GlobalSettings.CultureInfo);

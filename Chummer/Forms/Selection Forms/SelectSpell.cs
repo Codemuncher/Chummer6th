@@ -19,13 +19,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -235,9 +235,6 @@ namespace Chummer
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool FreeOnly { get; set; }
 
-        /// <summary>
-        /// Limit the Spell list to a particular Category.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Limit the Spell list to a particular Category.
@@ -247,9 +244,6 @@ namespace Chummer
             set => _strLimitCategory = value;
         }
 
-        /// <summary>
-        /// Force a particular Spell to be selected.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Force a particular Spell to be selected.
@@ -361,7 +355,8 @@ namespace Chummer
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                            // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                            strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
                     }
 
                     foreach (XPathNavigator objXmlSpell in _xmlBaseSpellDataNode.Select("spells/spell" + strFilter))
@@ -845,10 +840,7 @@ namespace Chummer
                     x.Enabled = FreeOnly;
                 }, token: token).ConfigureAwait(false);
                 blnBarehandedAdept = false;
-                await chkLimited.DoThreadSafeAsync(x =>
-                {
-                    x.Enabled = true;
-                }, token: token).ConfigureAwait(false);
+                await chkLimited.DoThreadSafeAsync(x => x.Enabled = true, token: token).ConfigureAwait(false);
             }
 
             if (!GlobalSettings.Language.Equals(GlobalSettings.DefaultLanguage, StringComparison.OrdinalIgnoreCase))
@@ -930,7 +922,7 @@ namespace Chummer
 
                     if (blnBarehandedAdept && !blnForce)
                     {
-                        sbdDv.Insert(0, "2*(", ')');
+                        sbdDv.Insert(0, "2*(").Append(')');
                     }
 
                     await _objCharacter.ProcessAttributesInXPathAsync(sbdDv, token: token).ConfigureAwait(false);

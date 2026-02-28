@@ -57,24 +57,25 @@ namespace Chummer
                     {
                         if (!string.IsNullOrEmpty(_strExcludeCategory))
                         {
+                            string strExclude = string.Empty;
                             using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                                           out StringBuilder sbdExclude))
                             {
-                                string strExclude = string.Empty;
                                 foreach (string strCategory in _strExcludeCategory.SplitNoAlloc(
                                              ',', StringSplitOptions.RemoveEmptyEntries))
-                                    sbdExclude.Append("category != ").Append(strCategory.CleanXPath()).Append(" and ");
+                                    sbdExclude.Append("category != ", strCategory.CleanXPath(), " and ");
                                 // Remove the trailing " and ";
                                 if (sbdExclude.Length > 0)
                                 {
                                     sbdExclude.Length -= 5;
-                                    strExclude = "(" + sbdExclude.Append(") and ").ToString();
+                                    // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                                    strExclude = string.Concat("(", sbdExclude.Append(") and ").ToString());
                                 }
-                                if (_objXmlDocument.SelectSingleNode(
+                            }
+                            if (_objXmlDocument.SelectSingleNode(
                                         "/chummer/skills/skill[" + strExclude + "skillgroup = "
                                         + objXmlSkill.Value.CleanXPath() + "]") == null)
-                                    continue;
-                            }
+                                continue;
                         }
 
                         string strInnerText = objXmlSkill.Value;
@@ -132,19 +133,19 @@ namespace Chummer
             set => lblDescription.Text = value;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Force a specific SkillGroup to be selected.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string OnlyGroup
         {
             set => _strForceValue = value;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only Skills not in the selected Category should be in the list.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string ExcludeCategory
         {
             set => _strExcludeCategory = value;

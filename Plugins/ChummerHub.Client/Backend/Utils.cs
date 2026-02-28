@@ -984,16 +984,16 @@ namespace ChummerHub.Client.Backend
             if (objCache == null)
                 throw new ArgumentNullException(nameof(objCache));
             objCache.MyPluginDataDic.TryAdd("SINnerId", sinner.Id);
-            objCache.OnMyDoubleClick = null;
-            objCache.OnMyDoubleClick += OnObjCacheOnMyDoubleClick;
+            objCache.ClearOnMyDoubleClick();
+            objCache.AddOnMyDoubleClick(OnObjCacheOnMyDoubleClick);
             async void OnObjCacheOnMyDoubleClick(object sender, EventArgs e) => await OnMyDoubleClick(sinner, objCache);
-            objCache.OnMyAfterSelect = null;
-            objCache.OnMyAfterSelect += OnObjCacheOnMyAfterSelect;
+            objCache.ClearOnMyAfterSelect();
+            objCache.AddOnMyAfterSelect(OnObjCacheOnMyAfterSelect);
             async void OnObjCacheOnMyAfterSelect(object sender, TreeViewEventArgs treeViewEventArgs) => await OnMyAfterSelect(sinner, objCache, treeViewEventArgs);
-            objCache.OnMyKeyDown = null;
-            objCache.OnMyKeyDown += OnObjCacheOnMyKeyDown;
+            objCache.ClearOnMyKeyDown();
+            objCache.AddOnMyKeyDown(OnObjCacheOnMyKeyDown);
 
-            async void OnObjCacheOnMyKeyDown(object sender, Tuple<KeyEventArgs, TreeNode> args)
+            async void OnObjCacheOnMyKeyDown(object sender, ValueTuple<KeyEventArgs, TreeNode> args)
             {
                 try
                 {
@@ -1007,26 +1007,25 @@ namespace ChummerHub.Client.Backend
                                 await client.DeleteAsync(sinner.Id.Value).ConfigureAwait(false);
                             }
 
-                            objCache.ErrorText = "deleted!";
+                            objCache.SetErrorText("deleted!");
                             await PluginHandler.MainForm.CharacterRoster.RefreshPluginNodesAsync(PluginHandler.MyPluginHandlerInstance);
                         }
                     }
                 }
                 catch (HttpOperationException e)
                 {
-                    objCache.ErrorText = e.Message;
-                    objCache.ErrorText += Environment.NewLine + e.Response.Content;
+                    objCache.SetErrorText((objCache?.ErrorText ?? string.Empty) + Environment.NewLine + e.Response.Content);
                     Log.Error(e, e.Response.Content);
                 }
                 catch (Exception e)
                 {
-                    objCache.ErrorText = e.Message;
+                    objCache.SetErrorText(e.Message);
                     Log.Error(e);
                 }
             }
 
-            objCache.OnMyContextMenuDeleteClick = null;
-            objCache.OnMyContextMenuDeleteClick += OnObjCacheOnMyContextMenuDeleteClick;
+            objCache.ClearOnMyContextMenuDeleteClick();
+            objCache.AddOnMyContextMenuDeleteClick(OnObjCacheOnMyContextMenuDeleteClick);
 
             async void OnObjCacheOnMyContextMenuDeleteClick(object sender, EventArgs args)
             {
@@ -1042,20 +1041,19 @@ namespace ChummerHub.Client.Backend
                             return;
                         if (result.CallSuccess)
                         {
-                            objCache.ErrorText = "deleted!";
+                            objCache.SetErrorText("deleted!");
                             await PluginHandler.MainForm.CharacterRoster.RefreshPluginNodesAsync(PluginHandler.MyPluginHandlerInstance);
                         }
                     }
                 }
                 catch (HttpOperationException ex)
                 {
-                    objCache.ErrorText = ex.Message;
-                    objCache.ErrorText += Environment.NewLine + ex.Response.Content;
+                    objCache.SetErrorText((objCache?.ErrorText ?? string.Empty) + Environment.NewLine + ex.Message + Environment.NewLine + ex.Response?.Content);
                     Log.Error(ex, objCache.ErrorText);
                 }
                 catch (Exception ex)
                 {
-                    objCache.ErrorText = ex.Message;
+                    objCache.SetErrorText(ex.Message);
                     Log.Error(ex);
                 }
             }
@@ -1067,7 +1065,9 @@ namespace ChummerHub.Client.Backend
             {
                 if (string.IsNullOrEmpty(sinner.FilePath))
                 {
-                    objCache.FilePath = await DownloadFileTask(sinner, objCache, token).ConfigureAwait(false);
+                    var fp = await DownloadFileTask(sinner, objCache, token).ConfigureAwait(false);
+                    if (objCache != null)
+                        objCache.SetFilePath(fp);
                 }
                 if (!string.IsNullOrEmpty(objCache.FilePath))
                 {
@@ -1356,7 +1356,7 @@ namespace ChummerHub.Client.Backend
                         {
                             loadFilePath = file;
                             if (objCache != null)
-                                objCache.FilePath = loadFilePath;
+                                objCache.SetFilePath(loadFilePath);
                             break;
                         }
                         File.Delete(file);
@@ -1428,14 +1428,14 @@ namespace ChummerHub.Client.Backend
                             }
                             loadFilePath = file;
                             if (objCache != null)
-                                objCache.FilePath = loadFilePath;
+                                objCache.SetFilePath(loadFilePath);
                         }
                     }
                     catch (Exception ex)
                     {
                         Log.Error(ex);
                         if (objCache != null)
-                            objCache.ErrorText = ex.Message;
+                            objCache.SetErrorText(ex.Message);
                     }
                 }
                 return loadFilePath;
@@ -1444,7 +1444,7 @@ namespace ChummerHub.Client.Backend
             {
                 Log.Error(e);
                 if (objCache != null)
-                    objCache.ErrorText = e.Message;
+                    objCache.SetErrorText(e.Message);
                 throw;
             }
         }
@@ -1464,25 +1464,26 @@ namespace ChummerHub.Client.Backend
         {
             try
             {
-                if (objCache?.RunningDownloadTask != null && objCache.RunningDownloadTask.Status == TaskStatus.Running)
-                    return objCache.RunningDownloadTask;
+                var running = objCache?.GetRunningDownloadTask();
+                if (running != null && running.Status == TaskStatus.Running)
+                    return running;
                 Log.Info("Downloading SINner: " + sinner?.Id);
                 Task<string> returntask = Task.Run(async () =>
                 {
                     string filepath = await DownloadFile(sinner, objCache, token);
                     if (objCache != null)
-                        objCache.FilePath = filepath;
+                        objCache.SetFilePath(filepath);
                     return filepath;
                 }, token);
                 if (objCache != null)
-                    objCache.RunningDownloadTask = returntask;
+                    objCache.SetRunningDownloadTask(returntask);
                 return returntask;
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Error downloading sinner " + sinner?.Id + ": ");
                 if (objCache != null)
-                    objCache.ErrorText = ex.ToString();
+                    objCache.SetErrorText(ex.ToString());
                 throw;
             }
         }

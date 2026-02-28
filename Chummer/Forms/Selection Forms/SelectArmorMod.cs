@@ -165,16 +165,16 @@ namespace Chummer
 
         #region Properties
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Whether the user wants to add another item after this one.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool AddAgain { get; private set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Whether the selected Vehicle is used.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool BlackMarketDiscount { get; private set; }
 
         /// <summary>
@@ -182,24 +182,18 @@ namespace Chummer
         /// </summary>
         public string SelectedArmorMod { get; private set; } = string.Empty;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Rating that was selected in the dialogue.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public int SelectedRating { get; private set; }
 
-        /// <summary>
-        /// Categories that the Armor allows to be used.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Categories that the Armor allows to be used.
-        /// </summary>
+        /// </summary>        
         public string AllowedCategories { get; set; } = string.Empty;
 
-        /// <summary>
-        /// Whether the General category should be included.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Whether the General category should be included.
@@ -528,7 +522,8 @@ namespace Chummer
                     }
 
                     if (sbdFilter.Length > 0)
-                        strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                        // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                        strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
                 }
 
                 int intOverLimit = 0;

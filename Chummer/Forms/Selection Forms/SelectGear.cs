@@ -17,8 +17,11 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Enums;
+using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -27,9 +30,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Enums;
-using Chummer.Backend.Equipment;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -671,15 +671,12 @@ namespace Chummer
 
         #region Properties
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Whether the user wants to add another item after this one.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool AddAgain { get; private set; }
 
-        /// <summary>
-        /// Only items that grant Capacity should be shown.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that grant Capacity should be shown.
@@ -695,9 +692,6 @@ namespace Chummer
             }
         }
 
-        /// <summary>
-        /// Only items that consume Capacity should be shown.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that consume Capacity should be shown.
@@ -713,27 +707,18 @@ namespace Chummer
             }
         }
 
-        /// <summary>
-        /// Only items that consume Armor Capacity should be shown.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that consume Armor Capacity should be shown.
         /// </summary>
         public bool ShowArmorCapacityOnly { get; set; }
 
-        /// <summary>
-        /// Only items that are marked as being flechette ammo should be shown.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only items that are marked as being flechette ammo should be shown.
         /// </summary>
         public bool ShowFlechetteAmmoOnly { get; set; }
 
-        /// <summary>
-        /// Guid of Gear that was selected in the dialogue.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Guid of Gear that was selected in the dialogue.
@@ -754,9 +739,6 @@ namespace Chummer
         /// </summary>
         public decimal SelectedQty => _decSelectedQty;
 
-        /// <summary>
-        /// Set the maximum Capacity the piece of Gear is allowed to be.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Set the maximum Capacity the piece of Gear is allowed to be.
@@ -804,9 +786,6 @@ namespace Chummer
         /// </summary>
         public bool Stack => _blnStack;
 
-        /// <summary>
-        /// Whether the Stack Checkbox should be shown (default true).
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Whether the Stack Checkbox should be shown (default true).
@@ -821,9 +800,6 @@ namespace Chummer
             }
         }
 
-        /// <summary>
-        /// Capacity display style.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Capacity display style.
@@ -838,16 +814,16 @@ namespace Chummer
         /// </summary>
         public bool BlackMarketDiscount => _blnBlackMarketDiscount;
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Default text string to filter by.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string DefaultSearchText { get; set; }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// What weapon type is our gear allowed to have
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string ForceItemAmmoForWeaponType { get; set; }
 
         #endregion Properties
@@ -1313,7 +1289,8 @@ namespace Chummer
                 }
 
                 if (sbdFilter.Length > 0)
-                    strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                    // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                    strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
             }
 
             int intOverLimit = 0;
@@ -1359,7 +1336,7 @@ namespace Chummer
                         continue;
                     }
 
-                    if (!await objXmlGear.RequirementsMetAsync(_objCharacter, token: token).ConfigureAwait(false))
+                    if (!await objXmlGear.RequirementsMetAsync(_objCharacter, _objGearParent, token: token).ConfigureAwait(false))
                         continue;
 
                     if (!blnDoUIUpdate)

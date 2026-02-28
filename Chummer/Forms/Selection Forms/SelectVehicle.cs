@@ -648,7 +648,8 @@ namespace Chummer
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                            // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                            strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
                     }
 
                     await BuildVehicleList(_xmlBaseVehicleDataNode.Select("vehicles/vehicle" + strFilter), token)
@@ -807,13 +808,14 @@ namespace Chummer
                                     using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                out StringBuilder sbdWeapons))
                                     {
-                                        if (sbdWeapons.Length > 0)
-                                            sbdWeapons.Length -= Environment.NewLine.Length;
                                         await objVehicle.Weapons.ForEachAsync(async objWeapon =>
                                         {
                                             sbdWeapons.AppendLine(await objWeapon.GetCurrentDisplayNameAsync(token)
                                                 .ConfigureAwait(false));
                                         }, token).ConfigureAwait(false);
+
+                                        if (sbdWeapons.Length > 0)
+                                            sbdWeapons.Length -= Environment.NewLine.Length;
 
                                         strWeapons = sbdWeapons.ToString();
                                     }

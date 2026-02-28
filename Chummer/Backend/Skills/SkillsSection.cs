@@ -17,6 +17,9 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Annotations;
+using Microsoft.OpenApi.Extensions;
+using Microsoft.VisualStudio.Threading;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -30,8 +33,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Annotations;
-using Microsoft.VisualStudio.Threading;
 using IAsyncDisposable = System.IAsyncDisposable;
 
 namespace Chummer.Backend.Skills
@@ -59,9 +60,8 @@ namespace Chummer.Backend.Skills
             _lstKnowledgeSkills = new ThreadSafeBindingList<KnowledgeSkill>(LockObject);
             _lstKnowsoftSkills = new ThreadSafeBindingList<KnowledgeSkill>(LockObject);
             objCharacter.MultiplePropertiesChangedAsync += OnCharacterPropertyChanged;
-            CharacterSettings objSettings = objCharacter.Settings;
-            if (objSettings?.IsDisposed == false)
-                objSettings.MultiplePropertiesChangedAsync += OnCharacterSettingsPropertyChanged;
+            if (_objCharacterSettings?.IsDisposed == false)
+                _objCharacterSettings.MultiplePropertiesChangedAsync += OnCharacterSettingsPropertyChanged;
             KnowsoftSkills.BeforeRemoveAsync += KnowsoftSkillsOnBeforeRemove;
             KnowledgeSkills.BeforeRemoveAsync += KnowledgeSkillsOnBeforeRemove;
             KnowledgeSkills.ListChangedAsync += KnowledgeSkillsOnListChanged;
@@ -1315,11 +1315,13 @@ namespace Chummer.Backend.Skills
                             token.ThrowIfCancellationRequested();
                             if (xmlSkill.TryGetField("id", Guid.TryParse, out Guid guiSkillId))
                             {
-                                    if (_dicSkillBackups.TryGetValue(guiSkillId, out Skill objSkill) && objSkill != null)
+                                if (_dicSkillBackups.TryGetValue(guiSkillId, out Skill objSkill) &&
+                                    objSkill != null)
                                     lstReturn.Add(objSkill);
                                 else
                                 {
-                                        string strCategoryCleaned = xmlSkill["category"]?.InnerTextViaPool(token).CleanXPath();
+                                    string strCategoryCleaned =
+                                        xmlSkill["category"]?.InnerTextViaPool(token).CleanXPath();
                                     bool blnIsKnowledgeSkill
                                         = string.IsNullOrEmpty(strCategoryCleaned) || xmlSkillsDocument
                                             .SelectSingleNodeAndCacheExpressionAsNavigator(
@@ -1572,6 +1574,7 @@ namespace Chummer.Backend.Skills
                         _lstNewSkills.RaiseListChangedEvents = false;
                         _lstKnowledgeSkills.RaiseListChangedEvents = false;
                         _lstKnowsoftSkills.RaiseListChangedEvents = false;
+                        _lstSkillGroups.RaiseListChangedEvents = false;
                         try
                         {
                             _dicSkills.Clear();
@@ -3413,7 +3416,7 @@ namespace Chummer.Backend.Skills
                                 }
 
                                 await _lstNewSkills.SortAsync(CompareSkills, token).ConfigureAwait(false);
-                            }
+                    }
                             finally
                             {
                                 _lstSkillGroups.RaiseListChangedEvents = true;
@@ -4192,7 +4195,7 @@ namespace Chummer.Backend.Skills
             try
             {
                 token.ThrowIfCancellationRequested();
-                objExistingSkill.CopyInternalId(objNewSkill);
+                await objExistingSkill.CopyInternalIdAsync(objNewSkill, token).ConfigureAwait(false);
                 int intExistingBasePoints = await objExistingSkill.GetBasePointsAsync(token).ConfigureAwait(false);
                 int intNewBasePoints = await objNewSkill.GetBasePointsAsync(token).ConfigureAwait(false);
                 if (intExistingBasePoints < intNewBasePoints)
@@ -4802,6 +4805,7 @@ namespace Chummer.Backend.Skills
                         //swallow this
                     }
                 }
+                await _lstSkillGroups.ForEachWithSideEffectsAsync(async x => await x.DisposeAsync().ConfigureAwait(false)).ConfigureAwait(false);
                 List<Skill> lstSkillBackups = _dicSkillBackups.GetValuesToListSafe();
                 _dicSkillBackups.Clear();
                 foreach (Skill objSkill in lstSkillBackups)
@@ -4812,6 +4816,7 @@ namespace Chummer.Backend.Skills
                 await _lstKnowledgeSkills.DisposeAsync().ConfigureAwait(false);
                 await _lstKnowsoftSkills.ClearAsync().ConfigureAwait(false);
                 await _lstKnowsoftSkills.DisposeAsync().ConfigureAwait(false);
+                await _lstSkillGroups.DisposeAsync().ConfigureAwait(false);
                 await _objSkillsInitializerLock.DisposeAsync().ConfigureAwait(false);
                 await _objCachedKnowledgePointsLock.DisposeAsync().ConfigureAwait(false);
                 IAsyncDisposable objLocker2 = await _objDefaultKnowledgeSkillsLock.EnterWriteLockAsync().ConfigureAwait(false);

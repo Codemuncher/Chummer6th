@@ -697,7 +697,7 @@ namespace Chummer.UI.Skills
                         //            x.Text = strDisplaySpec;
                         //    }
                         //}, token: token).ConfigureAwait(false);
-                            }
+                    }
                     finally
                     {
                         Interlocked.Decrement(ref _intUpdatingSpec);

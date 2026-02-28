@@ -42,6 +42,10 @@ using Microsoft.ApplicationInsights.Metrics;
 using Microsoft.ApplicationInsights.NLogTarget;
 using NLog;
 using NLog.Config;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using Azure.Monitor.OpenTelemetry.Exporter;
 
 [assembly: CLSCompliant(true)]
 
@@ -92,8 +96,30 @@ namespace Chummer
                 return new TelemetryClient(objActiveConfiguration);
             });
 
+        // OpenTelemetry wiring moved to TelemetryStartupService for centralized control.
+
         private static PluginControl _objPluginLoader;
         public static PluginControl PluginLoader => _objPluginLoader = _objPluginLoader ?? new PluginControl();
+
+        // Helper to start an Activity and apply the custom telemetry initializer to enrich it.
+        public static Activity StartActivity(string name, ActivityKind kind = ActivityKind.Internal)
+        {
+            var activity = TelemetryStartupService.ActivitySource.StartActivity(name, kind);
+            if (activity != null)
+            {
+                try
+                {
+                    s_objTelemetryInitializer.Value.Initialize(activity);
+                }
+                catch (Exception ex)
+                {
+                    // don't let telemetry enrichment break app execution
+                    try { Log?.Error(ex); } catch { }
+                }
+            }
+
+            return activity;
+        }
 
         internal static readonly IntPtr CommandLineArgsDataTypeId = (IntPtr)7593599;
 
@@ -121,6 +147,15 @@ namespace Chummer
             if (IsMainThread)
                 SetThreadDPI(GlobalSettings.DpiScalingMethodSetting);
             Utils.CreateSynchronizationContext();
+            // Initialize OpenTelemetry tracer provider centrally
+            try
+            {
+                TelemetryStartupService.Initialize("InstrumentationKey=012fd080-80dc-4c10-97df-4f2cf8c805d5;IngestionEndpoint=https://westeurope-0.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/");
+            }
+            catch
+            {
+                // ignore telemetry initialization failures
+            }
 
             using (GlobalChummerMutex = new Mutex(false, @"Global\" + ChummerGuid, out bool blnIsNewInstance))
             {
@@ -426,16 +461,16 @@ namespace Chummer
                                                          GlobalSettings.UseLoggingApplicationInsights.ToString(),
                                                          strOSVersion);
 
-                                    //Log a page view:
-                                    pvt = new PageViewTelemetry("frmChummerMain()")
+                                    // Log a page view via TelemetryService (AI when available, otherwise OpenTelemetry)
+                                    var startupProps = new Dictionary<string, string>
                                     {
-                                        Name = "Chummer Startup: " +
-                                               Utils.CurrentChummerVersion.ToString(),
-                                        Id = Settings.Default.UploadClientId.ToString(),
-                                        Timestamp = startTime
+                                        { "parameters", Environment.CommandLine }
                                     };
-                                    pvt.Context.Operation.Name = "Operation Program.Main()";
-                                    pvt.Properties.Add("parameters", Environment.CommandLine);
+                                    TelemetryService.TrackPageView("frmChummerMain()",
+                                        id: Settings.Default.UploadClientId.ToString(),
+                                        properties: startupProps,
+                                        url: null,
+                                        duration: DateTimeOffset.UtcNow - startTime);
 
                                     UploadObjectAsMetric.UploadObject(objLocalTelemetryClient, typeof(GlobalSettings));
                                 }

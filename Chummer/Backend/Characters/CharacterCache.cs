@@ -76,6 +76,12 @@ namespace Chummer
             }
         }
 
+        public void SetFilePath(string value)
+        {
+            using (LockObject.EnterWriteLock())
+                _strFilePath = value;
+        }
+
         public async Task<string> GetFilePathAsync(CancellationToken token = default)
         {
             IAsyncDisposable objLocker = await LockObject.EnterReadLockAsync(token).ConfigureAwait(false);
@@ -120,6 +126,12 @@ namespace Chummer
                 using (LockObject.EnterReadLock())
                     return _strErrorText;
             }
+        }
+
+        public void SetErrorText(string value)
+        {
+            using (LockObject.EnterWriteLock())
+                _strErrorText = value;
         }
 
         public async Task<string> GetErrorTextAsync(CancellationToken token = default)
@@ -663,6 +675,24 @@ namespace Chummer
             }
         }
 
+        public void AddOnMyDoubleClick(SafeAsyncEventHandler handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyDoubleClick += handler;
+        }
+
+        public void RemoveOnMyDoubleClick(SafeAsyncEventHandler handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyDoubleClick -= handler;
+        }
+
+        public void ClearOnMyDoubleClick()
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyDoubleClick = null;
+        }
+
         [JsonIgnore]
         [XmlIgnore]
         [IgnoreDataMember]
@@ -673,6 +703,24 @@ namespace Chummer
                 using (LockObject.EnterReadLock())
                     return _onMyContextMenuDeleteClick;
             }
+        }
+
+        public void AddOnMyContextMenuDeleteClick(SafeAsyncEventHandler handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyContextMenuDeleteClick += handler;
+        }
+
+        public void RemoveOnMyContextMenuDeleteClick(SafeAsyncEventHandler handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyContextMenuDeleteClick -= handler;
+        }
+
+        public void ClearOnMyContextMenuDeleteClick()
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyContextMenuDeleteClick = null;
         }
 
         [JsonIgnore]
@@ -687,6 +735,24 @@ namespace Chummer
             }
         }
 
+        public void AddOnMyAfterSelect(SafeAsyncEventHandler<TreeViewEventArgs> handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyAfterSelect += handler;
+        }
+
+        public void RemoveOnMyAfterSelect(SafeAsyncEventHandler<TreeViewEventArgs> handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyAfterSelect -= handler;
+        }
+
+        public void ClearOnMyAfterSelect()
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyAfterSelect = null;
+        }
+
         [JsonIgnore]
         [XmlIgnore]
         [IgnoreDataMember]
@@ -697,6 +763,38 @@ namespace Chummer
                 using (LockObject.EnterReadLock())
                     return _onMyKeyDown;
             }
+        }
+
+        public void AddOnMyKeyDown(SafeAsyncEventHandler<ValueTuple<KeyEventArgs, TreeNode>> handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyKeyDown += handler;
+        }
+
+        public void RemoveOnMyKeyDown(SafeAsyncEventHandler<ValueTuple<KeyEventArgs, TreeNode>> handler)
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyKeyDown -= handler;
+        }
+
+        public void ClearOnMyKeyDown()
+        {
+            using (LockObject.EnterWriteLock())
+                _onMyKeyDown = null;
+        }
+
+        private Task<string> _runningDownloadTask;
+
+        public Task<string> GetRunningDownloadTask()
+        {
+            using (LockObject.EnterReadLock())
+                return _runningDownloadTask;
+        }
+
+        public void SetRunningDownloadTask(Task<string> value)
+        {
+            using (LockObject.EnterWriteLock())
+                _runningDownloadTask = value;
         }
 
         public async Task OnDefaultDoubleClick(object sender, EventArgs e, CancellationToken token = default)

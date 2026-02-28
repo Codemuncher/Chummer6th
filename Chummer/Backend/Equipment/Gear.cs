@@ -1727,20 +1727,19 @@ namespace Chummer.Backend.Equipment
                 _strExtra = "Holdouts";
             objNode.TryGetBoolFieldQuickly("bonded", ref _blnBonded);
             objNode.TryGetBoolFieldQuickly("equipped", ref _blnEquipped);
-            _nodBonus = objNode["bonus"];
-            _nodWirelessBonus = objNode["wirelessbonus"];
             if (!objNode.TryGetBoolFieldQuickly("wirelesson", ref _blnWirelessOn))
                 _blnWirelessOn = false;
-            _nodWeaponBonus = objNode["weaponbonus"];
-            _nodFlechetteWeaponBonus = objNode["flechetteweaponbonus"];
+            XmlNode objSourceNode = blnSync ? objMyNode?.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false);
+            objNode.TryGetNodeWithSourceFallback("bonus", ref _nodBonus, objSourceNode);
+            objNode.TryGetNodeWithSourceFallback("wirelessbonus", ref _nodWirelessBonus, objSourceNode);
+            objNode.TryGetNodeWithSourceFallback("weaponbonus", ref _nodWeaponBonus, objSourceNode);
+            objNode.TryGetNodeWithSourceFallback("flechetteweaponbonus", ref _nodFlechetteWeaponBonus, objSourceNode);
             objNode.TryGetStringFieldQuickly("source", ref _strSource);
             objNode.TryGetStringFieldQuickly("page", ref _strPage);
             objNode.TryGetBoolFieldQuickly("stolen", ref _blnStolen);
             if (!objNode.TryGetBoolFieldQuickly("isflechetteammmo", ref _blnIsFlechetteAmmo))
             {
                 (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?.TryGetBoolFieldQuickly("isflechetteammmo", ref _blnIsFlechetteAmmo);
-                if (_nodFlechetteWeaponBonus == null && _blnIsFlechetteAmmo)
-                    _nodFlechetteWeaponBonus = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["flechetteweaponbonus"];
             }
 
             if (!objNode.TryGetStringFieldQuickly("ammoforweapontype", ref _strAmmoForWeaponType))
@@ -4314,7 +4313,7 @@ namespace Chummer.Backend.Equipment
                 {
                     decReturn = ProcessRatingStringAsDec(strReturn, () => Rating, out bool blnIsSuccess);
                     if (blnIsSuccess)
-                        strReturn = Math.Max(decReturn, 1.0m).ToString("#,0.##", objCulture);
+                        strReturn = decReturn.ToString("#,0.##", objCulture);
                 }
                 else
                 {
@@ -4393,7 +4392,7 @@ namespace Chummer.Backend.Equipment
                     bool blnIsSuccess;
                     (decReturn, blnIsSuccess) = await ProcessRatingStringAsDecAsync(strReturn, () => GetRatingAsync(token), token).ConfigureAwait(false);
                     if (blnIsSuccess)
-                        strReturn = Math.Max(decReturn, 1.0m).ToString("#,0.##", objCulture);
+                        strReturn = decReturn.ToString("#,0.##", objCulture);
                 }
                 else
                 {

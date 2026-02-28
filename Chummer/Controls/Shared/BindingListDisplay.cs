@@ -108,14 +108,12 @@ namespace Chummer.Controls.Shared
         /// <summary>
         /// Base BindingList that represents all possible contents of the display, not necessarily all visible.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public ThreadSafeBindingList<TType> Contents { get; private set; }
 
         public IEnumerable<Control> ContentControls => _lstContentList.Select(x => x.Control);
 
         public Panel DisplayPanel => pnlDisplay;
 
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         private int ListItemControlHeight
         {
             get => _intListItemControlHeight;
@@ -633,10 +631,7 @@ namespace Chummer.Controls.Shared
                             await objLoopControl.CleanupAsync(token).ConfigureAwait(false);
                         }
                         _lstContentList.Clear();
-                        await Contents.ForEachWithSideEffectsAsync(async objLoopTType =>
-                        {
-                            _lstContentList.Add(await ControlWithMetaData.GetNewAsync(objLoopTType, this, false, token).ConfigureAwait(false));
-                        }, token).ConfigureAwait(false);
+                        await Contents.ForEachWithSideEffectsAsync(async objLoopTType => _lstContentList.Add(await ControlWithMetaData.GetNewAsync(objLoopTType, this, false, token).ConfigureAwait(false)), token).ConfigureAwait(false);
                         Control[] aobjControls = _lstContentList.Select(y => y.Control).ToArray();
                         await pnlDisplay.DoThreadSafeAsync(x => x.Controls.AddRange(aobjControls), token).ConfigureAwait(false);
                     }
