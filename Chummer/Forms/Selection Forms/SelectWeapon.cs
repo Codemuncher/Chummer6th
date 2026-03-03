@@ -17,8 +17,10 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Text;
 using System.Threading;
@@ -26,8 +28,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Equipment;
-using System.ComponentModel;
 
 // ReSharper disable LocalizableElement
 
@@ -1033,9 +1033,6 @@ namespace Chummer
         /// </summary>
         public decimal Markup => _decMarkup;
 
-        /// <summary>
-        /// Only the provided Weapon Categories should be shown in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only the provided Weapon Categories should be shown in the list.
@@ -1052,10 +1049,6 @@ namespace Chummer
             }
         }
 
-        /// <summary>
-        /// Additional XPath filter expression for weapon filtering beyond categories.
-        /// This allows for flexible filtering on any weapon property (reach, type, damage, etc.).
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Additional XPath filter expression for weapon filtering beyond categories.
@@ -1153,7 +1146,8 @@ namespace Chummer
                             sbdFilter.Append(" and (", _strWeaponFilter, ')');
 
                         if (sbdFilter.Length > 0)
-                            strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                            // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                            strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
                     }
 
                     XmlNodeList objXmlWeaponList = _objXmlDocument.SelectNodes("/chummer/weapons/weapon" + strFilter);

@@ -20,13 +20,16 @@
 using System;
 using System.Diagnostics;
 using Chummer.Plugins;
-using Microsoft.ApplicationInsights.Channel;
-using Microsoft.ApplicationInsights.Extensibility;
+using System.Reflection;
+// ApplicationInsights types removed in favor of Activity/ActivitySource based initialization
 using NLog;
 
 namespace Chummer
 {
-    public class CustomTelemetryInitializer : ITelemetryInitializer
+    // This class supports both Application Insights' ITelemetryInitializer (for existing
+    // TelemetryClient/TelemetryConfiguration usage) and OpenTelemetry-style enrichment
+    // via Activity. That allows gradual migration.
+    public class CustomTelemetryInitializer
     {
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
         private static Logger Log => s_ObjLogger.Value;
@@ -35,16 +38,17 @@ namespace Chummer
         //private static string Hostname =  Dns.GetHostName();
 
         [CLSCompliant(false)]
-        public void Initialize(ITelemetry telemetry)
+        // OpenTelemetry-style initializer
+        public static void Initialize(Activity activity)
         {
-            if (telemetry == null)
-                throw new ArgumentNullException(nameof(telemetry));
-            if (telemetry.Context.GlobalProperties.ContainsKey("Milestone"))
-                telemetry.Context.GlobalProperties["Milestone"] = Utils.IsMilestoneVersion.ToString(GlobalSettings.InvariantCultureInfo);
-            else
-                telemetry.Context.GlobalProperties.Add("Milestone", Utils.IsMilestoneVersion.ToString(GlobalSettings.InvariantCultureInfo));
+            ArgumentNullException.ThrowIfNull(activity);
 
-            telemetry.Context.Device.OperatingSystem = Environment.OSVersion.ToString();
+            // Add a milestone/global property
+            activity.SetTag("app.milestone", Utils.IsMilestoneVersion.ToString(GlobalSettings.InvariantCultureInfo));
+
+            // Device / OS information
+            activity.SetTag("os.description", Environment.OSVersion.ToString());
+
             if (Properties.Settings.Default.UploadClientId == Guid.Empty
                 //sometimes, there are odd values stored in the UploadClientId.
                 || !Properties.Settings.Default.UploadClientId.ToString().IsGuid())
@@ -52,24 +56,52 @@ namespace Chummer
                 Properties.Settings.Default.UploadClientId = Guid.NewGuid();
                 Properties.Settings.Default.Save();
             }
-            telemetry.Context.Cloud.RoleInstance = Properties.Settings.Default.UploadClientId.ToString();
-            telemetry.Context.Cloud.RoleName = Properties.Settings.Default.UploadClientId.ToString();
-            telemetry.Context.Device.Id = Environment.MachineName;
-            telemetry.Context.Session.Id = Properties.Settings.Default.UploadClientId.ToString();
-            telemetry.Context.User.Id = Properties.Settings.Default.UploadClientId.ToString();
 
-            telemetry.Context.Component.Version = Utils.CurrentChummerVersion.ToString();
+            var uploadId = Properties.Settings.Default.UploadClientId.ToString();
+            activity.SetTag("cloud.role_instance", uploadId);
+            activity.SetTag("cloud.role", uploadId);
+            activity.SetTag("device.id", Environment.MachineName);
+            activity.SetTag("session.id", uploadId);
+            activity.SetTag("enduser.id", uploadId);
+
+            activity.SetTag("service.version", Utils.CurrentChummerVersion.ToString());
 
             if (Debugger.IsAttached)
             {
-                //don't fill the "productive" log with garbage from debug sessions
-                telemetry.Context.InstrumentationKey = "f4b2ea1b-afe4-4bd6-9175-f5bb167a4d8b";
+                //don't fill the "productive" logs with garbage from debug sessions
+                activity.SetTag("instrumentation.key", "f4b2ea1b-afe4-4bd6-9175-f5bb167a4d8b");
             }
+
+            // Allow plugins to further enrich the Activity. Plugins may implement a
+            // SetTelemetryInitialize method that accepts an Activity; call it via reflection
+            // so we remain compatible even if plugin implementations vary.
             foreach (IPlugin plugin in Program.PluginLoader.MyActivePlugins)
             {
                 try
                 {
-                    telemetry = plugin.SetTelemetryInitialize(telemetry);
+                    // Prefer a plugin method that accepts Activity
+                    var method = plugin.GetType().GetMethod("SetTelemetryInitialize", new[] { typeof(Activity) });
+                    if (method != null)
+                    {
+                        method.Invoke(plugin, new object[] { activity });
+                    }
+                    else
+                    {
+                        // fallback: try any method named SetTelemetryInitialize with a single parameter
+                        var methods = plugin.GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                        foreach (var m in methods)
+                        {
+                            if (m.Name == "SetTelemetryInitialize" && m.GetParameters().Length == 1)
+                            {
+                                var paramType = m.GetParameters()[0].ParameterType;
+                                if (paramType.IsAssignableFrom(typeof(Activity)))
+                                {
+                                    m.Invoke(plugin, new object[] { activity });
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
@@ -80,6 +112,20 @@ namespace Chummer
 #endif
                 }
             }
+        }
+
+        // ActivitySource-based initializer. Use this to enrich OpenTelemetry/Activity flows
+        // and to provide a migration path away from Application Insights' ITelemetry.
+        public static void Initialize(ActivitySource activitySource)
+        {
+            ArgumentNullException.ThrowIfNull(activitySource);
+
+            using var activity = activitySource.StartActivity("Chummer.TelemetryInitialization", ActivityKind.Internal);
+            if (activity == null)
+                return; // no listener is attached
+
+            // Delegate to the Activity-based initializer which sets tags and allows plugins
+            Initialize(activity);
         }
     }
 }

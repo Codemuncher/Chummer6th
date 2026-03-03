@@ -48,19 +48,24 @@ copy "$(TargetDir)Plugins\SamplePlugin\*" "$(SolutionDir)Chummer\bin\$(Configura
     <AssemblyAttribute Include="System.Runtime.InteropServices.Guid">
       <_Parameter1>ea016472-2f78-43f9-af2c-809bdf766645</_Parameter1>
     </AssemblyAttribute>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.1" />
+    <PackageReference Include="Azure.Core" Version="1.51.1" />
+    <PackageReference Include="itext" Version="9.5.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="3.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel.Core" Version="2.3.9" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.103">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NLog" Version="6.0.2" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="9.0.8" />
+    <PackageReference Include="NLog" Version="6.1.1" />
+    <PackageReference Include="System.CodeDom" Version="10.0.3" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="10.0.3" />
+    <PackageReference Include="System.Reflection.Metadata" Version="10.0.3" />
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
   </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -106,6 +111,10 @@ copy "$(TargetDir)Plugins\SamplePlugin\*" "$(SolutionDir)Chummer\bin\$(Configura
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="$(SolutionDir)Chummer\Chummer.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Temporarily exclude plugin source from compilation until migration is complete -->
+    <Compile Remove="**\*.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Resources\" />

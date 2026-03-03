@@ -17,18 +17,18 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Enums;
+using Chummer.Backend.Equipment;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.XPath;
-using Chummer.Backend.Enums;
-using Chummer.Backend.Equipment;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -331,9 +331,6 @@ namespace Chummer
         /// </summary>
         public string SelectedQuality => _strSelectedQuality;
 
-        /// <summary>
-        /// Forcefully add a Category to the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Forcefully add a Category to the list.
@@ -355,9 +352,6 @@ namespace Chummer
             }
         }
 
-        /// <summary>
-        /// A Quality the character has that should be ignored for checking Fobidden requirements (which would prevent upgrading/downgrading a Quality).
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// A Quality the character has that should be ignored for checking Fobidden requirements (which would prevent upgrading/downgrading a Quality).
@@ -434,7 +428,8 @@ namespace Chummer
                     sbdFilter.Append(" and ", CommonFunctions.GenerateSearchXPath(strSearch));
 
                 if (sbdFilter.Length > 0)
-                    strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                    // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                    strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
             }
 
             List<ListItem> lstLifestyleQuality = blnDoUIUpdate ? Utils.ListItemListPool.Get() : null;

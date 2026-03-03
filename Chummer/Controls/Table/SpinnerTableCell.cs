@@ -97,7 +97,7 @@ namespace Chummer.UI.Table
                     return;
                 try
                 {
-                    nudSpinner.Value = Math.Min(Math.Max(Utils.SafelyRunSynchronously(() => ValueGetter(tValue, _objMyToken), _objMyToken), nudSpinner.Minimum), nudSpinner.Maximum);
+                    nudSpinner.Value = Utils.SafelyRunSynchronously(() => ValueGetter(tValue, _objMyToken), _objMyToken);
                 }
                 finally
                 {
@@ -151,7 +151,7 @@ namespace Chummer.UI.Table
                             x.Maximum = Math.Max(decMax, decMin);
                         if (blnDoEnabled)
                             x.Enabled = blnEnabled;
-                        x.Value = Math.Min(Math.Max(decValue, x.Minimum), x.Maximum);
+                        x.Value = decValue;
                     }, token: token).ConfigureAwait(false);
                 }
                 finally
@@ -217,14 +217,9 @@ namespace Chummer.UI.Table
                 await nudSpinner.DoThreadSafeAsync(x => x.Minimum = decMin, token: token).ConfigureAwait(false);
             }
         }
-
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public Func<T, CancellationToken, Task<bool>> EnabledExtractor { get; set; }
 
-        /// <summary>
-        /// The extractor extracting the minimum value for the spinner
-        /// form the value.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// The extractor extracting the minimum value for the spinner
@@ -232,10 +227,6 @@ namespace Chummer.UI.Table
         /// </summary>
         public Func<T, CancellationToken, Task<decimal>> MinExtractor { get; set; }
 
-        /// <summary>
-        /// The extractor to extract the maximum value for the spinner
-        /// from the value.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// The extractor to extract the maximum value for the spinner
@@ -243,18 +234,12 @@ namespace Chummer.UI.Table
         /// </summary>
         public Func<T, CancellationToken, Task<decimal>> MaxExtractor { get; set; }
 
-        /// <summary>
-        /// The extractor for the property displayed in the spinner.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// The extractor for the property displayed in the spinner.
         /// </summary>
         public Func<T, CancellationToken, Task<decimal>> ValueGetter { get; set; }
 
-        /// <summary>
-        /// The extractor for the property displayed in the spinner.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// The extractor for the property displayed in the spinner.

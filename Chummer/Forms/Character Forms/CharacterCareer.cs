@@ -500,7 +500,7 @@ namespace Chummer
                                             {
                                                 x.Minimum = 1;
                                                 x.Maximum = intMugshotCount;
-                                                x.Value = Math.Max(intMainMugshotIndex, 0) + 1;
+                                                x.ValueAsInt = Math.Max(intMainMugshotIndex, 0) + 1;
                                             }, GenericToken).ConfigureAwait(false);
                                         }
                                         else
@@ -509,7 +509,7 @@ namespace Chummer
                                             {
                                                 x.Minimum = 0;
                                                 x.Maximum = 0;
-                                                x.Value = 0;
+                                                x.ValueAsInt = 0;
                                             }, GenericToken).ConfigureAwait(false);
                                         }
 
@@ -3101,15 +3101,23 @@ namespace Chummer
 
                         string strPrimaryArm = await CharacterObject.GetPrimaryArmAsync(token).ConfigureAwait(false);
 
-                        await cboPrimaryArm.PopulateWithListItemsAsync(lstPrimaryArm, token)
-                            .ConfigureAwait(false);
-                        await cboPrimaryArm.DoThreadSafeAsync(x =>
+                        IsRefreshing = true;
+                        try
                         {
-                            if (!string.IsNullOrEmpty(strPrimaryArm))
-                                x.SelectedValue = strPrimaryArm;
-                            if (x.SelectedIndex == -1)
-                                x.SelectedIndex = 0;
-                        }, token).ConfigureAwait(false);
+                            await cboPrimaryArm.PopulateWithListItemsAsync(lstPrimaryArm, token)
+                                .ConfigureAwait(false);
+                            await cboPrimaryArm.DoThreadSafeAsync(x =>
+                            {
+                                if (!string.IsNullOrEmpty(strPrimaryArm))
+                                    x.SelectedValue = strPrimaryArm;
+                                if (x.SelectedIndex == -1)
+                                    x.SelectedIndex = 0;
+                            }, token).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            IsRefreshing = false;
+                        }
                     }
                 }
 
@@ -7082,7 +7090,7 @@ namespace Chummer
                 await nudMugshotIndex.DoThreadSafeAsync(x =>
                 {
                     ++x.Maximum;
-                    x.Value = intMugshotCount;
+                    x.ValueAsInt = intMugshotCount;
                 }, GenericToken).ConfigureAwait(false);
                 await SetDirty(true).ConfigureAwait(false);
             }
@@ -9336,7 +9344,7 @@ namespace Chummer
                         try
                         {
                             x.Maximum = intMaxRating;
-                            x.Value = intLevels;
+                            x.ValueAsInt = intLevels;
                             x.Enabled = true;
                         }
                         finally
@@ -13250,34 +13258,8 @@ namespace Chummer
                                              .ConfigureAwait(false);
 
                             break;
-                        }
-                    case KarmaExpenseType.ImproveSkillGroup:
-                        {
-                            // Locate the Skill Group that was affected. Old characters may have had the expense added as the Name instead of guid.
-                            SkillGroup group
-                                = await CharacterObject.SkillsSection.SkillGroups.FirstOrDefaultAsync(
-                                                           g => g.InternalId == strUndoId || g.Name == strUndoId,
-                                                           GenericToken)
-                                                       .ConfigureAwait(false);
-
-                            if (group != null)
-                            {
-                                if (await group.GetKarmaUnbrokenAsync(GenericToken).ConfigureAwait(false))
-                                    --group.Karma;
-                                else
-                                {
-                                    await Program.ShowScrollableMessageBoxAsync(this,
-                                        await LanguageManager.GetStringAsync(
-                                            "Message_UndoBrokenSkillGroup", token: GenericToken).ConfigureAwait(false),
-                                        await LanguageManager.GetStringAsync(
-                                            "MessageTitle_UndoBrokenSkillGroup", token: GenericToken).ConfigureAwait(false),
-                                        MessageBoxButtons.OK, MessageBoxIcon.Warning, token: GenericToken).ConfigureAwait(false);
-                                    return;
-                                }
-                            }
-
-                            break;
-                        }
+                        }               
+                        
                     case KarmaExpenseType.AddSkill:
                         {
                             // Locate the Skill that was affected.
@@ -13312,34 +13294,7 @@ namespace Chummer
                                         await objKnowledgeSkill.SetBasePointsAsync(0, GenericToken).ConfigureAwait(false);
                                         await objKnowledgeSkill.SetKarmaPointsAsync(0, GenericToken).ConfigureAwait(false);
                                     }
-                                }
-                                else
-                                {
-                                    // Old characters may have incorrectly had their ExpenseType set to AddSkill rather than ImproveSkillGroup.
-                                    // Since skill groups can never be deleted, we don't have/need an AddSkillGroup expense type.
-                                    // Locate the Skill Group that was affected.
-                                    SkillGroup group
-                                        = await CharacterObject.SkillsSection.SkillGroups.FirstOrDefaultAsync(
-                                            g => g.InternalId == strUndoId, GenericToken).ConfigureAwait(false);
-
-                                    if (group != null)
-                                    {
-                                        if (await group.GetKarmaUnbrokenAsync(GenericToken).ConfigureAwait(false))
-                                            --group.Karma;
-                                        else
-                                        {
-                                            await Program.ShowScrollableMessageBoxAsync(this,
-                                                await LanguageManager.GetStringAsync(
-                                                        "Message_UndoBrokenSkillGroup", token: GenericToken)
-                                                    .ConfigureAwait(false),
-                                                await LanguageManager.GetStringAsync(
-                                                        "MessageTitle_UndoBrokenSkillGroup", token: GenericToken)
-                                                    .ConfigureAwait(false),
-                                                MessageBoxButtons.OK, MessageBoxIcon.Warning, token: GenericToken).ConfigureAwait(false);
-                                            return;
-                                        }
-                                    }
-                                }
+                                }                               
                             }
 
                             break;
@@ -22061,16 +22016,25 @@ namespace Chummer
                                         }
 
                                         token.ThrowIfCancellationRequested();
-                                        await cboWeaponAmmo.PopulateWithListItemsAsync(lstAmmo, token)
-                                                           .ConfigureAwait(false);
-                                        await cboWeaponAmmo.DoThreadSafeAsync(x =>
+                                        // Use IsRefreshing to prevent SelectedIndexChanged event handler from running during repopulation.
+                                        IsRefreshing = true;
+                                        try
                                         {
-                                            x.SelectedValue
-                                                = objWeapon.ActiveAmmoSlot.ToString(GlobalSettings.InvariantCultureInfo);
-                                            if (x.SelectedIndex == -1)
-                                                x.SelectedIndex = 0;
-                                            x.Enabled = lstAmmo.Count > 1;
-                                        }, token).ConfigureAwait(false);
+                                            await cboWeaponAmmo.PopulateWithListItemsAsync(lstAmmo, token)
+                                                               .ConfigureAwait(false);
+                                            await cboWeaponAmmo.DoThreadSafeAsync(x =>
+                                            {
+                                                x.SelectedValue
+                                                    = objWeapon.ActiveAmmoSlot.ToString(GlobalSettings.InvariantCultureInfo);
+                                                if (x.SelectedIndex == -1)
+                                                    x.SelectedIndex = 0;
+                                                x.Enabled = lstAmmo.Count > 1;
+                                            }, token).ConfigureAwait(false);
+                                        }
+                                        finally
+                                        {
+                                            IsRefreshing = false;
+                                        }
                                     }
                                 }
                                 else
@@ -23136,16 +23100,25 @@ namespace Chummer
                                         await LanguageManager.GetStringAsync("String_Firewall", token: token)
                                                              .ConfigureAwait(false)));
                                 token.ThrowIfCancellationRequested();
-                                await cboArmorOverclocker.PopulateWithListItemsAsync(lstOverclocker, token)
-                                                         .ConfigureAwait(false);
-                                string strOverclocked = await objHasMatrixAttributes.GetOverclockedAsync(token).ConfigureAwait(false);
-                                await cboArmorOverclocker.DoThreadSafeAsync(x =>
+                                // Use IsRefreshing to prevent SelectedIndexChanged event handler from running during repopulation.
+                                IsRefreshing = true;
+                                try
                                 {
-                                    if (!string.IsNullOrEmpty(strOverclocked))
-                                        x.SelectedValue = strOverclocked;
-                                    if (x.SelectedIndex == -1)
-                                        x.SelectedIndex = 0;
-                                }, token).ConfigureAwait(false);
+                                    await cboArmorOverclocker.PopulateWithListItemsAsync(lstOverclocker, token)
+                                                             .ConfigureAwait(false);
+                                    string strOverclocked = await objHasMatrixAttributes.GetOverclockedAsync(token).ConfigureAwait(false);
+                                    await cboArmorOverclocker.DoThreadSafeAsync(x =>
+                                    {
+                                        if (!string.IsNullOrEmpty(strOverclocked))
+                                            x.SelectedValue = strOverclocked;
+                                        if (x.SelectedIndex == -1)
+                                            x.SelectedIndex = 0;
+                                    }, token).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    IsRefreshing = false;
+                                }
                             }
 
                             token.ThrowIfCancellationRequested();
@@ -23483,16 +23456,25 @@ namespace Chummer
                                         await LanguageManager.GetStringAsync("String_Firewall", token: token)
                                                              .ConfigureAwait(false)));
 
-                                await cboGearOverclocker.PopulateWithListItemsAsync(lstOverclocker, token)
-                                                        .ConfigureAwait(false);
-                                string strOverclocked = await objGear.GetOverclockedAsync(token).ConfigureAwait(false);
-                                await cboGearOverclocker.DoThreadSafeAsync(x =>
+                                // Use IsRefreshing to prevent SelectedIndexChanged event handler from running during repopulation.
+                                IsRefreshing = true;
+                                try
                                 {
-                                    if (!string.IsNullOrEmpty(strOverclocked))
-                                        x.SelectedValue = strOverclocked;
-                                    if (x.SelectedIndex == -1)
-                                        x.SelectedIndex = 0;
-                                }, token).ConfigureAwait(false);
+                                    await cboGearOverclocker.PopulateWithListItemsAsync(lstOverclocker, token)
+                                                            .ConfigureAwait(false);
+                                    string strOverclocked = await objGear.GetOverclockedAsync(token).ConfigureAwait(false);
+                                    await cboGearOverclocker.DoThreadSafeAsync(x =>
+                                    {
+                                        if (!string.IsNullOrEmpty(strOverclocked))
+                                            x.SelectedValue = strOverclocked;
+                                        if (x.SelectedIndex == -1)
+                                            x.SelectedIndex = 0;
+                                    }, token).ConfigureAwait(false);
+                                }
+                                finally
+                                {
+                                    IsRefreshing = false;
+                                }
                             }
 
                             await cboGearOverclocker.DoThreadSafeAsync(x => x.Visible = true, token)
@@ -24793,7 +24775,7 @@ namespace Chummer
                                                           .ConfigureAwait(false),
                                                           await LanguageManager.GetStringAsync("String_Space", token: token)
                                                                          .ConfigureAwait(false))
-                                            .Append("[" +
+                                            .Append('[',
                                                 objImprovement.Value.ToString(
                                                     "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                             }
@@ -24813,8 +24795,9 @@ namespace Chummer
                                             .GetObjectNameAsync(objImprovement, token: token)
                                             .ConfigureAwait(false),
                                             await LanguageManager.GetStringAsync("String_Space", token: token)
-                                            .ConfigureAwait(false)).Append("[" +                                            objImprovement.Value.ToString(
-                                                "+#,0;-#,0;0" + GlobalSettings.CultureInfo) + "%]");
+                                            .ConfigureAwait(false)).Append('[',
+                                            objImprovement.Value.ToString(
+                                                "+#,0;-#,0;0", GlobalSettings.CultureInfo), "%]");
                                 }
                             }
 
@@ -25383,6 +25366,14 @@ namespace Chummer
                                                         + await LanguageManager.GetStringAsync("String_NuyenSymbol", token: token).ConfigureAwait(false);
                                 await lblVehicleCost.DoThreadSafeAsync(x => x.Text = strCost, token)
                                                 .ConfigureAwait(false);
+                                string strCapacity = await objMod.GetDisplayCapacityAsync(token).ConfigureAwait(false);
+                                bool blnShowCapacity = !string.IsNullOrEmpty(strCapacity);
+                                await lblVehicleCapacityLabel.DoThreadSafeAsync(x => x.Visible = blnShowCapacity, token).ConfigureAwait(false);
+                                await lblVehicleCapacity.DoThreadSafeAsync(x =>
+                                {
+                                    x.Visible = blnShowCapacity;
+                                    x.Text = strCapacity;
+                                }, token).ConfigureAwait(false);
                                 await lblVehicleSlotsLabel.DoThreadSafeAsync(x => x.Visible = true, token)
                                                           .ConfigureAwait(false);
                                 string strSlots = (await objMod.GetCalculatedSlotsAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo);
@@ -25813,16 +25804,25 @@ namespace Chummer
                                         }
 
                                         token.ThrowIfCancellationRequested();
-                                        await cboVehicleWeaponAmmo.PopulateWithListItemsAsync(lstAmmo, token)
-                                                                  .ConfigureAwait(false);
-                                        await cboVehicleWeaponAmmo.DoThreadSafeAsync(x =>
+                                        // Use IsRefreshing to prevent SelectedIndexChanged event handler from running during repopulation.
+                                        IsRefreshing = true;
+                                        try
                                         {
-                                            x.SelectedValue
-                                                = objWeapon.ActiveAmmoSlot.ToString(GlobalSettings.InvariantCultureInfo);
-                                            if (x.SelectedIndex == -1)
-                                                x.SelectedIndex = 0;
-                                            x.Enabled = lstAmmo.Count > 1;
-                                        }, token).ConfigureAwait(false);
+                                            await cboVehicleWeaponAmmo.PopulateWithListItemsAsync(lstAmmo, token)
+                                                                      .ConfigureAwait(false);
+                                            await cboVehicleWeaponAmmo.DoThreadSafeAsync(x =>
+                                            {
+                                                x.SelectedValue
+                                                    = objWeapon.ActiveAmmoSlot.ToString(GlobalSettings.InvariantCultureInfo);
+                                                if (x.SelectedIndex == -1)
+                                                    x.SelectedIndex = 0;
+                                                x.Enabled = lstAmmo.Count > 1;
+                                            }, token).ConfigureAwait(false);
+                                        }
+                                        finally
+                                        {
+                                            IsRefreshing = false;
+                                        }
                                     }
                                 }
                                 else
@@ -28879,140 +28879,7 @@ namespace Chummer
                 if (!(await treCyberware.DoThreadSafeFuncAsync(x => x.SelectedNode?.Tag, GenericToken)
                         .ConfigureAwait(false) is Cyberware objModularCyberware))
                     return;
-                GenericToken.ThrowIfCancellationRequested();
-                IAsyncDisposable objLocker = await CharacterObject.LockObject.EnterUpgradeableReadLockAsync(GenericToken).ConfigureAwait(false);
-                try
-                {
-                    GenericToken.ThrowIfCancellationRequested();
-                    string strSelectedParentID;
-                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(
-                               Utils.ListItemListPool, out List<ListItem> lstModularMounts))
-                    {
-                        List<ListItem> lstModularCyberlimbList = await CharacterObject
-                            .ConstructModularCyberlimbListAsync(
-                                objModularCyberware, true, GenericToken).ConfigureAwait(false);
-                        try
-                        {
-                            lstModularMounts.AddRange(lstModularCyberlimbList);
-                        }
-                        finally
-                        {
-                            Utils.ListItemListPool.Return(ref lstModularCyberlimbList);
-                        }
-                        //Mounted cyberware should always be allowed to be dismounted.
-                        //Unmounted cyberware requires that a valid mount be present.
-                        if (!await objModularCyberware.GetIsModularCurrentlyEquippedAsync(GenericToken)
-                                .ConfigureAwait(false)
-                            && (lstModularMounts.Count == 0 || lstModularMounts.TrueForAll(
-                                x => !string.Equals(x.Value.ToString(), "None", StringComparison.OrdinalIgnoreCase))))
-                        {
-                            await Program.ShowScrollableMessageBoxAsync(this,
-                                await LanguageManager.GetStringAsync("Message_NoValidModularMount", token: GenericToken)
-                                    .ConfigureAwait(false),
-                                await LanguageManager.GetStringAsync("MessageTitle_NoValidModularMount",
-                                        token: GenericToken)
-                                    .ConfigureAwait(false),
-                                MessageBoxButtons.OK, MessageBoxIcon.Information, token: GenericToken).ConfigureAwait(false);
-                            return;
-                        }
-
-                        string strDescription = await LanguageManager
-                            .GetStringAsync("MessageTitle_SelectCyberware", token: GenericToken)
-                            .ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> frmPickMount = await ThreadSafeForm<SelectItem>.GetAsync(
-                                   () => new SelectItem(), GenericToken).ConfigureAwait(false))
-                        {
-                            await frmPickMount.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, GenericToken).ConfigureAwait(false);
-                            frmPickMount.MyForm.SetGeneralItemsMode(lstModularMounts);
-
-                            // Make sure the dialogue window was not canceled.
-                            if (await frmPickMount.ShowDialogSafeAsync(this, GenericToken).ConfigureAwait(false)
-                                == DialogResult.Cancel)
-                            {
-                                return;
-                            }
-
-                            strSelectedParentID = await frmPickMount.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, GenericToken).ConfigureAwait(false);
-                        }
-                    }
-
-                    Cyberware objOldParent = await objModularCyberware.GetParentAsync(GenericToken).ConfigureAwait(false);
-                    if (objOldParent != null)
-                        await objModularCyberware.ChangeModularEquipAsync(false, token: GenericToken)
-                            .ConfigureAwait(false);
-                    if (strSelectedParentID == "None")
-                    {
-                        if (objOldParent != null)
-                        {
-                            await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-
-                            await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-                        }
-                    }
-                    else
-                    {
-                        Cyberware objNewParent = await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false))
-                            .DeepFindByIdAsync(strSelectedParentID, GenericToken).ConfigureAwait(false);
-                        if (objNewParent != null)
-                        {
-                            if (objOldParent != null)
-                                await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-                            else
-                                await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-
-                            await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-
-                            await objModularCyberware.ChangeModularEquipAsync(true, token: GenericToken)
-                                .ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            ThreadSafeObservableCollection<Vehicle> lstVehicles
-                                = await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false);
-                            VehicleMod objNewVehicleModParent
-                                = (await lstVehicles
-                                    .FindVehicleModAsync(x => x.InternalId == strSelectedParentID, GenericToken)
-                                    .ConfigureAwait(false)).Item1;
-                            if (objNewVehicleModParent == null)
-                                (objNewParent, objNewVehicleModParent)
-                                    = await lstVehicles.FindVehicleCyberwareAsync(
-                                        x => x.InternalId == strSelectedParentID, GenericToken).ConfigureAwait(false);
-                            if (objNewVehicleModParent != null || objNewParent != null)
-                            {
-                                if (objOldParent != null)
-                                    await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-
-                                if (objNewParent != null)
-                                    await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objNewVehicleModParent.Cyberware.AddAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                            }
-                            else if (objOldParent != null)
-                            {
-                                await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-
-                                await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    await objLocker.DisposeAsync().ConfigureAwait(false);
-                }
+                await ChangeModularMountLocationAsync(objModularCyberware, GenericToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -29027,151 +28894,7 @@ namespace Chummer
                 if (!(await treCyberware.DoThreadSafeFuncAsync(x => x.SelectedNode?.Tag, GenericToken)
                                         .ConfigureAwait(false) is Cyberware objModularCyberware))
                     return;
-                GenericToken.ThrowIfCancellationRequested();
-                IAsyncDisposable objLocker = await CharacterObject.LockObject.EnterUpgradeableReadLockAsync(GenericToken).ConfigureAwait(false);
-                try
-                {
-                    GenericToken.ThrowIfCancellationRequested();
-                    string strSelectedParentID;
-                    using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(
-                               Utils.ListItemListPool, out List<ListItem> lstModularMounts))
-                    {
-                        List<ListItem> lstModularCyberlimbList = await CharacterObject
-                            .ConstructModularCyberlimbListAsync(
-                                objModularCyberware, true, GenericToken).ConfigureAwait(false);
-                        try
-                        {
-                            lstModularMounts.AddRange(lstModularCyberlimbList);
-                        }
-                        finally
-                        {
-                            Utils.ListItemListPool.Return(ref lstModularCyberlimbList);
-                        }
-                        //Mounted cyberware should always be allowed to be dismounted.
-                        //Unmounted cyberware requires that a valid mount be present.
-                        if (!await objModularCyberware.GetIsModularCurrentlyEquippedAsync(GenericToken)
-                                .ConfigureAwait(false)
-                            && (lstModularMounts.Count == 0 || lstModularMounts.TrueForAll(
-                                x => !string.Equals(x.Value.ToString(), "None", StringComparison.OrdinalIgnoreCase))))
-                        {
-                            await Program.ShowScrollableMessageBoxAsync(this,
-                                await LanguageManager.GetStringAsync("Message_NoValidModularMount", token: GenericToken)
-                                    .ConfigureAwait(false),
-                                await LanguageManager.GetStringAsync("MessageTitle_NoValidModularMount",
-                                        token: GenericToken)
-                                    .ConfigureAwait(false),
-                                MessageBoxButtons.OK, MessageBoxIcon.Information, token: GenericToken).ConfigureAwait(false);
-                            return;
-                        }
-
-                        string strDescription = await LanguageManager
-                            .GetStringAsync("MessageTitle_SelectCyberware", token: GenericToken)
-                            .ConfigureAwait(false);
-                        using (ThreadSafeForm<SelectItem> frmPickMount = await ThreadSafeForm<SelectItem>.GetAsync(
-                                   () => new SelectItem(), GenericToken).ConfigureAwait(false))
-                        {
-                            await frmPickMount.MyForm.DoThreadSafeAsync(x => x.Description = strDescription, GenericToken).ConfigureAwait(false);
-                            frmPickMount.MyForm.SetGeneralItemsMode(lstModularMounts);
-
-                            // Make sure the dialogue window was not canceled.
-                            if (await frmPickMount.ShowDialogSafeAsync(this, GenericToken).ConfigureAwait(false)
-                                == DialogResult.Cancel)
-                            {
-                                return;
-                            }
-
-                            strSelectedParentID = await frmPickMount.MyForm.DoThreadSafeFuncAsync(x => x.SelectedItem, GenericToken).ConfigureAwait(false);
-                        }
-                    }
-
-                    VehicleMod objOldParentVehicleMod = (await CharacterObject.Vehicles
-                        .FindVehicleCyberwareAsync(x => x.InternalId == objModularCyberware.InternalId, GenericToken)
-                        .ConfigureAwait(false)).Item2;
-
-                    Cyberware objOldParent = await objModularCyberware.GetParentAsync(GenericToken).ConfigureAwait(false);
-                    if (objOldParent != null)
-                        await objModularCyberware.ChangeModularEquipAsync(false, token: GenericToken)
-                            .ConfigureAwait(false);
-                    if (strSelectedParentID == "None")
-                    {
-                        if (objOldParent != null)
-                            await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-                        else
-                            await objOldParentVehicleMod.Cyberware.RemoveAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-
-                        await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                            .ConfigureAwait(false);
-                    }
-                    else
-                    {
-                        Cyberware objNewParent = await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false))
-                            .DeepFindByIdAsync(strSelectedParentID, GenericToken).ConfigureAwait(false);
-                        if (objNewParent != null)
-                        {
-                            if (objOldParent != null)
-                                await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-                            else
-                                await objOldParentVehicleMod.Cyberware.RemoveAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-
-                            await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                .ConfigureAwait(false);
-
-                            await objModularCyberware.ChangeModularEquipAsync(true, token: GenericToken)
-                                .ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            ThreadSafeObservableCollection<Vehicle> lstVehicles
-                                = await CharacterObject.GetVehiclesAsync(GenericToken).ConfigureAwait(false);
-                            VehicleMod objNewVehicleModParent
-                                = (await lstVehicles
-                                    .FindVehicleModAsync(x => x.InternalId == strSelectedParentID, GenericToken)
-                                    .ConfigureAwait(false)).Item1;
-                            if (objNewVehicleModParent == null)
-                                (objNewParent, objNewVehicleModParent)
-                                    = await lstVehicles.FindVehicleCyberwareAsync(
-                                        x => x.InternalId == strSelectedParentID, GenericToken).ConfigureAwait(false);
-                            if (objNewVehicleModParent != null || objNewParent != null)
-                            {
-                                if (objOldParent != null)
-                                    await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objOldParentVehicleMod.Cyberware
-                                        .RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-
-                                if (objNewParent != null)
-                                    await (await objNewParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objNewVehicleModParent.Cyberware.AddAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                if (objOldParent != null)
-                                    await (await objOldParent.GetChildrenAsync(GenericToken).ConfigureAwait(false)).RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-                                else
-                                    await objOldParentVehicleMod.Cyberware
-                                        .RemoveAsync(objModularCyberware, GenericToken)
-                                        .ConfigureAwait(false);
-
-                                await (await CharacterObject.GetCyberwareAsync(GenericToken).ConfigureAwait(false)).AddAsync(objModularCyberware, GenericToken)
-                                    .ConfigureAwait(false);
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    await objLocker.DisposeAsync().ConfigureAwait(false);
-                }
+                await ChangeVehicleModularMountLocationAsync(objModularCyberware, GenericToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {

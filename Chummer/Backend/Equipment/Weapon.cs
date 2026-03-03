@@ -1836,13 +1836,9 @@ namespace Chummer.Backend.Equipment
                 }
             }
 
-            _nodWirelessBonus = objNode["wirelessbonus"];
-            _nodWirelessWeaponBonus = objNode["wirelessweaponbonus"];
-            // Legacy sweep
-            if (_objCharacter.LastSavedVersion < new ValueVersion(5, 225, 933) && _nodWirelessWeaponBonus == null)
-            {
-                _nodWirelessWeaponBonus = (blnSync ? objMyNode.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false))?["wirelessweaponbonus"];
-            }
+            XmlNode objSourceNode = blnSync ? objMyNode?.Value : await objMyNodeAsync.GetValueAsync(token).ConfigureAwait(false);
+            objNode.TryGetNodeWithSourceFallback("wirelessbonus", ref _nodWirelessBonus, objSourceNode);
+            objNode.TryGetNodeWithSourceFallback("wirelessweaponbonus", ref _nodWirelessWeaponBonus, objSourceNode);
             objNode.TryGetBoolFieldQuickly("wirelesson", ref _blnWirelessOn);
 
             //#1544 Ammunition not loading or available.
@@ -4562,28 +4558,9 @@ namespace Chummer.Backend.Equipment
             decimal decImprove = 0;
             if (_objCharacter != null)
             {
-                string strCategory = Category;
-                if (strCategory == "Unarmed")
-                {
-                    strCategory = "Unarmed Combat";
-                }
-
                 if (blnSync)
                 {
-                    string strUseSkill = Skill?.DictionaryKey ?? string.Empty;
-                    // ReSharper disable MethodHasAsyncOverload
-                    decImprove += ImprovementManager.ValueOf(_objCharacter,
-                        Improvement.ImprovementType.WeaponCategoryDV,
-                        strImprovedName: strCategory, token: token);
-                    if (!string.IsNullOrEmpty(strUseSkill) && strCategory != strUseSkill)
-                        decImprove += ImprovementManager.ValueOf(_objCharacter,
-                            Improvement.ImprovementType.WeaponCategoryDV,
-                            strImprovedName: strUseSkill, token: token);
-                    if (strCategory.StartsWith("Cyberware ", StringComparison.Ordinal))
-                        decImprove += ImprovementManager.ValueOf(_objCharacter,
-                            Improvement.ImprovementType.WeaponCategoryDV,
-                            strImprovedName: strCategory.TrimStartOnce(
-                                "Cyberware ", true), token: token);
+                    decImprove += GetWeaponCategoryImprovements(Improvement.ImprovementType.WeaponCategoryDV);
 
                     // If this is the Unarmed Attack Weapon and the character has the UnarmedDVPhysical Improvement, change the type to Physical.
                     // This should also add any UnarmedDV bonus which only applies to Unarmed Combat, not Unarmed Weapons.
@@ -4599,7 +4576,8 @@ namespace Chummer.Backend.Equipment
                     }
 
                     // This should also add any UnarmedDV bonus to Unarmed physical weapons if the option is enabled.
-                    else if (strUseSkill == "Unarmed Combat"
+                    string strUseSkill = Skill?.DictionaryKey ?? string.Empty;
+                    if (strUseSkill == "Unarmed Combat"
                              && _objCharacter.Settings.UnarmedImprovementsApplyToWeapons)
                     {
                         decImprove += ImprovementManager.ValueOf(_objCharacter, Improvement.ImprovementType.UnarmedDV,
@@ -4609,22 +4587,7 @@ namespace Chummer.Backend.Equipment
                 }
                 else
                 {
-                    Skill objSkill = await GetSkillAsync(token).ConfigureAwait(false);
-                    string strUseSkill = objSkill != null
-                        ? await objSkill.GetDictionaryKeyAsync(token).ConfigureAwait(false)
-                        : string.Empty;
-                    decImprove += await ImprovementManager.ValueOfAsync(_objCharacter,
-                        Improvement.ImprovementType.WeaponCategoryDV,
-                        strImprovedName: strCategory, token: token).ConfigureAwait(false);
-                    if (!string.IsNullOrEmpty(strUseSkill) && strCategory != strUseSkill)
-                        decImprove += await ImprovementManager.ValueOfAsync(_objCharacter,
-                            Improvement.ImprovementType.WeaponCategoryDV,
-                            strImprovedName: strUseSkill, token: token).ConfigureAwait(false);
-                    if (strCategory.StartsWith("Cyberware ", StringComparison.Ordinal))
-                        decImprove += await ImprovementManager.ValueOfAsync(_objCharacter,
-                            Improvement.ImprovementType.WeaponCategoryDV,
-                            strImprovedName: strCategory.TrimStartOnce(
-                                "Cyberware ", true), token: token).ConfigureAwait(false);
+                    decImprove += await GetWeaponCategoryImprovementsAsync(Improvement.ImprovementType.WeaponCategoryDV, token).ConfigureAwait(false);
 
                     // If this is the Unarmed Attack Weapon and the character has the UnarmedDVPhysical Improvement, change the type to Physical.
                     // This should also add any UnarmedDV bonus which only applies to Unarmed Combat, not Unarmed Weapons.
@@ -4642,7 +4605,11 @@ namespace Chummer.Backend.Equipment
                     }
 
                     // This should also add any UnarmedDV bonus to Unarmed physical weapons if the option is enabled.
-                    else if (strUseSkill == "Unarmed Combat"
+                    Skill objSkill = await GetSkillAsync(token).ConfigureAwait(false);
+                    string strUseSkill = objSkill != null
+                        ? await objSkill.GetDictionaryKeyAsync(token).ConfigureAwait(false)
+                        : string.Empty;
+                    if (strUseSkill == "Unarmed Combat"
                              && _objCharacter.Settings.UnarmedImprovementsApplyToWeapons)
                     {
                         decImprove += await ImprovementManager
@@ -4672,7 +4639,7 @@ namespace Chummer.Backend.Equipment
                     // Adjust the Weapon's Damage.
                     string strTemp = WirelessWeaponBonus["damage"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strTemp) && strTemp != "0" && strTemp != "+0" && strTemp != "-0")
-                        sbdBonusDamage.Append("(" + strTemp.TrimStart('+') + ")");
+                        sbdBonusDamage.Append('(', strTemp.TrimStart('+'), ')');
                     strTemp = WirelessWeaponBonus["damagereplace"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strTemp))
                     {
@@ -5271,11 +5238,24 @@ namespace Chummer.Backend.Equipment
                                             {
                                                 sbdThisAmmo.Append(strModifyAmmoCapacity, ')');
                                                 int intAddParenthesesCount = strModifyAmmoCapacity.Count(x => x == ')')
-                                                                             - strModifyAmmoCapacity.Count(x => x == '(');
-                                                for (int i = 0; i < intAddParenthesesCount + 1; ++i)
-                                                    sbdThisAmmo.Insert(0, '(');
-                                                for (int i = 0; i < -intAddParenthesesCount; ++i)
-                                                    sbdThisAmmo.Append(')');
+                                                                             - strModifyAmmoCapacity.Count(x => x == '(') + 1;
+                                                if (intAddParenthesesCount > 0)
+                                                {
+                                                    char[] achrTemp = ArrayPool<char>.Shared.Rent(intAddParenthesesCount);
+                                                    try
+                                                    {
+                                                        // Repeated StringBuilder.Insert can hammer the GC, so this is to allow us to call it just once
+                                                        for (int i = 0; i < intAddParenthesesCount; ++i)
+                                                            achrTemp[i] = '(';
+                                                        sbdThisAmmo.Insert(0, achrTemp, 0, intAddParenthesesCount);
+                                                    }
+                                                    finally
+                                                    {
+                                                        ArrayPool<char>.Shared.Return(achrTemp);
+                                                    }
+                                                }
+                                                else if (intAddParenthesesCount < 0)
+                                                    sbdThisAmmo.Append(')', -intAddParenthesesCount);
                                             }
                                         }
                                     }
@@ -5299,11 +5279,24 @@ namespace Chummer.Backend.Equipment
                                         {
                                             sbdThisAmmo.Append(strModifyAmmoCapacity, ')');
                                             int intAddParenthesesCount = strModifyAmmoCapacity.Count(x => x == ')')
-                                                                         - strModifyAmmoCapacity.Count(x => x == '(');
-                                            for (int i = 0; i < intAddParenthesesCount + 1; ++i)
-                                                sbdThisAmmo.Insert(0, '(');
-                                            for (int i = 0; i < -intAddParenthesesCount; ++i)
-                                                sbdThisAmmo.Append(')');
+                                                                         - strModifyAmmoCapacity.Count(x => x == '(') + 1;
+                                            if (intAddParenthesesCount > 0)
+                                            {
+                                                char[] achrTemp = ArrayPool<char>.Shared.Rent(intAddParenthesesCount);
+                                                try
+                                                {
+                                                    // Repeated StringBuilder.Insert can hammer the GC, so this is to allow us to call it just once
+                                                    for (int i = 0; i < intAddParenthesesCount + 1; ++i)
+                                                        achrTemp[i] = '(';
+                                                    sbdThisAmmo.Insert(0, achrTemp, 0, intAddParenthesesCount);
+                                                }
+                                                finally
+                                                {
+                                                    ArrayPool<char>.Shared.Return(achrTemp);
+                                                }
+                                            }
+                                            else if (intAddParenthesesCount < 0)
+                                                sbdThisAmmo.Append(')', -intAddParenthesesCount);
                                         }
                                     }
                                 }, token);
@@ -6314,7 +6307,7 @@ namespace Chummer.Backend.Equipment
                         ? strMount
                         : LanguageManager.GetString("String_Mount" + strMount), '/');
                 }
-                sbdMounts.Length -= 1; // Trim off the last slash
+                --sbdMounts.Length; // Trim off the last slash
                 return sbdMounts.ToString();
             }
         }
@@ -6335,7 +6328,7 @@ namespace Chummer.Backend.Equipment
                         : await LanguageManager.GetStringAsync("String_Mount" + strMount, token: token).ConfigureAwait(false), '/');
                 }
                 token.ThrowIfCancellationRequested();
-                sbdMounts.Length -= 1; // Trim off the last slash
+                --sbdMounts.Length; // Trim off the last slash
                 return sbdMounts.ToString();
             }
         }
@@ -6502,7 +6495,7 @@ namespace Chummer.Backend.Equipment
                     // Adjust the Weapon's Damage.
                     string strAPAdd = WirelessWeaponBonus["ap"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strAPAdd) && strAPAdd != "0" && strAPAdd != "+0" && strAPAdd != "-0")
-                        sbdBonusAP.Append("(" + strAPAdd.TrimStart('+') + ")");
+                        sbdBonusAP.Append('(', strAPAdd.TrimStart('+'), ')');
                 }
 
                 if (blnSync)
@@ -6792,6 +6785,28 @@ namespace Chummer.Backend.Equipment
                                     .ConfigureAwait(false))
                             .StandardRound();
                     }
+
+                    // Include WeaponCategoryAP Improvements.
+                    if (blnSync)
+                    {
+                        intImprove += GetWeaponCategoryImprovements(Improvement.ImprovementType.WeaponCategoryAP).StandardRound();
+                    }
+                    else
+                    {
+                        intImprove += (await GetWeaponCategoryImprovementsAsync(Improvement.ImprovementType.WeaponCategoryAP, token).ConfigureAwait(false)).StandardRound();
+                    }
+
+                    // Include WeaponSpecificAP Improvements.
+                    if (blnSync)
+                    {
+                        intImprove += ImprovementManager.ValueOf(_objCharacter,
+                            Improvement.ImprovementType.WeaponSpecificAP, false, InternalId, token: token).StandardRound();
+                    }
+                    else
+                    {
+                        intImprove += (await ImprovementManager.ValueOfAsync(_objCharacter,
+                            Improvement.ImprovementType.WeaponSpecificAP, false, InternalId, token: token).ConfigureAwait(false)).StandardRound();
+                    }
                 }
 
                 if (strAP == "-")
@@ -6941,7 +6956,7 @@ namespace Chummer.Backend.Equipment
                                 ? LanguageManager.GetString("Label_Base", strLanguage, token: token)
                                 : await LanguageManager.GetStringAsync("Label_Base", strLanguage, token: token)
                                     .ConfigureAwait(false))
-                            .Append("(" + strRCBase.TrimStart('+') + ")");
+                            .Append('(', strRCBase.TrimStart('+'), ')');
                     }
                 }
 
@@ -7085,7 +7100,7 @@ namespace Chummer.Backend.Equipment
                                                 .DisplayNameAsync(objCulture, strLanguage, token: token)
                                                 .ConfigureAwait(false))
                                         .Append(strSpace)
-                                        .Append("(" + strRCBonus.TrimStart('+') + ")");
+                                        .Append('(', strRCBonus.TrimStart('+'), ')');
                             }
                         }
                         else if (objGear.WeaponBonus != null)
@@ -7105,7 +7120,7 @@ namespace Chummer.Backend.Equipment
                                                 .DisplayNameAsync(objCulture, strLanguage, token: token)
                                                 .ConfigureAwait(false))
                                         .Append(strSpace)
-                                        .Append("(" + strRCBonus.TrimStart('+') + ")");
+                                        .Append('(', strRCBonus.TrimStart('+'), ')');
                             }
                         }
 
@@ -7134,7 +7149,7 @@ namespace Chummer.Backend.Equipment
                                                     .DisplayNameAsync(objCulture, strLanguage, token: token)
                                                     .ConfigureAwait(false))
                                             .Append(strSpace)
-                                            .Append("(" + strRCBonus.TrimStart('+') + ")");
+                                            .Append('(', strRCBonus.TrimStart('+'), ')');
                                 }
                             }
                             else if (objChild.WeaponBonus != null)
@@ -7155,7 +7170,7 @@ namespace Chummer.Backend.Equipment
                                                     .DisplayNameAsync(objCulture, strLanguage, token: token)
                                                     .ConfigureAwait(false))
                                             .Append(strSpace)
-                                            .Append("(" + strRCBonus.TrimStart('+') + ")");
+                                            .Append('(', strRCBonus.TrimStart('+'), ')');
                                 }
                             }
                         }
@@ -7172,7 +7187,7 @@ namespace Chummer.Backend.Equipment
                         intRCFull += intRecoil;
                         if (blnWithTooltip)
                             sbdRCTip.Append(strSpace, '+', strSpace).Append(strGroup, strSpace)
-                                .Append("(" + intRecoil.ToString(objCulture) + ")");
+                                .Append('(', intRecoil.ToString(objCulture), ')');
                     }
                 }
 
@@ -7353,6 +7368,7 @@ namespace Chummer.Backend.Equipment
             return new ValueTuple<string, string>(strRC, strTooltip);
         }
 
+
         /// <summary>
         /// The full Reach of the Weapons including the Character's Reach.
         /// </summary>
@@ -7367,6 +7383,13 @@ namespace Chummer.Backend.Equipment
                     // Run through the Character's Improvements and add any Reach Improvements.
                     decReach += ImprovementManager.ValueOf(_objCharacter, Improvement.ImprovementType.Reach,
                         strImprovedName: Name, blnIncludeNonImproved: true);
+
+                    // Include WeaponCategoryReach Improvements.
+                    string strCategory = Category;
+                    if (strCategory == "Unarmed")
+                        strCategory = "Unarmed Combat";
+                    decReach += ImprovementManager.ValueOf(_objCharacter, Improvement.ImprovementType.WeaponCategoryReach,
+                        strImprovedName: strCategory);
                 }
 
                 if (Name == "Unarmed Attack" || Skill?.DictionaryKey == "Unarmed Combat" &&
@@ -7377,6 +7400,59 @@ namespace Chummer.Backend.Equipment
 
                 return decReach.StandardRound();
             }
+        }
+
+        /// <summary>
+        /// Calculate weapon category improvements for this weapon.
+        /// </summary>
+        private decimal GetWeaponCategoryImprovements(Improvement.ImprovementType improvementType)
+        {
+            string strCategory = Category;
+            if (strCategory == "Unarmed")
+                strCategory = "Unarmed Combat";
+
+            decimal decImprove = ImprovementManager.ValueOf(_objCharacter, improvementType, strImprovedName: strCategory);
+
+            // Check skill-based improvements
+            string strUseSkill = Skill?.DictionaryKey ?? string.Empty;
+            if (!string.IsNullOrEmpty(strUseSkill) && strCategory != strUseSkill)
+                decImprove += ImprovementManager.ValueOf(_objCharacter, improvementType, strImprovedName: strUseSkill);
+
+            // Handle cyberware categories
+            if (strCategory.StartsWith("Cyberware ", StringComparison.Ordinal))
+                decImprove += ImprovementManager.ValueOf(_objCharacter, improvementType,
+                    strImprovedName: strCategory.TrimStartOnce("Cyberware ", true));
+
+            return decImprove;
+        }
+
+        /// <summary>
+        /// Calculate weapon category improvements for this weapon (async version).
+        /// </summary>
+        private async Task<decimal> GetWeaponCategoryImprovementsAsync(Improvement.ImprovementType improvementType, CancellationToken token = default)
+        {
+            string strCategory = Category;
+            if (strCategory == "Unarmed")
+                strCategory = "Unarmed Combat";
+
+            decimal decImprove = await ImprovementManager.ValueOfAsync(_objCharacter, improvementType,
+                strImprovedName: strCategory, token: token).ConfigureAwait(false);
+
+            // Check skill-based improvements
+            Skill objSkill = await GetSkillAsync(token).ConfigureAwait(false);
+            string strUseSkill = objSkill != null
+                ? await objSkill.GetDictionaryKeyAsync(token).ConfigureAwait(false)
+                : string.Empty;
+            if (!string.IsNullOrEmpty(strUseSkill) && strCategory != strUseSkill)
+                decImprove += await ImprovementManager.ValueOfAsync(_objCharacter, improvementType,
+                    strImprovedName: strUseSkill, token: token).ConfigureAwait(false);
+
+            // Handle cyberware categories
+            if (strCategory.StartsWith("Cyberware ", StringComparison.Ordinal))
+                decImprove += await ImprovementManager.ValueOfAsync(_objCharacter, improvementType,
+                    strImprovedName: strCategory.TrimStartOnce("Cyberware ", true), token: token).ConfigureAwait(false);
+
+            return decImprove;
         }
 
         /// <summary>
@@ -7391,6 +7467,13 @@ namespace Chummer.Backend.Equipment
                 // Run through the Character's Improvements and add any Reach Improvements.
                 decReach += await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.Reach,
                     strImprovedName: Name, blnIncludeNonImproved: true, token: token).ConfigureAwait(false);
+
+                // Include WeaponCategoryReach Improvements.
+                string strCategory = Category;
+                if (strCategory == "Unarmed")
+                    strCategory = "Unarmed Combat";
+                decReach += await ImprovementManager.ValueOfAsync(_objCharacter, Improvement.ImprovementType.WeaponCategoryReach,
+                    strImprovedName: strCategory, token: token).ConfigureAwait(false);
             }
 
             if (await (await _objCharacter.GetSettingsAsync(token).ConfigureAwait(false)).GetUnarmedImprovementsApplyToWeaponsAsync(token).ConfigureAwait(false))
@@ -7409,6 +7492,7 @@ namespace Chummer.Backend.Equipment
 
             return decReach.StandardRound();
         }
+
 
         /// <summary>
         /// The full Accuracy of the Weapon including modifiers from accessories.
@@ -7429,7 +7513,7 @@ namespace Chummer.Backend.Equipment
                     // Adjust the Weapon's Damage.
                     string strAccuracyAdd = WirelessWeaponBonus["accuracy"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
-                        sbdBonusAccuracy.Append("(" + strAccuracyAdd.TrimStart('+') + ")");
+                        sbdBonusAccuracy.Append('(', strAccuracyAdd.TrimStart('+'), ')');
                 }
 
                 List<string> lstNonStackingAccessoryBonuses = new List<string>(WeaponAccessories.Count);
@@ -7616,7 +7700,8 @@ namespace Chummer.Backend.Equipment
                     }
 
                     if (sbdBonusAccuracy.Length != 0)
-                        strAccuracy = sbdBonusAccuracy.Insert(0, '(', strAccuracy, ')').ToString();
+                        // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                        strAccuracy = string.Concat("(", strAccuracy, ")", sbdBonusAccuracy.ToString());
                 }
             }
 
@@ -7669,7 +7754,7 @@ namespace Chummer.Backend.Equipment
                     // Adjust the Weapon's Damage.
                     string strAccuracyAdd = WirelessWeaponBonus["accuracy"]?.InnerTextViaPool(token);
                     if (!string.IsNullOrEmpty(strAccuracyAdd) && strAccuracyAdd != "0" && strAccuracyAdd != "+0" && strAccuracyAdd != "-0")
-                        sbdBonusAccuracy.Append("(" + strAccuracyAdd.TrimStart('+') + ")");
+                        sbdBonusAccuracy.Append('(', strAccuracyAdd.TrimStart('+'), ')');
                 }
 
                 List<string> lstNonStackingAccessoryBonuses = new List<string>(await WeaponAccessories.GetCountAsync(token).ConfigureAwait(false));
@@ -7870,7 +7955,8 @@ namespace Chummer.Backend.Equipment
                     }
 
                     if (sbdBonusAccuracy.Length != 0)
-                        strAccuracy = sbdBonusAccuracy.Insert(0, '(', strAccuracy, ')').ToString();
+                        // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                        strAccuracy = string.Concat("(", strAccuracy, ")", sbdBonusAccuracy.ToString());
                 }
             }
 
@@ -8421,7 +8507,7 @@ namespace Chummer.Backend.Equipment
                 if (WirelessOn && WirelessWeaponBonus != null && WirelessWeaponBonus.TryGetStringFieldQuickly("rangebonus", ref strRangeBonus)
                     && strRangeBonus != "0" && strRangeBonus != "+0" && strRangeBonus != "-0")
                 {
-                    sbdRangeBonus.Append("(" + strRangeBonus.TrimStart('+') + ")");
+                    sbdRangeBonus.Append('(', strRangeBonus.TrimStart('+'), ')');
                 }
 
                 // Weapon Mods.
@@ -8496,7 +8582,7 @@ namespace Chummer.Backend.Equipment
                     && WirelessWeaponBonus.TryGetStringFieldQuickly("rangebonus", ref strRangeBonus)
                         && strRangeBonus != "0" && strRangeBonus != "+0" && strRangeBonus != "-0")
                 {
-                    sbdRangeBonus.Append("(" + strRangeBonus.TrimStart('+') + ")");
+                    sbdRangeBonus.Append('(', strRangeBonus.TrimStart('+'), ')');
                 }
 
                 // Weapon Mods.
@@ -8568,7 +8654,7 @@ namespace Chummer.Backend.Equipment
                 string strBaseModifier = _objCharacter.LoadDataXPath("ranges.xml")
                         .SelectSingleNodeAndCacheExpression("chummer/modifiers/" + strRange.ToLowerInvariant())?.Value;
                 if (!string.IsNullOrEmpty(strBaseModifier) && strBaseModifier != "0" && strBaseModifier != "+0")
-                    sbdBaseModifier.Append("(" + strBaseModifier.TrimStart('+') + ")");
+                    sbdBaseModifier.Append('(', strBaseModifier.TrimStart('+'), ')');
 
                 foreach (WeaponAccessory objAccessory in WeaponAccessories)
                 {
@@ -8617,7 +8703,7 @@ namespace Chummer.Backend.Equipment
                 string strBaseModifier = (await _objCharacter.LoadDataXPathAsync("ranges.xml", token: token).ConfigureAwait(false))
                         .SelectSingleNodeAndCacheExpression("chummer/modifiers/" + strRange.ToLowerInvariant(), token)?.Value;
                 if (!string.IsNullOrEmpty(strBaseModifier) && strBaseModifier != "0" && strBaseModifier != "+0")
-                    sbdBaseModifier.Append("(" + strBaseModifier.TrimStart('+') + ")");
+                    sbdBaseModifier.Append('(', strBaseModifier.TrimStart('+'), ')');
 
                 await WeaponAccessories.ForEachAsync(async objAccessory =>
                 {
@@ -8990,7 +9076,30 @@ namespace Chummer.Backend.Equipment
 
                         if (ParentVehicle != null)
                         {
+                            // If weapon is in a drone arm and the test would normally be Agility-based,
+                            // use the arm's Agility instead of the drone's Pilot Rating (R5, p125)
                             intDicePool = ParentVehicle.Pilot;
+                            if (!string.IsNullOrEmpty(ParentID))
+                            {
+                                Skill objSkill = Skill;
+                                if (objSkill?.Attribute == "AGI")
+                                {
+                                    Cyberware objAttributeSource = _objCharacter.Vehicles.FindVehicleCyberware(x => x.InternalId == ParentID, out VehicleMod objVehicleMod);
+                                    if (objVehicleMod?.UseOwnAttributesForWeapon == true && objAttributeSource != null)
+                                    {
+                                        while (objAttributeSource != null
+                                               && objAttributeSource.GetAttributeTotalValue("AGI") == 0)
+                                        {
+                                            objAttributeSource = objAttributeSource.Parent;
+                                        }
+
+                                        if (objAttributeSource != null)
+                                        {
+                                            intDicePool = objAttributeSource.GetAttributeTotalValue("AGI");
+                                        }
+                                    }
+                                }
+                            }
                             if (objAutosoft == null)
                             {
                                 objAutosoft = ParentVehicle.GearChildren.DeepFirstOrDefault(
@@ -9124,6 +9233,14 @@ namespace Chummer.Backend.Equipment
                                     false, Category);
                             decDicePoolModifier += ImprovementManager.ValueOf(
                                 _objCharacter, Improvement.ImprovementType.WeaponSpecificDice, false, InternalId);
+                            decDicePoolModifier += ImprovementManager.ValueOf(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificDV, false, InternalId);
+                            decDicePoolModifier += ImprovementManager.ValueOf(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificAP, false, InternalId);
+                            decDicePoolModifier += ImprovementManager.ValueOf(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificAccuracy, false, InternalId);
+                            decDicePoolModifier += ImprovementManager.ValueOf(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificRange, false, InternalId);
 
                             // If the character has a Specialization, include it in the Dice Pool string.
                             if (objSkill.Specializations.Count > 0 && !objSkill.IsExoticSkill)
@@ -9173,9 +9290,9 @@ namespace Chummer.Backend.Equipment
                     string strWeaponBonusPool = WirelessWeaponBonus["pool"]?.InnerTextViaPool();
                     if (!string.IsNullOrEmpty(strWeaponBonusPool) && strWeaponBonusPool != "0" && strWeaponBonusPool != "+0" && strWeaponBonusPool != "-0")
                     {
-                        sbdExtraModifier.Append("(" + strWeaponBonusPool.TrimStart('+') + ")");
+                        sbdExtraModifier.Append('(', strWeaponBonusPool.TrimStart('+'), ')');
                     }
-                    if (HasWirelessSmartgun)    
+                    if (HasWirelessSmartgun)
                     {
                         strWeaponBonusPool = WirelessWeaponBonus["smartlinkpool"]?.InnerTextViaPool();
                         if (!string.IsNullOrEmpty(strWeaponBonusPool) && strWeaponBonusPool != "0" && strWeaponBonusPool != "+0" && strWeaponBonusPool != "-0")
@@ -9366,7 +9483,30 @@ namespace Chummer.Backend.Equipment
                         }
                         if (ParentVehicle != null)
                         {
+                            // If weapon is in a drone arm and the test would normally be Agility-based,
+                            // use the arm's Agility instead of the drone's Pilot Rating (R5, p125)
                             intDicePool = await ParentVehicle.GetPilotAsync(token).ConfigureAwait(false);
+                            if (!string.IsNullOrEmpty(ParentID))
+                            {
+                                Skill objSkill = await GetSkillAsync(token).ConfigureAwait(false);
+                                if (objSkill != null && await objSkill.GetAttributeAsync(token).ConfigureAwait(false) == "AGI")
+                                {
+                                    (Cyberware objAttributeSource, VehicleMod objVehicleMod) = await _objCharacter.Vehicles.FindVehicleCyberwareAsync(x => x.InternalId == ParentID, token).ConfigureAwait(false);
+                                    if (objVehicleMod?.UseOwnAttributesForWeapon == true && objAttributeSource != null)
+                                    {
+                                        while (objAttributeSource != null
+                                               && await objAttributeSource.GetAttributeTotalValueAsync("AGI", token).ConfigureAwait(false) == 0)
+                                        {
+                                            objAttributeSource = await objAttributeSource.GetParentAsync(token).ConfigureAwait(false);
+                                        }
+
+                                        if (objAttributeSource != null)
+                                        {
+                                            intDicePool = await objAttributeSource.GetAttributeTotalValueAsync("AGI", token).ConfigureAwait(false);
+                                        }
+                                    }
+                                }
+                            }
                             if (objAutosoft == null)
                             {
                                 objAutosoft = await ParentVehicle.GearChildren.DeepFirstOrDefaultAsync(async x => await x.Children.ToListAsync(y => y.Equipped, token: token).ConfigureAwait(false),
@@ -9531,6 +9671,18 @@ namespace Chummer.Backend.Equipment
                             decDicePoolModifier += await ImprovementManager.ValueOfAsync(
                                 _objCharacter, Improvement.ImprovementType.WeaponSpecificDice, false, InternalId,
                                 token: token).ConfigureAwait(false);
+                            decDicePoolModifier += await ImprovementManager.ValueOfAsync(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificDV, false, InternalId,
+                                token: token).ConfigureAwait(false);
+                            decDicePoolModifier += await ImprovementManager.ValueOfAsync(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificAP, false, InternalId,
+                                token: token).ConfigureAwait(false);
+                            decDicePoolModifier += await ImprovementManager.ValueOfAsync(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificAccuracy, false, InternalId,
+                                token: token).ConfigureAwait(false);
+                            decDicePoolModifier += await ImprovementManager.ValueOfAsync(
+                                _objCharacter, Improvement.ImprovementType.WeaponSpecificRange, false, InternalId,
+                                token: token).ConfigureAwait(false);
 
                             // If the character has a Specialization, include it in the Dice Pool string.
                             if (!objSkill.IsExoticSkill &&
@@ -9593,7 +9745,7 @@ namespace Chummer.Backend.Equipment
                         && strWeaponBonusPool != "0" && strWeaponBonusPool != "+0" && strWeaponBonusPool != "-0")
                     {
                         strWeaponBonusPool = strWeaponBonusPool.TrimStart('+');
-                        sbdExtraModifier.Append("(" + strWeaponBonusPool + ")");
+                        sbdExtraModifier.Append('(', strWeaponBonusPool, ')');
                     }
                     if (HasWirelessSmartgun)
                     {
@@ -10081,8 +10233,8 @@ namespace Chummer.Backend.Equipment
                                         {
                                             sbdExtra.Append(strSpace, '+', strSpace)
                                                 .Append(objLoadedAmmo.CurrentDisplayNameShort, strSpace)
-                                                .Append("(" + (decTemp + decTemp2).StandardRound()
-                                                    .ToString(GlobalSettings.CultureInfo) + ")");
+                                                .Append('(', (decTemp + decTemp2).StandardRound()
+                                                    .ToString(GlobalSettings.CultureInfo), ')');
                                         }
                                         else
                                             sbdExtra.Append(strSpace, '+', strSpace)
@@ -10130,8 +10282,8 @@ namespace Chummer.Backend.Equipment
                                         {
                                             sbdExtra.Append(strSpace, '+', strSpace)
                                                 .Append(objLoadedAmmo.CurrentDisplayNameShort, strSpace)
-                                                .Append("(" + (decTemp + decTemp2).StandardRound()
-                                                    .ToString(GlobalSettings.CultureInfo) + ")");
+                                                .Append('(', (decTemp + decTemp2).StandardRound()
+                                                    .ToString(GlobalSettings.CultureInfo), ')');
                                         }
                                         else
                                             sbdExtra.Append(strSpace, '+', strSpace)
@@ -10292,7 +10444,31 @@ namespace Chummer.Backend.Equipment
                                              .GetCachedImprovementListForValueOf(
                                                  _objCharacter,
                                                  Improvement.ImprovementType
-                                                     .WeaponSpecificDice, InternalId)))
+                                                     .WeaponSpecificDice, InternalId))
+                                     .Concat(
+                                         ImprovementManager
+                                             .GetCachedImprovementListForValueOf(
+                                                 _objCharacter,
+                                                 Improvement.ImprovementType
+                                                     .WeaponSpecificDV, InternalId))
+                                     .Concat(
+                                         ImprovementManager
+                                             .GetCachedImprovementListForValueOf(
+                                                 _objCharacter,
+                                                 Improvement.ImprovementType
+                                                     .WeaponSpecificAP, InternalId))
+                                     .Concat(
+                                         ImprovementManager
+                                             .GetCachedImprovementListForValueOf(
+                                                 _objCharacter,
+                                                 Improvement.ImprovementType
+                                                     .WeaponSpecificAccuracy, InternalId))
+                                     .Concat(
+                                         ImprovementManager
+                                             .GetCachedImprovementListForValueOf(
+                                                 _objCharacter,
+                                                 Improvement.ImprovementType
+                                                     .WeaponSpecificRange, InternalId)))
                         {
                             sbdExtra.AppendFormat(GlobalSettings.CultureInfo, "{0}+{0}{1}{0}({2})",
                                 strSpace, _objCharacter.GetObjectName(objImprovement),
@@ -10897,7 +11073,31 @@ namespace Chummer.Backend.Equipment
                                      .GetCachedImprovementListForValueOfAsync(
                                          _objCharacter,
                                          Improvement.ImprovementType
-                                             .WeaponSpecificDice, InternalId, token: token).ConfigureAwait(false)))
+                                             .WeaponSpecificDice, InternalId, token: token).ConfigureAwait(false))
+                             .Concat(
+                                 await ImprovementManager
+                                     .GetCachedImprovementListForValueOfAsync(
+                                         _objCharacter,
+                                         Improvement.ImprovementType
+                                             .WeaponSpecificDV, InternalId, token: token).ConfigureAwait(false))
+                             .Concat(
+                                 await ImprovementManager
+                                     .GetCachedImprovementListForValueOfAsync(
+                                         _objCharacter,
+                                         Improvement.ImprovementType
+                                             .WeaponSpecificAP, InternalId, token: token).ConfigureAwait(false))
+                             .Concat(
+                                 await ImprovementManager
+                                     .GetCachedImprovementListForValueOfAsync(
+                                         _objCharacter,
+                                         Improvement.ImprovementType
+                                             .WeaponSpecificAccuracy, InternalId, token: token).ConfigureAwait(false))
+                             .Concat(
+                                 await ImprovementManager
+                                     .GetCachedImprovementListForValueOfAsync(
+                                         _objCharacter,
+                                         Improvement.ImprovementType
+                                             .WeaponSpecificRange, InternalId, token: token).ConfigureAwait(false)))
                     {
                         sbdExtra.AppendFormat(GlobalSettings.CultureInfo, "{0}+{0}{1}{0}({2})",
                             strSpace,
@@ -12807,12 +13007,13 @@ namespace Chummer.Backend.Equipment
                         objChild.RefreshChildrenGears(treWeapons, cmsWeaponAccessoryGear, null, null, y, funcMakeDirty,
                             token: innerToken);
 
-                    objChild.GearChildren.AddTaggedBeforeClearCollectionChanged(treWeapons,
+                    TaggedObservableCollection<Gear> lstGearChildren = objChild.GearChildren;
+                    lstGearChildren.AddTaggedBeforeClearCollectionChanged(treWeapons,
                         FuncWeaponAccessoryGearBeforeClearToAdd);
-                    objChild.GearChildren.AddTaggedCollectionChanged(treWeapons, FuncWeaponAccessoryGearToAdd);
+                    lstGearChildren.AddTaggedCollectionChanged(treWeapons, FuncWeaponAccessoryGearToAdd);
                     if (funcMakeDirty != null)
-                        objChild.GearChildren.AddTaggedCollectionChanged(treWeapons, funcMakeDirty);
-                    foreach (Gear objGear in objChild.GearChildren)
+                        lstGearChildren.AddTaggedCollectionChanged(treWeapons, funcMakeDirty);
+                    foreach (Gear objGear in lstGearChildren)
                         objGear.SetupChildrenGearsCollectionChanged(true, treWeapons, cmsWeaponAccessoryGear, null, funcMakeDirty);
                 }
             }
@@ -12828,9 +13029,10 @@ namespace Chummer.Backend.Equipment
                 }
                 foreach (WeaponAccessory objChild in WeaponAccessories)
                 {
-                    objChild.GearChildren.RemoveTaggedAsyncBeforeClearCollectionChanged(treWeapons);
-                    objChild.GearChildren.RemoveTaggedAsyncCollectionChanged(treWeapons);
-                    foreach (Gear objGear in objChild.GearChildren)
+                    TaggedObservableCollection<Gear> lstGearChildren = objChild.GearChildren;
+                    lstGearChildren.RemoveTaggedAsyncBeforeClearCollectionChanged(treWeapons);
+                    lstGearChildren.RemoveTaggedAsyncCollectionChanged(treWeapons);
+                    foreach (Gear objGear in lstGearChildren)
                         objGear.SetupChildrenGearsCollectionChanged(false, treWeapons);
                 }
             }
@@ -12882,12 +13084,13 @@ namespace Chummer.Backend.Equipment
                         objChild.RefreshChildrenGears(treWeapons, cmsWeaponAccessoryGear, null, null, y, funcMakeDirty,
                             token: innerToken);
 
-                    objChild.GearChildren.AddTaggedBeforeClearCollectionChanged(treWeapons,
+                    TaggedObservableCollection<Gear> lstGearChildren = objChild.GearChildren;
+                    lstGearChildren.AddTaggedBeforeClearCollectionChanged(treWeapons,
                         FuncWeaponAccessoryGearBeforeClearToAdd);
-                    objChild.GearChildren.AddTaggedCollectionChanged(treWeapons, FuncWeaponAccessoryGearToAdd);
+                    lstGearChildren.AddTaggedCollectionChanged(treWeapons, FuncWeaponAccessoryGearToAdd);
                     if (funcMakeDirty != null)
-                        objChild.GearChildren.AddTaggedCollectionChanged(treWeapons, funcMakeDirty);
-                    await objChild.GearChildren.ForEachWithSideEffectsAsync(
+                        lstGearChildren.AddTaggedCollectionChanged(treWeapons, funcMakeDirty);
+                    await lstGearChildren.ForEachWithSideEffectsAsync(
                         objGear => objGear.SetupChildrenGearsCollectionChangedAsync(true, treWeapons,
                             cmsWeaponAccessoryGear, null, funcMakeDirty, token),
                         token).ConfigureAwait(false);
@@ -12904,9 +13107,10 @@ namespace Chummer.Backend.Equipment
                     token).ConfigureAwait(false);
                 await WeaponAccessories.ForEachWithSideEffectsAsync(async objChild =>
                 {
-                    await objChild.GearChildren.RemoveTaggedAsyncBeforeClearCollectionChangedAsync(treWeapons, token).ConfigureAwait(false);
-                    await objChild.GearChildren.RemoveTaggedAsyncCollectionChangedAsync(treWeapons, token).ConfigureAwait(false);
-                    await objChild.GearChildren.ForEachWithSideEffectsAsync(
+                    TaggedObservableCollection<Gear> lstGearChildren = objChild.GearChildren;
+                    await lstGearChildren.RemoveTaggedAsyncBeforeClearCollectionChangedAsync(treWeapons, token).ConfigureAwait(false);
+                    await lstGearChildren.RemoveTaggedAsyncCollectionChangedAsync(treWeapons, token).ConfigureAwait(false);
+                    await lstGearChildren.ForEachWithSideEffectsAsync(
                         objGear => objGear.SetupChildrenGearsCollectionChangedAsync(false, treWeapons, token: token),
                         token).ConfigureAwait(false);
                 }, token).ConfigureAwait(false);

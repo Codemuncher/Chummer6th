@@ -2469,7 +2469,7 @@ namespace Chummer.Backend.Attributes
                                     decimal decValue = objImprovement.Augmented * objImprovement.Rating;
                                     sbdModifier.Append(strSpace, '+')
                                         .Append(strSpace, _objCharacter.GetObjectName(objImprovement, GlobalSettings.Language), strSpace)
-                                               .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                               .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                     decBaseValue += decValue;
                                 }
                             }
@@ -2491,7 +2491,7 @@ namespace Chummer.Backend.Attributes
                                         decHighest = decValue;
                                         sbdNewModifier.Clear();
                                         sbdNewModifier.Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                            .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                            .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                     }
 
                                     if (setUniqueNames.Contains("precedence-1"))
@@ -2504,7 +2504,7 @@ namespace Chummer.Backend.Attributes
                                             decHighest += decValue;
                                             sbdNewModifier
                                                 .Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                                .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                                .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                         }
                                     }
 
@@ -2548,7 +2548,7 @@ namespace Chummer.Backend.Attributes
                                         {
                                             decHighest = decValue;
                                             sbdModifier.Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                                .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                                .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                         }
                                     }
                                 }
@@ -2595,7 +2595,7 @@ namespace Chummer.Backend.Attributes
                                         continue;
                                     decHighest = decValue;
                                     sbdModifier.Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                        .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                        .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                 }
                             }
 
@@ -2606,7 +2606,8 @@ namespace Chummer.Backend.Attributes
                                 _objCharacter.Cyberware.ForEach(objCyberware => BuildTooltip(sbdModifier, objCyberware, strSpace));
                             }
 
-                            return _strCachedToolTip = sbdModifier.Insert(0, CurrentDisplayAbbrev, strSpace, "(", Value.ToString(GlobalSettings.CultureInfo), ")").ToString();
+                            // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                            return _strCachedToolTip = StringExtensions.ConcatFast(CurrentDisplayAbbrev, strSpace, "(", Value.ToString(GlobalSettings.CultureInfo), ")", sbdModifier.ToString());
                         }
                     }
                 }
@@ -2627,7 +2628,7 @@ namespace Chummer.Backend.Attributes
 
                     sbdModifier.AppendLine()
                         .Append(objCyberware.CurrentDisplayName, strSpace)
-                        .Append("(" + objCyberware.GetAttributeTotalValue(Abbrev).ToString(GlobalSettings.CultureInfo) + ")");
+                        .Append('(', objCyberware.GetAttributeTotalValue(Abbrev).ToString(GlobalSettings.CultureInfo), ')');
                 }
             }
         }
@@ -2715,7 +2716,7 @@ namespace Chummer.Backend.Attributes
                                     sbdNewModifier.Clear();
                                     sbdNewModifier
                                         .Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                        .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                        .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                 }
 
                                 if (setUniqueNames.Contains("precedence-1"))
@@ -2729,7 +2730,7 @@ namespace Chummer.Backend.Attributes
                                         decHighest += decValue;
                                         sbdNewModifier
                                             .Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                            .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                            .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                     }
                                 }
 
@@ -2775,7 +2776,7 @@ namespace Chummer.Backend.Attributes
                                     {
                                         decHighest = decValue;
                                         sbdModifier.Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                            .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")");
+                                            .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                                     }
                                 }
                             }
@@ -2807,7 +2808,7 @@ namespace Chummer.Backend.Attributes
                             {
                                 sbdModifier.Append(strSpace, '+')
                                     .Append(strSpace, await _objCharacter.GetObjectNameAsync(objImprovement, GlobalSettings.Language, token).ConfigureAwait(false), strSpace)
-                                    .Append("(" + (objImprovement.Augmented * objImprovement.Rating).ToString(GlobalSettings.CultureInfo) + ")");
+                                    .Append('(', (objImprovement.Augmented * objImprovement.Rating).ToString(GlobalSettings.CultureInfo), ')');
                             }
                         }
 
@@ -2824,7 +2825,7 @@ namespace Chummer.Backend.Attributes
                                     continue;
                                 decHighest = decValue;
                                 sbdModifier.Append(strSpace, '+').Append(strSpace, strSourceName, strSpace)
-                                    .Append("(" + decValue.ToString(GlobalSettings.CultureInfo) + ")"); 
+                                    .Append('(', decValue.ToString(GlobalSettings.CultureInfo), ')');
                             }
                         }
 
@@ -2835,7 +2836,8 @@ namespace Chummer.Backend.Attributes
                             await _objCharacter.Cyberware.ForEachAsync(objCyberware => BuildTooltip(sbdModifier, objCyberware, strSpace), token: token).ConfigureAwait(false);
                         }
 
-                        return _strCachedToolTip = sbdModifier.Insert(0, await GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace, "(", (await GetValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ")").ToString();
+                        // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                        return _strCachedToolTip = StringExtensions.ConcatFast(await GetCurrentDisplayAbbrevAsync(token).ConfigureAwait(false), strSpace, "(", (await GetValueAsync(token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ")", sbdModifier.ToString());
                     }
                 }
             }
@@ -2860,7 +2862,7 @@ namespace Chummer.Backend.Attributes
 
                 sbdModifier.AppendLine()
                     .Append(await objCyberware.GetCurrentDisplayNameAsync(token).ConfigureAwait(false), strSpace)
-                    .Append("(" + (await objCyberware.GetAttributeTotalValueAsync(Abbrev, token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo) + ")");
+                    .Append('(', (await objCyberware.GetAttributeTotalValueAsync(Abbrev, token).ConfigureAwait(false)).ToString(GlobalSettings.CultureInfo), ')');
             }
         }
 

@@ -161,6 +161,7 @@ namespace SevenZip.CommandLineParser
                             }
                             using (new Chummer.FetchSafelyFromObjectPool<StringBuilder>(Chummer.Utils.StringBuilderPool, out StringBuilder sbdSwitch))
                             {
+                                sbdSwitch.EnsureCapacity(switchForm.MaxLen);
                                 sbdSwitch.Append(srcString, pos, minLen);
                                 pos += minLen;
                                 for (int i = minLen; i < switchForm.MaxLen && pos < len; i++, pos++)
@@ -214,10 +215,10 @@ namespace SevenZip.CommandLineParser
                 }
                 else
                     if (commandString == id)
-                {
-                    postString = "";
-                    return i;
-                }
+                    {
+                        postString = "";
+                        return i;
+                    }
             }
             postString = "";
             return -1;

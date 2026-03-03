@@ -42,6 +42,10 @@ using Microsoft.ApplicationInsights.Metrics;
 using Microsoft.ApplicationInsights.NLogTarget;
 using NLog;
 using NLog.Config;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Resources;
+using Azure.Monitor.OpenTelemetry.Exporter;
 
 [assembly: CLSCompliant(true)]
 
@@ -81,7 +85,7 @@ namespace Chummer
 #else
                 objActiveConfiguration.TelemetryChannel.DeveloperMode = false;
 #endif
-                objActiveConfiguration.TelemetryInitializers.Add(s_objTelemetryInitializer.Value);
+                objActiveConfiguration.TelemetryInitializers.Add(new ProgramTelemetryInitializer());
                 objActiveConfiguration.TelemetryProcessorChainBuilder.Use(next =>
                                                                               new TranslateExceptionTelemetryProcessor(
                                                                                   next));
@@ -92,8 +96,30 @@ namespace Chummer
                 return new TelemetryClient(objActiveConfiguration);
             });
 
+        // OpenTelemetry wiring moved to TelemetryStartupService for centralized control.
+
         private static PluginControl _objPluginLoader;
         public static PluginControl PluginLoader => _objPluginLoader = _objPluginLoader ?? new PluginControl();
+
+        // Helper to start an Activity and apply the custom telemetry initializer to enrich it.
+        public static Activity StartActivity(string name, ActivityKind kind = ActivityKind.Internal)
+        {
+            var activity = TelemetryStartupService.ActivitySource.StartActivity(name, kind);
+            if (activity != null)
+            {
+                try
+                {
+                    CustomTelemetryInitializer.Initialize(activity);
+                }
+                catch (Exception ex)
+                {
+                    // don't let telemetry enrichment break app execution
+                    try { Log?.Error(ex); } catch { }
+                }
+            }
+
+            return activity;
+        }
 
         internal static readonly IntPtr CommandLineArgsDataTypeId = (IntPtr)7593599;
 
@@ -121,6 +147,15 @@ namespace Chummer
             if (IsMainThread)
                 SetThreadDPI(GlobalSettings.DpiScalingMethodSetting);
             Utils.CreateSynchronizationContext();
+            // Initialize OpenTelemetry tracer provider centrally
+            try
+            {
+                TelemetryStartupService.Initialize("InstrumentationKey=012fd080-80dc-4c10-97df-4f2cf8c805d5;IngestionEndpoint=https://westeurope-0.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/");
+            }
+            catch
+            {
+                // ignore telemetry initialization failures
+            }
 
             using (GlobalChummerMutex = new Mutex(false, @"Global\" + ChummerGuid, out bool blnIsNewInstance))
             {
@@ -280,7 +315,23 @@ namespace Chummer
                                         }
 
                                         et.Properties.Add("IsCrash", exa.IsTerminating.ToString());
-                                        s_objTelemetryInitializer.Value.Initialize(et);
+
+
+                                        // Fix: CustomTelemetryInitializer.Initialize expects an Activity or ActivitySource,
+                                        // not ExceptionTelemetry. Use the current Activity when available to apply the same initialization logic.
+                                        try
+                                        {
+                                            var currentActivity = Activity.Current;
+                                            if (currentActivity != null)
+                                            {
+                                                CustomTelemetryInitializer.Initialize(currentActivity);
+                                            }
+                                        }
+                                        catch (Exception exInit)
+                                        {
+                                            // don't let telemetry enrichment break app execution
+                                            try { Log?.Error(exInit); } catch { }
+                                        }
 
                                         objLocalTelemetryClient.TrackException(et);
                                         try
@@ -426,16 +477,16 @@ namespace Chummer
                                                          GlobalSettings.UseLoggingApplicationInsights.ToString(),
                                                          strOSVersion);
 
-                                    //Log a page view:
-                                    pvt = new PageViewTelemetry("frmChummerMain()")
+                                    // Log a page view via TelemetryService (AI when available, otherwise OpenTelemetry)
+                                    var startupProps = new Dictionary<string, string>
                                     {
-                                        Name = "Chummer Startup: " +
-                                               Utils.CurrentChummerVersion.ToString(),
-                                        Id = Settings.Default.UploadClientId.ToString(),
-                                        Timestamp = startTime
+                                        { "parameters", Environment.CommandLine }
                                     };
-                                    pvt.Context.Operation.Name = "Operation Program.Main()";
-                                    pvt.Properties.Add("parameters", Environment.CommandLine);
+                                    TelemetryService.TrackPageView("frmChummerMain()",
+                                        id: Settings.Default.UploadClientId.ToString(),
+                                        properties: startupProps,
+                                        url: null,
+                                        duration: DateTimeOffset.UtcNow - startTime);
 
                                     UploadObjectAsMetric.UploadObject(objLocalTelemetryClient, typeof(GlobalSettings));
                                 }
@@ -994,8 +1045,8 @@ namespace Chummer
                     //BUT ALSO KEEP IN MIND: when debugging a multi-threaded GUI app, and you're debugging in a thread
                     //other than the main/application thread, YOU NEED TO TURN OFF
                     //the "Enable property evaluation and other implicit function calls" option, or else VS will
-                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, which will
-                    //cause your application to crash/fail in strange ways. Go to Tools->Options->Debugging to turn
+                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, WHICH WILL
+                    //CAUSE YOUR APPLICATION TO CRASH/FAIL IN STRANGE WAYS. Go to Tools->Options->Debugging to turn
                     //that setting off.
                     Debugger.Break();
                 }
@@ -1121,8 +1172,8 @@ namespace Chummer
                     //BUT ALSO KEEP IN MIND: when debugging a multi-threaded GUI app, and you're debugging in a thread
                     //other than the main/application thread, YOU NEED TO TURN OFF
                     //the "Enable property evaluation and other implicit function calls" option, or else VS will
-                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, which will
-                    //cause your application to crash/fail in strange ways. Go to Tools->Options->Debugging to turn
+                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, WHICH WILL
+                    //CAUSE YOUR APPLICATION TO CRASH/FAIL IN STRANGE WAYS. Go to Tools->Options->Debugging to turn
                     //that setting off.
                     Debugger.Break();
                 }
@@ -1396,7 +1447,7 @@ namespace Chummer
                         {
                             if (blnSync)
                             {
-                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                // ReSharper disable once MethodHasAsyncOverload
                                 if (ShowScrollableMessageBox(
                                         string.Format(GlobalSettings.CultureInfo,
                                             // ReSharper disable once MethodHasAsyncOverload
@@ -1713,6 +1764,29 @@ namespace Chummer
         {
             get;
             private set;
+        }
+
+        // Add this nested adapter class inside the Program class (near other private helpers)
+        private sealed class ProgramTelemetryInitializer : Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer
+        {
+            public void Initialize(Microsoft.ApplicationInsights.Channel.ITelemetry telemetry)
+            {
+                try
+                {
+                    // Use the current Activity if available and delegate to the existing initializer logic.
+                    var activity = System.Diagnostics.Activity.Current;
+                    if (activity != null)
+                    {
+                        // CustomTelemetryInitializer exposes static Initialize(Activity) per type signatures.
+                        CustomTelemetryInitializer.Initialize(activity);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Keep telemetry initialization from breaking the application. Use same logging pattern as elsewhere.
+                    try { Log?.Error(ex); } catch { }
+                }
+            }
         }
     }
 }

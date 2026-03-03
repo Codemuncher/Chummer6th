@@ -17,6 +17,7 @@
  *  https://github.com/chummer5a/chummer5a
  */
 using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.AspNetCore;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -24,9 +25,10 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.SystemConsole.Themes;
 using System;
-using Azure.Identity;
-using Microsoft.Extensions.Logging.ApplicationInsights;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Azure.Monitor.OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using System.Diagnostics;
 
 namespace ChummerHub
 {
@@ -102,8 +104,11 @@ namespace ChummerHub
             }
         }
 
-
-
+        /// <summary>
+        /// Builds and configures the web host for the application.
+        /// </summary>
+        /// <param name="args">Command-line arguments forwarded to the host builder.</param>
+        /// <returns>An initialized <see cref="IWebHost"/> instance configured with the application's startup and logging.</returns>
         public static IWebHost CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 //.ConfigureAppConfiguration((hostingContext, config) =>
@@ -111,7 +116,7 @@ namespace ChummerHub
                 //    var settings = config.Build();
                 //    config.AddAzureAppConfiguration(options =>
                 //    {
-
+                //
                 //        //options.Connect(settings["ConnectionStrings.AppConfig"])
                 //        //        .ConfigureKeyVault(kv =>
                 //        //        {
@@ -125,28 +130,41 @@ namespace ChummerHub
                 //    //options.Listen(IPAddress.Loopback, 5000);  // http:localhost:5000
                 //    //options.Listen(IPAddress.Any, 80);         // http:*:80
                 //    //options.Listen(IPAddress.Loopback, 443, listenOptions =>
-                //    //{
-                //    //    listenOptions.UseHttps("certificate.pfx", "password");
-                //    //});
+                //    //    {
+                //    //        listenOptions.UseHttps("certificate.pfx", "password");
+                //    //    });
                 //})
                 .UseAzureAppServices()
                 //.UseContentRoot(Directory.GetCurrentDirectory())
+
                 .UseStartup<Startup>()
                 .UseIISIntegration()
+
+
                 .ConfigureLogging((hostingContext, logging) =>
                 {
-                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
-                    logging.AddConsole();
-                    logging.AddDebug();
-                    
-                    logging.AddApplicationInsights("95c486ab-aeb7-4361-8667-409b7bf62713");
-                    logging.AddFilter<ApplicationInsightsLoggerProvider>("", LogLevel.Trace);
+                    logging.ClearProviders();
+                    logging.AddOpenTelemetry(options =>
+                    {
+                        
+                        options.AddConsoleExporter();
+                        options.AddAzureMonitorLogExporter(o => o.ConnectionString = hostingContext.Configuration["AzureMonitor:ConnectionString"]);
+                        options.IncludeFormattedMessage = true;
+                        options.IncludeScopes = true;
+                    });
+                    logging.AddFilter<OpenTelemetryLoggerProvider>("*", LogLevel.Warning);
+                    //logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
+                    //logging.AddConsole();
+                    //logging.AddDebug();
+
+                    // logging.AddFilter<AddApplicationInsightsTelemetry>("", LogLevel.Trace);
                     // Additional filtering For category starting in "Microsoft",
                     // only Warning or above will be sent to Application Insights.
-                    logging.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Warning);
+                    //logging.AddFilter<Microsoft.Extensions.Logging.appli.ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Warning);
                 })
-          
+
                 .CaptureStartupErrors(true)
-                .Build();
+            .UseStartup<Startup>()
+            .Build();
     }
 }

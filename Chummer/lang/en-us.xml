@@ -732,6 +732,10 @@
       <text>Filter by Essence</text>
     </string>
     <string>
+      <key>Label_FilterByCapacity</key>
+      <text>Filter by Capacity</text>
+    </string>
+    <string>
       <key>Checkbox_UseCurrentEssence</key>
       <text>Current ESS</text>
     </string>
@@ -7331,6 +7335,26 @@
     <string>
       <key>MessageTitle_Metatype_SelectTalent</key>
       <text>Select a Talent</text>
+    </string>
+    <string>
+      <key>Message_Metatype_NoTalentChoices</key>
+      <text>No valid Talent choices are available for the selected Metatype and Talent priority combination. This is likely due to customdata restrictions that disallow all available talent options. Please select a different Metatype or Talent priority, or review your customdata settings.</text>
+    </string>
+    <string>
+      <key>MessageTitle_Metatype_NoTalentChoices</key>
+      <text>No Talent Choices Available</text>
+    </string>
+    <string>
+      <key>Message_NoGradesAvailable</key>
+      <text>No grades are available for the selected item.</text>
+    </string>
+    <string>
+      <key>MessageTitle_NoGradesAvailable</key>
+      <text>No Grades Available</text>
+    </string>
+    <string>
+      <key>String_NoGradesAvailable</key>
+      <text>No grades available</text>
     </string>
     <string>
       <key>Message_Metatype_SelectSkill</key>

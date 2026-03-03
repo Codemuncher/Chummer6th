@@ -508,13 +508,16 @@ namespace Chummer
         private int _intValue;
         private int _intMinimum;
         private int _intMaximum;
-        private readonly object _objIntValueLock = new object();
+        // Locks to ensure cached int values and decimal values are always in sync
+        private readonly object _objValueLock = new object();
+        private readonly object _objMinimumLock = new object();
+        private readonly object _objMaximumLock = new object();
 
         protected override void OnValueChanged(EventArgs e)
         {
             using (CursorWait.New(this))
             {
-                lock (_objIntValueLock) // Lock ensures synchronicity
+                lock (_objValueLock)
                     _intValue = Math.Min(Math.Max(Value, int.MinValue), int.MaxValue).ToInt32();
                 base.OnValueChanged(e);
             }
@@ -530,10 +533,43 @@ namespace Chummer
         {
             get
             {
-                lock (_objIntValueLock) // Lock ensures synchronicity
+                lock (_objValueLock)
                     return _intValue;
             }
-            set => Value = value;
+            set
+            {
+                // Ensure value is within bounds before setting
+                // Use cached integer values to avoid overflow when Maximum/Minimum are outside Int32 range
+                int intAdjustedValue = Math.Max(Math.Min(value, MaximumAsInt), MinimumAsInt);
+                Value = intAdjustedValue;
+            }
+        }
+
+
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        /// <summary>
+        /// Current value of the spinbox. Defined separately
+        /// </summary>
+        public new decimal Value
+        {
+            get
+            {
+                lock (_objValueLock)
+                    return base.Value;
+            }
+            set
+            {
+                lock (_objValueLock)
+                {
+                    decimal decMaximum = Maximum;
+                    if (value > decMaximum)
+                        value = decMaximum;
+                    decimal decMinimum = Minimum;
+                    if (value < decMinimum)
+                        value = decMinimum;
+                    base.Value = value;
+                }
+            }
         }
 
         /// <summary>
@@ -544,23 +580,34 @@ namespace Chummer
         [Browsable(false)]
         public int MinimumAsInt
         {
-            get => _intMinimum;
+            get
+            {
+                lock (_objMinimumLock)
+                    return _intMinimum;
+            }
             set => Minimum = value;
         }
-
+               
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// The minimum allowed value of the spin box.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]        
         public new decimal Minimum
         {
-            get => base.Minimum;
+            get
+            {
+                lock (_objMinimumLock)
+                    return base.Minimum;
+            }
             set
             {
-                if (value == base.Minimum)
-                    return;
-                _intMinimum = Math.Min(Math.Max(value, int.MinValue), int.MaxValue).ToInt32();
-                base.Minimum = value;
+                lock (_objMinimumLock)
+                {
+                    if (value == base.Minimum)
+                        return;
+                    _intMinimum = Math.Min(Math.Max(value, int.MinValue), int.MaxValue).ToInt32();
+                    base.Minimum = value;
+                }
             }
         }
 
@@ -572,23 +619,34 @@ namespace Chummer
         [Browsable(false)]
         public int MaximumAsInt
         {
-            get => _intMaximum;
+            get
+            {
+                lock (_objMaximumLock)
+                    return _intMaximum;
+            }
             set => Maximum = value;
         }
 
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// The maximum allowed value of the spin box.
         /// </summary>
-        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]       
         public new decimal Maximum
         {
-            get => base.Maximum;
+            get
+            {
+                lock (_objMaximumLock)
+                    return base.Maximum;
+            }
             set
             {
-                if (value == base.Maximum)
-                    return;
-                _intMaximum = Math.Min(Math.Max(value, int.MinValue), int.MaxValue).ToInt32();
-                base.Maximum = value;
+                lock (_objMaximumLock)
+                {
+                    if (value == base.Maximum)
+                        return;
+                    _intMaximum = Math.Min(Math.Max(value, int.MinValue), int.MaxValue).ToInt32();
+                    base.Maximum = value;
+                }
             }
         }
 
@@ -685,5 +743,6 @@ namespace Chummer
         }
 
         #endregion UpDownButtons visibility management
+
     }
 }

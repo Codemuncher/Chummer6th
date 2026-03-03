@@ -156,8 +156,8 @@ namespace Chummer
         private int _intMaxKnowledgeSkillRatingCreate = 6;
         private int _intMaxSkillRating = 12;
         private int _intMaxKnowledgeSkillRating = 12;
-        private HashSet<string> _setBannedWareGrades = Utils.StringHashSetPool.Get();
-        private HashSet<string> _setRedlinerExcludes = Utils.StringHashSetPool.Get();
+        private HashSet<string> _setBannedWareGrades;
+        private HashSet<string> _setRedlinerExcludes;
 
         // Initiative variables
         private int _intMinInitiativeDice = 1;
@@ -269,7 +269,7 @@ namespace Chummer
         private readonly List<string> _lstEnabledCustomDataDirectoryPaths = new List<string>();
 
         // Sourcebook list.
-        private HashSet<string> _setBooks = Utils.StringHashSetPool.Get();
+        private HashSet<string> _setBooks;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -625,13 +625,40 @@ namespace Chummer
         public CharacterSettings(CharacterSettings objOther = null, bool blnCopySourceId = true, string strOverrideFileName = "")
         {
             _dicCustomDataDirectoryKeys = new LockingTypedOrderedDictionary<string, bool>(LockObject);
-            _setBannedWareGrades.Add("Betaware");
-            _setBannedWareGrades.Add("Deltaware");
-            _setBannedWareGrades.Add("Gammaware");
-            _setRedlinerExcludes.Add("skull");
-            _setRedlinerExcludes.Add("torso");
-            if (objOther != null)
-                CopyValues(objOther, blnCopySourceId, strOverrideFileName);
+            _setBooks = Utils.StringHashSetPool.Get();
+            try
+            {
+                _setBannedWareGrades = Utils.StringHashSetPool.Get();
+                try
+                {
+                    _setBannedWareGrades.Add("Betaware");
+                    _setBannedWareGrades.Add("Deltaware");
+                    _setBannedWareGrades.Add("Gammaware");
+                    _setRedlinerExcludes = Utils.StringHashSetPool.Get();
+                    try
+                    {
+                        _setRedlinerExcludes.Add("skull");
+                        _setRedlinerExcludes.Add("torso");
+                        if (objOther != null)
+                            CopyValues(objOther, blnCopySourceId, strOverrideFileName);
+                    }
+                    catch
+                    {
+                        Utils.StringHashSetPool.Return(ref _setRedlinerExcludes);
+                        throw;
+                    }
+                }
+                catch
+                {
+                    Utils.StringHashSetPool.Return(ref _setBannedWareGrades);
+                    throw;
+                }
+            }
+            catch
+            {
+                Utils.StringHashSetPool.Return(ref _setBooks);
+                throw;
+            }
         }
 
         public void CopyValues(CharacterSettings objOther, bool blnCopySourceId = true, string strOverrideFileName = "", CancellationToken token = default)
@@ -3922,6 +3949,10 @@ namespace Chummer
                 using (_dicCustomDataDirectoryKeys.LockObject.EnterWriteLock(token))
                 {
                     _dicCustomDataDirectoryKeys.Clear();
+                    // First pass: collect entries and deduplicate by GUID, keeping the one with the highest version
+                    // The > separator indicates a minimum version requirement, so we keep the highest version to satisfy all requirements
+                    Dictionary<string, ValueTuple<string, bool, ValueVersion>> dicDeduplicatedByGuid =
+                        new Dictionary<string, ValueTuple<string, bool, ValueVersion>>(StringComparer.OrdinalIgnoreCase);
                     for (int i = intBottomMostOrder; i <= intTopMostOrder; ++i)
                     {
                         if (!dicLoadingCustomDataDirectories.TryGetValue(i, out ValueTuple<string, bool> tupLoop))
@@ -3941,9 +3972,33 @@ namespace Chummer
 
                             if (objExistingInfo != null)
                                 strDirectoryKey = objExistingInfo.CharacterSettingsSaveKey;
+                            // For entries without GUID, use the directory key as the deduplication key
+                            if (!dicDeduplicatedByGuid.ContainsKey(strDirectoryKey))
+                                dicDeduplicatedByGuid.Add(strDirectoryKey, new ValueTuple<string, bool, ValueVersion>(strDirectoryKey, tupLoop.Item2, default));
                         }
-
-                        _dicCustomDataDirectoryKeys.TryAdd(strDirectoryKey, tupLoop.Item2, token);
+                        else
+                        {
+                            // Extract version for comparison (the > indicates minimum version requirement)
+                            CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strDirectoryKey, out ValueVersion objCurrentVersion);
+                            // Check if we already have an entry with this GUID
+                            if (dicDeduplicatedByGuid.TryGetValue(strLoopId, out ValueTuple<string, bool, ValueVersion> tupExisting))
+                            {
+                                // Keep the entry with the higher version (satisfies all minimum version requirements)
+                                if (objCurrentVersion > tupExisting.Item3)
+                                {
+                                    dicDeduplicatedByGuid[strLoopId] = new ValueTuple<string, bool, ValueVersion>(strDirectoryKey, tupLoop.Item2, objCurrentVersion);
+                                }
+                            }
+                            else
+                            {
+                                dicDeduplicatedByGuid.Add(strLoopId, new ValueTuple<string, bool, ValueVersion>(strDirectoryKey, tupLoop.Item2, objCurrentVersion));
+                            }
+                        }
+                    }
+                    // Second pass: add deduplicated entries to the dictionary
+                    foreach (ValueTuple<string, bool, ValueVersion> tupDeduplicated in dicDeduplicatedByGuid.Values)
+                    {
+                        _dicCustomDataDirectoryKeys.TryAdd(tupDeduplicated.Item1, tupDeduplicated.Item2, token);
                     }
 
                     // Legacy sweep for custom data directories
@@ -3970,9 +4025,39 @@ namespace Chummer
 
                                 if (objExistingInfo != null)
                                     strDirectoryKey = objExistingInfo.CharacterSettingsSaveKey;
+                                // For entries without GUID, check if key already exists
+                                if (!_dicCustomDataDirectoryKeys.ContainsKey(strDirectoryKey))
+                                    _dicCustomDataDirectoryKeys.TryAdd(strDirectoryKey, true, token);
                             }
-
-                            _dicCustomDataDirectoryKeys.TryAdd(strDirectoryKey, true, token);
+                            else
+                            {
+                                // Check if an entry with the same GUID already exists and deduplicate by keeping the latest version
+                                string strExistingKey = null;
+                                ValueVersion objExistingVersion = default;
+                                CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strDirectoryKey, out ValueVersion objCurrentVersion);
+                                _dicCustomDataDirectoryKeys.ForEach(kvpExisting =>
+                                {
+                                    string strExistingId = CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(kvpExisting.Key);
+                                    if (strExistingId.Equals(strLoopId, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(kvpExisting.Key, out ValueVersion objExistingVersionFromKey);
+                                        if (strExistingKey == null || objExistingVersionFromKey > objExistingVersion)
+                                        {
+                                            strExistingKey = kvpExisting.Key;
+                                            objExistingVersion = objExistingVersionFromKey;
+                                        }
+                                    }
+                                }, token);
+                                if (strExistingKey != null)
+                                {
+                                    // If the existing entry has a higher or equal version, skip adding this one
+                                    if (objExistingVersion >= objCurrentVersion)
+                                        continue;
+                                    // If the current entry has a higher version, remove the old one
+                                    _dicCustomDataDirectoryKeys.Remove(strExistingKey);
+                                }
+                                _dicCustomDataDirectoryKeys.TryAdd(strDirectoryKey, true, token);
+                            }
                         }
                     }
 
@@ -4020,9 +4105,39 @@ namespace Chummer
 
                                     if (objExistingInfo != null)
                                         strDirectoryKey = objExistingInfo.InternalId;
+                                    // For entries without GUID, check if key already exists
+                                    if (!_dicCustomDataDirectoryKeys.ContainsKey(strDirectoryKey))
+                                        _dicCustomDataDirectoryKeys.TryAdd(strDirectoryKey, blnLoopEnabled, token);
                                 }
-
-                                _dicCustomDataDirectoryKeys.TryAdd(strDirectoryKey, blnLoopEnabled, token);
+                                else
+                                {
+                                    // Check if an entry with the same GUID already exists and deduplicate by keeping the latest version
+                                    string strExistingKey = null;
+                                    ValueVersion objExistingVersion = default;
+                                    CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strDirectoryKey, out ValueVersion objCurrentVersion);
+                                    _dicCustomDataDirectoryKeys.ForEach(kvpExisting =>
+                                    {
+                                        string strExistingId = CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(kvpExisting.Key);
+                                        if (strExistingId.Equals(strLoopId, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(kvpExisting.Key, out ValueVersion objExistingVersionFromKey);
+                                            if (strExistingKey == null || objExistingVersionFromKey > objExistingVersion)
+                                            {
+                                                strExistingKey = kvpExisting.Key;
+                                                objExistingVersion = objExistingVersionFromKey;
+                                            }
+                                        }
+                                    }, token);
+                                    if (strExistingKey != null)
+                                    {
+                                        // If the existing entry has a higher or equal version, skip adding this one
+                                        if (objExistingVersion >= objCurrentVersion)
+                                            continue;
+                                        // If the current entry has a higher version, remove the old one
+                                        _dicCustomDataDirectoryKeys.Remove(strExistingKey);
+                                    }
+                                    _dicCustomDataDirectoryKeys.TryAdd(strDirectoryKey, blnLoopEnabled, token);
+                                }
                             }
                         }
                     }
@@ -4701,6 +4816,10 @@ namespace Chummer
                 {
                     token.ThrowIfCancellationRequested();
                     await _dicCustomDataDirectoryKeys.ClearAsync(token).ConfigureAwait(false);
+                    // First pass: collect entries and deduplicate by GUID, keeping the one with the highest version
+                    // The > separator indicates a minimum version requirement, so we keep the highest version to satisfy all requirements
+                    Dictionary<string, ValueTuple<string, bool, ValueVersion>> dicDeduplicatedByGuid =
+                        new Dictionary<string, ValueTuple<string, bool, ValueVersion>>(StringComparer.OrdinalIgnoreCase);
                     for (int i = intBottomMostOrder; i <= intTopMostOrder; ++i)
                     {
                         if (!dicLoadingCustomDataDirectories.TryGetValue(i, out ValueTuple<string, bool> tupLoop))
@@ -4720,10 +4839,34 @@ namespace Chummer
 
                             if (objExistingInfo != null)
                                 strDirectoryKey = objExistingInfo.CharacterSettingsSaveKey;
+                            // For entries without GUID, use the directory key as the deduplication key
+                            if (!dicDeduplicatedByGuid.ContainsKey(strDirectoryKey))
+                                dicDeduplicatedByGuid.Add(strDirectoryKey, new ValueTuple<string, bool, ValueVersion>(strDirectoryKey, tupLoop.Item2, default));
                         }
-
+                        else
+                        {
+                            // Extract version for comparison (the > indicates minimum version requirement)
+                            CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strDirectoryKey, out ValueVersion objCurrentVersion);
+                            // Check if we already have an entry with this GUID
+                            if (dicDeduplicatedByGuid.TryGetValue(strLoopId, out ValueTuple<string, bool, ValueVersion> tupExisting))
+                            {
+                                // Keep the entry with the higher version (satisfies all minimum version requirements)
+                                if (objCurrentVersion > tupExisting.Item3)
+                                {
+                                    dicDeduplicatedByGuid[strLoopId] = new ValueTuple<string, bool, ValueVersion>(strDirectoryKey, tupLoop.Item2, objCurrentVersion);
+                                }
+                            }
+                            else
+                            {
+                                dicDeduplicatedByGuid.Add(strLoopId, new ValueTuple<string, bool, ValueVersion>(strDirectoryKey, tupLoop.Item2, objCurrentVersion));
+                            }
+                        }
+                    }
+                    // Second pass: add deduplicated entries to the dictionary
+                    foreach (ValueTuple<string, bool, ValueVersion> tupDeduplicated in dicDeduplicatedByGuid.Values)
+                    {
                         await _dicCustomDataDirectoryKeys
-                              .TryAddAsync(strDirectoryKey, tupLoop.Item2, token)
+                              .TryAddAsync(tupDeduplicated.Item1, tupDeduplicated.Item2, token)
                               .ConfigureAwait(false);
                     }
 
@@ -4751,10 +4894,46 @@ namespace Chummer
 
                                 if (objExistingInfo != null)
                                     strDirectoryKey = objExistingInfo.CharacterSettingsSaveKey;
+                                // For entries without GUID, check if key already exists
+                                if (!await _dicCustomDataDirectoryKeys.ContainsKeyAsync(strDirectoryKey, token).ConfigureAwait(false))
+                                    await _dicCustomDataDirectoryKeys.TryAddAsync(strDirectoryKey, true, token).ConfigureAwait(false);
                             }
-
-                            await _dicCustomDataDirectoryKeys.TryAddAsync(strDirectoryKey, true, token)
-                                                             .ConfigureAwait(false);
+                            else
+                            {
+                                // Check if an entry with the same GUID already exists and deduplicate by keeping the latest version
+                                CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strDirectoryKey, out ValueVersion objCurrentVersion);
+                                List<KeyValuePair<string, bool>> lstMatchingEntries = new List<KeyValuePair<string, bool>>();
+                                await _dicCustomDataDirectoryKeys.ForEachAsync(kvpExisting =>
+                                {
+                                    string strExistingId = CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(kvpExisting.Key);
+                                    if (strExistingId.Equals(strLoopId, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        lstMatchingEntries.Add(kvpExisting);
+                                    }
+                                }, token).ConfigureAwait(false);
+                                if (lstMatchingEntries.Count > 0)
+                                {
+                                    // Find the entry with the highest version
+                                    string strExistingKey = null;
+                                    ValueVersion objExistingVersion = default;
+                                    foreach (KeyValuePair<string, bool> kvpExisting in lstMatchingEntries)
+                                    {
+                                        string strKey = kvpExisting.Key;
+                                        CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strKey, out ValueVersion objExistingVersionFromKey);
+                                        if (strExistingKey == null || objExistingVersionFromKey > objExistingVersion)
+                                        {
+                                            strExistingKey = strKey;
+                                            objExistingVersion = objExistingVersionFromKey;
+                                        }
+                                    }
+                                    // If the existing entry has a higher or equal version, skip adding this one
+                                    if (objExistingVersion >= objCurrentVersion)
+                                        continue;
+                                    // If the current entry has a higher version, remove the old one
+                                    await _dicCustomDataDirectoryKeys.RemoveAsync(strExistingKey, token).ConfigureAwait(false);
+                                }
+                                await _dicCustomDataDirectoryKeys.TryAddAsync(strDirectoryKey, true, token).ConfigureAwait(false);
+                            }
                         }
                     }
 
@@ -4804,10 +4983,46 @@ namespace Chummer
 
                                     if (objExistingInfo != null)
                                         strDirectoryKey = objExistingInfo.InternalId;
+                                    // For entries without GUID, check if key already exists
+                                    if (!await _dicCustomDataDirectoryKeys.ContainsKeyAsync(strDirectoryKey, token).ConfigureAwait(false))
+                                        await _dicCustomDataDirectoryKeys.TryAddAsync(strDirectoryKey, blnLoopEnabled, token).ConfigureAwait(false);
                                 }
-
-                                await _dicCustomDataDirectoryKeys.TryAddAsync(strDirectoryKey, blnLoopEnabled, token)
-                                                                 .ConfigureAwait(false);
+                                else
+                                {
+                                    // Check if an entry with the same GUID already exists and deduplicate by keeping the latest version
+                                    CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strDirectoryKey, out ValueVersion objCurrentVersion);
+                                    List<KeyValuePair<string, bool>> lstMatchingEntries = new List<KeyValuePair<string, bool>>();
+                                    await _dicCustomDataDirectoryKeys.ForEachAsync(kvpExisting =>
+                                    {
+                                        string strExistingId = CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(kvpExisting.Key);
+                                        if (strExistingId.Equals(strLoopId, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            lstMatchingEntries.Add(kvpExisting);
+                                        }
+                                    }, token).ConfigureAwait(false);
+                                    if (lstMatchingEntries.Count > 0)
+                                    {
+                                        // Find the entry with the highest version
+                                        string strExistingKey = null;
+                                        ValueVersion objExistingVersion = default;
+                                        foreach (KeyValuePair<string, bool> kvpExisting in lstMatchingEntries)
+                                        {
+                                            string strKey = kvpExisting.Key;
+                                            CustomDataDirectoryInfo.GetIdFromCharacterSettingsSaveKey(strKey, out ValueVersion objExistingVersionFromKey);
+                                            if (strExistingKey == null || objExistingVersionFromKey > objExistingVersion)
+                                            {
+                                                strExistingKey = strKey;
+                                                objExistingVersion = objExistingVersionFromKey;
+                                            }
+                                        }
+                                        // If the existing entry has a higher or equal version, skip adding this one
+                                        if (objExistingVersion >= objCurrentVersion)
+                                            continue;
+                                        // If the current entry has a higher version, remove the old one
+                                        await _dicCustomDataDirectoryKeys.RemoveAsync(strExistingKey, token).ConfigureAwait(false);
+                                    }
+                                    await _dicCustomDataDirectoryKeys.TryAddAsync(strDirectoryKey, blnLoopEnabled, token).ConfigureAwait(false);
+                                }
                             }
                         }
                     }
@@ -6222,7 +6437,8 @@ namespace Chummer
                 }
 
                 if (sbdPath.Length > 0)
-                    return sbdPath.Insert(0, '(').Append(')').ToString();
+                    // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                    return string.Concat("(", sbdPath.Append(')').ToString());
             }
 
             // We have only the opening parentheses; return an empty string
@@ -6277,7 +6493,8 @@ namespace Chummer
                 }
 
                 if (sbdPath.Length > 0)
-                    return sbdPath.Insert(0, '(').Append(')').ToString();
+                    // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                    return string.Concat("(", sbdPath.Append(')').ToString());
             }
 
             // We have only the opening parentheses; return an empty string
@@ -6297,6 +6514,7 @@ namespace Chummer
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                               out StringBuilder sbdBookXPath))
                 {
+                    sbdBookXPath.EnsureCapacity(_setBooks.Count * 16 - 2);
                     sbdBookXPath.Append('(');
                     foreach (string strBook in _setBooks)
                     {
@@ -6330,6 +6548,7 @@ namespace Chummer
                 using (new FetchSafelyFromObjectPool<StringBuilder>(Utils.StringBuilderPool,
                                                               out StringBuilder sbdBookXPath))
                 {
+                    sbdBookXPath.EnsureCapacity(_setBooks.Count * 16 - 2);
                     sbdBookXPath.Append('(');
                     foreach (string strBook in _setBooks)
                     {

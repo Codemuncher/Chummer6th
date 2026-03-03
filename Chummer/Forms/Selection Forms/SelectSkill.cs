@@ -17,17 +17,17 @@
  *  https://github.com/chummer5a/chummer5a
  */
 
+using Chummer.Backend.Skills;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using System.Xml.XPath;
-using Chummer.Backend.Skills;
-using System.ComponentModel;
 
 namespace Chummer
 {
@@ -204,7 +204,8 @@ namespace Chummer
                         }
 
                         if (sbdFilter.Length > 0)
-                            strFilter = sbdFilter.Insert(0, '[').Append(']').ToString();
+                            // StringBuilder.Insert can be slow because of in-place replaces, so use concat instead
+                            strFilter = string.Concat("[", sbdFilter.Append(']').ToString());
                     }
 
                     objXmlSkillList = _objXmlDocument.Select("/chummer/skills/skill" + strFilter);
@@ -422,15 +423,7 @@ namespace Chummer
 
         #region Properties
 
-        /// <summary>
-        /// Only Skills of the selected Category should be in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-
-        #endregion Control Events
-
-        #region Properties
-
         /// <summary>
         /// Only Skills of the selected Category should be in the list.
         /// </summary>
@@ -439,9 +432,6 @@ namespace Chummer
             set => _strIncludeCategory = value;
         }
 
-        /// <summary>
-        /// Only Skills from the selected Categories should be in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only Skills from the selected Categories should be in the list.
@@ -470,9 +460,6 @@ namespace Chummer
             }
         }
 
-        /// <summary>
-        /// Only Skills not in the selected Category should be in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only Skills not in the selected Category should be in the list.
@@ -482,9 +469,6 @@ namespace Chummer
             set => _strExcludeCategory = value;
         }
 
-        /// <summary>
-        /// Only Skills in the selected Skill Group should be in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only Skills in the selected Skill Group should be in the list.
@@ -494,9 +478,6 @@ namespace Chummer
             set => _strIncludeSkillGroup = value;
         }
 
-        /// <summary>
-        /// Restrict the list to only a single Skill.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Restrict the list to only a single Skill.
@@ -506,9 +487,6 @@ namespace Chummer
             set => _strForceSkill = value;
         }
 
-        /// <summary>
-        /// Only Skills not in the selected Skill Group should be in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only Skills not in the selected Skill Group should be in the list.
@@ -518,9 +496,6 @@ namespace Chummer
             set => _strExcludeSkillGroup = value;
         }
 
-        /// <summary>
-        /// Only the provided Skills should be shown in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only the provided Skills should be shown in the list.
@@ -530,9 +505,6 @@ namespace Chummer
             set => _strLimitToSkill = value;
         }
 
-        /// <summary>
-        /// Only Skills not among the selected should be in the list.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only Skills not among the selected should be in the list.
@@ -547,9 +519,6 @@ namespace Chummer
         /// </summary>
         public string SelectedSkill => _strReturnValue;
 
-        /// <summary>
-        /// Description to show in the window.
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Description to show in the window.
@@ -559,9 +528,6 @@ namespace Chummer
             set => lblDescription.Text = value;
         }
 
-        /// <summary>
-        /// Only show skills with a rating greater than or equal to this
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only show skills with a rating greater than or equal to this
@@ -571,9 +537,6 @@ namespace Chummer
             set => _intMinimumRating = value;
         }
 
-        /// <summary>
-        /// Only show skills with a rating less than or equal to this
-        /// </summary>
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         /// <summary>
         /// Only show skills with a rating less than or equal to this
