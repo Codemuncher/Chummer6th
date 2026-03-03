@@ -20884,18 +20884,7 @@ namespace Chummer
 
                     // Check if the character has gone over on Skill Groups
                     SkillsSection objSkillsSection
-                        = await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                    int intSkillGroupPoints = await objSkillsSection.GetSkillGroupPointsAsync(token)
-                                                                    .ConfigureAwait(false);
-                    if (intSkillGroupPoints < 0)
-                    {
-                        blnValid = false;
-                        sbdMessage.AppendLine().Append('\t').AppendFormat(GlobalSettings.CultureInfo,
-                                                                          await LanguageManager.GetStringAsync(
-                                                                              "Message_InvalidSkillGroupExcess",
-                                                                              token: token).ConfigureAwait(false),
-                                                                          -intSkillGroupPoints);
-                    }
+                        = await CharacterObject.GetSkillsSectionAsync(token).ConfigureAwait(false);                   
 
                     // Check if the character has gone over on Active Skills
                     int intSkillPoints = await objSkillsSection.GetSkillPointsAsync(token)
@@ -21585,30 +21574,7 @@ namespace Chummer
                         == DialogResult.No)
                     {
                         blnValid = false;
-                    }
-
-                    // Check if the character has extra Skill Group points
-                    if (blnValid && intSkillGroupPoints > 0
-                                 && await Program.ShowScrollableMessageBoxAsync(this,
-                                     string.Format(
-                                         GlobalSettings.CultureInfo,
-                                         await LanguageManager.GetStringAsync(
-                                                 "Message_ExtraPoints", token: token)
-                                             .ConfigureAwait(false),
-                                         intSkillGroupPoints.ToString(
-                                             GlobalSettings.CultureInfo),
-                                         await LanguageManager
-                                             .GetStringAsync(
-                                                 "Label_SummarySkillGroups",
-                                                 token: token).ConfigureAwait(false)),
-                                     await LanguageManager.GetStringAsync(
-                                             "MessageTitle_ExtraPoints", token: token)
-                                         .ConfigureAwait(false),
-                                     MessageBoxButtons.YesNo,
-                                     MessageBoxIcon.Warning, token: token).ConfigureAwait(false) == DialogResult.No)
-                    {
-                        blnValid = false;
-                    }
+                    }                   
 
                     // Check if the character has extra Active Skill points
                     if (blnValid && intSkillPoints > 0 && await Program.ShowScrollableMessageBoxAsync(

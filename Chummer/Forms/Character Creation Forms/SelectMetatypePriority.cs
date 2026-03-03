@@ -2157,8 +2157,6 @@ namespace Chummer
                             int intTemp = 0;
                             if (objXmlSkillsPriority.TryGetInt32FieldQuickly("skills", ref intTemp))
                                 _objCharacter.SkillsSection.SkillPointsMaximum = intTemp;
-                            if (objXmlSkillsPriority.TryGetInt32FieldQuickly("skillgroups", ref intTemp))
-                                _objCharacter.SkillsSection.SkillGroupPointsMaximum = intTemp;
                             break;
                         }
                     }
@@ -2282,43 +2280,7 @@ namespace Chummer
                             blnDoSwitch = true;
                         return true;
                     }, token).ConfigureAwait(false);
-
-                    if (blnDoSwitch)
-                    {
-                        int intPointsSpent = 0;
-                        SkillsSection objSkillsSection
-                            = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        while (intPointsSpent < objSkillsSection.SkillGroupPointsMaximum)
-                        {
-                            Skill objSkillToShift = null;
-                            int intSkillToShiftKarma = 0;
-                            await (await _objCharacter.SkillsSection.GetSkillsAsync(token).ConfigureAwait(false)).ForEachWithSideEffectsAsync(async objSkill =>
-                            {
-                                int intLoopKarma = await objSkill.GetKarmaAsync(token).ConfigureAwait(false);
-                                if (intLoopKarma > 0 && (objSkillToShift == null
-                                                         || await objSkillToShift.GetRatingAsync(token)
-                                                             .ConfigureAwait(false)
-                                                         < await objSkill.GetRatingAsync(token)
-                                                             .ConfigureAwait(false)))
-                                {
-                                    objSkillToShift = objSkill;
-                                    intSkillToShiftKarma = intLoopKarma;
-                                }
-                            }, token).ConfigureAwait(false);
-
-                            if (objSkillToShift == null)
-                                break;
-                            int intKarma = Math.Min(intSkillToShiftKarma,
-                                objSkillsSection.SkillGroupPointsMaximum - intPointsSpent);
-                            await objSkillToShift.SetKarmaAsync(intSkillToShiftKarma - intKarma, token)
-                                .ConfigureAwait(false);
-                            await objSkillToShift
-                                .SetBaseAsync(
-                                    await objSkillToShift.GetBaseAsync(token).ConfigureAwait(false) + intKarma,
-                                    token).ConfigureAwait(false);
-                            intPointsSpent += intKarma;
-                        }
-                    }
+                    
                 }
                 finally
                 {

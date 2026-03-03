@@ -1969,32 +1969,6 @@ namespace Chummer
                     }
                     break;
 
-                case ImprovementType.SkillGroupLevel:
-                    {
-                        if (lstExtraImprovedName?.Count > 0)
-                        {
-                            foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                            {
-                                if (objTargetGroup.Name == ImprovedName || lstExtraImprovedName.Contains(objTargetGroup.Name))
-                                {
-                                    yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.FreeLevels));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            SkillGroup objTargetGroup =
-                                _objCharacter.SkillsSection.SkillGroups.FirstOrDefault(x => x.Name == ImprovedName);
-                            if (objTargetGroup != null)
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.FreeLevels));
-                            }
-                        }
-                    }
-                    break;
-
                 case ImprovementType.SkillBase:
                     {
                         if (!string.IsNullOrEmpty(ImprovedName))
@@ -2025,28 +1999,7 @@ namespace Chummer
                             }
                         }
                     }
-                    break;
-
-                case ImprovementType.SkillGroupBase:
-                    {
-                        if (!string.IsNullOrEmpty(ImprovedName))
-                        {
-                            foreach (var result in ProcessSkillsWithPropertyComprehensive(_objCharacter.SkillsSection.SkillGroups, ImprovedName, Target, lstExtraImprovedName, lstExtraTarget, nameof(SkillGroup.FreeBase)))
-                            {
-                                yield return result;
-                            }
-                        }
-                        else
-                        {
-                            // When no specific target, process all skill groups
-                            foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.FreeBase));
-                            }
-                        }
-                    }
-                    break;
+                    break;             
 
                 case ImprovementType.Skillsoft:
                     {
@@ -2589,70 +2542,6 @@ namespace Chummer
                     }
                     break;
 
-                case ImprovementType.SkillGroupKarmaCost:
-                case ImprovementType.SkillGroupKarmaCostMultiplier:
-                    {
-                        if (!string.IsNullOrEmpty(ImprovedName))
-                        {
-                            if (lstExtraImprovedName?.Count > 0)
-                            {
-                                foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                                {
-                                    if (objTargetGroup.Name == ImprovedName || lstExtraImprovedName.Contains(objTargetGroup.Name))
-                                    {
-                                        yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                            nameof(SkillGroup.UpgradeKarmaCost));
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                SkillGroup objTargetGroup =
-                                    _objCharacter.SkillsSection.SkillGroups.FirstOrDefault(x => x.Name == ImprovedName);
-                                if (objTargetGroup != null)
-                                {
-                                    yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.UpgradeKarmaCost));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.UpgradeKarmaCost));
-                            }
-                        }
-                    }
-                    break;
-
-                case ImprovementType.SkillGroupDisable:
-                    {
-                        if (lstExtraImprovedName?.Count > 0)
-                        {
-                            foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                            {
-                                if (objTargetGroup.Name == ImprovedName || lstExtraImprovedName.Contains(objTargetGroup.Name))
-                                {
-                                    yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.IsDisabled));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            SkillGroup objTargetGroup =
-                                _objCharacter.SkillsSection.SkillGroups.FirstOrDefault(x => x.Name == ImprovedName);
-                            if (objTargetGroup != null)
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.IsDisabled));
-                            }
-                        }
-
-                        break;
-                    }
                 case ImprovementType.SkillDisable:
                     {
                         foreach (var result in ProcessSkillsWithPropertyComprehensive(_objCharacter.SkillsSection.Skills, ImprovedName, Target, lstExtraImprovedName, lstExtraTarget, nameof(Skill.Enabled)))
@@ -2719,39 +2608,6 @@ namespace Chummer
                     }
                     break;
 
-                case ImprovementType.SkillGroupCategoryDisable:
-                    {
-                        foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                        {
-                            if (objTargetGroup.GetRelevantSkillCategories.Contains(ImprovedName)
-                                || (lstExtraImprovedName != null
-                                    && objTargetGroup.GetRelevantSkillCategories.Any(
-                                        lstExtraImprovedName.Contains)))
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                    objTargetGroup, nameof(SkillGroup.IsDisabled));
-                            }
-                        }
-                    }
-                    break;
-
-                case ImprovementType.SkillGroupCategoryKarmaCostMultiplier:
-                case ImprovementType.SkillGroupCategoryKarmaCost:
-                    {
-                        foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                        {
-                            if (objTargetGroup.GetRelevantSkillCategories.Contains(ImprovedName)
-                                || (lstExtraImprovedName != null
-                                    && objTargetGroup.GetRelevantSkillCategories.Any(
-                                        lstExtraImprovedName.Contains)))
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                    objTargetGroup, nameof(SkillGroup.UpgradeKarmaCost));
-                            }
-                        }
-                    }
-                    break;
-
                 case ImprovementType.AttributePointCost:
                 case ImprovementType.AttributePointCostMultiplier:
                     {
@@ -2784,45 +2640,7 @@ namespace Chummer
                                 nameof(Skill.CurrentSpCost));
                         }
                     }
-                    break;
-
-                case ImprovementType.SkillGroupPointCost:
-                case ImprovementType.SkillGroupPointCostMultiplier:
-                    {
-                        if (!string.IsNullOrEmpty(ImprovedName))
-                        {
-                            if (lstExtraImprovedName?.Count > 0)
-                            {
-                                foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                                {
-                                    if (objTargetGroup.Name == ImprovedName || lstExtraImprovedName.Contains(objTargetGroup.Name))
-                                    {
-                                        yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                            nameof(SkillGroup.CurrentSpCost));
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                SkillGroup objTargetGroup =
-                                    _objCharacter.SkillsSection.SkillGroups.FirstOrDefault(x => x.Name == ImprovedName);
-                                if (objTargetGroup != null)
-                                {
-                                    yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.CurrentSpCost));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.CurrentSpCost));
-                            }
-                        }
-                    }
-                    break;
+                    break;               
 
                 case ImprovementType.KnowledgeSkillPointCost:
                 case ImprovementType.KnowledgeSkillPointCostMultiplier:
@@ -2862,23 +2680,6 @@ namespace Chummer
                             if (objTargetSkill.SkillCategory == ImprovedName || lstExtraImprovedName?.Contains(objTargetSkill.SkillCategory) == true)
                                 yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetSkill,
                                     nameof(Skill.CurrentSpCost));
-                        }
-                    }
-                    break;
-
-                case ImprovementType.SkillGroupCategoryPointCost:
-                case ImprovementType.SkillGroupCategoryPointCostMultiplier:
-                    {
-                        foreach (SkillGroup objTargetGroup in _objCharacter.SkillsSection.SkillGroups)
-                        {
-                            if (objTargetGroup.GetRelevantSkillCategories.Contains(ImprovedName)
-                                || (lstExtraImprovedName != null
-                                    && objTargetGroup.GetRelevantSkillCategories.Any(
-                                        lstExtraImprovedName.Contains)))
-                            {
-                                yield return new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                    objTargetGroup, nameof(SkillGroup.CurrentSpCost));
-                            }
                         }
                     }
                     break;
@@ -4012,36 +3813,7 @@ namespace Chummer
                         await ProcessSkillsWithPropertyComprehensiveAsync(await objSkillsSection.GetSkillsAsync(token).ConfigureAwait(false), ImprovedName, Target, lstExtraImprovedName, lstExtraTarget, nameof(Skill.FreeKarma), lstReturn, token).ConfigureAwait(false);
                         await ProcessSkillsWithPropertyComprehensiveAsync(await objSkillsSection.GetKnowledgeSkillsAsync(token).ConfigureAwait(false), ImprovedName, Target, lstExtraImprovedName, lstExtraTarget, nameof(Skill.FreeKarma), lstReturn, token).ConfigureAwait(false);
                     }
-                    break;
-
-                case ImprovementType.SkillGroupLevel:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        if (lstExtraImprovedName?.Count > 0)
-                        {
-                            await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(async objTargetGroup =>
-                            {
-                                string strName = await objTargetGroup.GetNameAsync(token).ConfigureAwait(false);
-                                if (strName == ImprovedName ||
-                                    lstExtraImprovedName.Contains(strName))
-                                {
-                                    lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.FreeLevels)));
-                                }
-                            }, token).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            SkillGroup objTargetGroup =
-                                await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).FirstOrDefaultAsync(async x => await x.GetNameAsync(token).ConfigureAwait(false) == ImprovedName, token).ConfigureAwait(false);
-                            if (objTargetGroup != null)
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.FreeLevels)));
-                            }
-                        }
-                    }
-                    break;
+                    break;              
 
                 case ImprovementType.SkillBase:
                     {
@@ -4067,26 +3839,7 @@ namespace Chummer
                             }, token).ConfigureAwait(false);
                         }
                     }
-                    break;
-
-                case ImprovementType.SkillGroupBase:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        if (!string.IsNullOrEmpty(ImprovedName))
-                        {
-                            await ProcessSkillsWithPropertyComprehensiveAsync(await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false), ImprovedName, Target, lstExtraImprovedName, lstExtraTarget, nameof(SkillGroup.FreeBase), lstReturn, token).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            // When no specific target, process all skill groups
-                            await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetGroup =>
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.FreeBase)));
-                            }, token).ConfigureAwait(false);
-                        }
-                    }
-                    break;
+                    break;               
 
                 case ImprovementType.Skillsoft:
                     {
@@ -4614,79 +4367,8 @@ namespace Chummer
                             }, token).ConfigureAwait(false);
                         }
                     }
-                    break;
+                    break; 
 
-                case ImprovementType.SkillGroupKarmaCost:
-                case ImprovementType.SkillGroupKarmaCostMultiplier:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        if (!string.IsNullOrEmpty(ImprovedName))
-                        {
-                            if (lstExtraImprovedName?.Count > 0)
-                            {
-                                await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(async objTargetGroup =>
-                                {
-                                    string strName = await objTargetGroup.GetNameAsync(token).ConfigureAwait(false);
-                                    if (strName == ImprovedName ||
-                                        lstExtraImprovedName.Contains(strName))
-                                    {
-                                        lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                            objTargetGroup,
-                                            nameof(SkillGroup.UpgradeKarmaCost)));
-                                    }
-                                }, token).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                SkillGroup objTargetGroup =
-                                    await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).FirstOrDefaultAsync(async x => await x.GetNameAsync(token).ConfigureAwait(false) == ImprovedName, token).ConfigureAwait(false);
-                                if (objTargetGroup != null)
-                                {
-                                    lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.UpgradeKarmaCost)));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetGroup =>
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.UpgradeKarmaCost)));
-                            }, token).ConfigureAwait(false);
-                        }
-                    }
-                    break;
-
-                case ImprovementType.SkillGroupDisable:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        if (lstExtraImprovedName?.Count > 0)
-                        {
-                            await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(async objTargetGroup =>
-                            {
-                                string strName = await objTargetGroup.GetNameAsync(token).ConfigureAwait(false);
-                                if (strName == ImprovedName ||
-                                    lstExtraImprovedName.Contains(strName))
-                                {
-                                    lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.IsDisabled)));
-                                }
-                            }, token).ConfigureAwait(false);
-                        }
-                        else
-                        {
-                            SkillGroup objTargetGroup =
-                                await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).FirstOrDefaultAsync(async x => await x.GetNameAsync(token).ConfigureAwait(false) == ImprovedName, token).ConfigureAwait(false);
-                            if (objTargetGroup != null)
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.IsDisabled)));
-                            }
-                        }
-
-                        break;
-                    }
                 case ImprovementType.SkillDisable:
                     {
                         SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
@@ -4749,41 +4431,6 @@ namespace Chummer
                     }
                     break;
 
-                case ImprovementType.SkillGroupCategoryDisable:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetGroup =>
-                        {
-                            if (objTargetGroup.GetRelevantSkillCategories.Contains(ImprovedName)
-                                || (lstExtraImprovedName != null
-                                    && objTargetGroup.GetRelevantSkillCategories.Any(
-                                        lstExtraImprovedName.Contains)))
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                    objTargetGroup, nameof(SkillGroup.IsDisabled)));
-                            }
-                        }, token).ConfigureAwait(false);
-                    }
-                    break;
-
-                case ImprovementType.SkillGroupCategoryKarmaCostMultiplier:
-                case ImprovementType.SkillGroupCategoryKarmaCost:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetGroup =>
-                        {
-                            if (objTargetGroup.GetRelevantSkillCategories.Contains(ImprovedName)
-                                || (lstExtraImprovedName != null
-                                    && objTargetGroup.GetRelevantSkillCategories.Any(
-                                        lstExtraImprovedName.Contains)))
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                    objTargetGroup, nameof(SkillGroup.UpgradeKarmaCost)));
-                            }
-                        }, token).ConfigureAwait(false);
-                    }
-                    break;
-
                 case ImprovementType.AttributePointCost:
                 case ImprovementType.AttributePointCostMultiplier:
                     {
@@ -4818,48 +4465,6 @@ namespace Chummer
                     }
                     break;
 
-                case ImprovementType.SkillGroupPointCost:
-                case ImprovementType.SkillGroupPointCostMultiplier:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        if (!string.IsNullOrEmpty(ImprovedName))
-                        {
-                            if (lstExtraImprovedName?.Count > 0)
-                            {
-                                await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(async objTargetGroup =>
-                                {
-                                    string strName = await objTargetGroup.GetNameAsync(token).ConfigureAwait(false);
-                                    if (strName == ImprovedName ||
-                                        lstExtraImprovedName.Contains(strName))
-                                    {
-                                        lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                            objTargetGroup,
-                                            nameof(SkillGroup.CurrentSpCost)));
-                                    }
-                                }, token).ConfigureAwait(false);
-                            }
-                            else
-                            {
-                                SkillGroup objTargetGroup =
-                                    await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).FirstOrDefaultAsync(async x => await x.GetNameAsync(token).ConfigureAwait(false) == ImprovedName, token).ConfigureAwait(false);
-                                if (objTargetGroup != null)
-                                {
-                                    lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                        nameof(SkillGroup.CurrentSpCost)));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetGroup =>
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetGroup,
-                                    nameof(SkillGroup.CurrentSpCost)));
-                            }, token).ConfigureAwait(false);
-                        }
-                    }
-                    break;
-
                 case ImprovementType.KnowledgeSkillPointCost:
                 case ImprovementType.KnowledgeSkillPointCostMultiplier:
                     {
@@ -4878,48 +4483,7 @@ namespace Chummer
                             }, token).ConfigureAwait(false);
                         }
                     }
-                    break;
-
-                case ImprovementType.SkillCategoryPointCost:
-                case ImprovementType.SkillCategoryPointCostMultiplier:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        // Keeping two enumerations separate helps avoid extra heap allocations
-                        await (await objSkillsSection.GetSkillsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetSkill =>
-                        {
-                            if (objTargetSkill.SkillCategory == ImprovedName ||
-                                lstExtraImprovedName?.Contains(objTargetSkill.SkillCategory) == true)
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetSkill,
-                                    nameof(Skill.CurrentSpCost)));
-                        }, token).ConfigureAwait(false);
-
-                        await (await objSkillsSection.GetKnowledgeSkillsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetSkill =>
-                        {
-                            if (objTargetSkill.SkillCategory == ImprovedName ||
-                                lstExtraImprovedName?.Contains(objTargetSkill.SkillCategory) == true)
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(objTargetSkill,
-                                    nameof(Skill.CurrentSpCost)));
-                        }, token).ConfigureAwait(false);
-                    }
-                    break;
-
-                case ImprovementType.SkillGroupCategoryPointCost:
-                case ImprovementType.SkillGroupCategoryPointCostMultiplier:
-                    {
-                        SkillsSection objSkillsSection = await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false);
-                        await (await objSkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(objTargetGroup =>
-                        {
-                            if (objTargetGroup.GetRelevantSkillCategories.Contains(ImprovedName)
-                                || (lstExtraImprovedName != null
-                                    && objTargetGroup.GetRelevantSkillCategories.Any(
-                                        lstExtraImprovedName.Contains)))
-                            {
-                                lstReturn.Add(new ValueTuple<INotifyMultiplePropertiesChangedAsync, string>(
-                                    objTargetGroup, nameof(SkillGroup.CurrentSpCost)));
-                            }
-                        }, token).ConfigureAwait(false);
-                    }
-                    break;
+                    break;              
 
                 case ImprovementType.NewSpellKarmaCost:
                 case ImprovementType.NewSpellKarmaCostMultiplier:

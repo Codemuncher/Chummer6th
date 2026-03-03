@@ -85,7 +85,7 @@ namespace Chummer
 #else
                 objActiveConfiguration.TelemetryChannel.DeveloperMode = false;
 #endif
-                objActiveConfiguration.TelemetryInitializers.Add(s_objTelemetryInitializer.Value);
+                objActiveConfiguration.TelemetryInitializers.Add(new ProgramTelemetryInitializer());
                 objActiveConfiguration.TelemetryProcessorChainBuilder.Use(next =>
                                                                               new TranslateExceptionTelemetryProcessor(
                                                                                   next));
@@ -109,7 +109,7 @@ namespace Chummer
             {
                 try
                 {
-                    s_objTelemetryInitializer.Value.Initialize(activity);
+                    CustomTelemetryInitializer.Initialize(activity);
                 }
                 catch (Exception ex)
                 {
@@ -315,7 +315,23 @@ namespace Chummer
                                         }
 
                                         et.Properties.Add("IsCrash", exa.IsTerminating.ToString());
-                                        s_objTelemetryInitializer.Value.Initialize(et);
+
+
+                                        // Fix: CustomTelemetryInitializer.Initialize expects an Activity or ActivitySource,
+                                        // not ExceptionTelemetry. Use the current Activity when available to apply the same initialization logic.
+                                        try
+                                        {
+                                            var currentActivity = Activity.Current;
+                                            if (currentActivity != null)
+                                            {
+                                                CustomTelemetryInitializer.Initialize(currentActivity);
+                                            }
+                                        }
+                                        catch (Exception exInit)
+                                        {
+                                            // don't let telemetry enrichment break app execution
+                                            try { Log?.Error(exInit); } catch { }
+                                        }
 
                                         objLocalTelemetryClient.TrackException(et);
                                         try
@@ -1029,8 +1045,8 @@ namespace Chummer
                     //BUT ALSO KEEP IN MIND: when debugging a multi-threaded GUI app, and you're debugging in a thread
                     //other than the main/application thread, YOU NEED TO TURN OFF
                     //the "Enable property evaluation and other implicit function calls" option, or else VS will
-                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, which will
-                    //cause your application to crash/fail in strange ways. Go to Tools->Options->Debugging to turn
+                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, WHICH WILL
+                    //CAUSE YOUR APPLICATION TO CRASH/FAIL IN STRANGE WAYS. Go to Tools->Options->Debugging to turn
                     //that setting off.
                     Debugger.Break();
                 }
@@ -1156,8 +1172,8 @@ namespace Chummer
                     //BUT ALSO KEEP IN MIND: when debugging a multi-threaded GUI app, and you're debugging in a thread
                     //other than the main/application thread, YOU NEED TO TURN OFF
                     //the "Enable property evaluation and other implicit function calls" option, or else VS will
-                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, which will
-                    //cause your application to crash/fail in strange ways. Go to Tools->Options->Debugging to turn
+                    //automatically fetch the values of local/global GUI objects FROM THE CURRENT THREAD, WHICH WILL
+                    //CAUSE YOUR APPLICATION TO CRASH/FAIL IN STRANGE WAYS. Go to Tools->Options->Debugging to turn
                     //that setting off.
                     Debugger.Break();
                 }
@@ -1431,7 +1447,7 @@ namespace Chummer
                         {
                             if (blnSync)
                             {
-                                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                                // ReSharper disable once MethodHasAsyncOverload
                                 if (ShowScrollableMessageBox(
                                         string.Format(GlobalSettings.CultureInfo,
                                             // ReSharper disable once MethodHasAsyncOverload
@@ -1748,6 +1764,29 @@ namespace Chummer
         {
             get;
             private set;
+        }
+
+        // Add this nested adapter class inside the Program class (near other private helpers)
+        private sealed class ProgramTelemetryInitializer : Microsoft.ApplicationInsights.Extensibility.ITelemetryInitializer
+        {
+            public void Initialize(Microsoft.ApplicationInsights.Channel.ITelemetry telemetry)
+            {
+                try
+                {
+                    // Use the current Activity if available and delegate to the existing initializer logic.
+                    var activity = System.Diagnostics.Activity.Current;
+                    if (activity != null)
+                    {
+                        // CustomTelemetryInitializer exposes static Initialize(Activity) per type signatures.
+                        CustomTelemetryInitializer.Initialize(activity);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Keep telemetry initialization from breaking the application. Use same logging pattern as elsewhere.
+                    try { Log?.Error(ex); } catch { }
+                }
+            }
         }
     }
 }

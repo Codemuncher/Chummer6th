@@ -81,6 +81,7 @@
     <PackageReference Include="Azure.Core" Version="1.51.1" />
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
     <PackageReference Include="Azure.Identity" Version="1.18.0" />
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.6.0" />
     <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.9.0" />
     <PackageReference Include="Duende.IdentityModel" Version="8.0.0" />
     <PackageReference Include="Duende.IdentityServer.AspNetIdentity" Version="7.4.6" />
@@ -134,6 +135,16 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  
+    <PackageReference Include="OpenTelemetry" Version="1.15.0" />
+  
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.0" />
+  
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.0" />
+  
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.0" />
+  
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
     <PackageReference Include="Sendgrid" Version="9.29.3" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.3" />

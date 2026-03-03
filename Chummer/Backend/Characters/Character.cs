@@ -60,7 +60,7 @@ namespace Chummer
     [DebuggerDisplay("{CharacterName} ({FileName})")]
     public sealed class Character : INotifyMultiplePropertiesChangedAsync, IHasMugshots, IHasName, IHasSource, IHasXmlDataNode, IHasLockObject, IHasCharacterObject
     {
-        private static readonly TelemetryClient TelemetryClient = new TelemetryClient();
+        private static readonly ActivitySource TelemetryClient = new ActivitySource("Chummer6e");
         private static readonly Lazy<Logger> s_ObjLogger = new Lazy<Logger>(LogManager.GetCurrentClassLogger);
         private static Logger Log => s_ObjLogger.Value;
         private XmlNode _oldSkillsBackup;
@@ -14005,16 +14005,6 @@ namespace Chummer
                                 }
                             }
                         }
-                        foreach (SkillGroup objGroup in SkillsSection.SkillGroups)
-                        {
-                            token.ThrowIfCancellationRequested();
-                            if (setIds.Remove(objGroup.InternalId))
-                            {
-                                yield return objGroup;
-                                if (setIds.Count == 0)
-                                    yield break;
-                            }
-                        }
                         foreach (KnowledgeSkill objSkill in SkillsSection.KnowledgeSkills)
                         {
                             token.ThrowIfCancellationRequested();
@@ -14654,18 +14644,6 @@ namespace Chummer
                                 return true;
                             }, token).ConfigureAwait(false);
                             return setIds.Count > 0;
-                        }, token).ConfigureAwait(false);
-                        if (setIds.Count == 0)
-                            return lstReturn;
-                        await SkillsSection.SkillGroups.ForEachWithBreakAsync(x =>
-                        {
-                            if (setIds.Remove(x.InternalId))
-                            {
-                                lstReturn.Add(x);
-                                if (setIds.Count == 0)
-                                    return false;
-                            }
-                            return true;
                         }, token).ConfigureAwait(false);
                         if (setIds.Count == 0)
                             return lstReturn;
@@ -17194,28 +17172,6 @@ namespace Chummer
                             sbdMessage.AppendLine().Append(await LanguageManager.GetStringAsync("String_SkillPoints", strLanguage, token: token).ConfigureAwait(false))
                                       .Append(strColonCharacter, strSpace, intSkillPointsKarma.ToString(objCulture), strKarmaSuffix);
                             intReturn += intSkillPointsKarma;
-                        }
-
-                        int intSkillGroupPointsKarma = 0;
-                        // Value from skill group points
-                        await (await (await GetSkillsSectionAsync(token).ConfigureAwait(false)).GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(async objLoopGroup =>
-                        {
-                            int intLoopRating = await objLoopGroup.GetBaseAsync(token).ConfigureAwait(false);
-                            if (intLoopRating <= 0)
-                                return;
-                            intSkillGroupPointsKarma
-                                += await objSettings.GetKarmaNewSkillGroupAsync(token).ConfigureAwait(false);
-                            intSkillGroupPointsKarma += ((intLoopRating + 1) * intLoopRating / 2 - 1)
-                                                        * await objSettings.GetKarmaImproveSkillGroupAsync(token)
-                                                                           .ConfigureAwait(false);
-                        }, token).ConfigureAwait(false);
-
-                        if (intSkillGroupPointsKarma != 0)
-                        {
-                            sbdMessage.AppendLine()
-                                      .Append(await LanguageManager.GetStringAsync("String_SkillGroupPoints", strLanguage, token: token).ConfigureAwait(false))
-                                      .Append(strColonCharacter, strSpace, intSkillGroupPointsKarma.ToString(objCulture), strKarmaSuffix);
-                            intReturn += intSkillGroupPointsKarma;
                         }
 
                         // Starting Nuyen karma value
@@ -54328,8 +54284,36 @@ namespace Chummer
                     catch (Exception e)
                     {
                         op_load.SetSuccess(false);
-                        TelemetryClient.TrackException(e);
-                        Log.Error(e);
+                        //TelemetryClient.TrackException(e);                       
+
+                        // Start an Activity (re-uses the class-level ActivitySource `TelemetryClient`)
+                        using var activity = TelemetryClient?.StartActivity("character.exception", ActivityKind.Internal);
+
+                        // Add exception details as tags for trace correlation
+                        if (activity != null)
+                        {
+                            activity.SetTag("exception.type", e.GetType().FullName);
+                            activity.SetTag("exception.message", e.Message);
+                            activity.SetTag("exception.stacktrace", e.StackTrace);
+                            activity.SetTag("otel.status_code", "ERROR");
+
+                            // Optionally emit an explicit event with the exception payload (recommended for richer telemetry)
+                            var tags = new ActivityTagsCollection
+                            {
+                                ["exception.type"] = e.GetType().FullName,
+                                ["exception.message"] = e.Message,
+                                ["exception.stacktrace"] = e.StackTrace
+                            };
+                            activity.AddEvent(new ActivityEvent("exception", tags: tags));
+                            Log.Error(e);
+                        }
+                        else
+                        {
+                            // Fallback if ActivitySource isn't available — preserve existing diagnostic output
+                            System.Diagnostics.Trace.TraceError(e.ToString());
+                            System.Diagnostics.Debug.WriteLine(e.ToString());
+                            Log.Error(e);
+                        }
                     }
                 }
 

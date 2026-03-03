@@ -16,23 +16,21 @@ namespace Chummer
                 var aiClient = Program.ChummerTelemetryClient?.Value;
                 if (aiClient != null)
                 {
-                    var pvt = new PageViewTelemetry(name)
+                    // Build a properties dictionary that doesn't require PageViewTelemetry type.
+                    var combinedProperties = new Dictionary<string, string>(properties ?? new Dictionary<string, string>())
                     {
-                        Id = id ?? Guid.NewGuid().ToString(),
-                        Name = name,
-                        Timestamp = DateTimeOffset.UtcNow
+                        ["page.name"] = name,
+                        ["id"] = id ?? Guid.NewGuid().ToString()
                     };
-                    if (url != null)
-                        pvt.Url = url;
-                    if (duration.HasValue)
-                        pvt.Duration = duration.Value;
-                    if (properties != null)
-                    {
-                        foreach (var kvp in properties)
-                            pvt.Properties[kvp.Key] = kvp.Value;
-                    }
 
-                    aiClient.TrackPageView(pvt);
+                    if (url != null)
+                        combinedProperties["page.url"] = url.ToString();
+
+                    if (duration.HasValue)
+                        combinedProperties["page.duration"] = duration.Value.TotalMilliseconds.ToString();
+
+                    // Use TrackEvent to avoid depending on PageViewTelemetry type/assembly.
+                    aiClient.TrackEvent("PageView", combinedProperties);
                     return;
                 }
 

@@ -13258,34 +13258,8 @@ namespace Chummer
                                              .ConfigureAwait(false);
 
                             break;
-                        }
-                    case KarmaExpenseType.ImproveSkillGroup:
-                        {
-                            // Locate the Skill Group that was affected. Old characters may have had the expense added as the Name instead of guid.
-                            SkillGroup group
-                                = await CharacterObject.SkillsSection.SkillGroups.FirstOrDefaultAsync(
-                                                           g => g.InternalId == strUndoId || g.Name == strUndoId,
-                                                           GenericToken)
-                                                       .ConfigureAwait(false);
-
-                            if (group != null)
-                            {
-                                if (await group.GetKarmaUnbrokenAsync(GenericToken).ConfigureAwait(false))
-                                    --group.Karma;
-                                else
-                                {
-                                    await Program.ShowScrollableMessageBoxAsync(this,
-                                        await LanguageManager.GetStringAsync(
-                                            "Message_UndoBrokenSkillGroup", token: GenericToken).ConfigureAwait(false),
-                                        await LanguageManager.GetStringAsync(
-                                            "MessageTitle_UndoBrokenSkillGroup", token: GenericToken).ConfigureAwait(false),
-                                        MessageBoxButtons.OK, MessageBoxIcon.Warning, token: GenericToken).ConfigureAwait(false);
-                                    return;
-                                }
-                            }
-
-                            break;
-                        }
+                        }               
+                        
                     case KarmaExpenseType.AddSkill:
                         {
                             // Locate the Skill that was affected.
@@ -13320,34 +13294,7 @@ namespace Chummer
                                         await objKnowledgeSkill.SetBasePointsAsync(0, GenericToken).ConfigureAwait(false);
                                         await objKnowledgeSkill.SetKarmaPointsAsync(0, GenericToken).ConfigureAwait(false);
                                     }
-                                }
-                                else
-                                {
-                                    // Old characters may have incorrectly had their ExpenseType set to AddSkill rather than ImproveSkillGroup.
-                                    // Since skill groups can never be deleted, we don't have/need an AddSkillGroup expense type.
-                                    // Locate the Skill Group that was affected.
-                                    SkillGroup group
-                                        = await CharacterObject.SkillsSection.SkillGroups.FirstOrDefaultAsync(
-                                            g => g.InternalId == strUndoId, GenericToken).ConfigureAwait(false);
-
-                                    if (group != null)
-                                    {
-                                        if (await group.GetKarmaUnbrokenAsync(GenericToken).ConfigureAwait(false))
-                                            --group.Karma;
-                                        else
-                                        {
-                                            await Program.ShowScrollableMessageBoxAsync(this,
-                                                await LanguageManager.GetStringAsync(
-                                                        "Message_UndoBrokenSkillGroup", token: GenericToken)
-                                                    .ConfigureAwait(false),
-                                                await LanguageManager.GetStringAsync(
-                                                        "MessageTitle_UndoBrokenSkillGroup", token: GenericToken)
-                                                    .ConfigureAwait(false),
-                                                MessageBoxButtons.OK, MessageBoxIcon.Warning, token: GenericToken).ConfigureAwait(false);
-                                            return;
-                                        }
-                                    }
-                                }
+                                }                               
                             }
 
                             break;

@@ -1272,19 +1272,7 @@ namespace Chummer.Backend.Skills
                 try
                 {
                     await objExoticReturn.SetIsLoadingAsync(true, token).ConfigureAwait(false);
-                    string strExoticGroup = xmlNode["skillgroup"]?.InnerTextViaPool(token);
-
-                    if (!string.IsNullOrEmpty(strExoticGroup))
-                    {
-                        objExoticReturn.SkillGroup = strExoticGroup;
-                        SkillGroup objGroup =
-                            await Skills.SkillGroup.GetAsync(objExoticReturn, token).ConfigureAwait(false);
-                        objExoticReturn.SkillGroupObject = objGroup;
-                        if (objGroup != null)
-                        {
-                            objGroup.MultiplePropertiesChangedAsync += objExoticReturn.OnSkillGroupChanged;
-                        }
-                    }
+                  
                 }
                 catch
                 {
@@ -1329,18 +1317,8 @@ namespace Chummer.Backend.Skills
             try
             {
                 await objReturn.SetIsLoadingAsync(true, token).ConfigureAwait(false);
-                string strGroup = xmlNode["skillgroup"]?.InnerTextViaPool(token);
 
-                if (!string.IsNullOrEmpty(strGroup))
-                {
-                    objReturn.SkillGroup = strGroup;
-                    SkillGroup objGroup = await Skills.SkillGroup.GetAsync(objReturn, token).ConfigureAwait(false);
-                    objReturn.SkillGroupObject = objGroup;
-                    if (objGroup != null)
-                    {
-                        objGroup.MultiplePropertiesChangedAsync += objReturn.OnSkillGroupChanged;
-                    }
-                }
+              
             }
             catch
             {
@@ -1486,22 +1464,7 @@ namespace Chummer.Backend.Skills
                 RequiresSwimMovement = blnTemp;
             if (xmlNode.TryGetBoolFieldQuickly("requiresflymovement", ref blnTemp) ||
                 objMyNode.Value?.TryGetBoolFieldQuickly("requiresflymovement", ref blnTemp) == true)
-                RequiresFlyMovement = blnTemp;
-
-            if (blnDoSkillGroup)
-            {
-                string strGroup = xmlNode["skillgroup"]?.InnerTextViaPool();
-
-                if (!string.IsNullOrEmpty(strGroup))
-                {
-                    SkillGroup = strGroup;
-                    SkillGroupObject = Skills.SkillGroup.Get(this);
-                    if (SkillGroupObject != null)
-                    {
-                        SkillGroupObject.MultiplePropertiesChangedAsync += OnSkillGroupChanged;
-                    }
-                }
-            }
+                RequiresFlyMovement = blnTemp;         
 
             _blnRecalculateCachedSuggestedSpecializations = true;
             IsLoading = false;

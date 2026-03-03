@@ -518,13 +518,6 @@ namespace Chummer
                         await objSkill.ModifyKarmaPointsAsync(intBase, token).ConfigureAwait(false);
                     }, token).ConfigureAwait(false);
 
-                    await (await _objCharacter.SkillsSection.GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachWithSideEffectsAsync(async objGroup =>
-                    {
-                        // This ordering makes sure data bindings to numeric up-downs with maxima don't get broken
-                        int intBase = await objGroup.GetBasePointsAsync(token).ConfigureAwait(false);
-                        await objGroup.SetBasePointsAsync(0, token).ConfigureAwait(false);
-                        await objGroup.ModifyKarmaPointsAsync(intBase, token).ConfigureAwait(false);
-                    }, token).ConfigureAwait(false);
                 }
                 finally
                 {

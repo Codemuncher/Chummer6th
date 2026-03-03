@@ -6291,29 +6291,7 @@ namespace Chummer
             else
             {
                 using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkills))
-                {
-                    using (XmlNodeList objXmlGroups = bonusNode.SelectNodes("skillgroup"))
-                    {
-                        if (objXmlGroups?.Count > 0)
-                        {
-                            foreach (XmlNode objXmlGroup in objXmlGroups)
-                            {
-                                string strInnerText = objXmlGroup.InnerTextViaPool();
-                                lstSkills.Add(new ListItem(strInnerText,
-                                                           _objCharacter.TranslateExtra(
-                                                               strInnerText, GlobalSettings.Language,
-                                                               "skills.xml")));
-                            }
-                        }
-                        else
-                        {
-                            foreach (SkillGroup objGroup in _objCharacter.SkillsSection.SkillGroups)
-                            {
-                                if (!objGroup.IsDisabled)
-                                    lstSkills.Add(new ListItem(objGroup.Name, objGroup.CurrentDisplayName));
-                            }
-                        }
-                    }
+                {                 
 
                     if (lstSkills.Count > 1)
                     {

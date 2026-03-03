@@ -6634,30 +6634,6 @@ namespace Chummer
             {
                 using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkills))
                 {
-                    using (XmlNodeList objXmlGroups = bonusNode.SelectNodes("skillgroup"))
-                    {
-                        if (objXmlGroups?.Count > 0)
-                        {
-                            foreach (XmlNode objXmlGroup in objXmlGroups)
-                            {
-                                string strInnerText = objXmlGroup.InnerTextViaPool(token);
-                                lstSkills.Add(new ListItem(strInnerText,
-                                                           await _objCharacter.TranslateExtraAsync(
-                                                               strInnerText, GlobalSettings.Language,
-                                                               "skills.xml", token).ConfigureAwait(false)));
-                            }
-                        }
-                        else
-                        {
-                            await (await (await _objCharacter.GetSkillsSectionAsync(token).ConfigureAwait(false)).GetSkillGroupsAsync(token).ConfigureAwait(false)).ForEachAsync(async objGroup =>
-                            {
-                                if (!await objGroup.GetIsDisabledAsync(token).ConfigureAwait(false))
-                                    lstSkills.Add(new ListItem(objGroup.Name,
-                                        await objGroup.GetCurrentDisplayNameAsync(token).ConfigureAwait(false)));
-                            }, token).ConfigureAwait(false);
-                        }
-                    }
-
                     if (lstSkills.Count > 1)
                     {
                         lstSkills.Sort(CompareListItems.CompareNames);
