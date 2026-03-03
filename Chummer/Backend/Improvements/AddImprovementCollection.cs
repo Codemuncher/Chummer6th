@@ -2315,6 +2315,12 @@ namespace Chummer
             {
                 CreateImprovement(strSkill, _objImprovementSource, SourceName, Improvement.ImprovementType.SkillLevel, _strUnique, intValue);
             }
+            else if (bonusNode["selectskill"] != null)
+            {
+                strSkill = ImprovementManager.DoSelectSkill(bonusNode["selectskill"], _objCharacter, _intRating, _strFriendlyName).Item1;
+                SelectedValue = strSkill;
+                CreateImprovement(strSkill, _objImprovementSource, SourceName, Improvement.ImprovementType.SkillLevel, _strUnique, intValue);
+            }
             else
             {
                 Log.Error(new object[] { "skilllevel", bonusNode.OuterXmlViaPool() });
@@ -2447,11 +2453,17 @@ namespace Chummer
         {
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            //Theoretically life modules, right now we just give out free points and let people sort it out themselves.
-            //Going to be fun to do the real way, from a computer science perspective, but i don't feel like using 2 weeks on that now
-
             decimal decVal = bonusNode["val"] != null ? ImprovementManager.ValueToDec(_objCharacter, bonusNode["val"].InnerTextViaPool(), _intRating) : 1;
-            CreateImprovement(string.Empty, _objImprovementSource, SourceName, Improvement.ImprovementType.FreeKnowledgeSkills, _strUnique, decVal);
+            if (bonusNode["selectskill"] != null)
+            {
+                string strSkill = ImprovementManager.DoSelectSkill(bonusNode["selectskill"], _objCharacter, _intRating, _strFriendlyName, true).Item1;
+                SelectedValue = strSkill;
+                CreateImprovement(strSkill, _objImprovementSource, SourceName, Improvement.ImprovementType.SkillLevel, _strUnique, (int)decVal.StandardRound());
+            }
+            else
+            {
+                CreateImprovement(string.Empty, _objImprovementSource, SourceName, Improvement.ImprovementType.FreeKnowledgeSkills, _strUnique, decVal);
+            }
         }
 
         public void knowledgeskillpoints(XmlNode bonusNode)
@@ -2461,25 +2473,6 @@ namespace Chummer
             CreateImprovement(string.Empty, _objImprovementSource, SourceName, Improvement.ImprovementType.FreeKnowledgeSkills, _strUnique,
                 ImprovementManager.ValueToDec(_objCharacter, bonusNode.InnerTextViaPool(), ImprovementManager.ValueToInt(_objCharacter, bonusNode.Value, _intRating)));
         }
-
-        public void skillgrouplevel(XmlNode bonusNode)
-        {
-            if (bonusNode == null)
-                throw new ArgumentNullException(nameof(bonusNode));
-            string strSkillGroup = string.Empty;
-            int value = 1;
-            if (bonusNode.TryGetStringFieldQuickly("name", ref strSkillGroup) &&
-                bonusNode.TryGetInt32FieldQuickly("val", ref value))
-            {
-                CreateImprovement(strSkillGroup, _objImprovementSource, SourceName,
-                    Improvement.ImprovementType.SkillGroupLevel, _strUnique, value);
-            }
-            else
-            {
-                Log.Error(new object[] { "skillgrouplevel", bonusNode.OuterXmlViaPool() });
-            }
-        }
-
         // Change the maximum number of BP that can be spent on Nuyen.
         public void nuyenmaxbp(XmlNode bonusNode)
         {
@@ -6291,7 +6284,7 @@ namespace Chummer
             else
             {
                 using (new FetchSafelyFromSafeObjectPool<List<ListItem>>(Utils.ListItemListPool, out List<ListItem> lstSkills))
-                {                 
+                {
 
                     if (lstSkills.Count > 1)
                     {

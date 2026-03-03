@@ -1272,7 +1272,7 @@ namespace Chummer.Backend.Skills
                 try
                 {
                     await objExoticReturn.SetIsLoadingAsync(true, token).ConfigureAwait(false);
-                  
+
                 }
                 catch
                 {
@@ -1317,8 +1317,6 @@ namespace Chummer.Backend.Skills
             try
             {
                 await objReturn.SetIsLoadingAsync(true, token).ConfigureAwait(false);
-
-              
             }
             catch
             {
@@ -1464,7 +1462,7 @@ namespace Chummer.Backend.Skills
                 RequiresSwimMovement = blnTemp;
             if (xmlNode.TryGetBoolFieldQuickly("requiresflymovement", ref blnTemp) ||
                 objMyNode.Value?.TryGetBoolFieldQuickly("requiresflymovement", ref blnTemp) == true)
-                RequiresFlyMovement = blnTemp;         
+                RequiresFlyMovement = blnTemp;
 
             _blnRecalculateCachedSuggestedSpecializations = true;
             IsLoading = false;
@@ -2536,10 +2534,9 @@ namespace Chummer.Backend.Skills
                     if (ImprovementManager.GetCachedImprovementListForValueOf(CharacterObject,
                             Improvement.ImprovementType.ReflexRecorderOptimization).Count > 0)
                     {
-                        List<Cyberware> lstReflexRecorders = CharacterObject.Cyberware
-                            .Where(x => x.SourceID == ReflexRecorderGUID)
-                            .ToList();
-                        if (lstReflexRecorders.Count > 0)
+                        bool blnHasReflexRecorder = CharacterObject.Cyberware.DeepAny(
+                            x => x.Children, x => x.SourceID == ReflexRecorderGUID);
+                        if (blnHasReflexRecorder)
                         {
                             using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(
                                        Utils.StringHashSetPool, out HashSet<string> setSkillNames))
@@ -2547,13 +2544,19 @@ namespace Chummer.Backend.Skills
                                 if (SkillGroupObject != null)
                                 {
                                     setSkillNames.AddRange(SkillGroupObject.SkillList.Select(x => x.DictionaryKey));
-                                    if (lstReflexRecorders.Exists(x => setSkillNames.Contains(x.Extra)))
+                                    if (CharacterObject.Cyberware.DeepAny(
+                                            x => x.Children,
+                                            x => x.SourceID == ReflexRecorderGUID && setSkillNames.Contains(x.Extra)))
                                     {
                                         return 0;
                                     }
                                 }
-                                else if (lstReflexRecorders.Exists(x => x.Extra == DictionaryKey))
+                                else if (CharacterObject.Cyberware.DeepAny(
+                                             x => x.Children,
+                                             x => x.SourceID == ReflexRecorderGUID && x.Extra == DictionaryKey))
+                                {
                                     return 0;
+                                }
                             }
                         }
                     }
@@ -2595,9 +2598,11 @@ namespace Chummer.Backend.Skills
                             Improvement.ImprovementType.ReflexRecorderOptimization, token: token).ConfigureAwait(false))
                     .Count > 0)
                 {
-                    List<Cyberware> lstReflexRecorders = await CharacterObject.Cyberware
-                        .ToListAsync(async x => await x.GetSourceIDAsync(token).ConfigureAwait(false) == ReflexRecorderGUID, token: token).ConfigureAwait(false);
-                    if (lstReflexRecorders.Count > 0)
+                    bool blnHasReflexRecorder = await CharacterObject.Cyberware.DeepAnyAsync(
+                        x => x.GetChildrenAsync(token),
+                        async x => await x.GetSourceIDAsync(token).ConfigureAwait(false) == ReflexRecorderGUID,
+                        token).ConfigureAwait(false);
+                    if (blnHasReflexRecorder)
                     {
                         using (new FetchSafelyFromSafeObjectPool<HashSet<string>>(
                                    Utils.StringHashSetPool, out HashSet<string> setSkillNames))
@@ -2607,7 +2612,12 @@ namespace Chummer.Backend.Skills
                                 foreach (Skill objSkill in SkillGroupObject.SkillList)
                                     setSkillNames.Add(await objSkill.GetDictionaryKeyAsync(token)
                                         .ConfigureAwait(false));
-                                if (lstReflexRecorders.Exists(x => setSkillNames.Contains(x.Extra)))
+                                if (await CharacterObject.Cyberware.DeepAnyAsync(
+                                        x => x.GetChildrenAsync(token),
+                                        async x => await x.GetSourceIDAsync(token).ConfigureAwait(false) ==
+                                                   ReflexRecorderGUID &&
+                                                   setSkillNames.Contains(x.Extra),
+                                        token).ConfigureAwait(false))
                                 {
                                     return 0;
                                 }
@@ -2615,8 +2625,15 @@ namespace Chummer.Backend.Skills
                             else
                             {
                                 string strKey = await GetDictionaryKeyAsync(token).ConfigureAwait(false);
-                                if (lstReflexRecorders.Exists(x => x.Extra == strKey))
+                                if (await CharacterObject.Cyberware.DeepAnyAsync(
+                                        x => x.GetChildrenAsync(token),
+                                        async x => await x.GetSourceIDAsync(token).ConfigureAwait(false) ==
+                                                   ReflexRecorderGUID &&
+                                                   x.Extra == strKey,
+                                        token).ConfigureAwait(false))
+                                {
                                     return 0;
+                                }
                             }
                         }
                     }
@@ -4334,12 +4351,10 @@ namespace Chummer.Backend.Skills
                 ? Task.FromCanceled<bool>(token)
                 : Task.FromResult(false);
         }
-
         public virtual Task<bool> GetAllowNewSkillDeleteAsync(CancellationToken token = default)
         {
             return Task.FromResult(AllowDelete);
         }
-
         public bool Default
         {
             get
@@ -5162,7 +5177,7 @@ namespace Chummer.Backend.Skills
 
             IAsyncDisposable objLocker = await LockObject.EnterWriteLockAsync(token).ConfigureAwait(false);
             try
-        {
+            {
                 token.ThrowIfCancellationRequested();
 
 
@@ -5182,7 +5197,6 @@ namespace Chummer.Backend.Skills
                 await objLocker.DisposeAsync().ConfigureAwait(false);
             }
         }
-
         public async Task SetTopMostDisplaySpecializationAsync(string value, CancellationToken token = default)
         {
             if (string.IsNullOrWhiteSpace(value))

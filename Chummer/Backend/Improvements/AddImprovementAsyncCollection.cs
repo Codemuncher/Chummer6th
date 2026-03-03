@@ -2402,6 +2402,12 @@ namespace Chummer
             {
                 await CreateImprovementAsync(strSkill, _objImprovementSource, SourceName, Improvement.ImprovementType.SkillLevel, _strUnique, intValue, token: token).ConfigureAwait(false);
             }
+            else if (bonusNode["selectskill"] != null)
+            {
+                strSkill = (await ImprovementManager.DoSelectSkillAsync(bonusNode["selectskill"], _objCharacter, _intRating, _strFriendlyName, token: token).ConfigureAwait(false)).Item1;
+                SelectedValue = strSkill;
+                await CreateImprovementAsync(strSkill, _objImprovementSource, SourceName, Improvement.ImprovementType.SkillLevel, _strUnique, intValue, token: token).ConfigureAwait(false);
+            }
             else
             {
                 Log.Error(new object[] { "skilllevel", bonusNode.OuterXmlViaPool(token) });
@@ -2541,11 +2547,17 @@ namespace Chummer
             token.ThrowIfCancellationRequested();
             if (bonusNode == null)
                 throw new ArgumentNullException(nameof(bonusNode));
-            //Theoretically life modules, right now we just give out free points and let people sort it out themselves.
-            //Going to be fun to do the real way, from a computer science perspective, but i don't feel like using 2 weeks on that now
-
             decimal decVal = bonusNode["val"] != null ? await ImprovementManager.ValueToDecAsync(_objCharacter, bonusNode["val"].InnerTextViaPool(token), _intRating, token).ConfigureAwait(false) : 1;
-            await CreateImprovementAsync(string.Empty, _objImprovementSource, SourceName, Improvement.ImprovementType.FreeKnowledgeSkills, _strUnique, decVal, token: token).ConfigureAwait(false);
+            if (bonusNode["selectskill"] != null)
+            {
+                string strSkill = (await ImprovementManager.DoSelectSkillAsync(bonusNode["selectskill"], _objCharacter, _intRating, _strFriendlyName, true, token).ConfigureAwait(false)).Item1;
+                SelectedValue = strSkill;
+                await CreateImprovementAsync(strSkill, _objImprovementSource, SourceName, Improvement.ImprovementType.SkillLevel, _strUnique, (int)decVal.StandardRound(), token: token).ConfigureAwait(false);
+            }
+            else
+            {
+                await CreateImprovementAsync(string.Empty, _objImprovementSource, SourceName, Improvement.ImprovementType.FreeKnowledgeSkills, _strUnique, decVal, token: token).ConfigureAwait(false);
+            }
         }
 
         public async Task knowledgeskillpoints(XmlNode bonusNode, CancellationToken token = default)
@@ -2557,25 +2569,7 @@ namespace Chummer
                 await ImprovementManager.ValueToDecAsync(_objCharacter, bonusNode.InnerTextViaPool(token), await ImprovementManager.ValueToIntAsync(_objCharacter, bonusNode.Value, _intRating, token).ConfigureAwait(false), token).ConfigureAwait(false), token: token).ConfigureAwait(false);
         }
 
-        public async Task skillgrouplevel(XmlNode bonusNode, CancellationToken token = default)
-        {
-            token.ThrowIfCancellationRequested();
-            if (bonusNode == null)
-                throw new ArgumentNullException(nameof(bonusNode));
-            string strSkillGroup = string.Empty;
-            int value = 1;
-            if (bonusNode.TryGetStringFieldQuickly("name", ref strSkillGroup) &&
-                bonusNode.TryGetInt32FieldQuickly("val", ref value))
-            {
-                await CreateImprovementAsync(strSkillGroup, _objImprovementSource, SourceName,
-                    Improvement.ImprovementType.SkillGroupLevel, _strUnique, value, token: token).ConfigureAwait(false);
-            }
-            else
-            {
-                Log.Error(new object[] { "skillgrouplevel", bonusNode.OuterXmlViaPool(token) });
-            }
-        }
-
+        
         // Change the maximum number of BP that can be spent on Nuyen.
         public async Task nuyenmaxbp(XmlNode bonusNode, CancellationToken token = default)
         {

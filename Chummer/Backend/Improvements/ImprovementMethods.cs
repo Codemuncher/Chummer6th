@@ -154,8 +154,6 @@ namespace Chummer
                     return objImprovementAdder.knowledgeskilllevel;
                 case "KNOWLEDGESKILLPOINTS":
                     return objImprovementAdder.knowledgeskillpoints;
-                case "SKILLGROUPLEVEL":
-                    return objImprovementAdder.skillgrouplevel;
                 case "NUYENMAXBP":
                     return objImprovementAdder.nuyenmaxbp;
                 case "PHYSICALLIMIT":
@@ -819,8 +817,6 @@ namespace Chummer
                     return objImprovementAsyncAdder.knowledgeskilllevel;
                 case "KNOWLEDGESKILLPOINTS":
                     return objImprovementAsyncAdder.knowledgeskillpoints;
-                case "SKILLGROUPLEVEL":
-                    return objImprovementAsyncAdder.skillgrouplevel;
                 case "NUYENMAXBP":
                     return objImprovementAsyncAdder.nuyenmaxbp;
                 case "PHYSICALLIMIT":

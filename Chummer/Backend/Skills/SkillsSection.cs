@@ -1032,31 +1032,31 @@ namespace Chummer.Backend.Skills
         }
 
         internal async Task RemoveNewSkillsAsync(Skill skillToRemove, CancellationToken token = default)
-        {
+                    {
             token.ThrowIfCancellationRequested();
             IAsyncDisposable objLocker = await LockObject.EnterUpgradeableReadLockAsync(token).ConfigureAwait(false);
             try
-            {
-                token.ThrowIfCancellationRequested();
+                        {
+                            token.ThrowIfCancellationRequested();
                 token.ThrowIfCancellationRequested();
                 ThreadSafeBindingList<Skill> lstSkills = await GetSkillsAsync(token).ConfigureAwait(false);
                 for (int i = await _lstNewSkills.GetCountAsync(token).ConfigureAwait(false) - 1; i >= 0; --i)
-                {
+                            {
                     if (await _lstNewSkills.GetValueAtAsync(i, token).ConfigureAwait(false) != skillToRemove)
                         continue;
                     await _lstNewSkills.RemoveAtAsync(i, token).ConfigureAwait(false);
                     bool isRemoved = _dicSkills.TryRemove(await skillToRemove.GetDictionaryKeyAsync(token).ConfigureAwait(false), out _);
+                            }
                         }
-                    }
             catch
             {
                 throw;
-                }
+                    }
             finally
             {
                 await objLocker.DisposeAsync().ConfigureAwait(false);
+                }
             }
-        }
 
         internal async Task RemoveSkillsAsync(FilterOption eSkillsToRemove, string strName = "", bool blnCreateKnowledge = true, CancellationToken token = default)
         {
@@ -1160,8 +1160,8 @@ namespace Chummer.Backend.Skills
                             }
                         }
                     }
-                   
-                }
+
+                                }
                 finally
                 {
                     await objLocker2.DisposeAsync().ConfigureAwait(false);
@@ -1816,7 +1816,7 @@ namespace Chummer.Backend.Skills
                                             else
                                                 await _objSkillsInitializerLock.SetParentAsync(LockObject, token: token).ConfigureAwait(false);
                                         }
-                                    }                                    
+                                                                }
 
                                     using (_ = Timekeeper.StartSyncron("load_char_skills_normal", opLoadCharSkills))
                                     {
@@ -2360,6 +2360,11 @@ namespace Chummer.Backend.Skills
                                 xmlSkillNode = xmlSkillNode.OwnerDocument?["character"];
                             }
 
+                            int intTmp = 0;
+                            if (xmlSkillNode.TryGetInt32FieldQuickly("skillptsmax", ref intTmp))
+                                SkillPointsMaximum = intTmp;
+                          
+
                             //Timekeeper.Finish("load_char_skills");
                             if (blnSync)
                             {
@@ -2513,7 +2518,7 @@ namespace Chummer.Backend.Skills
 
                         if (!_objCharacter.Created)
                         {
-                           if (_objCharacter.EffectiveBuildMethodUsesPriorityTables)
+                            if (_objCharacter.EffectiveBuildMethodUsesPriorityTables)
                             {
                                 // Allocate Skill Points
                                 int intSkillPointCount = SkillPointsMaximum;
@@ -2680,7 +2685,7 @@ namespace Chummer.Backend.Skills
                 // Potentially expensive checks that can (and therefore should) be parallelized. Normally, this would just be a Parallel.Invoke,
                 // but we want to allow UI messages to happen, just in case this is called on the Main Thread and another thread wants to show a message box.
                 Utils.RunWithoutThreadLock(
-                    () =>                    
+                    () =>
                     {
                         Parallel.ForEach(Skills, x =>
                         {
@@ -2799,7 +2804,7 @@ namespace Chummer.Backend.Skills
                 objWriter.WriteStartElement("newskills");
 
                 objWriter.WriteElementString("skillptsmax",
-                    SkillPointsMaximum.ToString(GlobalSettings.InvariantCultureInfo));              
+                    SkillPointsMaximum.ToString(GlobalSettings.InvariantCultureInfo));
 
                 objWriter.WriteStartElement("skills");
                 List<Skill> lstSkillsOrdered = new List<Skill>(CharacterSkills);
@@ -3114,10 +3119,10 @@ namespace Chummer.Backend.Skills
                             }
                             finally
                             {
+                            }
                         }
-                    }
-                    finally
-                    {
+                        finally
+                        {
                         await _lstSkills.LockObject.SetParentAsync(LockObject, token: token).ConfigureAwait(false);
                     }
 
@@ -3201,7 +3206,7 @@ namespace Chummer.Backend.Skills
                                             Skill objSkill = await Skill.FromDataAsync(xmlSkill, _objCharacter,
                                                 blnIsKnowledgeSkill, token).ConfigureAwait(false);
                                             string strKey = await objSkill.GetDictionaryKeyAsync(token)
-                                                .ConfigureAwait(false);
+                                .ConfigureAwait(false);
                                             bool inDictionary = _dicSkills.TryGetValue(strKey, out Skill objExistingSkill);
                                             if (!inDictionary)
                                             {
@@ -3214,13 +3219,13 @@ namespace Chummer.Backend.Skills
                                             else
                                                 Utils.BreakIfDebug();
                                         }
-                                    }
-                                }
+                        }
+                    }
 
                                 await _lstNewSkills.SortAsync(CompareSkills, token).ConfigureAwait(false);
                     }
-                            finally
-                            {
+                    finally
+                    {
                                 _lstNewSkills.RaiseListChangedEvents = true;
                             }
                         }
@@ -3349,7 +3354,6 @@ namespace Chummer.Backend.Skills
 
         private readonly ThreadSafeBindingList<KnowledgeSkill> _lstKnowledgeSkills;
         private readonly ThreadSafeBindingList<KnowledgeSkill> _lstKnowsoftSkills;
-
         public ThreadSafeBindingList<KnowledgeSkill> KnowledgeSkills
         {
             get
